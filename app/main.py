@@ -23,6 +23,7 @@ from starlette.middleware.sessions import SessionMiddleware
 
 from app.db import connect, initialize, register_scan_metadata
 from app.parser import MAX_BYTES, digest, parse_attlog
+from app.ingestion import insert_punches
 from app.security import check_password
 from app.reports import preview_k14_report
 from app.registry import parse_staff, clean
@@ -299,14 +300,7 @@ async def import_file(request: Request, file: UploadFile = File(...), user: dict
                     "VALUES(?,?,?,?,?)", (digest(raw), filename, len(records), 0, user["id"]),
                 )
                 batch_id = cur.lastrowid
-                before = con.total_changes
-                con.executemany(
-                    "INSERT OR IGNORE INTO punches(employee_code,happened_at,device_id,status_code,verification_code,work_code,imported_batch_id) "
-                    "VALUES(?,?,?,?,?,?,?)",
-                    [(p.employee_code,p.happened_at,p.device_id,p.status_code,p.verification_code,p.work_code,batch_id) for p in records],
-                )
-                inserted = con.total_changes - before
-                register_scan_metadata(con)
+                inserted = insert_punches(con, records, batch_id)
                 con.execute("UPDATE import_batches SET inserted_records=? WHERE id=?", (inserted,batch_id))
                 con.execute(
                     "INSERT INTO audit_events(actor_id,action,entity,entity_id,details) VALUES(?,?,?,?,?)",
