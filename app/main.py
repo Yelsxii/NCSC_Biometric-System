@@ -22,6 +22,7 @@ from starlette.middleware.sessions import SessionMiddleware
 
 from app.db import connect, initialize
 from app.parser import MAX_BYTES, digest, parse_attlog
+from app.roster import MAX_ROSTER_BYTES, parse_user_dat, parse_department_dat
 from app.security import check_password
 
 load_dotenv()
@@ -111,6 +112,11 @@ class FieldworkInput(BaseModel):
         return self
 
 
+class WorkCodeInput(BaseModel):
+    numeric_code: str = Field(pattern=r"^[0-9]{1,10}$")
+    label: str = Field(min_length=2, max_length=80)
+
+
 class DecisionInput(BaseModel):
     decision: Literal["approved", "rejected"]
 
@@ -155,6 +161,8 @@ def overview(user: dict = Depends(current_user)):
             "employees": con.execute("SELECT COUNT(DISTINCT employee_code) FROM punches").fetchone()[0],
             "imports": con.execute("SELECT COUNT(*) FROM import_batches").fetchone()[0],
             "pending": con.execute("SELECT COUNT(*) FROM fieldwork WHERE status='pending'").fetchone()[0],
+            "staff": con.execute("SELECT COUNT(*) FROM staff").fetchone()[0],
+            "named_staff": con.execute("SELECT COUNT(*) FROM staff WHERE device_name != ''").fetchone()[0],
         }
         recent = [dict(x) for x in con.execute(
             "SELECT id,original_name,total_records,inserted_records,imported_at "
@@ -169,13 +177,14 @@ def punches(limit: int = 100, employee_code: str = "", user: dict = Depends(curr
         raise HTTPException(400, "Limit must be between 1 and 250.")
     if employee_code and not CODE_RE.fullmatch(employee_code):
         raise HTTPException(400, "Invalid employee code.")
-    sql = ("SELECT id,employee_code,happened_at,device_id,status_code,verification_code,work_code "
-           "FROM punches ")
+    sql = ("SELECT p.id,p.employee_code,p.happened_at,p.device_id,p.status_code,p.verification_code,p.work_code, "
+           "COALESCE(w.label, '') AS work_code_label FROM punches p "
+           "LEFT JOIN work_code_mappings w ON w.numeric_code=p.work_code ")
     args: list = []
     if employee_code:
-        sql += "WHERE employee_code=? "
+        sql += "WHERE p.employee_code=? "
         args.append(employee_code)
-    sql += "ORDER BY happened_at DESC, id DESC LIMIT ?"
+    sql += "ORDER BY p.happened_at DESC, p.id DESC LIMIT ?"
     args.append(limit)
     with closing(connect()) as con:
         rows = [dict(x) for x in con.execute(sql, args).fetchall()]
@@ -229,6 +238,25 @@ async def import_file(request: Request, file: UploadFile = File(...), user: dict
                     [(p.employee_code,p.happened_at,p.device_id,p.status_code,p.verification_code,p.work_code,batch_id) for p in records],
                 )
                 inserted = con.total_changes - before
+                # Device enrollment and scan history are separate. Each unknown
+                # employee ID appearing in a log creates a placeholder staff row.
+                # A later user.dat import fills in the device-registered name.
+                limits = {}
+                for p in records:
+                    earliest, latest = limits.get(p.employee_code, (p.happened_at, p.happened_at))
+                    limits[p.employee_code] = (min(earliest, p.happened_at), max(latest, p.happened_at))
+                con.executemany(
+                    """INSERT INTO staff(employee_code,first_scan_at,last_scan_at)
+                       VALUES(?,?,?)
+                       ON CONFLICT(employee_code) DO UPDATE SET
+                         first_scan_at=CASE WHEN staff.first_scan_at IS NULL OR
+                           staff.first_scan_at > excluded.first_scan_at
+                           THEN excluded.first_scan_at ELSE staff.first_scan_at END,
+                         last_scan_at=CASE WHEN staff.last_scan_at IS NULL OR
+                           staff.last_scan_at < excluded.last_scan_at
+                           THEN excluded.last_scan_at ELSE staff.last_scan_at END""",
+                    [(code, start, end) for code, (start, end) in limits.items()],
+                )
                 con.execute("UPDATE import_batches SET inserted_records=? WHERE id=?", (inserted,batch_id))
                 con.execute(
                     "INSERT INTO audit_events(actor_id,action,entity,entity_id,details) VALUES(?,?,?,?,?)",
@@ -286,3 +314,124 @@ def review_fieldwork(item_id: int, payload: DecisionInput, request: Request, use
                 (user["id"],payload.decision,"fieldwork",item_id),
             )
     return {"ok": True, "status": payload.decision}
+
+
+# ── USB device directory (no biometric templates) ───────────────────────────
+
+def _directory_file(file: UploadFile, raw: bytes):
+    filename = (file.filename or "").lower()
+    try:
+        if filename == "user.dat":
+            return "user", parse_user_dat(raw)
+        if filename == "department.dat":
+            return "department", parse_department_dat(raw)
+    except ValueError as exc:
+        raise HTTPException(400, str(exc)) from exc
+    raise HTTPException(400, "Only user.dat and department.dat are supported. Never upload template.fp10 files.")
+
+
+@app.get("/api/staff")
+def staff_directory(user: dict = Depends(current_user)):
+    with closing(connect()) as con:
+        employees = [dict(row) for row in con.execute(
+            """SELECT employee_code,device_name,origin,first_scan_at,last_scan_at,last_roster_sync
+               FROM staff ORDER BY CAST(employee_code AS INTEGER), employee_code LIMIT 500"""
+        ).fetchall()]
+        departments = [dict(row) for row in con.execute(
+            "SELECT department_code,device_name FROM departments ORDER BY CAST(department_code AS INTEGER)"
+        ).fetchall()]
+        import_history = [dict(row) for row in con.execute(
+            "SELECT kind,record_count,imported_at FROM directory_imports ORDER BY id DESC LIMIT 8"
+        ).fetchall()]
+    return {"employees": employees, "departments": departments, "directory_imports": import_history,
+            "note": "Staff are synced from USB snapshots, NOT live. Department membership not verified."}
+
+
+@app.post("/api/device-directory/preview")
+async def directory_preview(request: Request, file: UploadFile = File(...), user: dict = Depends(require_admin)):
+    require_csrf(request)
+    raw = await file.read(MAX_ROSTER_BYTES + 1)
+    kind, rows = _directory_file(file, raw)
+    with closing(connect()) as con:
+        existing = con.execute("SELECT id FROM directory_imports WHERE file_sha256=?", (digest(raw),)).fetchone()
+    return {"kind": kind, "count": len(rows), "already_imported": bool(existing),
+            "message": "Preview only; no directory records saved. Names and fingerprint data are not shown here."}
+
+
+@app.post("/api/device-directory/import")
+async def directory_import(request: Request, file: UploadFile = File(...), user: dict = Depends(require_admin)):
+    require_csrf(request)
+    raw = await file.read(MAX_ROSTER_BYTES + 1)
+    kind, rows = _directory_file(file, raw)
+    with closing(connect()) as con:
+        try:
+            with con:
+                cur = con.execute(
+                    "INSERT INTO directory_imports(file_sha256,kind,record_count,imported_by) VALUES(?,?,?,?)",
+                    (digest(raw), kind, len(rows), user["id"]),
+                )
+                if kind == "user":
+                    con.executemany(
+                        """INSERT INTO staff(employee_code,device_name,origin,last_roster_sync)
+                           VALUES(?,?,'user_export',CURRENT_TIMESTAMP)
+                           ON CONFLICT(employee_code) DO UPDATE SET
+                             device_name=excluded.device_name,
+                             origin='user_export',
+                             last_roster_sync=CURRENT_TIMESTAMP""",
+                        [(row.employee_code, row.device_name) for row in rows],
+                    )
+                else:
+                    con.executemany(
+                        """INSERT INTO departments(department_code,device_name)
+                           VALUES(?,?)
+                           ON CONFLICT(department_code) DO UPDATE SET
+                             device_name=excluded.device_name,
+                             last_roster_sync=CURRENT_TIMESTAMP""",
+                        [(row.department_code, row.department_name) for row in rows],
+                    )
+                con.execute(
+                    "INSERT INTO audit_events(actor_id,action,entity,entity_id,details) VALUES(?,?,?,?,?)",
+                    (user["id"], "device_directory_import", "directory_import", cur.lastrowid,
+                     kind + " metadata only; biometric templates ignored"),
+                )
+        except sqlite3.IntegrityError as exc:
+            if "file_sha256" in str(exc):
+                raise HTTPException(409, "This exact directory file was already imported.") from exc
+            raise HTTPException(409, "Could not import directory metadata.") from exc
+    return {"kind": kind, "count": len(rows), "message": "Directory metadata updated. K14 device unchanged."}
+
+
+# ── Local numeric work-code labels. These DO NOT configure the K14. ─────────
+
+@app.get("/api/work-codes")
+def get_work_codes(user: dict = Depends(current_user)):
+    with closing(connect()) as con:
+        configured = [dict(x) for x in con.execute(
+            "SELECT numeric_code,label,updated_at FROM work_code_mappings ORDER BY CAST(numeric_code AS INTEGER)"
+        ).fetchall()]
+        observed = [dict(x) for x in con.execute(
+            """SELECT work_code AS numeric_code,COUNT(*) AS scan_count
+               FROM punches GROUP BY work_code ORDER BY CAST(work_code AS INTEGER)"""
+        ).fetchall()]
+    return {"configured": configured, "observed": observed,
+            "note": "Mappings are LOCAL labels only; they do not change device work codes or scans."}
+
+
+@app.post("/api/work-codes")
+def save_work_code(payload: WorkCodeInput, request: Request, user: dict = Depends(require_admin)):
+    require_csrf(request)
+    with closing(connect()) as con:
+        with con:
+            con.execute(
+                """INSERT INTO work_code_mappings(numeric_code,label,created_by)
+                   VALUES(?,?,?)
+                   ON CONFLICT(numeric_code) DO UPDATE SET
+                   label=excluded.label,updated_at=CURRENT_TIMESTAMP""",
+                (payload.numeric_code, payload.label.strip(), user["id"]),
+            )
+            con.execute(
+                "INSERT INTO audit_events(actor_id,action,entity,entity_id,details) VALUES(?,?,?,?,?)",
+                (user["id"], "work_code_label", "work_code_mappings", 0,
+                 "Updated local label for numeric code " + payload.numeric_code),
+            )
+    return {"ok": True, "device_updated": False}
