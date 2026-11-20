@@ -50,6 +50,22 @@ CREATE TABLE IF NOT EXISTS punches (
 );
 CREATE INDEX IF NOT EXISTS idx_punch_date ON punches(happened_at);
 CREATE INDEX IF NOT EXISTS idx_punch_employee ON punches(employee_code,happened_at);
+CREATE INDEX IF NOT EXISTS idx_punch_work_code ON punches(device_id,work_code);
+CREATE TABLE IF NOT EXISTS employees (
+ employee_code TEXT PRIMARY KEY,
+ display_name TEXT NOT NULL DEFAULT '',
+ department TEXT NOT NULL DEFAULT '',
+ name_source TEXT NOT NULL DEFAULT 'scan',
+ updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+CREATE TABLE IF NOT EXISTS work_codes (
+ device_id TEXT NOT NULL,
+ work_code TEXT NOT NULL,
+ label TEXT NOT NULL DEFAULT '',
+ activity_type TEXT NOT NULL DEFAULT 'Unclassified',
+ updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+ PRIMARY KEY(device_id,work_code)
+);
 CREATE TABLE IF NOT EXISTS fieldwork (
  id INTEGER PRIMARY KEY AUTOINCREMENT,
  employee_code TEXT NOT NULL,
@@ -66,6 +82,25 @@ CREATE TABLE IF NOT EXISTS fieldwork (
  CHECK(end_at > start_at)
 );
 CREATE INDEX IF NOT EXISTS idx_fieldwork_status ON fieldwork(status, start_at);
+CREATE TABLE IF NOT EXISTS activity_records (
+ id INTEGER PRIMARY KEY AUTOINCREMENT,
+ employee_code TEXT NOT NULL,
+ category TEXT NOT NULL CHECK(category IN ('AJA','Fieldwork','Official Business','Travel Order')),
+ reference TEXT NOT NULL DEFAULT '',
+ purpose TEXT NOT NULL DEFAULT '',
+ start_at TEXT NOT NULL,
+ end_at TEXT NOT NULL,
+ status TEXT NOT NULL DEFAULT 'recorded' CHECK(status IN ('recorded','voided')),
+ recorded_by INTEGER NOT NULL REFERENCES users(id),
+ created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+ voided_by INTEGER REFERENCES users(id),
+ voided_at TEXT,
+ void_reason TEXT NOT NULL DEFAULT '',
+ CHECK(end_at > start_at)
+);
+CREATE INDEX IF NOT EXISTS idx_activity_employee ON activity_records(employee_code,start_at,end_at);
+CREATE UNIQUE INDEX IF NOT EXISTS idx_activity_duplicate ON activity_records
+ (employee_code,category,start_at,end_at,reference,purpose) WHERE status='recorded';
 CREATE TABLE IF NOT EXISTS audit_events (
  id INTEGER PRIMARY KEY AUTOINCREMENT,
  actor_id INTEGER NOT NULL REFERENCES users(id),
@@ -81,3 +116,10 @@ CREATE TABLE IF NOT EXISTS audit_events (
 def initialize() -> None:
     with connect() as con:
         con.executescript(SCHEMA)
+        register_scan_metadata(con)
+
+
+def register_scan_metadata(con: sqlite3.Connection) -> None:
+    """Register IDs/codes seen in logs without inventing names or code meanings."""
+    con.execute("INSERT OR IGNORE INTO employees(employee_code) SELECT DISTINCT employee_code FROM punches")
+    con.execute("INSERT OR IGNORE INTO work_codes(device_id,work_code) SELECT DISTINCT device_id,work_code FROM punches")

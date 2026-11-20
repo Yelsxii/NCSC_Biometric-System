@@ -32,6 +32,8 @@ def digest(raw: bytes) -> str:
 def parse_attlog(raw: bytes) -> list[Punch]:
     if not raw or len(raw) > MAX_BYTES:
         raise ValueError("Attendance log must be nonempty and under 2 MB.")
+    if b"\0" in raw:
+        raise ValueError("This is not a text attendance log. Choose the original _attlog.dat attendance export, not a user/fingerprint backup.")
     try:
         content = raw.decode("utf-8-sig")
     except UnicodeDecodeError:
