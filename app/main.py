@@ -21,10 +21,11 @@ from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, Field, field_validator, model_validator
 from starlette.middleware.sessions import SessionMiddleware
 
-from app.db import connect, initialize
+from app.db import connect, initialize, register_scan_metadata
 from app.parser import MAX_BYTES, digest, parse_attlog
 from app.security import check_password
 from app.reports import preview_k14_report
+from app.registry import parse_staff, clean
 
 load_dotenv()
 secret = os.environ.get("SECRET_KEY", "")
@@ -131,6 +132,26 @@ class VoidInput(BaseModel):
         return value.strip() if isinstance(value, str) else value
 
 
+class EmployeeInput(BaseModel):
+    display_name: str = Field(min_length=1, max_length=140)
+    department: str = Field(default="", max_length=140)
+
+    @field_validator("display_name", "department", mode="before")
+    @classmethod
+    def valid_text(cls, value):
+        return clean(value, 140, "Staff metadata") if isinstance(value, str) else value
+
+
+class WorkCodeInput(BaseModel):
+    label: str = Field(min_length=1, max_length=100)
+    activity_type: Literal["Unclassified", "Regular", "AJA", "Fieldwork", "Official Business", "Travel Order"]
+
+    @field_validator("label", mode="before")
+    @classmethod
+    def valid_label(cls, value):
+        return clean(value, 100, "Work code label") if isinstance(value, str) else value
+
+
 @app.get("/")
 def home():
     return FileResponse(ROOT / "index.html")
@@ -168,7 +189,7 @@ def overview(user: dict = Depends(current_user)):
     with closing(connect()) as con:
         totals = {
             "scans": con.execute("SELECT COUNT(*) FROM punches").fetchone()[0],
-            "employees": con.execute("SELECT COUNT(DISTINCT employee_code) FROM punches").fetchone()[0],
+            "employees": con.execute("SELECT COUNT(*) FROM employees").fetchone()[0],
             "imports": con.execute("SELECT COUNT(*) FROM import_batches").fetchone()[0],
             "activities": con.execute("SELECT COUNT(*) FROM activity_records WHERE status='recorded'").fetchone()[0],
         }
@@ -207,23 +228,24 @@ def punches(limit: int = 100, employee_code: str = "", offset: int = 0,
         raise HTTPException(400, "Dates must be between 2000 and 2100.")
     if date_from and date_to and date_to < date_from:
         raise HTTPException(400, "End date must be on or after the start date.")
-    sql = ("SELECT id,employee_code,happened_at,device_id,status_code,verification_code,work_code "
-           "FROM punches ")
+    sql = ("SELECT p.id,p.employee_code,e.display_name,p.happened_at,p.device_id,p.status_code,p.verification_code,p.work_code, "
+           "w.label AS work_label,w.activity_type FROM punches p LEFT JOIN employees e ON e.employee_code=p.employee_code "
+           "LEFT JOIN work_codes w ON w.device_id=p.device_id AND w.work_code=p.work_code ")
     args: list = []
     filters = []
     if employee_code:
-        filters.append("employee_code=?")
+        filters.append("p.employee_code=?")
         args.append(employee_code)
     if date_from:
-        filters.append("happened_at>=?")
+        filters.append("p.happened_at>=?")
         args.append(date_from.isoformat())
     if date_to:
-        filters.append("happened_at<?")
+        filters.append("p.happened_at<?")
         args.append((date_to + dt.timedelta(days=1)).isoformat())
     where = "WHERE " + " AND ".join(filters) + " " if filters else ""
-    sql += where + "ORDER BY happened_at DESC, id DESC LIMIT ? OFFSET ?"
+    sql += where + "ORDER BY p.happened_at DESC, p.id DESC LIMIT ? OFFSET ?"
     with closing(connect()) as con:
-        total = con.execute("SELECT COUNT(*) FROM punches " + where, args).fetchone()[0]
+        total = con.execute("SELECT COUNT(*) FROM punches p " + where, args).fetchone()[0]
         rows = [dict(x) for x in con.execute(sql, [*args, limit, offset]).fetchall()]
     return {"items": rows, "total": total,
             "note": "Raw codes are not yet verified as clock-IN or clock-OUT."}
@@ -259,7 +281,7 @@ async def preview(request: Request, file: UploadFile = File(...), user: dict = D
 async def import_file(request: Request, file: UploadFile = File(...), user: dict = Depends(require_admin)):
     require_csrf(request)
     if (file.filename or "").lower().endswith(".xls"):
-        raise HTTPException(400, "Excel reports are preview-only. Import the original _attlog.dat source file.")
+        raise HTTPException(400, "Excel reports cannot supply raw scans. Use Import staff names for the roster, or select the _attlog.dat file for attendance.")
     raw = await file.read(MAX_BYTES + 1)
     try:
         records = parse_attlog(raw)
@@ -283,6 +305,7 @@ async def import_file(request: Request, file: UploadFile = File(...), user: dict
                     [(p.employee_code,p.happened_at,p.device_id,p.status_code,p.verification_code,p.work_code,batch_id) for p in records],
                 )
                 inserted = con.total_changes - before
+                register_scan_metadata(con)
                 con.execute("UPDATE import_batches SET inserted_records=? WHERE id=?", (inserted,batch_id))
                 con.execute(
                     "INSERT INTO audit_events(actor_id,action,entity,entity_id,details) VALUES(?,?,?,?,?)",
@@ -370,11 +393,113 @@ def void_activity(item_id: int, payload: VoidInput, request: Request, user: dict
 @app.get("/api/employees")
 def employee_ids(user: dict = Depends(current_user)):
     with closing(connect()) as con:
-        items = [r[0] for r in con.execute(
+        codes = [r[0] for r in con.execute(
             "SELECT employee_code FROM punches UNION SELECT employee_code FROM activity_records "
-            "UNION SELECT employee_code FROM fieldwork ORDER BY employee_code"
+            "UNION SELECT employee_code FROM fieldwork UNION SELECT employee_code FROM employees ORDER BY employee_code"
+        )]
+        names = {r["employee_code"]: dict(r) for r in con.execute("SELECT * FROM employees")}
+    return {"items": codes, "staff": [names.get(code, {"employee_code": code, "display_name": "", "department": "", "name_source": "reference"}) for code in codes]}
+
+
+@app.put("/api/employees/{employee_code}")
+def save_employee(employee_code: str, payload: EmployeeInput, request: Request, user: dict = Depends(require_admin)):
+    require_csrf(request)
+    if not CODE_RE.fullmatch(employee_code):
+        raise HTTPException(400, "Invalid employee ID.")
+    with closing(connect()) as con, con:
+        con.execute(
+            "INSERT INTO employees(employee_code,display_name,department,name_source) VALUES(?,?,?,'manual') "
+            "ON CONFLICT(employee_code) DO UPDATE SET display_name=excluded.display_name,department=excluded.department,"
+            "name_source='manual',updated_at=CURRENT_TIMESTAMP",
+            (employee_code,payload.display_name,payload.department),
+        )
+        con.execute("INSERT INTO audit_events(actor_id,action,entity,entity_id,details) VALUES(?,?,?,0,?)",
+                    (user["id"],"saved","employee",employee_code))
+    return {"ok": True}
+
+
+def roster_changes(con, rows: list[dict]) -> list[dict]:
+    existing = {r["employee_code"]: dict(r) for r in con.execute("SELECT * FROM employees")}
+    result = []
+    for row in rows:
+        old = existing.get(row["employee_code"])
+        change = "new"
+        if old:
+            conflict = any(old[key] and row[key] and old[key] != row[key] for key in ("display_name", "department"))
+            fills = any(not old[key] and row[key] for key in ("display_name", "department"))
+            change = "conflict" if conflict else "fill" if fills else "unchanged"
+        result.append({**row, "change": change, "existing_name": old["display_name"] if old else ""})
+    return result
+
+
+async def read_roster(file: UploadFile) -> list[dict]:
+    raw = await file.read(MAX_BYTES + 1)
+    try:
+        return parse_staff(raw, file.filename or "")
+    except ValueError as exc:
+        raise HTTPException(400, str(exc)) from exc
+
+
+@app.post("/api/employees/import/preview")
+async def preview_employees(request: Request, file: UploadFile = File(...), user: dict = Depends(require_admin)):
+    require_csrf(request)
+    rows = await read_roster(file)
+    with closing(connect()) as con:
+        changes = roster_changes(con, rows)
+    counts = {kind: sum(row["change"] == kind for row in changes) for kind in ("new", "fill", "unchanged", "conflict")}
+    return {"total": len(changes), "counts": counts, "items": changes[:100], "preview_limit": 100}
+
+
+@app.post("/api/employees/import")
+async def import_employees(request: Request, file: UploadFile = File(...), user: dict = Depends(require_admin)):
+    require_csrf(request)
+    rows = await read_roster(file)
+    with closing(connect()) as con, con:
+        # Acquire the write transaction before comparing names to avoid a stale
+        # preview overwriting a concurrently edited staff record.
+        con.execute("BEGIN IMMEDIATE")
+        changes = roster_changes(con, rows)
+        for row in changes:
+            if row["change"] == "new":
+                con.execute("INSERT INTO employees(employee_code,display_name,department,name_source) VALUES(?,?,?,'roster')",
+                            (row["employee_code"],row["display_name"],row["department"]))
+            elif row["change"] == "fill":
+                con.execute(
+                    "UPDATE employees SET display_name=CASE WHEN display_name='' THEN ? ELSE display_name END,"
+                    "department=CASE WHEN department='' THEN ? ELSE department END,name_source='roster',updated_at=CURRENT_TIMESTAMP "
+                    "WHERE employee_code=?", (row["display_name"],row["department"],row["employee_code"]),
+                )
+        counts = {kind: sum(row["change"] == kind for row in changes) for kind in ("new", "fill", "unchanged", "conflict")}
+        con.execute("INSERT INTO audit_events(actor_id,action,entity,entity_id,details) VALUES(?,?,?,0,?)",
+                    (user["id"],"imported","employee_roster",str(counts)))
+    return {"total": len(changes), "counts": counts}
+
+
+@app.get("/api/work-codes")
+def work_code_list(user: dict = Depends(current_user)):
+    with closing(connect()) as con:
+        items = [dict(r) for r in con.execute(
+            "SELECT w.*,COUNT(p.id) AS scan_count FROM work_codes w LEFT JOIN punches p "
+            "ON p.device_id=w.device_id AND p.work_code=w.work_code GROUP BY w.device_id,w.work_code ORDER BY w.device_id,w.work_code"
         )]
     return {"items": items}
+
+
+@app.put("/api/work-codes/{device_id}/{work_code}")
+def save_work_code(device_id: str, work_code: str, payload: WorkCodeInput, request: Request,
+                   user: dict = Depends(require_admin)):
+    require_csrf(request)
+    if not CODE_RE.fullmatch(device_id) or not CODE_RE.fullmatch(work_code):
+        raise HTTPException(400, "Invalid device or work code.")
+    with closing(connect()) as con, con:
+        con.execute(
+            "INSERT INTO work_codes(device_id,work_code,label,activity_type) VALUES(?,?,?,?) "
+            "ON CONFLICT(device_id,work_code) DO UPDATE SET label=excluded.label,activity_type=excluded.activity_type,updated_at=CURRENT_TIMESTAMP",
+            (device_id,work_code,payload.label,payload.activity_type),
+        )
+        con.execute("INSERT INTO audit_events(actor_id,action,entity,entity_id,details) VALUES(?,?,?,0,?)",
+                    (user["id"],"mapped","work_code",device_id + ":" + work_code))
+    return {"ok": True}
 
 
 @app.get("/api/dtr/monitor")
@@ -398,10 +523,12 @@ def monitor_dtr(employee_code: str, month: str, user: dict = Depends(current_use
     end = start + dt.timedelta(days=day_count)
     with closing(connect()) as con:
         scans = [dict(x) for x in con.execute(
-            "SELECT id,happened_at,device_id,status_code,verification_code,work_code FROM punches "
-            "WHERE employee_code=? AND happened_at>=? AND happened_at<? ORDER BY happened_at,id LIMIT 10001",
+            "SELECT p.id,p.happened_at,p.device_id,p.status_code,p.verification_code,p.work_code,w.label AS work_label,w.activity_type "
+            "FROM punches p LEFT JOIN work_codes w ON w.device_id=p.device_id AND w.work_code=p.work_code "
+            "WHERE p.employee_code=? AND p.happened_at>=? AND p.happened_at<? ORDER BY p.happened_at,p.id LIMIT 10001",
             (employee_code,start.isoformat(),end.isoformat()),
         )]
+        employee = con.execute("SELECT display_name FROM employees WHERE employee_code=?", (employee_code,)).fetchone()
         activities = [dict(x) for x in con.execute(
             "SELECT id,category,reference,purpose,start_at,end_at FROM activity_records "
             "WHERE employee_code=? AND status='recorded' AND start_at<? AND end_at>? ORDER BY start_at,id LIMIT 1001",
@@ -419,7 +546,7 @@ def monitor_dtr(employee_code: str, month: str, user: dict = Depends(current_use
         rows.append({"date": date.isoformat(), "day": date.strftime("%a"),
                      "scans": day_scans, "activities": support,
                      "coverage": "scans" if day_scans else "reference_only" if support else "no_records"})
-    return {"employee_code": employee_code, "month": month, "days": rows,
+    return {"employee_code": employee_code, "display_name": employee[0] if employee else "", "month": month, "days": rows,
             "summary": {"scans": len(scans), "days_with_scans": sum(bool(r["scans"]) for r in rows),
                         "activity_records": len(activities)},
             "calculation_status": "not_calculated"}

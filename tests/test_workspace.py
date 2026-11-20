@@ -49,7 +49,7 @@ def test_report_preview_requires_auth_and_never_inserts_scans(admin):
     assert preview.json()["period"] == "2026-11-01 to 2026-11-19"
     rejected = client.post("/api/imports", files={"file": ("report.xls", raw)}, headers=headers)
     assert rejected.status_code == 400
-    assert "preview-only" in rejected.json()["detail"]
+    assert "Import staff names" in rejected.json()["detail"]
     with closing(connect()) as con:
         for table in ("punches", "import_batches", "audit_events"):
             assert con.execute(f"SELECT COUNT(*) FROM {table}").fetchone()[0] == 0

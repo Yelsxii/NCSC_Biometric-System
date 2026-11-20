@@ -258,6 +258,20 @@ td .scan-day { font-size: .75rem; color: #929db3; }
 .monitor-table { min-width: 650px; }
 .monitor-table td { vertical-align: top; }
 .monitor-table .scan-day { display: block; margin-top: 4px; }
+.scan-work-label { display: block; max-width: 150px; white-space: normal; font-size: .75rem; margin-top: 3px; }
+.registry-layout { grid-template-columns: minmax(0,1.5fr) minmax(0,1fr); }
+.registry-layout > .panel { min-width: 0; }
+.registry-layout .section-top { flex-wrap: wrap; gap: 14px; }
+.registry-tools { display: flex; gap: 12px; margin: 22px 0 10px; }
+.registry-tools input { min-width: 0; }
+.registry-layout td .scan-day, #punch-rows .scan-day, #roster-preview .scan-day { display: block; margin-top: 5px; }
+.roster-dialog { width: min(740px,calc(100% - 32px)); padding: 30px; border-radius: 18px; }
+.roster-dialog h2 { margin-top: 0; }
+.roster-dialog td { white-space: normal; overflow-wrap: anywhere; }
+.roster-file { display: grid; gap: 8px; font-size: .875rem; }
+#roster-preview { margin-top: 20px; }
+#roster-preview .table-scroll { max-height: 340px; }
+#view-imported, #report-staff { margin-top: 18px; }
 .scan-times { display: flex; flex-wrap: wrap; gap: 6px; max-width: 350px; }
 .scan-time { display: inline-block; font-variant-numeric: tabular-nums; padding: 4px 7px; background: #f0f3fb; color: #354f8f; border-radius: 5px; font-size: .875rem; }
 .monitor-reference { display: grid; gap: 4px; max-width: 350px; white-space: normal; overflow-wrap: anywhere; margin-bottom: 8px; }
@@ -274,6 +288,7 @@ td .scan-day { font-size: .75rem; color: #929db3; }
   .sidebar { width: 215px; padding-left: 13px; padding-right: 13px; } .nav-item { padding: 0 12px; gap: 9px; } .nav-item.active::before { left: -13px; } .brand { font-size: 1.5rem; gap: 9px; } .brand .seal { width: 43px; height: 43px; } .brand .brand-sub { font-size: .65rem; } .topbar { padding: 0 25px; } #main-content { padding: 25px; } .metrics { gap: 12px; } .metric { padding: 16px; } .metric-period { font-size: .65rem; } .overview-grid { grid-template-columns: 1.1fr 1fr; } .panel { padding: 20px; }
 }
 @media (max-width: 1000px) {
+  .registry-layout { grid-template-columns: 1fr; }
   .sidebar { width: 205px; } .brand .brand-sub { font-size: .62rem; } .brand .seal { width: 38px; height: 38px; } .nav-item { gap: 8px; padding: 0 10px; font-size: .8rem; } .nav-item .icon { width: 17px; height: 17px; } .metrics { grid-template-columns: repeat(2,minmax(0,1fr)); } .overview-grid, .two-col { grid-template-columns: 1fr; } .page-heading h1 { font-size: 1.65rem; } .chart-bar { width: min(40px,65%); }
 }
 @media (max-width: 740px) {

@@ -6,13 +6,15 @@ Local **DTR monitoring workspace** for ZKTeco K14 scans and existing **AJA / Fie
 
 ## What's included
 
-- Modern responsive web UI (Overview, DTR Monitoring, Attendance Logs, USB Imports, Activity References)
+- Modern responsive web UI (Overview, DTR Monitoring, Attendance Logs, USB Imports, Staff & Work Codes, Activity References)
 - FastAPI backend and local SQLite database
 - Admin sign-in with scrypt password hashing, signed session cookie, and CSRF protection
 - USB attendance log **preview** and import
 - Duplicate-safe original scan events and recorded import batches
 - Optional references to existing office activities, saved directly without a second approval; audited void/correction history
 - Raw K14 device status/verification/work codes preserved **without guessing IN or OUT**
+- Staff database keyed by device employee ID, populated automatically from scans and enriched with names from the K14 .xls report or a CSV roster
+- Per-device work-code labels and activity types, left unclassified until mapped to the actual device configuration
 - A future LAN-sync adapter can be added without changing the database's record model
 - NCSC blue, red, and white theme with the supplied seal and locally served NCSC photography
 - Direct sign-in page with NCSC photography, a fingerprint emblem, password visibility control, and inline login errors
@@ -101,7 +103,7 @@ Select an exact employee ID and/or inclusive From/To dates to filter scans. Use 
 
 ### Excel device reports
 
-USB imports also previews legacy **.xls** K14 reports containing an `Att.log report` worksheet. The preview shows the reporting period, unique device IDs, and worksheet structure. It does not save report contents, infer IN/OUT events, or import calculated attendance/OT totals. Use the original `_attlog.dat` for source scan ingestion. Other workbook layouts and `.xlsx` are not supported by this preview.
+USB imports also previews legacy **.xls** K14 reports containing an `Att.log report` worksheet. The preview shows the reporting period, unique device IDs, and worksheet structure. This attendance preview does not save report contents, infer IN/OUT events, or import calculated attendance/OT totals. Select **Import staff names from this report** to preview and save the ID/name/department roster separately. Use the original `_attlog.dat` for source scan ingestion. Other workbook layouts and `.xlsx` are not supported by this preview.
 
 ### Supported K14 six-field log format
 
@@ -110,6 +112,26 @@ EMP001<TAB>2026-11-03 07:21:07<TAB>1<TAB>0<TAB>1<TAB>0
 ```
 
 Fields: employee ID, scan timestamp, device ID, **raw status code**, **raw verification code**, raw work code. Field meaning should be confirmed with the exact firmware/device configuration before classifying any scan as IN/OUT. The example uses a **fictional** ID.
+
+## Staff database and device work codes
+
+The biometric device remains where staff enroll. Staff here are attendance identities, separate from administrator/reviewer login accounts. Importing attendance automatically registers its employee IDs and observed `(device_id, work_code)` pairs. It does not invent names or meanings; code `0` is not automatically treated as Regular or AJA.
+
+1. **Staff & work codes → Import staff names**: choose the device's `.xls` report with the `Att.log report` worksheet, preview the roster, then select **Import names**. This reads only ID, name and department headers. It does not import biometrics, passwords, card data or calculated attendance totals.
+2. Alternatively, use a UTF-8 CSV with headers `employee_code,display_name,department`; the department column may be omitted. Keep IDs as text to preserve leading zeroes. The roster may include staff with no scans yet.
+3. Roster import creates staff or fills missing names/departments. It never overwrites conflicting existing details. Check conflicts and use **Edit** to correct the staff metadata deliberately. Reimporting a roster does not duplicate staff.
+4. In **Device work codes**, map each observed code to the actual device label and activity type. The mapping applies only to that device ID. You may also add a code from the device's existing list before it appears in a scan.
+5. Attendance logs and DTR monitoring display the linked staff name and work-code label while retaining the original device IDs, codes and timestamps.
+
+Binary `user.dat` backups and binary Work Code exports have firmware-dependent layouts and are not supported by this importer. No device write, re-enrollment or live LAN download is implemented. Use the readable report for names and the actual device list to verify code labels.
+
+### If import or attendance looks empty
+
+- Use **USB imports** for the original `_attlog.dat` / `.txt` attendance export. The `.xls` report supplies staff names through the separate roster import; it does not supply exact raw scan events.
+- Select **Preview file**, then **Import records**, then **View imported attendance**. That last button resets old attendance filters.
+- Same-file reimport is intentionally blocked. A successful roster import adds names, not attendance scans.
+- Invalid-file and server errors stay below the import form until the next attempt. Record that exact error if the problem persists.
+- Pull the latest branch, restart Uvicorn, and press Ctrl+F5 if the browser or server is still running an earlier version. Keep the app at `http://127.0.0.1:8000` rather than opening `index.html` directly.
 
 ## DTR monitoring workflow
 
@@ -140,7 +162,7 @@ Current monitoring is an evidence view, not an automatically completed or export
 
 ## Pilot limitations and next development stages
 
-1. **Employee registry and mapping:** manage verified staff ↔ K14 ID mapping. Currently IDs appear as exported.
+1. **Live device metadata:** staff IDs, roster imports and work-code mapping are implemented locally. Read-only automatic retrieval of enrolled staff and work-code definitions still requires verified device connectivity and a compatible connector.
 2. **Existing activity records:** add a source import/connector for the current office register if available, so staff do not re-encode already recorded AJA or orders. Manual references remain optional.
 3. **NCSC DTR output:** match verified AM/PM scan meanings, existing DTR formulas and the exact printable template before implementing automated filling, undertime or export. Do not add independent lunch deductions or new attendance policy.
 4. **Network sync adapter:** when authorized, verify actual Ethernet connectivity, K14 SDK/protocol, and a **read-only** pull path. The existing import/punch schema is designed for both USB and future LAN sources.
@@ -180,7 +202,7 @@ NCSC_Biometric-System/
 .\.venv\Scripts\python.exe -m pytest -q
 ```
 
-GitHub Actions also runs an isolated Chromium smoke check for direct sign-in, session restore/logout, raw-log preview/import/deduplication, Excel report preview, filtering, activity references and audited corrections, daily monitoring, and 1440/768/390/320px layouts. Its `ncsc-design-previews` artifact contains screenshots with fictional data only.
+GitHub Actions also runs an isolated Chromium smoke check for direct sign-in, session restore/logout, raw-log preview/import/deduplication, Excel report preview, filtering, persistent import errors, staff roster import, work-code mapping, linked names, activity references and audited corrections, daily monitoring, and 1440/768/390/320px layouts. Its `ncsc-design-previews` artifact contains screenshots with fictional data only.
 
 Optional local browser check (Node.js is needed only for this check):
 

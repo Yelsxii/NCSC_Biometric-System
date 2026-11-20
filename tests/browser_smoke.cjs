@@ -83,6 +83,10 @@ uvicorn.run('app.main:app',host='127.0.0.1',port=int(os.environ['QA_PORT']),log_
     await page.locator('#metric-scans').filter({hasText:/^0$/}).waitFor();
     await page.locator('[data-page="imports"]').click();
     assert.equal(await page.locator('#import-submit').isEnabled(), false);
+    await page.locator('#attendance-file').setInputFiles({name:'bad.dat',mimeType:'text/plain',buffer:Buffer.from('invalid export')});
+    await page.locator('#preview-btn').click();
+    await page.locator('#import-error:not(.hidden)').waitFor();
+    assert.equal(await page.locator('#import-submit').isEnabled(),false);
     const sample = Buffer.from('DEMO001\t2026-11-03 07:21:07\t1\t0\t1\t0\nDEMO001\t2026-11-03 17:05:45\t1\t4\t1\t0\nDEMO002\t2026-11-04 08:12:00\t1\t0\t1\t0\n');
     await page.locator('#attendance-file').setInputFiles({name:'fictional.txt',mimeType:'text/plain',buffer:sample});
     await page.locator('#preview-btn').click();
@@ -90,6 +94,9 @@ uvicorn.run('app.main:app',host='127.0.0.1',port=int(os.environ['QA_PORT']),log_
     assert.equal(await page.locator('#import-submit').isEnabled(),true);
     await page.locator('#import-submit').click();
     await page.getByRole('heading',{name:'Import complete'}).waitFor();
+    await page.locator('#view-imported').click();
+    await page.locator('#punch-count').filter({hasText:'1–3 of 3 records'}).waitFor();
+    await page.locator('[data-page="imports"]').click();
     await page.locator('#preview-btn').click();
     await page.getByText('This exact file has already been imported.').waitFor();
     assert.equal(await page.locator('#import-submit').isEnabled(),false);
@@ -97,6 +104,21 @@ uvicorn.run('app.main:app',host='127.0.0.1',port=int(os.environ['QA_PORT']),log_
     await page.locator('#preview-btn').click();
     await page.getByRole('heading',{name:'Excel report preview'}).waitFor();
     assert.equal(await page.locator('#import-submit').isEnabled(),false);
+    await page.locator('#report-staff').click();
+    await page.locator('#staff-import-dialog[open]').waitFor();
+    await page.locator('#preview-staff').click();
+    await page.locator('#roster-preview').getByText('Sample Employee One',{exact:true}).waitFor();
+    assert.equal(await page.locator('#import-staff').isEnabled(),true);
+    await page.locator('#import-staff').click();
+    await page.locator('#roster-preview').getByText('Names saved to the local database. Attendance scans are unchanged.').waitFor();
+    await page.getByRole('button',{name:'Close staff import',exact:true}).click();
+    await page.locator('#staff-rows').getByText('Sample Employee One',{exact:true}).waitFor();
+    await page.locator('#work-code-items').getByRole('button',{name:'Map code',exact:true}).click();
+    await page.locator('#work-label').fill('Sample regular code');
+    await page.locator('#work-type').selectOption('Regular');
+    await page.locator('#save-work-code').click();
+    await page.locator('#work-code-items').getByText('0 · Sample regular code',{exact:true}).waitFor();
+    await page.screenshot({animations:'disabled',path:join(root,'docs/staff-preview.png'),fullPage:true});
     await page.locator('[data-page="attendance"]').click();
     await page.locator('#filter-id').fill('DEMO001');
     await page.locator('#filter-from').fill('2026-11-03');
@@ -104,6 +126,8 @@ uvicorn.run('app.main:app',host='127.0.0.1',port=int(os.environ['QA_PORT']),log_
     await page.getByRole('button',{name:'Apply filters'}).click();
     await page.locator('#punch-count').filter({hasText:'1–2 of 2 records'}).waitFor();
     assert.equal(await page.locator('#punch-rows tr').count(),2);
+    assert.equal(await page.locator('#punch-rows').getByText('Sample Employee One',{exact:true}).count(),2);
+    assert.equal(await page.locator('#punch-rows').getByText('0 · Sample regular code',{exact:true}).count(),2);
     await page.locator('[data-page="fieldwork"]').click();
     const form = page.locator('#fieldwork-form');
     await form.locator('[name="employee_code"]').fill('DEMO001');
@@ -121,7 +145,8 @@ uvicorn.run('app.main:app',host='127.0.0.1',port=int(os.environ['QA_PORT']),log_
     await page.getByRole('button',{name:'View daily records'}).click();
     await page.locator('#dtr-summary').filter({hasText:'Scans: 2 · Days with scans: 1'}).waitFor();
     assert.equal(await page.locator('#dtr-rows tr').count(),30);
-    await page.locator('#dtr-rows').getByText('07:21:07',{exact:true}).waitFor();
+    await page.locator('#dtr-rows .scan-time').filter({hasText:'07:21:07'}).waitFor();
+    await page.locator('#dtr-summary').filter({hasText:'Sample Employee One'}).waitFor();
     await page.locator('#dtr-rows').getByText('FICTIONAL-TO-001',{exact:false}).waitFor();
     assert.equal(await page.locator('#dtr-rows').getByText('Absent',{exact:true}).count(),0);
     await page.screenshot({animations:'disabled',path:join(root,'docs/monitoring-preview.png'),fullPage:true});
@@ -156,7 +181,7 @@ uvicorn.run('app.main:app',host='127.0.0.1',port=int(os.environ['QA_PORT']),log_
       assert.ok(submit.y >= 0 && submit.y+submit.height <= 844, 'Sign-in button exceeds viewport');
       if (width === 390) await page.screenshot({animations:'disabled',path:join(root,'docs/mobile-login-preview.png')});
       await signIn();
-      for (const target of ['overview','attendance','imports','fieldwork','dtr']) {
+      for (const target of ['overview','attendance','imports','fieldwork','dtr','staff']) {
         await page.locator('[data-page="'+target+'"]').click();
         await fits();
       }
@@ -166,7 +191,7 @@ uvicorn.run('app.main:app',host='127.0.0.1',port=int(os.environ['QA_PORT']),log_
       assert.equal(await page.locator('#login-username').inputValue(),'');
     }
     assert.deepEqual(errors,[]);
-    console.log('PASS: direct sign-in without landing/demo, focus and account help, login errors, password visibility, session restore/logout, import preview/dedup, XLS preview, date filters, activity reference recording/void history, daily monitoring, and 1440/768/390/320px layouts.');
+    console.log('PASS: direct sign-in without landing/demo, focus and account help, login errors, password visibility, session restore/logout, import preview/dedup, persistent import errors, XLS staff-name import, work-code mapping, linked names, date filters, activity reference recording/void history, daily monitoring, and 1440/768/390/320px layouts.');
   } finally {
     if (browser) await browser.close();
     server.kill('SIGTERM');

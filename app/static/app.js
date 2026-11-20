@@ -16,11 +16,19 @@ let pendingVoid = null;
 let activityRequest = 0;
 let monitorRequest = 0;
 let employeeRequest = 0;
+let registryRequest = 0;
+let staffRows = [];
+let workRows = [];
+let rosterFile = null;
+let rosterReady = false;
+let rosterBusy = false;
+let rosterVersion = 0;
 const pageSize = 25;
 const pages = {
   overview: ['Overview', 'Attendance records and official activities.'],
   attendance: ['Attendance logs', 'Filter source scans by employee or date.'],
-  imports: ['USB imports', 'Upload and review attendance files.'],
+  imports: ['USB imports', 'Import original attendance scans; use Excel reports for staff names.'],
+  staff: ['Staff & work codes', 'Staff database linked to biometric IDs and device work codes.'],
   fieldwork: ['Activity references', 'Existing AJA, fieldwork and travel orders.'],
   dtr: ['DTR monitoring', 'Check daily scans alongside existing activity references.']
 };
@@ -52,7 +60,9 @@ async function api(path, options = {}) {
   const headers = new Headers(options.headers || {});
   if (session?.csrf && options.method && options.method !== 'GET') headers.set('X-CSRF-Token', session.csrf);
   if (options.body && !(options.body instanceof FormData)) headers.set('Content-Type', 'application/json');
-  const response = await fetch(path, {credentials:'same-origin', ...options, headers});
+  let response;
+  try { response = await fetch(path, {credentials:'same-origin', ...options, headers}); }
+  catch (_) { throw new Error('Cannot reach the local server. Start the application, then retry.'); }
   let result;
   try { result = await response.json(); } catch (_) { result = {}; }
   if (!response.ok) {
@@ -73,6 +83,8 @@ function resetFile() {
   $('preview-output').innerHTML = '';
   $('preview-output').classList.add('hidden');
   $('import-submit').disabled = true;
+  $('import-error').classList.add('hidden'); $('import-error').textContent = '';
+  $('view-imported').classList.add('hidden'); $('report-staff').classList.add('hidden');
 }
 function showAuth() {
   document.querySelectorAll('dialog[open]').forEach(dialog => dialog.close());
@@ -82,7 +94,12 @@ function showAuth() {
   $('login-password').type = 'password';
   $('toggle-password').setAttribute('aria-label', 'Show password');
   $('toggle-password').setAttribute('aria-pressed', 'false');
-  pendingVoid = null; activityRequest++; monitorRequest++; employeeRequest++;
+  pendingVoid = null; activityRequest++; monitorRequest++; employeeRequest++; registryRequest++;
+  staffRows = []; workRows = []; $('staff-rows').innerHTML = ''; $('work-code-items').innerHTML = '';
+  $('staff-form').reset(); $('work-code-form').reset(); $('staff-search').value = '';
+  $('staff-file').value = ''; rosterFile = null; rosterReady = false; rosterVersion++;
+  $('roster-preview').innerHTML = '';
+  for (const id of ['staff-error','staff-save-error','work-save-error','roster-error']) { $(id).textContent = ''; $(id).classList.add('hidden'); }
   $('void-form').reset(); $('dtr-filter').reset(); $('dtr-rows').innerHTML = '';
   $('dtr-employee').innerHTML = '<option value="">Choose employee ID</option>';
   $('known-employees').innerHTML = ''; $('legacy-items').innerHTML = '';
@@ -106,6 +123,8 @@ function showWorkspace() {
   $('preview-btn').disabled = !canWrite;
   $('fieldwork-form').querySelectorAll('input, select, textarea, button').forEach(el => { el.disabled = !canWrite; });
   $('import-access-note').classList.toggle('hidden', canWrite);
+  for (const id of ['open-staff-import','add-staff','add-work-code','preview-staff','import-staff']) $(id).disabled = !canWrite;
+  $('import-staff').disabled = true;
   resetFile();
   $('dtr-month').value = new Date().toLocaleDateString('en-CA', {timeZone:'Asia/Manila'}).slice(0,7);
   const hashPage = location.hash.slice(1);
@@ -121,7 +140,7 @@ function navigate(page) {
   });
   $('page-heading').textContent = pages[page][0]; $('current-location').textContent = pages[page][0];
   $('page-description').textContent = pages[page][1];
-  $('heading-action').classList.toggle('hidden', page === 'imports' || page === 'fieldwork');
+  $('heading-action').classList.toggle('hidden', page === 'imports' || page === 'fieldwork' || page === 'staff');
   $('main-content').scrollTop = 0;
   history.replaceState(null, '', '#' + page);
   document.title = pages[page][0] + ' | NCSC Attendance';
@@ -129,6 +148,7 @@ function navigate(page) {
   if (page === 'attendance') { punchOffset = 0; loadPunches(); }
   if (page === 'fieldwork') { loadFieldwork(); loadEmployees(); }
   if (page === 'dtr') loadEmployees(true);
+  if (page === 'staff') loadRegistry();
 }
 
 function renderChart(days) {
@@ -161,7 +181,7 @@ async function loadPunches() {
   try {
     const result = await api('/api/punches?' + params);
     if (context !== session || requestId !== punchRequest) return;
-    $('punch-rows').innerHTML = result.items.length ? result.items.map(item => '<tr><td>' + escapeHtml(item.employee_code) + '</td><td><span class="scan-date">' + escapeHtml(localDate(item.happened_at)) + ' <strong>' + escapeHtml(item.happened_at.slice(11)) + '</strong></span><span class="scan-day">' + dayLabel(item.happened_at) + ' · Manila time</span></td><td>' + escapeHtml(item.device_id) + '</td><td><span class="tag blue-tag">' + escapeHtml(item.status_code) + '</span></td><td>' + escapeHtml(item.verification_code) + '</td><td>' + escapeHtml(item.work_code) + '</td></tr>').join('') : '<tr><td colspan="6">No matching scans. Try another employee ID or date range.</td></tr>';
+    $('punch-rows').innerHTML = result.items.length ? result.items.map(item => '<tr><td><strong>' + escapeHtml(item.display_name || 'Name not imported') + '</strong><span class="scan-day">ID: ' + escapeHtml(item.employee_code) + '</span></td><td><span class="scan-date">' + escapeHtml(localDate(item.happened_at)) + ' <strong>' + escapeHtml(item.happened_at.slice(11)) + '</strong></span><span class="scan-day">' + dayLabel(item.happened_at) + ' · Manila time</span></td><td>' + escapeHtml(item.device_id) + '</td><td><span class="tag blue-tag">' + escapeHtml(item.status_code) + '</span></td><td>' + escapeHtml(item.verification_code) + '</td><td>' + escapeHtml(item.work_code) + (item.work_label ? ' · ' + escapeHtml(item.work_label) : '<span class="scan-day">Unmapped</span>') + '</td></tr>').join('') : '<tr><td colspan="6">No matching scans. Try another employee ID or date range.</td></tr>';
     $('punch-count').textContent = result.total ? (punchOffset + 1) + '–' + (punchOffset + result.items.length) + ' of ' + result.total.toLocaleString() + ' records · Raw device codes' : '0 matching records';
     $('prev-punches').disabled = punchOffset === 0; $('next-punches').disabled = punchOffset + pageSize >= result.total;
   } catch (error) {
@@ -174,8 +194,8 @@ async function loadPunches() {
 function chooseFile(file) {
   resetFile();
   if (!file) return;
-  if (!/\.(dat|txt|xls)$/i.test(file.name)) { toast('Choose a .dat, .txt, or .xls file.', true); return; }
-  if (!file.size || file.size > 2 * 1024 * 1024) { toast('Choose a nonempty file up to 2 MB.', true); return; }
+  if (!/\.(dat|txt|xls)$/i.test(file.name)) { showInlineError('import-error', 'Choose a .dat/.txt attendance log or .xls report.'); return; }
+  if (!file.size || file.size > 2 * 1024 * 1024) { showInlineError('import-error', 'Choose a nonempty file up to 2 MB.'); return; }
   selectedFile = file; $('file-name').textContent = file.name;
 }
 function previewStat(label, value) {
@@ -187,6 +207,7 @@ async function handleImport(previewOnly) {
   if (!previewOnly && !previewReady) { toast('Preview the selected source log before importing.', true); return; }
   const context = session; const version = fileVersion;
   const data = new FormData(); data.append('file', selectedFile);
+  $('import-error').classList.add('hidden');
   importBusy = true; $('preview-btn').disabled = true; $('import-submit').disabled = true;
   $('preview-btn').textContent = previewOnly ? 'Reading file…' : 'Saving records…';
   try {
@@ -194,18 +215,19 @@ async function handleImport(previewOnly) {
     if (context !== session || version !== fileVersion) return;
     const output = $('preview-output'); output.classList.remove('hidden');
     if (previewOnly && result.format === 'report') {
-      previewReady = false;
-      output.innerHTML = '<h3>Excel report preview</h3><div class="preview-grid">' + previewStat('Employee IDs in report', result.employees) + previewStat('Report period', result.period) + '</div><ul class="report-sheets">' + result.sheets.map(s => '<li>' + escapeHtml(s.name) + ' · ' + Number(s.rows) + ' rows</li>').join('') + '</ul><p class="inline-help">Report preview only. Nothing was saved. Use the original _attlog.dat file to import exact source scans.</p>';
+      previewReady = false; $('report-staff').classList.remove('hidden');
+      output.innerHTML = '<h3>Excel report preview</h3><div class="preview-grid">' + previewStat('Employee IDs in report', result.employees) + previewStat('Report period', result.period) + '</div><ul class="report-sheets">' + result.sheets.map(s => '<li>' + escapeHtml(s.name) + ' · ' + Number(s.rows) + ' rows</li>').join('') + '</ul><p class="inline-help">This Excel report can supply staff names. Select Import staff names from this report. To import attendance scans, choose the original _attlog.dat file.</p>';
     } else if (previewOnly) {
       previewReady = !result.already_imported;
       output.innerHTML = '<h3>Source log preview</h3><div class="preview-grid">' + previewStat('Scan records', result.rows.toLocaleString()) + previewStat('Employee IDs', result.employees) + previewStat('First scan', result.earliest) + previewStat('Last scan', result.latest) + '</div><p class="inline-help">' + (result.already_imported ? 'This exact file has already been imported.' : 'Nothing saved yet. Review the details, then select Import records.') + '<br>Raw status codes: ' + result.codes.map(escapeHtml).join(', ') + '</p>';
     } else {
       previewReady = false;
       output.innerHTML = '<h3>Import complete</h3><div class="preview-grid">' + previewStat('New scans', result.inserted.toLocaleString()) + previewStat('Duplicates skipped', result.duplicates.toLocaleString()) + '</div><p class="inline-help">Original K14 scans remain unchanged. Open Attendance logs to review your records.</p>';
+      $('view-imported').classList.remove('hidden');
       toast('Attendance imported successfully.'); loadOverview();
     }
   } catch (error) {
-    if (context === session && version === fileVersion) { previewReady = false; $('preview-output').classList.add('hidden'); toast(error.message, true); }
+    if (context === session && version === fileVersion) { previewReady = false; $('preview-output').classList.add('hidden'); showInlineError('import-error', error.message); }
   } finally {
     importBusy = false; $('preview-btn').innerHTML = icon('eye') + ' Preview file';
     $('preview-btn').disabled = session?.role !== 'admin';
@@ -267,8 +289,8 @@ async function loadEmployees(openMonitor = false) {
     const result = await api('/api/employees');
     if (context !== session || requestId !== employeeRequest) return;
     const selected = $('dtr-employee').value;
-    $('known-employees').innerHTML = result.items.map(code => '<option value="' + escapeHtml(code) + '"></option>').join('');
-    $('dtr-employee').innerHTML = '<option value="">Choose employee ID</option>' + result.items.map(code => '<option value="' + escapeHtml(code) + '">' + escapeHtml(code) + '</option>').join('');
+    $('known-employees').innerHTML = result.staff.map(item => '<option value="' + escapeHtml(item.employee_code) + '">' + escapeHtml(item.display_name) + '</option>').join('');
+    $('dtr-employee').innerHTML = '<option value="">Choose employee ID</option>' + result.staff.map(item => '<option value="' + escapeHtml(item.employee_code) + '">' + escapeHtml(item.display_name ? item.display_name + ' · ' + item.employee_code : item.employee_code) + '</option>').join('');
     if (result.items.includes(selected)) $('dtr-employee').value = selected;
     else if (openMonitor && result.items.length) $('dtr-employee').value = result.items[0];
     if (openMonitor && currentPage === 'dtr') loadMonitor();
@@ -283,9 +305,9 @@ async function loadMonitor() {
   try {
     const result = await api('/api/dtr/monitor?' + new URLSearchParams({employee_code:employee, month}));
     if (context !== session || requestId !== monitorRequest) return;
-    $('dtr-summary').textContent = employee + ' · ' + month + ' · Scans: ' + result.summary.scans + ' · Days with scans: ' + result.summary.days_with_scans + ' · References: ' + result.summary.activity_records;
+    $('dtr-summary').textContent = (result.display_name ? result.display_name + ' · ' : '') + employee + ' · ' + month + ' · Scans: ' + result.summary.scans + ' · Days with scans: ' + result.summary.days_with_scans + ' · References: ' + result.summary.activity_records;
     $('dtr-rows').innerHTML = result.days.map(day => {
-      const scans = day.scans.length ? '<div class="scan-times">' + day.scans.map(scan => '<span class="scan-time" title="' + escapeHtml('Device ' + scan.device_id + ' · Status ' + scan.status_code + ' · Verify ' + scan.verification_code + ' · Work code ' + scan.work_code) + '">' + escapeHtml(scan.happened_at.slice(11)) + '</span>').join('') + '</div>' : '—';
+      const scans = day.scans.length ? '<div class="scan-times">' + day.scans.map(scan => '<span class="scan-time" title="' + escapeHtml('Device ' + scan.device_id + ' · Status ' + scan.status_code + ' · Verify ' + scan.verification_code + ' · Work code ' + scan.work_code + (scan.work_label ? ' · ' + scan.work_label : ' (unmapped)')) + '">' + escapeHtml(scan.happened_at.slice(11)) + (scan.work_label ? '<small class="scan-work-label">' + escapeHtml(scan.work_label) + '</small>' : '') + '</span>').join('') + '</div>' : '—';
       const references = day.activities.length ? day.activities.map(item => '<div class="monitor-reference"><strong>' + escapeHtml(item.category) + (item.reference ? ' · ' + escapeHtml(item.reference) : '') + '</strong><span>' + escapeHtml(item.purpose) + '</span></div>').join('') : '—';
       const label = day.coverage === 'scans' ? 'Device scans' : day.coverage === 'reference_only' ? 'Reference only' : 'No records';
       return '<tr><td><strong>' + escapeHtml(day.date.slice(8)) + '</strong><span class="scan-day">' + escapeHtml(day.day) + '</span></td><td>' + scans + '</td><td>' + references + '</td><td><span class="tag ' + (day.coverage === 'no_records' ? '' : 'blue-tag') + '">' + label + '</span></td></tr>';
@@ -293,6 +315,103 @@ async function loadMonitor() {
   } catch (error) {
     if (context !== session || requestId !== monitorRequest) return;
     $('dtr-rows').innerHTML = '<tr><td colspan="4">Daily records could not be loaded. Try again.</td></tr>'; toast(error.message, true);
+  }
+}
+
+function showInlineError(id, message) {
+  $(id).textContent = message; $(id).classList.remove('hidden');
+}
+function renderStaff() {
+  const query = $('staff-search').value.trim().toLowerCase();
+  const rows = staffRows.filter(item => (item.employee_code + ' ' + item.display_name).toLowerCase().includes(query));
+  $('staff-rows').innerHTML = rows.length ? rows.map(item => '<tr><td>' + escapeHtml(item.employee_code) + '</td><td><strong>' + escapeHtml(item.display_name || 'Name not imported') + '</strong></td><td>' + escapeHtml(item.department || '—') + '</td><td>' + (session?.role === 'admin' ? '<button class="text-button" type="button" data-staff-edit="' + escapeHtml(item.employee_code) + '">Edit</button>' : '') + '</td></tr>').join('') : '<tr><td colspan="4">No staff found. Import a staff report or attendance log to get started.</td></tr>';
+}
+async function loadRegistry() {
+  const context = session; const requestId = ++registryRequest;
+  $('staff-error').classList.add('hidden');
+  $('staff-rows').innerHTML = '<tr><td colspan="4">Loading staff…</td></tr>';
+  try {
+    const [employees, codes] = await Promise.all([api('/api/employees'), api('/api/work-codes')]);
+    if (context !== session || requestId !== registryRequest) return;
+    staffRows = employees.staff; workRows = codes.items; renderStaff();
+    $('work-code-items').innerHTML = workRows.length ? workRows.map(item => '<div class="request"><div class="request-head"><strong>' + escapeHtml(item.work_code) + ' · ' + escapeHtml(item.label || 'Unmapped') + '</strong>' + (context.role === 'admin' ? '<button class="text-button" type="button" data-work-device="' + escapeHtml(item.device_id) + '" data-work-code="' + escapeHtml(item.work_code) + '">Map code</button>' : '') + '</div><p>Device ' + escapeHtml(item.device_id) + ' · ' + Number(item.scan_count) + ' scans · ' + escapeHtml(item.activity_type) + '</p></div>').join('') : '<div class="empty">No work codes yet. Import attendance to see the codes recorded in scans.</div>';
+  } catch (error) {
+    if (context !== session || requestId !== registryRequest) return;
+    $('staff-rows').innerHTML = ''; $('work-code-items').innerHTML = '';
+    showInlineError('staff-error', error.message);
+  }
+}
+function editStaff(code = '') {
+  const item = staffRows.find(row => row.employee_code === code);
+  $('staff-form').reset(); $('staff-save-error').classList.add('hidden');
+  $('staff-code').value = code; $('staff-code').readOnly = !!code;
+  $('staff-name').value = item?.display_name || '';
+  $('staff-department').value = item?.department || '';
+  openDialog('staff-dialog');
+}
+async function saveStaff(event) {
+  event.preventDefault(); const context = session;
+  $('save-staff').disabled = true; $('staff-save-error').classList.add('hidden');
+  try {
+    await api('/api/employees/' + encodeURIComponent($('staff-code').value.trim()), {method:'PUT',body:JSON.stringify({display_name:$('staff-name').value,department:$('staff-department').value})});
+    if (context !== session) return;
+    $('staff-dialog').close(); toast('Staff details saved.'); loadRegistry(); loadOverview();
+  } catch (error) { if (context === session) showInlineError('staff-save-error', error.message); }
+  finally { $('save-staff').disabled = false; }
+}
+function editWorkCode(device = '', code = '') {
+  const item = workRows.find(row => row.device_id === device && row.work_code === code);
+  $('work-code-form').reset(); $('work-save-error').classList.add('hidden');
+  $('work-device').value = device; $('work-code').value = code;
+  $('work-device').readOnly = !!device; $('work-code').readOnly = !!device;
+  $('work-label').value = item?.label || ''; $('work-type').value = item?.activity_type || 'Unclassified';
+  openDialog('work-code-dialog');
+}
+async function saveWorkCode(event) {
+  event.preventDefault(); const context = session;
+  $('save-work-code').disabled = true; $('work-save-error').classList.add('hidden');
+  try {
+    await api('/api/work-codes/' + encodeURIComponent($('work-device').value.trim()) + '/' + encodeURIComponent($('work-code').value.trim()), {method:'PUT',body:JSON.stringify({label:$('work-label').value,activity_type:$('work-type').value})});
+    if (context !== session) return;
+    $('work-code-dialog').close(); toast('Work code mapping saved.'); loadRegistry();
+  } catch (error) { if (context === session) showInlineError('work-save-error', error.message); }
+  finally { $('save-work-code').disabled = false; }
+}
+function setRosterFile(file) {
+  rosterFile = file || null; rosterVersion++; rosterReady = false;
+  $('roster-selected').textContent = file ? 'Selected: ' + file.name : 'No staff file selected';
+  $('import-staff').disabled = true; $('roster-preview').innerHTML = ''; $('roster-preview').classList.add('hidden');
+  $('roster-error').classList.add('hidden');
+}
+function openStaffImport(file = null) {
+  $('staff-file').value = ''; setRosterFile(file); openDialog('staff-import-dialog');
+}
+async function uploadRoster(previewOnly) {
+  if (rosterBusy) return;
+  if (!rosterFile) { showInlineError('roster-error', 'Choose the K14 .xls report or a staff CSV first.'); return; }
+  if (!previewOnly && !rosterReady) return;
+  const context = session; const version = rosterVersion;
+  const data = new FormData(); data.append('file', rosterFile);
+  rosterBusy = true; $('preview-staff').disabled = true; $('import-staff').disabled = true;
+  $('roster-error').classList.add('hidden');
+  try {
+    const result = await api('/api/employees/import' + (previewOnly ? '/preview' : ''), {method:'POST',body:data});
+    if (context !== session || version !== rosterVersion) return;
+    rosterReady = previewOnly && result.counts.new + result.counts.fill > 0;
+    $('roster-preview').classList.remove('hidden');
+    const counts = result.counts;
+    $('roster-preview').innerHTML = '<p class="inline-help">' + (previewOnly ? 'Preview: ' : 'Import complete: ') + Number(counts.new) + ' new · ' + Number(counts.fill) + ' fill missing details · ' + Number(counts.unchanged) + ' unchanged · ' + Number(counts.conflict) + ' conflicts skipped.</p>';
+    if (previewOnly) {
+      $('roster-preview').innerHTML += '<div class="table-scroll"><table><thead><tr><th>Device ID</th><th>Staff name</th><th>Result</th></tr></thead><tbody>' + result.items.map(item => '<tr><td>' + escapeHtml(item.employee_code) + '</td><td>' + escapeHtml(item.display_name) + (item.change === 'conflict' ? '<span class="scan-day">Existing: ' + escapeHtml(item.existing_name) + '</span>' : '') + '</td><td>' + escapeHtml(item.change) + '</td></tr>').join('') + '</tbody></table></div><p class="table-foot">Preview shows up to 100 of ' + Number(result.total) + ' staff. Conflicts keep the existing details; use Edit after checking the correct ID.</p>';
+    } else {
+      $('roster-preview').innerHTML += '<p>Names saved to the local database. Attendance scans are unchanged.</p>';
+      loadRegistry(); loadOverview();
+    }
+  } catch (error) {
+    if (context !== session || version !== rosterVersion) return;
+    rosterReady = false; showInlineError('roster-error', error.message);
+  } finally {
+    rosterBusy = false; $('preview-staff').disabled = session?.role !== 'admin'; $('import-staff').disabled = !rosterReady || session?.role !== 'admin';
   }
 }
 
@@ -304,8 +423,12 @@ async function initialize() {
     if (!button) return;
     if (button.hasAttribute('data-help')) openDialog('help-dialog');
     if (button.dataset.close) $(button.dataset.close).close();
+    if (button.id === 'view-imported') $('filter-form').reset();
     if (button.dataset.page || button.dataset.go) navigate(button.dataset.page || button.dataset.go);
     if (button.dataset.void) openVoid(button);
+    if (button.dataset.staffEdit) editStaff(button.dataset.staffEdit);
+    if (button.dataset.workDevice) editWorkCode(button.dataset.workDevice, button.dataset.workCode);
+    if (button.id === 'report-staff') openStaffImport(selectedFile);
   });
   document.querySelectorAll('dialog').forEach(dialog => {
     dialog.addEventListener('click', event => {
@@ -347,6 +470,15 @@ async function initialize() {
   $('drop-area').addEventListener('dragleave', () => $('drop-area').classList.remove('drag-over'));
   $('drop-area').addEventListener('drop', event => { event.preventDefault(); $('drop-area').classList.remove('drag-over'); chooseFile(event.dataTransfer.files[0]); });
   $('fieldwork-form').addEventListener('submit', createFieldwork);
+  $('open-staff-import').addEventListener('click', () => openStaffImport());
+  $('staff-file').addEventListener('change', () => setRosterFile($('staff-file').files[0]));
+  $('preview-staff').addEventListener('click', () => uploadRoster(true));
+  $('import-staff').addEventListener('click', () => uploadRoster(false));
+  $('add-staff').addEventListener('click', () => editStaff());
+  $('add-work-code').addEventListener('click', () => editWorkCode());
+  $('staff-form').addEventListener('submit', saveStaff);
+  $('work-code-form').addEventListener('submit', saveWorkCode);
+  $('staff-search').addEventListener('input', renderStaff);
   $('activity-status').addEventListener('change', loadFieldwork);
   $('void-form').addEventListener('submit', voidReference);
   $('dtr-filter').addEventListener('submit', event => { event.preventDefault(); loadMonitor(); });
