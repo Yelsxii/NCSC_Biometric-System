@@ -85,3 +85,85 @@ def test_auth_import_and_fieldwork():
 def test_no_fingerprint_templates():
     from app.db import SCHEMA
     assert "fingerprint" not in SCHEMA.lower()
+
+
+def _fake_user_record(code: int, name: str) -> bytes:
+    """Synthetic structure matching the observed USB user.dat layout."""
+    row = bytearray(72)
+    row[:2] = code.to_bytes(2, "little")
+    encoded = name.encode("ascii")
+    row[11:11 + len(encoded)] = encoded
+    row[48:48 + len(str(code))] = str(code).encode("ascii")
+    # Remaining bytes are zero. Never put biometric templates in tests.
+    return bytes(row)
+
+
+def _fake_department_record(code: int, name: str) -> bytes:
+    row = bytearray(49)
+    row[0] = code
+    encoded = name.encode("ascii")
+    row[1:1 + len(encoded)] = encoded
+    return bytes(row)
+
+
+def test_device_roster_parsers():
+    from app.roster import parse_user_dat, parse_department_dat
+    users = parse_user_dat(_fake_user_record(1, "Sample A") + _fake_user_record(2, "Sample B"))
+    assert [u.employee_code for u in users] == ["1", "2"]
+    assert users[0].device_name == "Sample A"
+    departments = parse_department_dat(_fake_department_record(1, "Company"))
+    assert departments[0].department_name == "Company"
+    import pytest
+    with pytest.raises(ValueError):
+        parse_user_dat(b"not binary roster")
+    with pytest.raises(ValueError):
+        parse_user_dat(_fake_user_record(1, "Sample A") * 2)
+    with pytest.raises(ValueError):
+        parse_department_dat(_fake_department_record(1, "Company") + b"garbage")
+
+
+def test_staff_sync_and_local_numeric_work_codes():
+    initialize()
+    with connect() as con:
+        con.execute(
+            "INSERT OR IGNORE INTO users(username,password_hash,role) VALUES(?,?,?)",
+            ("roster-admin", hash_password("test-password-for-roster-123"), "admin")
+        )
+    with TestClient(app) as client:
+        auth = client.post("/api/login", json={
+            "username": "roster-admin", "password": "test-password-for-roster-123"
+        })
+        assert auth.status_code == 200
+        headers = {"X-CSRF-Token": auth.json()["csrf"]}
+
+        users = _fake_user_record(1, "Sample A") + _fake_user_record(2, "Sample B")
+        response = client.post("/api/device-directory/preview",
+                               files={"file": ("user.dat", users)}, headers=headers)
+        assert response.status_code == 200, response.text
+        assert response.json()["count"] == 2
+
+        response = client.post("/api/device-directory/import",
+                               files={"file": ("user.dat", users)}, headers=headers)
+        assert response.status_code == 200, response.text
+        assert response.json()["kind"] == "user"
+
+        staff = client.get("/api/staff").json()["employees"]
+        assert next(s for s in staff if s["employee_code"] == "1")["device_name"] == "Sample A"
+        assert client.post("/api/device-directory/import",
+                           files={"file": ("user.dat", users)}, headers=headers).status_code == 409
+
+        departments = _fake_department_record(1, "Company")
+        response = client.post("/api/device-directory/import",
+                               files={"file": ("department.dat", departments)}, headers=headers)
+        assert response.status_code == 200, response.text
+        assert client.get("/api/staff").json()["departments"][0]["device_name"] == "Company"
+
+        assert client.post("/api/device-directory/import",
+                           files={"file": ("template.fp10", users)}, headers=headers).status_code == 400
+        mapped = client.post("/api/work-codes", json={
+            "numeric_code": "101", "label": "Official Business"
+        }, headers=headers)
+        assert mapped.status_code == 200
+        assert mapped.json()["device_updated"] is False
+        codes = client.get("/api/work-codes").json()
+        assert codes["configured"][0]["numeric_code"] == "101"
