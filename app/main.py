@@ -602,3 +602,86 @@ def device_status(user: dict = Depends(current_user)):
 def device_probe(request: Request, user: dict = Depends(require_admin)):
     require_csrf(request)
     return tcp_probe()
+
+
+@app.get("/api/activities/monitor")
+def monitor_official_activities(
+    month: str,
+    q: str = "",
+    category: Literal["All", "AJA", "Travel Order"] = "All",
+    user: dict = Depends(current_user),
+):
+    """Read-only monitoring from existing office references and classified scans.
+
+    A device work-code event identifies an observed scan, NOT a validated
+    approval or a complete start/end interval. Even for TO references, work-hour
+    credit is not calculated by this query.
+    """
+    if not re.fullmatch(r"\d{4}-\d{2}", month):
+        raise HTTPException(400, "Month must be YYYY-MM.")
+    try:
+        start = dt.date.fromisoformat(month + "-01")
+    except ValueError as exc:
+        raise HTTPException(400, "Invalid month.") from exc
+    if not 2000 <= start.year <= 2100:
+        raise HTTPException(400, "Unsupported year.")
+    end = start + dt.timedelta(days=calendar.monthrange(start.year, start.month)[1])
+    search = q.strip()
+    if len(search) > 80 or any(ord(c) < 32 for c in search):
+        raise HTTPException(400, "Invalid search term.")
+    with closing(connect()) as con:
+        references = [dict(r) for r in con.execute(
+            """SELECT a.id,a.employee_code,COALESCE(e.display_name,'') AS display_name,
+                      a.category,a.start_at,a.end_at,a.reference,a.purpose
+               FROM activity_records a
+               LEFT JOIN employees e ON e.employee_code=a.employee_code
+               WHERE a.status='recorded' AND a.category IN ('AJA','Travel Order')
+                 AND a.start_at < ? AND a.end_at > ?
+                 AND (?='All' OR a.category=?)
+                 AND (?='' OR instr(lower(a.employee_code),lower(?))>0
+                            OR instr(lower(COALESCE(e.display_name,'')),lower(?))>0)
+               ORDER BY a.start_at DESC,a.id DESC LIMIT 500""",
+            (end.isoformat(), start.isoformat(), category, category, search, search, search),
+        ).fetchall()]
+        signals = [dict(r) for r in con.execute(
+            """SELECT p.id,p.employee_code,COALESCE(e.display_name,'') AS display_name,
+                      w.activity_type AS category,p.happened_at,p.device_id,p.work_code,w.label
+               FROM punches p
+               JOIN work_codes w ON w.device_id=p.device_id AND w.work_code=p.work_code
+               LEFT JOIN employees e ON e.employee_code=p.employee_code
+               WHERE w.activity_type IN ('AJA','Travel Order')
+                 AND p.happened_at >= ? AND p.happened_at < ?
+                 AND (?='All' OR w.activity_type=?)
+                 AND (?='' OR instr(lower(p.employee_code),lower(?))>0
+                            OR instr(lower(COALESCE(e.display_name,'')),lower(?))>0)
+               ORDER BY p.happened_at DESC,p.id DESC LIMIT 500""",
+            (start.isoformat(), end.isoformat(), category, category, search, search, search),
+        ).fetchall()]
+    items = [
+        {**r, "source": "office_reference", "source_label": "Office document",
+         "verified_by_hr": False, "note": "Previously recorded office reference; verify its approved document."}
+        for r in references
+    ]
+    items.extend({
+        "id": r["id"], "employee_code": r["employee_code"],
+        "display_name": r["display_name"], "category": r["category"],
+        "start_at": r["happened_at"], "end_at": None,
+        "reference": "", "purpose": r["label"] or "",
+        "device_id": r["device_id"], "work_code": r["work_code"],
+        "source": "device_scan", "source_label": "Device scan only",
+        "verified_by_hr": False,
+        "note": "Work code label is local. This scan does not prove activity approval or end time.",
+    } for r in signals)
+    items.sort(key=lambda r: (r["start_at"], r["id"]), reverse=True)
+    return {
+        "month": month, "items": items[:800],
+        "summary": {
+            "employees": len({r["employee_code"] for r in items}),
+            "aja": sum(r["category"] == "AJA" for r in items),
+            "travel_orders": sum(r["category"] == "Travel Order" for r in items),
+            "references": len(references), "device_signals": len(signals),
+        },
+        "note": "Monitoring only; references are not a second filing system. "
+                "Work codes are evidence of a scan, not TO authorization. "
+                "Unscanned Travel Orders require an existing approved office record to appear.",
+    }
