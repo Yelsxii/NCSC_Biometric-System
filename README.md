@@ -20,6 +20,16 @@ Local-first, security-conscious **Phase 1 MVP** for importing ZKTeco K14 attenda
 - Daily scan chart, date filters, paginated source logs, and activity status filters
 - Read-only **K14 .xls report preview**, kept separate from raw attendance imports
 
+## Interface previews
+
+The dashboard screenshot uses explicitly fictional sample records.
+
+![NCSC sign-in overlay](docs/login-preview.webp)
+
+![NCSC attendance dashboard with fictional data](docs/dashboard-preview.webp)
+
+[View the mobile sign-in layout](docs/mobile-login-preview.webp).
+
 ## Tech stack
 
 - **Python 3.11+**, FastAPI, Uvicorn, SQLite (no separate database server needed)
