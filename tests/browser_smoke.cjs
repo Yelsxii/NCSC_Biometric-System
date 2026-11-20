@@ -57,7 +57,36 @@ uvicorn.run('app.main:app',host='127.0.0.1',port=int(os.environ['QA_PORT']),log_
     await page.locator('.login-story').waitFor();
     assert.equal(await page.locator('.login-story-photo').count(),1);
     assert.equal(await page.locator('.fingerprint-mark').count(),1);
+    const desktopBrand=await page.evaluate(()=>{
+      const fp=document.querySelector('.login-brand-row .fingerprint-mark');
+      const seal=document.querySelector('.login-brand-row .mobile-seal');
+      const leftLogo=document.querySelector('.login-story-brand .seal').getBoundingClientRect();
+      const leftName=document.querySelector('.login-story-brand .eyebrow').getBoundingClientRect();
+      return {fingerprint:getComputedStyle(fp).visibility,
+        mobileSeal:getComputedStyle(seal).visibility,
+        leftLogoWidth:leftLogo.width,
+        nameToRight:leftName.left>=leftLogo.right,
+        leftLogoVisible:leftLogo.width>0};
+    });
+    assert.equal(desktopBrand.fingerprint,'visible');
+    assert.equal(desktopBrand.mobileSeal,'hidden');
+    assert.ok(desktopBrand.leftLogoWidth>=108);
+    assert.ok(desktopBrand.nameToRight);
     await page.screenshot({path:join(root,'docs/login-preview.png'),animations:'disabled'});
+
+    await page.setViewportSize({width:390,height:800});
+    const mobileBrand=await page.evaluate(()=>{
+      const fp=document.querySelector('.login-brand-row .fingerprint-mark');
+      const seal=document.querySelector('.login-brand-row .mobile-seal');
+      return {fingerprint:getComputedStyle(fp).visibility,
+        mobileSeal:getComputedStyle(seal).visibility,
+        sealWidth:seal.getBoundingClientRect().width};
+    });
+    assert.equal(mobileBrand.fingerprint,'hidden');
+    assert.equal(mobileBrand.mobileSeal,'visible');
+    assert.ok(mobileBrand.sealWidth>=72);
+    await page.screenshot({path:join(root,'docs/mobile-login-preview.png'),animations:'disabled'});
+    await page.setViewportSize({width:1440,height:900});
     await page.locator('#login-username').fill('qa-admin');
     await page.locator('#login-password').fill(password);
     await page.locator('#login-submit').click();
