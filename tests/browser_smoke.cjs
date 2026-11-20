@@ -59,11 +59,14 @@ uvicorn.run('app.main:app',host='127.0.0.1',port=int(os.environ['QA_PORT']),log_
     await page.locator('#login-password').fill(password);
     await page.locator('#login-submit').click();
     await page.locator('#workspace:not(.hidden)').waitFor();
-    await page.locator('#metric-employees').filter({hasText:/^0$/}).waitFor();
+    await page.locator('[data-page="employees"].active').waitFor();
+    assert.equal(await page.locator('[data-page]').count(),3);
+    assert.equal(await page.locator('[data-page="overview"]').count(),0);
+    assert.equal(await page.locator('#page-description').count(),0);
 
-    // Import a fictional K14 log; no real employee data or fingerprint templates.
-    await page.locator('[data-page="device"]').click();
-    await page.locator('#lan-sync').filter({hasText:/Not active/}).waitFor();
+    // USB fallback is inside Employee Attendance; hidden until requested.
+    await page.locator('#toggle-attendance-import').click();
+    await page.locator('#attendance-import:not(.hidden)').waitFor();
     const attlog=Buffer.from(
       '1\t2026-11-03 08:00:00\t1\t0\t1\t0\n'+
       '1\t2026-11-03 17:00:00\t1\t1\t1\t0\n'+
@@ -76,6 +79,20 @@ uvicorn.run('app.main:app',host='127.0.0.1',port=int(os.environ['QA_PORT']),log_
     await page.locator('#usb-form button[type="submit"]').click();
     await page.locator('#usb-result').filter({hasText:/Imported 3 new scans/}).waitFor();
 
+    // Overlapping backup contains 3 old events + one new event. Do not double-count.
+    const overlap=Buffer.concat([attlog,Buffer.from(
+      '2\\t2026-11-04 10:30:00\\t1\\t0\\t1\\t101\\n')]);
+    await page.locator('#usb-file').setInputFiles({
+      name:'overlap_attlog.dat',mimeType:'application/octet-stream',buffer:overlap
+    });
+    await page.locator('#usb-preview').click();
+    await page.locator('#usb-result').filter({hasText:/Preview: 4 scans/}).waitFor();
+    await page.locator('#usb-form button[type="submit"]').click();
+    await page.locator('#usb-result').filter({hasText:/Imported 1 new scans; 3 duplicate records ignored/}).waitFor();
+
+    await page.locator('[data-page="staff"]').click();
+    await page.locator('#lan-sync').filter({hasText:/Not active/}).waitFor();
+
     // Import a fictional roster: staff appears by name in the monthly register.
     const roster=Buffer.from('employee_code,display_name,department\n1,Sample One,Sample Section\n2,Sample Two,Sample Section\n');
     await page.locator('#roster-file').setInputFiles({
@@ -86,16 +103,46 @@ uvicorn.run('app.main:app',host='127.0.0.1',port=int(os.environ['QA_PORT']),log_
     await page.locator('#roster-form button[type="submit"]').click();
     await page.locator('#roster-result').filter({hasText:/Roster updated: 2 staff/}).waitFor();
 
-    // Existing official order: November 23 and 24; no fake scans.
+    // Manual directory fallback is available without touching the K14.
+    await page.locator('#add-staff').click();
+    await page.locator('#staff-code').fill('3');
+    await page.locator('#staff-name').fill('Sample Three');
+    await page.locator('#staff-department').fill('Sample Section');
+    await page.locator('#staff-form button[type="submit"]').click();
+    await page.locator('#staff-rows').getByText('Sample Three').waitFor();
+
+    // Code 101 can be displayed as AJA in the local registry.
+    await page.locator('[data-map-code="1|101"]').click();
+    await page.locator('#code-label').fill('AJA device event');
+    await page.locator('#code-activity').selectOption('AJA');
+    await page.locator('#code-form button[type="submit"]').click();
+    await page.locator('#code-rows').getByText('AJA device event').waitFor();
+
+    // Create one pre-existing official TO reference through the authorized API,
+    // not through a second filing UI (which no longer exists).
+    const result=await page.evaluate(async () => {
+      const response=await fetch('/api/activities',{
+        method:'POST',credentials:'same-origin',
+        headers:{'Content-Type':'application/json','X-CSRF-Token':session.csrf},
+        body:JSON.stringify({employee_code:'1',category:'Travel Order',
+          reference:'DEMO-TO-001',purpose:'Official assignment',
+          start_at:'2026-11-23T00:00',end_at:'2026-11-25T00:00'})
+      });
+      return {status:response.status,data:await response.json()};
+    });
+    assert.equal(result.status,201,JSON.stringify(result));
+
     await page.locator('[data-page="activities"]').click();
-    await page.locator('#activity-employee').fill('1');
-    await page.locator('#activity-type').selectOption('Travel Order');
-    await page.locator('#activity-reference').fill('DEMO-TO-001');
-    await page.locator('#activity-purpose').fill('Official assignment');
-    await page.locator('#activity-start').fill('2026-11-23T00:00');
-    await page.locator('#activity-end').fill('2026-11-25T00:00');
-    await page.locator('#activity-form button[type="submit"]').click();
+    await page.locator('#activity-month').fill('2026-11');
+    await page.locator('#activity-filter button[type="submit"]').click();
     await page.locator('#activity-rows').getByText('DEMO-TO-001').waitFor();
+    await page.locator('#activity-rows').getByText('Code 101').waitFor();
+    assert.equal(await page.locator('#activity-form').count(),0);
+    await page.screenshot({path:join(root,'docs/activity-monitoring-preview.png'),animations:'disabled'});
+    await page.locator('#activity-category').selectOption('Travel Order');
+    await page.locator('#activity-filter button[type="submit"]').click();
+    await page.locator('#activity-rows').getByText('DEMO-TO-001').waitFor();
+    assert.equal((await page.locator('#activity-rows').textContent()).includes('Code 101'),false);
 
     await page.locator('[data-page="employees"]').click();
     await page.locator('#register-month').fill('2026-11');
@@ -114,8 +161,8 @@ uvicorn.run('app.main:app',host='127.0.0.1',port=int(os.environ['QA_PORT']),log_
     await page.screenshot({path:join(root,'docs/dtr-preview.png'),animations:'disabled'});
     await page.locator('#close-dtr').click();
     await page.screenshot({path:join(root,'docs/employee-records-preview.png'),animations:'disabled'});
-    await page.locator('[data-page="overview"]').click();
-    await page.screenshot({path:join(root,'docs/dashboard-preview.png'),animations:'disabled'});
+    await page.locator('#back-to-register').click();
+    await page.screenshot({path:join(root,'docs/attendance-preview.png'),animations:'disabled'});
 
     // No unintended horizontal overflow on a normal phone viewport.
     await page.setViewportSize({width:390,height:800});
