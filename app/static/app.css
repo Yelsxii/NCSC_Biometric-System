@@ -261,6 +261,8 @@ td .scan-day { font-size: .75rem; color: #929db3; }
 .scan-work-label { display: block; max-width: 150px; white-space: normal; font-size: .75rem; margin-top: 3px; }
 .registry-layout { grid-template-columns: minmax(0,1.5fr) minmax(0,1fr); }
 .registry-layout > .panel { min-width: 0; }
+.registry-layout table { min-width: 480px; }
+.registry-layout td { overflow-wrap: anywhere; }
 .registry-layout .section-top { flex-wrap: wrap; gap: 14px; }
 .registry-tools { display: flex; gap: 12px; margin: 22px 0 10px; }
 .registry-tools input { min-width: 0; }

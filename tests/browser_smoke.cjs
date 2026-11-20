@@ -113,6 +113,12 @@ uvicorn.run('app.main:app',host='127.0.0.1',port=int(os.environ['QA_PORT']),log_
     await page.locator('#roster-preview').getByText('Names saved to the local database. Attendance scans are unchanged.').waitFor();
     await page.getByRole('button',{name:'Close staff import',exact:true}).click();
     await page.locator('#staff-rows').getByText('Sample Employee One',{exact:true}).waitFor();
+    const editBox = await page.locator('[data-staff-edit="DEMO001"]').boundingBox();
+    const rosterBox = await page.locator('.registry-layout .table-scroll').boundingBox();
+    assert.ok(editBox.x + editBox.width <= rosterBox.x + rosterBox.width, 'Staff edit action is outside the visible table');
+    await page.locator('[data-staff-edit="DEMO001"]').click();
+    assert.equal(await page.locator('#staff-name').inputValue(),'Sample Employee One');
+    await page.locator('#staff-dialog').getByRole('button',{name:'Cancel',exact:true}).click();
     await page.locator('#work-code-items').getByRole('button',{name:'Map code',exact:true}).click();
     await page.locator('#work-label').fill('Sample regular code');
     await page.locator('#work-type').selectOption('Regular');
