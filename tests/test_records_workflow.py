@@ -86,45 +86,51 @@ def test_binary_template_not_accepted_as_roster(admin):
 
 
 
-def test_activity_monitor_filters_office_references_and_device_work_codes(admin):
+def test_device_classified_monitor_excludes_office_references(admin):
     client, headers = admin
     scans = (
         b"21\t2026-11-04 09:00:00\t1\t0\t1\t0\n"
         b"21\t2026-11-04 10:00:00\t1\t0\t1\t101\n"
+        b"21\t2026-11-05 12:00:00\t1\t0\t1\t102\n"
     )
-    assert client.post("/api/imports",files={"file":("sample.dat",scans)},headers=headers).status_code == 200
-    assert client.put("/api/employees/21",json={
-        "display_name":"Example Employee", "department":"Sample Office"
-    },headers=headers).status_code == 200
-    assert client.put("/api/work-codes/1/101",json={
-        "label":"AJA device event", "activity_type":"AJA"
-    },headers=headers).status_code == 200
-    assert client.post("/api/activities",json={
-        "employee_code":"21","category":"Travel Order","reference":"SAMPLE-TO-1",
-        "purpose":"Official assignment","start_at":"2026-11-23T00:00",
-        "end_at":"2026-11-25T00:00"
-    },headers=headers).status_code == 201
+    imported = client.post("/api/imports", files={"file": ("sample.dat", scans)}, headers=headers)
+    assert imported.status_code == 200, imported.text
+    assert client.put("/api/employees/21", json={
+        "display_name": "Example Employee", "department": "Sample Office"
+    }, headers=headers).status_code == 200
+    for code, category in (("101", "AJA"), ("102", "Travel Order")):
+        assert client.put(f"/api/work-codes/1/{code}", json={
+            "label": category + " device classification",
+            "activity_type": category
+        }, headers=headers).status_code == 200
 
-    result=client.get("/api/activities/monitor?month=2026-11")
+    # Office document references remain available to DTR monitoring, but they
+    # do not appear as device events in this page.
+    response = client.post("/api/activities", json={
+        "employee_code": "21", "category": "Travel Order", "reference": "SAMPLE-TO-1",
+        "purpose": "Official assignment", "start_at": "2026-11-23T00:00",
+        "end_at": "2026-11-25T00:00"
+    }, headers=headers)
+    assert response.status_code == 201, response.text
+
+    result = client.get("/api/activities/monitor?month=2026-11")
     assert result.status_code == 200, result.text
-    data=result.json()
+    data = result.json()
     assert data["summary"] == {
-        "employees":1,"aja":1,"travel_orders":1,"references":1,"device_signals":1
+        "employees": 1, "aja": 1, "travel_orders": 1, "device_signals": 2
     }
-    device=next(x for x in data["items"] if x["source"]=="device_scan")
-    assert device["category"]=="AJA"
-    assert device["verified_by_hr"] is False
-    assert device["end_at"] is None  # one scan does not imply return
-    assert device["work_code"]=="101"
-    trip=next(x for x in data["items"] if x["source"]=="office_reference")
-    assert trip["category"]=="Travel Order"
-    assert trip["reference"]=="SAMPLE-TO-1"
-    assert trip["verified_by_hr"] is False
-    assert len(client.get("/api/activities/monitor?month=2026-11&category=AJA").json()["items"])==1
-    assert len(client.get("/api/activities/monitor?month=2026-11&category=Travel%20Order").json()["items"])==1
-    assert len(client.get("/api/activities/monitor?month=2026-11&q=Example").json()["items"])==2
-    assert client.get("/api/activities/monitor?month=2026-11&q=unmatched").json()["items"]==[]
-    assert client.get("/api/activities/monitor?month=2026-13").status_code==400
-    assert client.get("/api/activities/monitor?month=2026-11&category=Fieldwork").status_code==422
+    assert len(data["items"]) == 2
+    assert all("reference" not in item for item in data["items"])
+    assert all(item["verified_by_hr"] is False for item in data["items"])
+    assert {x["work_code"] for x in data["items"]} == {"101", "102"}
+    assert len(client.get("/api/activities/monitor?month=2026-11&category=AJA").json()["items"]) == 1
+    assert len(client.get("/api/activities/monitor?month=2026-11&category=Travel%20Order").json()["items"]) == 1
+    assert len(client.get("/api/activities/monitor?month=2026-11&q=Example").json()["items"]) == 2
+    assert client.get("/api/activities/monitor?month=2026-11&q=unmatched").json()["items"] == []
+    assert client.get("/api/activities/monitor?month=2026-13").status_code == 400
+    assert client.get("/api/activities/monitor?month=2026-11&category=Fieldwork").status_code == 422
+
+    dtr = client.get("/api/dtr/monitor?employee_code=21&month=2026-11").json()
+    assert dtr["days"][22]["travel_remark"] == "OFFICIAL TRAVEL"
     with closing(connect()) as con:
-        assert con.execute("SELECT COUNT(*) FROM punches").fetchone()[0]==2
+        assert con.execute("SELECT COUNT(*) FROM punches").fetchone()[0] == 3
