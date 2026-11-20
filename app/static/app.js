@@ -16,11 +16,12 @@ let requestSerial = 0;
 let rosterPreviewOkay = false;
 let usbPreviewOkay = false;
 const titles = {
-  overview:['Overview','Attendance records and official activity monitoring'],
-  employees:['Employee Records','Monthly scan history, AJA references and DTR preview'],
-  activities:['Official Activities','Existing AJA and Travel Order records'],
-  device:['Device & Imports','Connection status, USB backup and work-code mapping']
+  employees:'Employee Attendance',
+  activities:'AJA / Travel Orders',
+  staff:'Staff Management'
 };
+let activityRequest = 0;
+let staffEntries = [];
 const currentMonth = () => {
   const parts = new Intl.DateTimeFormat('en-CA',{timeZone:'Asia/Manila',year:'numeric',month:'2-digit'})
     .formatToParts(new Date());
@@ -58,11 +59,13 @@ function showApp(){
   $('workspace').classList.remove('hidden');
   $('account').textContent=session.username;
   const canWrite=session.role==='admin';
-  document.querySelectorAll('#activity-form input,#activity-form select,#activity-form button,#usb-form button,#roster-form button')
+  document.querySelectorAll('#usb-form button,#roster-form button,#staff-form button[type="submit"]')
     .forEach(el=>el.disabled=!canWrite);
+  $('add-staff').disabled=!canWrite;
   $('register-month').value=currentMonth();
   $('detail-month').value=currentMonth();
-  navigate('overview');
+  $('activity-month').value=currentMonth();
+  navigate('employees');
 }
 function navigate(page){
   if (!session || !titles[page]) return;
@@ -73,29 +76,12 @@ function navigate(page){
     if (node.dataset.page===page) node.setAttribute('aria-current','page');
     else node.removeAttribute('aria-current');
   });
-  $('section-name').textContent=titles[page][0];
-  $('page-title').textContent=titles[page][0];
-  $('page-description').textContent=titles[page][1];
-  document.title=titles[page][0]+' | NCSC Records';
+  $('section-name').textContent=titles[page];
+  document.title=titles[page]+' | NCSC Records';
   window.history.replaceState(null,'','#'+page);
-  if (page==='overview') loadOverview();
-  if (page==='employees') loadRegister();
-  if (page==='activities') loadActivities();
-  if (page==='device') loadDevice();
-}
-async function loadOverview(){
-  try{
-    const data=await api('/api/overview');
-    for (const key of ['employees','scans','activities','imports'])
-      $('metric-'+key).textContent=Number(data.totals[key]||0).toLocaleString();
-    $('recent-imports').innerHTML=data.recent_imports.length
-      ?data.recent_imports.slice(0,5).map(row=>
-        '<div><span>'+esc(row.original_name)+'</span><b>'+esc(row.inserted_records)+' scans</b></div>').join('')
-      :'<span>No USB imports recorded.</span>';
-    const lan=await api('/api/device/status');
-    $('overview-device-status').textContent=lan.sync_enabled?'Automatic synchronization enabled':'LAN sync not yet active';
-    $('overview-device-note').textContent='Configured '+lan.host+':'+lan.port+' · USB fallback available';
-  }catch(error){toast(error.message,true);}
+  if (page==='employees') return loadRegister();
+  if (page==='activities') return loadActivities();
+  if (page==='staff') return Promise.all([loadStaff(),loadDevice()]);
 }
 async function loadRegister(){
   const serial=++requestSerial;
@@ -225,42 +211,96 @@ function openDtr(print=false){
   if (print) window.print();
 }
 async function loadActivities(){
+  const token=++activityRequest;
+  const params=new URLSearchParams({
+    month:$('activity-month').value||currentMonth(),
+    category:$('activity-category').value,
+    q:$('activity-search').value.trim()
+  });
+  $('activity-rows').innerHTML='<tr><td colspan="7">Loading monitoring records…</td></tr>';
   try{
-    const data=await api('/api/activities');
-    $('activity-rows').innerHTML=data.items.length ? data.items.map(item=>
-      '<tr><td>'+esc(item.employee_code)+'</td><td>'+esc(item.category)+'</td>'+
-      '<td>'+esc(item.start_at)+' → '+esc(item.end_at)+'</td>'+
-      '<td>'+esc(item.reference||item.purpose||'—')+'</td>'+
-      '<td>'+esc(item.status)+'</td>'+
-      '<td>'+(item.status==='recorded'&&session.role==='admin'?
-      '<button class="text-link" type="button" data-void="'+Number(item.id)+'">Void</button>':'')+'</td></tr>'
-    ).join(''):'<tr><td colspan="6">No activity records. Existing approved documents can be referenced here.</td></tr>';
+    const data=await api('/api/activities/monitor?'+params);
+    if(token!==activityRequest || currentPage!=='activities') return;
+    const counts=data.summary;
+    $('activity-counts').innerHTML=
+      '<span><b>'+counts.employees+'</b> employees</span>'+
+      '<span><b>'+counts.aja+'</b> AJA entries</span>'+
+      '<span><b>'+counts.travel_orders+'</b> Travel Order entries</span>'+
+      '<span><b>'+counts.device_signals+'</b> device-coded scans</span>';
+    $('activity-note').textContent=data.note;
+    $('activity-rows').innerHTML=data.items.length ? data.items.map(item=>{
+      const time=item.source==='device_scan'?item.start_at:
+        item.start_at+(item.end_at?' — '+item.end_at:'');
+      const supporting=item.source==='device_scan'?
+        'Code '+item.work_code+' · Device '+item.device_id:
+        item.reference||item.purpose||'Reference recorded';
+      const evidence=item.source==='device_scan'?
+        '<span class="pill-neutral pill-aja">Device event · unverified</span>':
+        '<span class="pill-neutral">Office reference · verify</span>';
+      return '<tr><td>'+esc(item.employee_code)+'</td>'+
+        '<td><strong>'+esc(item.display_name||'Name not synced')+'</strong></td>'+
+        '<td>'+esc(item.category)+'</td><td>'+esc(time)+'</td>'+
+        '<td>'+esc(supporting)+'</td><td>'+evidence+'</td>'+
+        '<td><button class="text-link" type="button" data-monitor-employee="'+
+          esc(item.employee_code)+'">Attendance →</button></td></tr>';
+    }).join(''):
+      '<tr><td colspan="7">No AJA / Travel Order matches for this period. Full-day travel without office scans needs an existing approved office record.</td></tr>';
+  }catch(error){
+    if(token!==activityRequest) return;
+    $('activity-rows').innerHTML='<tr><td colspan="7">Could not load monitoring data.</td></tr>';
+    toast(error.message,true);
+  }
+}
+async function viewActivityEmployee(code){
+  $('employee-search').value=code;
+  $('register-month').value=$('activity-month').value||currentMonth();
+  await navigate('employees');
+  await openEmployee(code);
+}
+async function loadStaff(){
+  try{
+    const data=await api('/api/employees');
+    staffEntries=data.staff;
+    renderStaff();
   }catch(error){toast(error.message,true);}
 }
-async function submitActivity(event){
+function renderStaff(){
+  const q=$('staff-search').value.trim().toLowerCase();
+  const rows=staffEntries.filter(x=>[x.employee_code,x.display_name,x.department].join(' ').toLowerCase().includes(q));
+  $('staff-count').textContent=rows.length+' staff';
+  $('staff-rows').innerHTML=rows.length?rows.map(x=>
+    '<tr><td>'+esc(x.employee_code)+'</td>'+
+    '<td><b>'+esc(x.display_name||'Name not synchronized')+'</b></td>'+
+    '<td>'+esc(x.department||'—')+'</td>'+
+    '<td>'+esc(x.name_source||'Device attendance')+'</td>'+
+    '<td>'+(session.role==='admin'?
+      '<button class="text-link" data-staff-edit="'+esc(x.employee_code)+'" type="button">Edit</button>':'')+
+    '</td></tr>').join(''):
+    '<tr><td colspan="5">No staff found. Use USB staff recovery or add basic staff details manually.</td></tr>';
+}
+function openStaffEditor(code=''){
+  const row=staffEntries.find(x=>x.employee_code===code);
+  $('staff-form').reset();
+  $('staff-code').value=code;
+  $('staff-code').readOnly=Boolean(row);
+  $('staff-name').value=row?.display_name||'';
+  $('staff-department').value=row?.department||'';
+  $('staff-dialog-heading').textContent=row?'Edit staff details':'Add staff details';
+  $('staff-dialog').showModal();
+}
+async function saveStaff(event){
   event.preventDefault();
-  const values={
-    employee_code:$('activity-employee').value.trim(),
-    category:$('activity-type').value,
-    reference:$('activity-reference').value.trim(),
-    purpose:$('activity-purpose').value.trim(),
-    start_at:$('activity-start').value,
-    end_at:$('activity-end').value
-  };
+  const code=$('staff-code').value.trim();
   try{
-    await api('/api/activities',{method:'POST',body:JSON.stringify(values)});
-    $('activity-form').reset();
-    toast('Existing office activity reference recorded.');
-    loadActivities();
-  }catch(error){toast(error.message,true);}
-}
-async function voidActivity(id){
-  if (!Number.isInteger(id)) return;
-  const reason=window.prompt('Reason for voiding this reference (minimum 3 characters):');
-  if (reason===null) return;
-  if (reason.trim().length<3){toast('Enter a reason of at least 3 characters.',true);return;}
-  try{await api('/api/activities/'+id+'/void',{method:'POST',body:JSON.stringify({reason:reason.trim()})});
-    toast('Reference voided. Original audit history retained.');loadActivities();
+    await api('/api/employees/'+encodeURIComponent(code),{
+      method:'PUT',body:JSON.stringify({
+        display_name:$('staff-name').value.trim(),
+        department:$('staff-department').value.trim()
+      })
+    });
+    $('staff-dialog').close();
+    toast('Staff metadata saved locally. Biometric device unchanged.');
+    loadStaff();
   }catch(error){toast(error.message,true);}
 }
 async function loadDevice(){
@@ -311,7 +351,7 @@ async function processUsb(previewOnly){
     }else{
       output.textContent='Imported '+result.inserted+' new scans; '+result.duplicates+' duplicate records ignored.';
       usbPreviewOkay=false;
-      toast('Attendance import completed.');
+      toast('Attendance import completed.');loadRegister();
     }
   }catch(error){toast(error.message,true);}
 }
@@ -329,7 +369,7 @@ async function processRoster(previewOnly){
     output.textContent=(previewOnly?'Preview':'Roster updated')+': '+result.total+
       ' staff · New '+result.counts.new+' · Fill '+result.counts.fill+
       ' · Conflicts '+result.counts.conflict+' (not overwritten)';
-    if(!previewOnly){rosterPreviewOkay=false;toast('Staff directory synchronized from file.');}
+    if(!previewOnly){rosterPreviewOkay=false;toast('Staff directory synchronized from file.');loadStaff();}
   }catch(error){toast(error.message,true);}
 }
 function openCodeEditor(device,code){
@@ -391,10 +431,24 @@ async function initialize(){
   $('export-dtr').addEventListener('click',()=>openDtr(true));
   $('close-dtr').addEventListener('click',()=>$('dtr-dialog').close());
   $('print-dtr').addEventListener('click',()=>window.print());
-  $('activity-form').addEventListener('submit',submitActivity);
+  $('activity-filter').addEventListener('submit',e=>{e.preventDefault();loadActivities();});
   $('activity-rows').addEventListener('click',e=>{
-    const node=e.target.closest('[data-void]');if(node)voidActivity(Number(node.dataset.void));
+    const node=e.target.closest('[data-monitor-employee]');
+    if(node) viewActivityEmployee(node.dataset.monitorEmployee);
   });
+  $('toggle-attendance-import').addEventListener('click',()=>{
+    const area=$('attendance-import');
+    area.classList.toggle('hidden');
+    $('toggle-attendance-import').setAttribute('aria-expanded',String(!area.classList.contains('hidden')));
+  });
+  $('staff-search').addEventListener('input',renderStaff);
+  $('add-staff').addEventListener('click',()=>openStaffEditor());
+  $('staff-rows').addEventListener('click',e=>{
+    const node=e.target.closest('[data-staff-edit]');
+    if(node)openStaffEditor(node.dataset.staffEdit);
+  });
+  $('staff-form').addEventListener('submit',saveStaff);
+  $('close-staff').addEventListener('click',()=>$('staff-dialog').close());
   $('usb-file').addEventListener('change',()=>{usbPreviewOkay=false;$('usb-result').classList.add('hidden');});
   $('usb-preview').addEventListener('click',()=>processUsb(true));
   $('usb-form').addEventListener('submit',e=>{e.preventDefault();processUsb(false);});
