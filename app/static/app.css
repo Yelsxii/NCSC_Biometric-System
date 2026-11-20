@@ -90,3 +90,35 @@ button:focus-visible,a:focus-visible{outline:3px solid #6499e2;outline-offset:2p
   .print-sheet{box-shadow:none!important;width:auto!important;min-height:0!important;margin:0!important;padding:0!important;font-size:10px!important}
   .dtr-table{page-break-inside:avoid}.dtr-table tr{break-inside:avoid}
 }
+
+/* Streamlined three-section records workflow. */
+.sidebar .nav{gap:5px}
+.sidebar .nav-item{font-size:12.5px;padding-left:10px;gap:8px}
+#main-content{padding-top:20px}
+.page>.panel:first-child{margin-top:0}
+.panel-header{margin-bottom:12px}
+.panel-header p{max-width:720px}
+.inline-collapse{background:#f7f9fc;border:1px solid #dfe6ef;border-left:3px solid var(--navy2);padding:12px 14px;margin:0 0 15px;border-radius:4px}
+.inline-collapse-heading{display:flex;align-items:baseline;gap:12px;margin-bottom:10px;flex-wrap:wrap}
+.inline-collapse-heading strong{color:var(--navy);font-size:12px}
+.inline-collapse-heading span{color:#77869b;font-size:11px}
+.inline-collapse .table-note{margin-top:8px}
+.inline-summary{display:flex;gap:18px;flex-wrap:wrap;border-top:1px solid #edf1f6;border-bottom:1px solid #edf1f6;margin:0 0 10px;padding:9px 2px;color:#687993;font-size:11px}
+.inline-summary b{font-size:13px;color:var(--navy);margin-right:4px}
+.toolbar-count{color:#728099;font-size:12px;align-self:center}
+.connection-details{display:block}
+.connection-details>summary{cursor:pointer;border:1px solid var(--line);background:#fff;color:var(--navy);font-size:12px;font-weight:700;padding:13px 18px;border-radius:5px;list-style-position:inside}
+.connection-details[open]>summary{border-bottom-left-radius:0;border-bottom-right-radius:0}
+.connection-details>.panel{border-top:0;border-top-left-radius:0;border-top-right-radius:0}
+.connection-details .connection-grid{grid-template-columns:1fr 1fr 1.2fr auto}
+#activity-rows .text-link,#register-rows .text-link,#staff-rows .text-link{font-size:11px;white-space:nowrap}
+#activity-rows td:nth-child(4),#activity-rows td:nth-child(5){font-variant-numeric:tabular-nums}
+@media(max-width:1050px){.connection-details .connection-grid{grid-template-columns:1fr 1fr}}
+@media(max-width:740px){
+  #main-content{padding-top:12px}
+  .panel-header{gap:9px}
+  .inline-summary{gap:9px 15px}
+  #toggle-attendance-import{width:100%}
+  .connection-details .connection-grid{grid-template-columns:1fr}
+  .inline-collapse{padding:11px}
+}
