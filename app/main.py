@@ -546,7 +546,7 @@ def monitor_dtr(employee_code: str, month: str, user: dict = Depends(current_use
         support = [a for a in activities if a["start_at"] < after and a["end_at"] > before]
         rows.append({"date": date.isoformat(), "day": date.strftime("%a"),
                      "scans": day_scans, "activities": support,
-                     "coverage": "scans" if day_scans else "official_travel_reference" if any(a["category"]=="Travel Order" for a in support) else "reference_only" if support else "no_records",
+                     "coverage": "scans" if day_scans else "reference_only" if support else "no_records",
                      "travel_order": any(a["category"]=="Travel Order" for a in support),
                      "travel_remark": "OFFICIAL TRAVEL" if any(a["category"]=="Travel Order" for a in support) else "",
                      "undertime_review": "TO coverage for HR verification" if any(a["category"]=="Travel Order" for a in support) else "Not calculated"})
