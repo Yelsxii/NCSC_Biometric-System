@@ -21,7 +21,6 @@ const titles = {
   staff:'Staff Management'
 };
 let activityRequest = 0;
-let staffEntries = [];
 const currentMonth = () => {
   const parts = new Intl.DateTimeFormat('en-CA',{timeZone:'Asia/Manila',year:'numeric',month:'2-digit'})
     .formatToParts(new Date());
@@ -52,6 +51,8 @@ function showLogin(){
   $('login-view').classList.remove('hidden');
   $('workspace').classList.add('hidden');
   $('login-password').value='';
+  $('login-password').type='password';
+  $('toggle-password').setAttribute('aria-pressed','false');
   $('login-username').focus();
 }
 function showApp(){
@@ -59,9 +60,10 @@ function showApp(){
   $('workspace').classList.remove('hidden');
   $('account').textContent=session.username;
   const canWrite=session.role==='admin';
-  document.querySelectorAll('#usb-form button,#roster-form button,#staff-form button[type="submit"]')
+  document.querySelectorAll('#usb-form button,#roster-form button')
     .forEach(el=>el.disabled=!canWrite);
-  $('add-staff').disabled=!canWrite;
+  $('open-attendance-import').disabled=!canWrite;
+  $('open-user-import').disabled=!canWrite;
   $('register-month').value=currentMonth();
   $('detail-month').value=currentMonth();
   $('activity-month').value=currentMonth();
@@ -81,26 +83,30 @@ function navigate(page){
   window.history.replaceState(null,'','#'+page);
   if (page==='employees') return loadRegister();
   if (page==='activities') return loadActivities();
-  if (page==='staff') return Promise.all([loadStaff(),loadDevice()]);
+  if (page==='staff') return loadDevice();
 }
 async function loadRegister(){
   const serial=++requestSerial;
   const month=$('register-month').value||currentMonth();
   const q=$('employee-search').value.trim();
-  $('register-rows').innerHTML='<tr><td colspan="6">Loading employee register…</td></tr>';
-  try{
+  $('register-rows').innerHTML='<tr><td colspan="4" class="table-empty">Loading attendance register…</td></tr>';
+  try {
     const result=await api('/api/employee-register?'+new URLSearchParams({month,q}));
-    if (serial!==requestSerial || currentPage!=='employees') return;
+    if (serial!==requestSerial||currentPage!=='employees') return;
     lastEmployeeRows=result.items;
-    $('register-count').textContent=result.items.length+' employees · '+month+' · Actual scans only';
-    $('register-rows').innerHTML=result.items.length ? result.items.map(row=>
+    $('register-count').textContent=result.items.length+' employee'+(result.items.length===1?'':'s')+' found';
+    $('register-rows').innerHTML=result.items.length?result.items.map(row=>
       '<tr class="click-row" tabindex="0" role="button" data-employee="'+esc(row.employee_code)+'">'+
-      '<td>'+esc(row.employee_code)+'</td><td><b>'+esc(row.display_name||'Name not synchronized')+'</b></td>'+
-      '<td>'+esc(row.department||'—')+'</td><td>'+Number(row.scan_count)+'</td>'+
-      '<td>'+esc(row.last_scan||'No scans this month')+'</td>'+
-      '<td><button type="button" class="text-link" data-employee="'+esc(row.employee_code)+'">Open record →</button></td></tr>'
-    ).join(''):'<tr><td colspan="6">No matching employees. Check the month or USB roster import.</td></tr>';
-  }catch(error){$('register-rows').innerHTML='<tr><td colspan="6">Unable to load employee records.</td></tr>';toast(error.message,true);}
+      '<td class="id-cell">'+esc(row.employee_code)+'</td>'+
+      '<td class="employee-name-cell">'+esc(row.display_name||'Name not synchronized')+'</td>'+
+      '<td>'+esc(row.department||'—')+'</td>'+
+      '<td><button type="button" class="text-link row-action" data-employee="'+esc(row.employee_code)+'">View attendance <span aria-hidden="true">→</span></button></td>'+
+      '</tr>'
+    ).join(''):'<tr><td colspan="4" class="table-empty">No employees found. Try a different name, ID, or month.</td></tr>';
+  }catch(error){
+    $('register-rows').innerHTML='<tr><td colspan="4" class="table-empty">Unable to load employee attendance.</td></tr>';
+    toast(error.message,true);
+  }
 }
 async function openEmployee(code){
   if (!code) return;
@@ -217,37 +223,31 @@ async function loadActivities(){
     category:$('activity-category').value,
     q:$('activity-search').value.trim()
   });
-  $('activity-rows').innerHTML='<tr><td colspan="7">Loading monitoring records…</td></tr>';
+  $('activity-rows').innerHTML='<tr><td colspan="7" class="table-empty">Loading activity logs…</td></tr>';
   try{
     const data=await api('/api/activities/monitor?'+params);
-    if(token!==activityRequest || currentPage!=='activities') return;
+    if(token!==activityRequest||currentPage!=='activities')return;
     const counts=data.summary;
     $('activity-counts').innerHTML=
       '<span><b>'+counts.employees+'</b> employees</span>'+
-      '<span><b>'+counts.aja+'</b> AJA entries</span>'+
-      '<span><b>'+counts.travel_orders+'</b> Travel Order entries</span>'+
-      '<span><b>'+counts.device_signals+'</b> device-coded scans</span>';
+      '<span><b>'+counts.aja+'</b> AJA scans</span>'+
+      '<span><b>'+counts.travel_orders+'</b> Travel Order scans</span>';
     $('activity-note').textContent=data.note;
-    $('activity-rows').innerHTML=data.items.length ? data.items.map(item=>{
-      const time=item.source==='device_scan'?item.start_at:
-        item.start_at+(item.end_at?' — '+item.end_at:'');
-      const supporting=item.source==='device_scan'?
-        'Code '+item.work_code+' · Device '+item.device_id:
-        item.reference||item.purpose||'Reference recorded';
-      const evidence=item.source==='device_scan'?
-        '<span class="pill-neutral pill-aja">Device event · unverified</span>':
-        '<span class="pill-neutral">Office reference · verify</span>';
-      return '<tr><td>'+esc(item.employee_code)+'</td>'+
-        '<td><strong>'+esc(item.display_name||'Name not synced')+'</strong></td>'+
-        '<td>'+esc(item.category)+'</td><td>'+esc(time)+'</td>'+
-        '<td>'+esc(supporting)+'</td><td>'+evidence+'</td>'+
-        '<td><button class="text-link" type="button" data-monitor-employee="'+
-          esc(item.employee_code)+'">Attendance →</button></td></tr>';
-    }).join(''):
-      '<tr><td colspan="7">No AJA / Travel Order matches for this period. Full-day travel without office scans needs an existing approved office record.</td></tr>';
+    $('activity-rows').innerHTML=data.items.length?data.items.map(item=>{
+      const instant=item.happened_at||'';
+      const badge=item.category==='AJA'?'activity-aja':'activity-travel';
+      return '<tr><td class="id-cell">'+esc(item.employee_code)+'</td>'+
+        '<td class="employee-name-cell">'+esc(item.display_name||'Name not synchronized')+'</td>'+
+        '<td><span class="activity-badge '+badge+'">'+esc(item.category)+'</span></td>'+
+        '<td class="date-cell">'+esc(instant.slice(0,10))+'</td>'+
+        '<td class="date-cell">'+esc(instant.slice(11,19))+'</td>'+
+        '<td><span class="code-pill">'+esc(item.work_code)+'</span></td>'+
+        '<td><button class="text-link row-action" type="button" data-monitor-employee="'+
+          esc(item.employee_code)+'">View attendance <span aria-hidden="true">→</span></button></td></tr>';
+    }).join(''):'<tr><td colspan="7" class="table-empty">No device-classified AJA or Travel Order scans found for these filters.</td></tr>';
   }catch(error){
-    if(token!==activityRequest) return;
-    $('activity-rows').innerHTML='<tr><td colspan="7">Could not load monitoring data.</td></tr>';
+    if(token!==activityRequest)return;
+    $('activity-rows').innerHTML='<tr><td colspan="7" class="table-empty">Unable to load activity logs.</td></tr>';
     toast(error.message,true);
   }
 }
@@ -256,52 +256,6 @@ async function viewActivityEmployee(code){
   $('register-month').value=$('activity-month').value||currentMonth();
   await navigate('employees');
   await openEmployee(code);
-}
-async function loadStaff(){
-  try{
-    const data=await api('/api/employees');
-    staffEntries=data.staff;
-    renderStaff();
-  }catch(error){toast(error.message,true);}
-}
-function renderStaff(){
-  const q=$('staff-search').value.trim().toLowerCase();
-  const rows=staffEntries.filter(x=>[x.employee_code,x.display_name,x.department].join(' ').toLowerCase().includes(q));
-  $('staff-count').textContent=rows.length+' staff';
-  $('staff-rows').innerHTML=rows.length?rows.map(x=>
-    '<tr><td>'+esc(x.employee_code)+'</td>'+
-    '<td><b>'+esc(x.display_name||'Name not synchronized')+'</b></td>'+
-    '<td>'+esc(x.department||'—')+'</td>'+
-    '<td>'+esc(x.name_source||'Device attendance')+'</td>'+
-    '<td>'+(session.role==='admin'?
-      '<button class="text-link" data-staff-edit="'+esc(x.employee_code)+'" type="button">Edit</button>':'')+
-    '</td></tr>').join(''):
-    '<tr><td colspan="5">No staff found. Use USB staff recovery or add basic staff details manually.</td></tr>';
-}
-function openStaffEditor(code=''){
-  const row=staffEntries.find(x=>x.employee_code===code);
-  $('staff-form').reset();
-  $('staff-code').value=code;
-  $('staff-code').readOnly=Boolean(row);
-  $('staff-name').value=row?.display_name||'';
-  $('staff-department').value=row?.department||'';
-  $('staff-dialog-heading').textContent=row?'Edit staff details':'Add staff details';
-  $('staff-dialog').showModal();
-}
-async function saveStaff(event){
-  event.preventDefault();
-  const code=$('staff-code').value.trim();
-  try{
-    await api('/api/employees/'+encodeURIComponent(code),{
-      method:'PUT',body:JSON.stringify({
-        display_name:$('staff-name').value.trim(),
-        department:$('staff-department').value.trim()
-      })
-    });
-    $('staff-dialog').close();
-    toast('Staff metadata saved locally. Biometric device unchanged.');
-    loadStaff();
-  }catch(error){toast(error.message,true);}
 }
 async function loadDevice(){
   try{
@@ -314,8 +268,8 @@ async function loadDevice(){
     $('probe-lan').disabled=session.role!=='admin';
     const codes=await api('/api/work-codes');
     $('code-rows').innerHTML=codes.items.length?codes.items.map(row=>
-      '<tr><td>'+esc(row.device_id)+'</td><td><b>'+esc(row.work_code)+'</b></td>'+
-      '<td>'+esc(row.label||'Unmapped')+'</td><td>'+esc(row.activity_type)+'</td>'+
+      '<tr><td>'+esc(row.device_id)+'</td><td><span class="code-pill">'+esc(row.work_code)+'</span></td>'+
+      '<td>'+esc(row.activity_type)+'</td><td>'+esc(row.label||'Unmapped')+'</td>'+
       '<td>'+Number(row.scan_count||0)+'</td>'+
       '<td>'+(session.role==='admin'?'<button class="text-link" type="button" data-map-code="'+
       esc(row.device_id)+'|'+esc(row.work_code)+'">Edit label</button>':'')+'</td></tr>'
@@ -342,14 +296,16 @@ async function processUsb(previewOnly){
       {method:'POST',body:uploadBody(file)});
     const output=$('usb-result');
     output.classList.remove('hidden');
+    output.className='upload-result '+(previewOnly?'import-preview':'import-success');
     if (previewOnly){
       usbPreviewOkay=result.format==='source'&&!result.already_imported;
+      if(result.already_imported)output.className='upload-result import-warning';
       output.textContent=result.format==='report'
         ?'Excel report preview only. It cannot create raw scan events. Use the staff import for names.'
         :'Preview: '+result.rows+' scans · '+result.employees+' IDs · '+result.earliest+' to '+result.latest+
          (result.already_imported?' · File already imported':'');
     }else{
-      output.textContent='Imported '+result.inserted+' new scans; '+result.duplicates+' duplicate records ignored.';
+      output.textContent='Merge complete · '+result.inserted+' new scans added · '+result.duplicates+' duplicate scans skipped.';
       usbPreviewOkay=false;
       toast('Attendance import completed.');loadRegister();
     }
@@ -366,10 +322,11 @@ async function processRoster(previewOnly){
     const output=$('roster-result');
     output.classList.remove('hidden');
     rosterPreviewOkay=previewOnly;
-    output.textContent=(previewOnly?'Preview':'Roster updated')+': '+result.total+
+    output.className='upload-result '+(previewOnly?'import-preview':'import-success');
+    output.textContent=(previewOnly?'Preview':'User sync complete')+': '+result.total+
       ' staff · New '+result.counts.new+' · Fill '+result.counts.fill+
       ' · Conflicts '+result.counts.conflict+' (not overwritten)';
-    if(!previewOnly){rosterPreviewOkay=false;toast('Staff directory synchronized from file.');loadStaff();}
+    if(!previewOnly){rosterPreviewOkay=false;toast('Device user names synchronized from file.');}
   }catch(error){toast(error.message,true);}
 }
 function openCodeEditor(device,code){
@@ -436,23 +393,35 @@ async function initialize(){
     const node=e.target.closest('[data-monitor-employee]');
     if(node) viewActivityEmployee(node.dataset.monitorEmployee);
   });
-  $('toggle-attendance-import').addEventListener('click',()=>{
-    const area=$('attendance-import');
-    area.classList.toggle('hidden');
-    $('toggle-attendance-import').setAttribute('aria-expanded',String(!area.classList.contains('hidden')));
+  $('open-attendance-import').addEventListener('click',()=>{
+    $('usb-form').reset();$('usb-file-name').textContent='No file selected';
+    usbPreviewOkay=false;$('usb-result').classList.add('hidden');
+    $('attendance-import-dialog').showModal();
   });
-  $('staff-search').addEventListener('input',renderStaff);
-  $('add-staff').addEventListener('click',()=>openStaffEditor());
-  $('staff-rows').addEventListener('click',e=>{
-    const node=e.target.closest('[data-staff-edit]');
-    if(node)openStaffEditor(node.dataset.staffEdit);
+  $('close-attendance-import').addEventListener('click',()=>$('attendance-import-dialog').close());
+  $('open-user-import').addEventListener('click',()=>{
+    $('roster-form').reset();$('roster-file-name').textContent='No file selected';
+    rosterPreviewOkay=false;$('roster-result').classList.add('hidden');
+    $('user-import-dialog').showModal();
   });
-  $('staff-form').addEventListener('submit',saveStaff);
-  $('close-staff').addEventListener('click',()=>$('staff-dialog').close());
-  $('usb-file').addEventListener('change',()=>{usbPreviewOkay=false;$('usb-result').classList.add('hidden');});
+  $('close-user-import').addEventListener('click',()=>$('user-import-dialog').close());
+  $('toggle-password').addEventListener('click',()=>{
+    const input=$('login-password'),btn=$('toggle-password');
+    const visible=input.type==='password';
+    input.type=visible?'text':'password';
+    btn.setAttribute('aria-pressed',String(visible));
+    btn.setAttribute('aria-label',visible?'Hide password':'Show password');
+  });
+  $('usb-file').addEventListener('change',()=>{
+    usbPreviewOkay=false;$('usb-result').classList.add('hidden');
+    $('usb-file-name').textContent=$('usb-file').files[0]?.name||'No file selected';
+  });
   $('usb-preview').addEventListener('click',()=>processUsb(true));
   $('usb-form').addEventListener('submit',e=>{e.preventDefault();processUsb(false);});
-  $('roster-file').addEventListener('change',()=>{rosterPreviewOkay=false;$('roster-result').classList.add('hidden');});
+  $('roster-file').addEventListener('change',()=>{
+    rosterPreviewOkay=false;$('roster-result').classList.add('hidden');
+    $('roster-file-name').textContent=$('roster-file').files[0]?.name||'No file selected';
+  });
   $('roster-preview').addEventListener('click',()=>processRoster(true));
   $('roster-form').addEventListener('submit',e=>{e.preventDefault();processRoster(false);});
   $('probe-lan').addEventListener('click',probeDevice);
