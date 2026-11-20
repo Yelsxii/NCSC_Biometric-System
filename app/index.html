@@ -32,6 +32,8 @@
         <button class="nav-item active" data-page="overview"><span class="nav-icon">▦</span> Overview</button>
         <button class="nav-item" data-page="attendance"><span class="nav-icon">◷</span> Attendance Logs</button>
         <button class="nav-item" data-page="imports"><span class="nav-icon">⇩</span> USB Imports</button>
+        <button class="nav-item" data-page="staff"><span class="nav-icon">♙</span> Staff Directory</button>
+        <button class="nav-item" data-page="workcodes"><span class="nav-icon">#</span> Work Codes</button>
         <button class="nav-item" data-page="fieldwork"><span class="nav-icon">↗</span> AJA / Fieldwork</button>
       </nav>
       <div class="sidebar-bottom">
@@ -59,7 +61,7 @@
           </div>
           <div class="metrics">
             <article class="metric"><div class="metric-top"><span>Total scans</span><span class="metric-icon teal">◷</span></div><strong id="metric-scans">—</strong><small>All imported records</small></article>
-            <article class="metric"><div class="metric-top"><span>Employees</span><span class="metric-icon blue">♙</span></div><strong id="metric-employees">—</strong><small>Unique biometric IDs</small></article>
+            <article class="metric"><div class="metric-top"><span>Staff IDs</span><span class="metric-icon blue">♙</span></div><strong id="metric-staff">—</strong><small>From logs + user directory</small></article>
             <article class="metric"><div class="metric-top"><span>Import batches</span><span class="metric-icon violet">⇩</span></div><strong id="metric-imports">—</strong><small>USB files processed</small></article>
             <article class="metric"><div class="metric-top"><span>Awaiting review</span><span class="metric-icon amber">◌</span></div><strong id="metric-pending">—</strong><small>AJA / fieldwork requests</small></article>
           </div>
@@ -98,6 +100,55 @@
               <div class="safeguard"><span>✓</span><div><strong>Private local database</strong><small>Do not commit real logs or database files to GitHub.</small></div></div>
             </article>
           </div>
+        </section>
+
+
+        <section class="page hidden" data-view="staff">
+          <div class="section-heading"><div><h3>Staff directory</h3><p>Automatically discover staff IDs from attendance logs and update device names through a safe user.dat USB export.</p></div><span class="tag green">No fingerprint data imported</span></div>
+          <div class="two-col imports-layout">
+            <article class="panel">
+              <h3>Sync device directory</h3>
+              <p class="muted">Select <b>user.dat</b> for registered staff names and IDs, or <b>department.dat</b> for department labels. These are snapshots, not live device synchronization.</p>
+              <form id="directory-form">
+                <label class="drop-area" for="directory-file"><span class="drop-icon">♙</span><strong>Choose user.dat or department.dat</strong><small>Only names and IDs are extracted · Never choose template.fp10</small><span class="file-name" id="directory-file-name">No directory file chosen</span></label>
+                <input id="directory-file" class="sr-only" type="file" accept=".dat" required>
+                <div class="button-row"><button class="btn outline" id="directory-preview-btn" type="button">Preview directory</button><button class="btn primary" type="submit">Sync directory</button></div>
+              </form>
+              <div id="directory-result" class="preview-output hidden"></div>
+            </article>
+            <article class="panel">
+              <h3>How updates work</h3>
+              <div class="safeguard"><span>✓</span><div><strong>New attendance IDs appear automatically</strong><small>When a newly registered employee first scans and the log is imported, a placeholder staff record is created.</small></div></div>
+              <div class="safeguard"><span>✓</span><div><strong>Names from user.dat</strong><small>Re-export user data from the K14 and sync here to update staff names. No manual retyping.</small></div></div>
+              <div class="safeguard"><span>!</span><div><strong>Live sync is not active</strong><small>The K14 has no LAN cable yet. Automatic real-time updates can be added after authorized network integration.</small></div></div>
+            </article>
+          </div>
+          <article class="panel directory-panel">
+            <div class="section-top"><div><h3>Device staff records</h3><p><span id="staff-count">0</span> staff IDs · <span id="named-staff-count">0</span> have names from device export</p></div><button class="link-button" type="button" id="refresh-staff">Refresh</button></div>
+            <div class="table-scroll"><table><thead><tr><th>Employee ID</th><th>Name on device</th><th>Source</th><th>Last biometric scan</th></tr></thead><tbody id="staff-rows"></tbody></table></div>
+          </article>
+          <article class="panel directory-panel">
+            <div class="section-top"><div><h3>Device departments</h3><p>Imported names only; employee-to-department assignments still require verification.</p></div></div>
+            <div id="department-items" class="department-chips"></div>
+          </article>
+        </section>
+
+        <section class="page hidden" data-view="workcodes">
+          <div class="section-heading"><div><h3>Numeric work codes</h3><p>Maintain readable labels for codes already recorded in device attendance events.</p></div><span class="tag">Local mappings only</span></div>
+          <div class="two-col imports-layout">
+            <article class="panel">
+              <h3>Create a numeric code label</h3>
+              <p class="muted">Example: a code like <code>101</code> may be labeled “Official Business” in the app. This does NOT install code 101 on the K14 or change any original scan.</p>
+              <form id="code-form" class="code-form">
+                <label>Numeric code<input name="numeric_code" type="text" inputmode="numeric" pattern="[0-9]{1,10}" maxlength="10" required placeholder="e.g., 101"></label>
+                <label>Label<input name="label" required minlength="2" maxlength="80" placeholder="e.g., Official Business"></label>
+                <button class="btn primary" type="submit">Save local label</button>
+              </form>
+              <div class="notice">The <strong>Shift 1 / Shift 2</strong> dropdown shown on your K14 controls attendance schedules, not work codes. Do not change the device schedule to create work codes.</div>
+            </article>
+            <article class="panel"><h3>Codes found in attendance logs</h3><p class="muted">These are raw values from the sixth column of imported .dat files.</p><div id="observed-codes" class="code-list"></div></article>
+          </div>
+          <article class="panel directory-panel"><h3>Local code mappings</h3><p class="muted">Only for display in this HRIS. The original device keeps its own configuration.</p><div id="configured-codes" class="code-list"></div></article>
         </section>
 
         <section class="page hidden" data-view="fieldwork">
