@@ -565,7 +565,7 @@ def employee_register(month: str, q: str = "", user: dict = Depends(current_user
     No scan is interpreted as time-in/out here. The same personnel registry
     powers offline USB and the future LAN connector.
     """
-    if not re.fullmatch(r"\\d{4}-\\d{2}", month):
+    if not re.fullmatch(r"\d{4}-\d{2}", month):
         raise HTTPException(400, "Month must be YYYY-MM.")
     try:
         start = dt.date.fromisoformat(month + "-01")
