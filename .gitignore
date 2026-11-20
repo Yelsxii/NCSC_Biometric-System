@@ -14,3 +14,8 @@ exports/
 .DS_Store
 .vscode/
 .idea/
+*.xls
+*.xlsx
+*.csv
+!tests/fixtures/k14_sample.xls
+node_modules/

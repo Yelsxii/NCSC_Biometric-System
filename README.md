@@ -14,6 +14,11 @@ Local-first, security-conscious **Phase 1 MVP** for importing ZKTeco K14 attenda
 - Separate fieldwork entries with pending/approved/rejected decisions and an audit trail
 - Raw K14 device status/verification/work codes preserved **without guessing IN or OUT**
 - A future LAN-sync adapter can be added without changing the database's record model
+- NCSC blue, red, and white theme with the supplied seal and locally served NCSC photography
+- Welcome page with an accessible sign-in overlay, password visibility control, and inline login errors
+- Read-only, fictional-data preview available through **Explore preview**, without an account
+- Daily scan chart, date filters, paginated source logs, and activity status filters
+- Read-only **K14 .xls report preview**, kept separate from raw attendance imports
 
 ## Tech stack
 
@@ -68,6 +73,8 @@ Choose a private username and a strong password of 12+ characters. These are sto
 
 Open **http://127.0.0.1:8000** in your browser and sign in.
 
+The welcome page opens first. Select **Sign in** or **Open your workspace** for the login overlay. **Explore preview** shows fictional sample data without signing in or writing to the local database. Existing accounts and attendance data need no migration for this theme update.
+
 Press **Ctrl+C** to stop. The SQLite database is created at `data/ncsc.sqlite3`, which is ignored by Git.
 
 ## USB import workflow
@@ -78,6 +85,12 @@ Press **Ctrl+C** to stop. The SQLite database is created at `data/ncsc.sqlite3`,
 4. Review the count, date range, unique employee IDs, and raw status codes.
 5. Select **Import records**. The system stores the source events separately and skips duplicate events.
 6. Visit **Attendance Logs** to review records.
+
+Select an exact employee ID and/or inclusive From/To dates to filter scans. Use **Previous** and **Next** to browse more than 25 results. The overview chart shows seven calendar days ending on the latest imported scan date, including zero-count days. It counts device events only.
+
+### Excel device reports
+
+USB imports also previews legacy **.xls** K14 reports containing an `Att.log report` worksheet. The preview shows the reporting period, unique device IDs, and worksheet structure. It does not save report contents, infer IN/OUT events, or import calculated attendance/OT totals. Use the original `_attlog.dat` for source scan ingestion. Other workbook layouts and `.xlsx` are not supported by this preview.
 
 ### Supported K14 six-field log format
 
@@ -141,6 +154,18 @@ NCSC_Biometric-System/
 .\.venv\Scripts\python.exe -m pip install pytest httpx
 .\.venv\Scripts\python.exe -m pytest -q
 ```
+
+GitHub Actions also runs an isolated Chromium smoke check for the sign-in overlay, session restore/logout, raw-log preview/import/deduplication, Excel report preview, filtering, fieldwork decisions, and 1440/768/390/320px layouts. Its `ncsc-design-previews` artifact contains screenshots with fictional data only.
+
+Optional local browser check (Node.js is needed only for this check):
+
+```powershell
+npm install --no-save --package-lock=false playwright@1.62.1
+npx playwright install chromium
+node tests/browser_smoke.cjs
+```
+
+The browser check creates an isolated temporary database and account, then removes them. It never uses the office database or uploaded reports. See [asset sources](app/static/images/SOURCES.md) for the bundled logo and photograph.
 
 ## Working with GitHub
 

@@ -23,6 +23,7 @@ from starlette.middleware.sessions import SessionMiddleware
 from app.db import connect, initialize
 from app.parser import MAX_BYTES, digest, parse_attlog
 from app.security import check_password
+from app.reports import preview_k14_report
 
 load_dotenv()
 secret = os.environ.get("SECRET_KEY", "")
@@ -160,26 +161,57 @@ def overview(user: dict = Depends(current_user)):
             "SELECT id,original_name,total_records,inserted_records,imported_at "
             "FROM import_batches ORDER BY id DESC LIMIT 6"
         ).fetchall()]
-    return {"totals": totals, "recent_imports": recent, "phase": "USB / Local Pilot"}
+        latest = con.execute("SELECT MAX(happened_at) FROM punches").fetchone()[0]
+        daily = []
+        if latest:
+            end = dt.date.fromisoformat(latest[:10])
+            start = end - dt.timedelta(days=6)
+            counts = dict(con.execute(
+                "SELECT substr(happened_at,1,10),COUNT(*) FROM punches "
+                "WHERE happened_at>=? GROUP BY substr(happened_at,1,10)",
+                (start.isoformat(),),
+            ).fetchall())
+            daily = [{"date": (start + dt.timedelta(days=i)).isoformat(),
+                      "scans": counts.get((start + dt.timedelta(days=i)).isoformat(), 0)}
+                     for i in range(7)]
+    return {"totals": totals, "recent_imports": recent, "daily_scans": daily,
+            "phase": "USB / Local Pilot"}
 
 
 @app.get("/api/punches")
-def punches(limit: int = 100, employee_code: str = "", user: dict = Depends(current_user)):
+def punches(limit: int = 100, employee_code: str = "", offset: int = 0,
+            date_from: dt.date | None = None, date_to: dt.date | None = None,
+            user: dict = Depends(current_user)):
     if not 1 <= limit <= 250:
         raise HTTPException(400, "Limit must be between 1 and 250.")
     if employee_code and not CODE_RE.fullmatch(employee_code):
         raise HTTPException(400, "Invalid employee code.")
+    if not 0 <= offset <= 1_000_000:
+        raise HTTPException(400, "Invalid page offset.")
+    if any(d and not 2000 <= d.year <= 2100 for d in (date_from, date_to)):
+        raise HTTPException(400, "Dates must be between 2000 and 2100.")
+    if date_from and date_to and date_to < date_from:
+        raise HTTPException(400, "End date must be on or after the start date.")
     sql = ("SELECT id,employee_code,happened_at,device_id,status_code,verification_code,work_code "
            "FROM punches ")
     args: list = []
+    filters = []
     if employee_code:
-        sql += "WHERE employee_code=? "
+        filters.append("employee_code=?")
         args.append(employee_code)
-    sql += "ORDER BY happened_at DESC, id DESC LIMIT ?"
-    args.append(limit)
+    if date_from:
+        filters.append("happened_at>=?")
+        args.append(date_from.isoformat())
+    if date_to:
+        filters.append("happened_at<?")
+        args.append((date_to + dt.timedelta(days=1)).isoformat())
+    where = "WHERE " + " AND ".join(filters) + " " if filters else ""
+    sql += where + "ORDER BY happened_at DESC, id DESC LIMIT ? OFFSET ?"
     with closing(connect()) as con:
-        rows = [dict(x) for x in con.execute(sql, args).fetchall()]
-    return {"items": rows, "note": "Raw codes are not yet verified as clock-IN or clock-OUT."}
+        total = con.execute("SELECT COUNT(*) FROM punches " + where, args).fetchone()[0]
+        rows = [dict(x) for x in con.execute(sql, [*args, limit, offset]).fetchall()]
+    return {"items": rows, "total": total,
+            "note": "Raw codes are not yet verified as clock-IN or clock-OUT."}
 
 
 @app.post("/api/imports/preview")
@@ -187,6 +219,11 @@ async def preview(request: Request, file: UploadFile = File(...), user: dict = D
     require_csrf(request)
     raw = await file.read(MAX_BYTES + 1)
     try:
+        filename = (file.filename or "").lower()
+        if filename.endswith(".xls"):
+            return preview_k14_report(raw)
+        if not filename.endswith((".dat", ".txt")):
+            raise ValueError("Choose a .dat/.txt source log or a .xls device report.")
         records = parse_attlog(raw)
     except ValueError as exc:
         raise HTTPException(400, str(exc)) from exc
@@ -194,7 +231,7 @@ async def preview(request: Request, file: UploadFile = File(...), user: dict = D
     with closing(connect()) as con:
         exists = con.execute("SELECT id FROM import_batches WHERE file_sha256=?", (fingerprint,)).fetchone()
     return {
-        "rows": len(records), "employees": len({r.employee_code for r in records}),
+        "format": "source", "rows": len(records), "employees": len({r.employee_code for r in records}),
         "earliest": min(r.happened_at for r in records),
         "latest": max(r.happened_at for r in records),
         "sha256": fingerprint, "already_imported": bool(exists),
@@ -206,6 +243,8 @@ async def preview(request: Request, file: UploadFile = File(...), user: dict = D
 @app.post("/api/imports")
 async def import_file(request: Request, file: UploadFile = File(...), user: dict = Depends(require_admin)):
     require_csrf(request)
+    if (file.filename or "").lower().endswith(".xls"):
+        raise HTTPException(400, "Excel reports are preview-only. Import the original _attlog.dat source file.")
     raw = await file.read(MAX_BYTES + 1)
     try:
         records = parse_attlog(raw)
