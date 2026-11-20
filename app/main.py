@@ -358,6 +358,10 @@ def record_activity(payload: ActivityInput, request: Request, user: dict = Depen
                      payload.start_at.isoformat(sep=" "),payload.end_at.isoformat(sep=" "),user["id"]),
                 )
                 aid = cur.lastrowid
+                # Approved-office references may cover staff without any office scans.
+                # Keep those employee IDs in the attendance register as unscanned IDs.
+                con.execute("INSERT OR IGNORE INTO employees(employee_code) VALUES(?)",
+                            (payload.employee_code,))
                 con.execute(
                     "INSERT INTO audit_events(actor_id,action,entity,entity_id) VALUES(?,?,?,?)",
                     (user["id"],"recorded","activity_record",aid),
