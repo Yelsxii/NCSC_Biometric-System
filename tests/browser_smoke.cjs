@@ -75,6 +75,9 @@ uvicorn.run('app.main:app',host='127.0.0.1',port=int(os.environ['QA_PORT']),log_
     await page.screenshot({path:join(root,'docs/login-preview.png'),animations:'disabled'});
 
     await page.setViewportSize({width:390,height:800});
+    // The logo swap deliberately transitions visibility/opacity over 220 ms.
+    await page.waitForFunction(() =>
+      getComputedStyle(document.querySelector('.login-brand-row .fingerprint-mark')).visibility==='hidden');
     const mobileBrand=await page.evaluate(()=>{
       const fp=document.querySelector('.login-brand-row .fingerprint-mark');
       const seal=document.querySelector('.login-brand-row .mobile-seal');
