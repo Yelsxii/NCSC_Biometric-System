@@ -1,0 +1,16 @@
+.venv/
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.env
+*.db
+*.sqlite
+*.sqlite3
+data/
+uploads/
+exports/
+*.dat
+*_attlog*
+.DS_Store
+.vscode/
+.idea/

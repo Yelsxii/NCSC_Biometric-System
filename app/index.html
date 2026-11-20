@@ -1,0 +1,181 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#0f766e">
+  <title>NCSC | Biometric Attendance</title>
+  <link rel="stylesheet" href="/static/app.css">
+  <script src="/static/app.js" defer></script>
+</head>
+<body>
+  <div id="login-view" class="auth-shell">
+    <form id="login-form" class="auth-card" autocomplete="on">
+      <div class="brand-mark large">N</div>
+      <p class="eyebrow">NCSC · Internal Pilot</p>
+      <h1>Welcome back</h1>
+      <p class="muted">Sign in to your local biometric attendance workspace.</p>
+      <label for="login-username">Username</label>
+      <input id="login-username" name="username" required minlength="3" autocomplete="username" placeholder="Administrator">
+      <label for="login-password">Password</label>
+      <input id="login-password" name="password" type="password" required autocomplete="current-password" placeholder="Enter password">
+      <button class="btn primary block" type="submit">Sign in <span aria-hidden="true">→</span></button>
+      <p class="note center">Local-first · Employee data stays on this computer</p>
+    </form>
+  </div>
+
+  <div id="workspace" class="workspace hidden">
+    <aside class="sidebar">
+      <div class="brand"><div class="brand-mark">N</div><span>NCSC<span class="brand-sub">Attendance Hub</span></span></div>
+      <div class="sidebar-label">WORKSPACE</div>
+      <nav aria-label="Main navigation">
+        <button class="nav-item active" data-page="overview"><span class="nav-icon">▦</span> Overview</button>
+        <button class="nav-item" data-page="attendance"><span class="nav-icon">◷</span> Attendance Logs</button>
+        <button class="nav-item" data-page="imports"><span class="nav-icon">⇩</span> USB Imports</button>
+        <button class="nav-item" data-page="staff"><span class="nav-icon">♙</span> Staff Directory</button>
+        <button class="nav-item" data-page="workcodes"><span class="nav-icon">#</span> Work Codes</button>
+        <button class="nav-item" data-page="fieldwork"><span class="nav-icon">↗</span> AJA / Fieldwork</button>
+      </nav>
+      <div class="sidebar-bottom">
+        <div class="status-chip"><span class="status-dot"></span> USB mode · Offline ready</div>
+        <p>Phase 1 · Local pilot</p>
+        <button class="text-button" id="logout" type="button">Sign out</button>
+      </div>
+    </aside>
+
+    <div class="main-shell">
+      <header class="topbar">
+        <div><p class="eyebrow">OPERATIONS / <span id="current-location">OVERVIEW</span></p><h2 id="page-heading">Overview</h2></div>
+        <div class="top-actions"><span class="today" id="today"></span><span class="account-pill" id="account">Admin</span></div>
+      </header>
+      <main id="main-content">
+        <section class="page" data-view="overview">
+          <div class="hero">
+            <div>
+              <div class="hero-tag">NCSC · BIOMETRIC ATTENDANCE</div>
+              <h1>Attendance, organized.</h1>
+              <p>A secure, centralized view of biometric scans and separately managed field activities.</p>
+              <button class="btn hero-btn" type="button" data-go="imports">Import attendance file <span>→</span></button>
+            </div>
+            <div class="hero-illustration" aria-hidden="true"><div class="ring one"></div><div class="ring two"></div><div class="inner-symbol">◉</div></div>
+          </div>
+          <div class="metrics">
+            <article class="metric"><div class="metric-top"><span>Total scans</span><span class="metric-icon teal">◷</span></div><strong id="metric-scans">—</strong><small>All imported records</small></article>
+            <article class="metric"><div class="metric-top"><span>Staff IDs</span><span class="metric-icon blue">♙</span></div><strong id="metric-staff">—</strong><small>From logs + user directory</small></article>
+            <article class="metric"><div class="metric-top"><span>Import batches</span><span class="metric-icon violet">⇩</span></div><strong id="metric-imports">—</strong><small>USB files processed</small></article>
+            <article class="metric"><div class="metric-top"><span>Awaiting review</span><span class="metric-icon amber">◌</span></div><strong id="metric-pending">—</strong><small>AJA / fieldwork requests</small></article>
+          </div>
+          <div class="two-col">
+            <article class="panel"><div class="section-top"><div><h3>Recent imports</h3><p>Latest attendance files processed</p></div><button class="link-button" data-go="imports">Manage imports →</button></div><div id="recent-imports" class="empty">No files imported yet.</div></article>
+            <article class="panel next-steps"><div class="section-top"><div><h3>Integration roadmap</h3><p>Designed for a safe staged rollout</p></div></div><div class="step"><b>01</b><div><strong>USB log ingestion</strong><small>Import original scan records without modifying the K14</small></div><span class="tag green">Ready</span></div><div class="step"><b>02</b><div><strong>AJA and fieldwork</strong><small>Separate requests and review trail</small></div><span class="tag">Pilot</span></div><div class="step"><b>03</b><div><strong>Automatic LAN sync</strong><small>Add later after network access and SDK validation</small></div><span class="tag">Later</span></div></article>
+          </div>
+        </section>
+
+        <section class="page hidden" data-view="attendance">
+          <div class="section-heading"><div><h3>Biometric attendance logs</h3><p>Original device events; raw status codes are not assumed to be IN or OUT.</p></div><button class="btn outline" type="button" data-go="imports">+ Import logs</button></div>
+          <div class="panel">
+            <form id="filter-form" class="filterbar"><label class="sr-only" for="filter-id">Employee ID</label><input id="filter-id" placeholder="Filter by employee ID"><button class="btn primary" type="submit">Search</button><button class="btn outline" type="button" id="clear-filter">Clear</button></form>
+            <div class="table-scroll"><table><thead><tr><th>Employee ID</th><th>Scan timestamp</th><th>Device</th><th>Status code</th><th>Verify code</th><th>Work code</th></tr></thead><tbody id="punch-rows"></tbody></table></div>
+            <p class="table-foot">Up to 100 recent records shown · No automatic IN / OUT interpretation.</p>
+          </div>
+        </section>
+
+        <section class="page hidden" data-view="imports">
+          <div class="section-heading"><div><h3>USB attendance imports</h3><p>Preview and import raw attendance logs from a ZKTeco K14.</p></div><span class="tag green">Read-only source</span></div>
+          <div class="two-col imports-layout">
+            <article class="panel">
+              <h3>Upload an attendance file</h3><p class="muted">Supported format: six tab-separated fields (.dat/.txt) · up to 2 MB.</p>
+              <form id="import-form">
+                <label id="drop-area" class="drop-area" for="attendance-file"><span class="drop-icon">⇪</span><strong>Choose your K14 attendance file</strong><small>USB → Download → Attendance Data</small><span id="file-name" class="file-name">No file chosen</span></label>
+                <input id="attendance-file" type="file" accept=".dat,.txt,text/plain" required class="sr-only">
+                <div class="button-row"><button class="btn outline" type="button" id="preview-btn">Preview file</button><button class="btn primary" type="submit">Import records</button></div>
+              </form>
+              <div id="preview-output" class="preview-output hidden"></div>
+            </article>
+            <article class="panel">
+              <h3>Import safeguards</h3>
+              <div class="safeguard"><span>✓</span><div><strong>Device stays unchanged</strong><small>The software only reads exported USB files.</small></div></div>
+              <div class="safeguard"><span>✓</span><div><strong>Duplicates ignored</strong><small>Re-exported scans won't create additional events.</small></div></div>
+              <div class="safeguard"><span>✓</span><div><strong>Source codes preserved</strong><small>Status codes remain raw until confirmed on the device.</small></div></div>
+              <div class="safeguard"><span>✓</span><div><strong>Private local database</strong><small>Do not commit real logs or database files to GitHub.</small></div></div>
+            </article>
+          </div>
+        </section>
+
+
+        <section class="page hidden" data-view="staff">
+          <div class="section-heading"><div><h3>Staff directory</h3><p>Automatically discover staff IDs from attendance logs and update device names through a safe user.dat USB export.</p></div><span class="tag green">No fingerprint data imported</span></div>
+          <div class="two-col imports-layout">
+            <article class="panel">
+              <h3>Sync device directory</h3>
+              <p class="muted">Select <b>user.dat</b> for registered staff names and IDs, or <b>department.dat</b> for department labels. These are snapshots, not live device synchronization.</p>
+              <form id="directory-form">
+                <label class="drop-area" for="directory-file"><span class="drop-icon">♙</span><strong>Choose user.dat or department.dat</strong><small>Only names and IDs are extracted · Never choose template.fp10</small><span class="file-name" id="directory-file-name">No directory file chosen</span></label>
+                <input id="directory-file" class="sr-only" type="file" accept=".dat" required>
+                <div class="button-row"><button class="btn outline" id="directory-preview-btn" type="button">Preview directory</button><button class="btn primary" type="submit">Sync directory</button></div>
+              </form>
+              <div id="directory-result" class="preview-output hidden"></div>
+            </article>
+            <article class="panel">
+              <h3>How updates work</h3>
+              <div class="safeguard"><span>✓</span><div><strong>New attendance IDs appear automatically</strong><small>When a newly registered employee first scans and the log is imported, a placeholder staff record is created.</small></div></div>
+              <div class="safeguard"><span>✓</span><div><strong>Names from user.dat</strong><small>Re-export user data from the K14 and sync here to update staff names. No manual retyping.</small></div></div>
+              <div class="safeguard"><span>!</span><div><strong>Live sync is not active</strong><small>The K14 has no LAN cable yet. Automatic real-time updates can be added after authorized network integration.</small></div></div>
+            </article>
+          </div>
+          <article class="panel directory-panel">
+            <div class="section-top"><div><h3>Device staff records</h3><p><span id="staff-count">0</span> staff IDs · <span id="named-staff-count">0</span> have names from device export</p></div><button class="link-button" type="button" id="refresh-staff">Refresh</button></div>
+            <div class="table-scroll"><table><thead><tr><th>Employee ID</th><th>Name on device</th><th>Source</th><th>Last biometric scan</th></tr></thead><tbody id="staff-rows"></tbody></table></div>
+          </article>
+          <article class="panel directory-panel">
+            <div class="section-top"><div><h3>Device departments</h3><p>Imported names only; employee-to-department assignments still require verification.</p></div></div>
+            <div id="department-items" class="department-chips"></div>
+          </article>
+        </section>
+
+        <section class="page hidden" data-view="workcodes">
+          <div class="section-heading"><div><h3>Numeric work codes</h3><p>Maintain readable labels for codes already recorded in device attendance events.</p></div><span class="tag">Local mappings only</span></div>
+          <div class="two-col imports-layout">
+            <article class="panel">
+              <h3>Create a numeric code label</h3>
+              <p class="muted">Example: a code like <code>101</code> may be labeled “Official Business” in the app. This does NOT install code 101 on the K14 or change any original scan.</p>
+              <form id="code-form" class="code-form">
+                <label>Numeric code<input name="numeric_code" type="text" inputmode="numeric" pattern="[0-9]{1,10}" maxlength="10" required placeholder="e.g., 101"></label>
+                <label>Label<input name="label" required minlength="2" maxlength="80" placeholder="e.g., Official Business"></label>
+                <button class="btn primary" type="submit">Save local label</button>
+              </form>
+              <div class="notice">The <strong>Shift 1 / Shift 2</strong> dropdown shown on your K14 controls attendance schedules, not work codes. Do not change the device schedule to create work codes.</div>
+            </article>
+            <article class="panel"><h3>Codes found in attendance logs</h3><p class="muted">These are raw values from the sixth column of imported .dat files.</p><div id="observed-codes" class="code-list"></div></article>
+          </div>
+          <article class="panel directory-panel"><h3>Local code mappings</h3><p class="muted">Only for display in this HRIS. The original device keeps its own configuration.</p><div id="configured-codes" class="code-list"></div></article>
+        </section>
+
+        <section class="page hidden" data-view="fieldwork">
+          <div class="section-heading"><div><h3>AJA & fieldwork management</h3><p>Independent official-activity records with documented approval.</p></div><span class="tag">Administrator pilot</span></div>
+          <div class="two-col fieldwork-layout">
+            <article class="panel">
+              <h3>Create an activity request</h3><p class="muted">For the pilot, authorized administrators enter requests on behalf of employees.</p>
+              <form id="fieldwork-form" class="form-grid">
+                <label>Employee ID<input name="employee_code" required maxlength="64" placeholder="Device employee ID"></label>
+                <label>Activity type<select name="category"><option>AJA</option><option>Fieldwork</option><option>Official Business</option></select></label>
+                <label class="span-2">Location<input name="location" required minlength="3" maxlength="140" placeholder="Official location / assignment"></label>
+                <label>Start (local time)<input name="start_at" type="datetime-local" required></label>
+                <label>End (local time)<input name="end_at" type="datetime-local" required></label>
+                <label class="span-2">Purpose / justification<textarea name="reason" required minlength="5" maxlength="600" rows="3" placeholder="Describe the official activity"></textarea></label>
+                <button class="btn primary span-2" type="submit">Create pending request</button>
+              </form>
+            </article>
+            <article class="panel">
+              <div class="section-top"><div><h3>Recent requests</h3><p>Approval decisions are recorded for audit</p></div></div>
+              <div id="fieldwork-items" class="request-list"></div>
+              <p class="table-foot">Production use will require separate requester/reviewer accounts and a defined approval policy.</p>
+            </article>
+          </div>
+        </section>
+      </main>
+    </div>
+  </div>
+  <div id="toast" class="toast hidden" role="status" aria-live="polite"></div>
+</body>
+</html>
