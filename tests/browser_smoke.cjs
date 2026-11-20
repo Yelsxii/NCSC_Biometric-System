@@ -100,7 +100,7 @@ uvicorn.run('app.main:app',host='127.0.0.1',port=int(os.environ['QA_PORT']),log_
     await page.locator('#usb-result').filter({hasText:/Merge complete · 2 new scans added · 3 duplicate scans skipped/}).waitFor();
 
     await page.locator('#close-attendance-import').click();
-    await page.locator('#attendance-import-dialog:not([open])').waitFor();
+    await page.locator('#attendance-import-dialog').waitFor({state:'hidden'});
     await page.locator('[data-page="staff"]').click();
     assert.equal(await page.locator('#staff-rows').count(),0);
     assert.equal(await page.locator('#staff-form').count(),0);
