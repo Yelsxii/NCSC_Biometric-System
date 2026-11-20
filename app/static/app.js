@@ -18,7 +18,7 @@ let usbPreviewOkay = false;
 const titles = {
   employees:'Employee Attendance',
   activities:'AJA / Travel Orders',
-  staff:'Staff Management'
+  staff:'Users & Work Codes'
 };
 let activityRequest = 0;
 const currentMonth = () => {
