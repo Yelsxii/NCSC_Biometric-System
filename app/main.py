@@ -26,6 +26,7 @@ from app.parser import MAX_BYTES, digest, parse_attlog
 from app.security import check_password
 from app.reports import preview_k14_report
 from app.registry import parse_staff, clean
+from app.lan import status as lan_status, tcp_probe
 
 load_dotenv()
 secret = os.environ.get("SECRET_KEY", "")
@@ -211,7 +212,7 @@ def overview(user: dict = Depends(current_user)):
                       "scans": counts.get((start + dt.timedelta(days=i)).isoformat(), 0)}
                      for i in range(7)]
     return {"totals": totals, "recent_imports": recent, "daily_scans": daily,
-            "phase": "USB / Local Pilot"}
+            "phase": "Attendance monitoring", "connection": lan_status()}
 
 
 @app.get("/api/punches")
@@ -550,3 +551,57 @@ def monitor_dtr(employee_code: str, month: str, user: dict = Depends(current_use
             "summary": {"scans": len(scans), "days_with_scans": sum(bool(r["scans"]) for r in rows),
                         "activity_records": len(activities)},
             "calculation_status": "not_calculated"}
+
+
+# ── Streamlined employee records ─────────────────────────────────────────────
+
+@app.get("/api/employee-register")
+def employee_register(month: str, q: str = "", user: dict = Depends(current_user)):
+    """Directory-first list for one chosen calendar month, including unscanned staff.
+
+    No scan is interpreted as time-in/out here. The same personnel registry
+    powers offline USB and the future LAN connector.
+    """
+    if not re.fullmatch(r"\\d{4}-\\d{2}", month):
+        raise HTTPException(400, "Month must be YYYY-MM.")
+    try:
+        start = dt.date.fromisoformat(month + "-01")
+    except ValueError as exc:
+        raise HTTPException(400, "Invalid month.") from exc
+    if not 2000 <= start.year <= 2100:
+        raise HTTPException(400, "Unsupported year.")
+    end = start + dt.timedelta(days=calendar.monthrange(start.year, start.month)[1])
+    search = q.strip()
+    if len(search) > 80 or any(ord(c) < 32 for c in search):
+        raise HTTPException(400, "Invalid search term.")
+    with closing(connect()) as con:
+        rows = [dict(row) for row in con.execute(
+            """SELECT e.employee_code, e.display_name, e.department,
+                      COUNT(p.id) AS scan_count,
+                      COUNT(DISTINCT substr(p.happened_at,1,10)) AS days_with_scans,
+                      MAX(p.happened_at) AS last_scan
+               FROM employees e
+               LEFT JOIN punches p ON p.employee_code=e.employee_code
+                    AND p.happened_at>=? AND p.happened_at<?
+               WHERE (?='' OR instr(lower(e.employee_code),lower(?))>0
+                       OR instr(lower(e.display_name),lower(?))>0)
+               GROUP BY e.employee_code,e.display_name,e.department
+               ORDER BY CASE WHEN e.display_name='' THEN 1 ELSE 0 END,
+                        lower(e.display_name), e.employee_code LIMIT 1000""",
+            (start.isoformat(), end.isoformat(), search, search, search),
+        ).fetchall()]
+    return {"items": rows, "month": month, "search": search,
+            "note": "Scan counts only; no automatic absence or undertime calculation."}
+
+
+# ── LAN configuration without unauthorized reads/writes ────────────────────
+
+@app.get("/api/device/status")
+def device_status(user: dict = Depends(current_user)):
+    return lan_status()
+
+
+@app.post("/api/device/probe")
+def device_probe(request: Request, user: dict = Depends(require_admin)):
+    require_csrf(request)
+    return tcp_probe()
