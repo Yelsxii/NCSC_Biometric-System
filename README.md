@@ -4,29 +4,19 @@ NCSC records-oriented prototype using **FastAPI + SQLite**, with a restrained **
 
 > **Pilot only.** The system does **not** yet automatically synchronize with the K14, certify an official DTR, interpret unverified time-in/time-out codes, or credit undertime for official travel.
 
-## Three main sections
+## Records-first interface
 
-### 1. Employee Attendance (default page)
+- **Employee Attendance (default):** Search by employee ID or name, filter month, and open detailed daily scans / DTR preview. The register table deliberately shows employee ID, name, department and **View attendance** only; scan-count and last-scan columns were removed as nonessential.
+- **Import attendance:** A compact **Import attendance** button sits next to **View records** and opens an accessible modal. Admins preview the original K14 `.dat`/`.txt` USB export, then merge it. Existing scan records are never overwritten; duplicate events are skipped while new source events are appended. File import remains a fallback if LAN sync is unavailable.
+- **AJA / Travel Orders:** Read-only **device-classified scan event list**, filterable by employee and month/type. Columns show employee, activity, exact recorded date/time and numeric work code. **No office reference column, no new TO/AJA filing form.** The list uses existing local labels for codes found on K14 scans; code 0 is untouched. A work-code scan alone is not evidence of approved activity, start/end interval, or DTR time credit.
+- **Users & Work Codes:** No staff directory listing or manual-add form. Existing user-data recovery is available via a small **Import device users** modal for K14 `user.dat`, `.xls` or `.csv`. Work-code mappings remain accessible, with device network diagnostics hidden under an expandable section.
+- **Login:** The original **split-panel NCSC login** from `feat/ncsc-theme` has been restored, including its photo, seal and fingerprint sign-in panel. Only redundant help affordances were removed.
 
-- Search employees by name or biometric device ID, choose the month, and open an employee's daily records.
-- The employee detail shows every raw device event, related AJA/Travel Order references, and **Preview DTR / Print or Save PDF** controls.
-- A compact **Import attendance log** control opens the backup USB importer **on this same page**. Use original `.dat` or `.txt` attendance exports and preview first; the same file cannot be imported twice, and raw scans duplicated in overlapping exports are deduplicated through the database's unique source-event key. New nonduplicate scans are appended; existing scans are never overwritten.
-- Excel `.xls` attendance reports can be previewed but are not substitutes for raw source events.
+## K14 data limitations
 
-### 2. AJA / Travel Orders (read-only monitoring)
+The application currently has a tested USB import path, not live LAN synchronization. An authorized K14 network connection and verified **read-only SDK connector** are needed to automatically fetch user profiles, attendance and supported work-code metadata.
 
-- Filter by month, AJA versus Travel Order, and staff name or ID.
-- Shows **existing office activity references** plus **raw biometric events whose recorded work codes have been locally mapped to AJA/Travel Order**.
-- A work code is only a *classified device event*, **not** a declaration of approved official travel or a guaranteed departure/return pair.
-- No new AJA / Travel Order **filing** or approval UI. The existing office's approvals remain authoritative. Past activity references remain in the database.
-- Full-day travel may have **no office fingerprint scans at all**. Those travel dates can appear only if an existing approved office record is linked/imported through an authorized source; the K14 alone cannot infer their duration or approval. That official-records integration remains a deployment task.
-
-### 3. Staff Management
-
-- Search staff roster and edit basic names/departments, with manual entry when syncing is unavailable. Manual entry **does not enroll a fingerprint on the device**.
-- **Staff data recovery** uploads a K14 `user.dat` (from the specific sample-tested firmware), a K14 `.xls` report, or a UTF-8 roster CSV. Only name + employee ID are extracted from binary user exports. Conflict handling avoids silently overwriting verified names.
-- Locally label the actual numeric work codes present in raw attendance events (including unmodified `0`). Configuring new codes on the K14 requires direct device setup and an authorized verification test.
-- A collapsed **LAN connection readiness** area shows configured device IP/port and has a disabled-by-default opt-in connectivity probe. There is **no live sync** until a validated read-only K14 connector is added.
+**Official Travel without a fingerprint scan cannot show up in the device-only activity log.** Existing approved office TO records are still necessary to mark days as Official Travel in DTR review. The absence of a device scan must never create fake 8 AM / 5 PM times or automatically justify attendance credit.
 
 ## DTR rules
 
