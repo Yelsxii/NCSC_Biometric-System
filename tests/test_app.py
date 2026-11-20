@@ -1,4 +1,4 @@
-"""Small non-PII smoke suite: parser, login, import, fieldwork."""
+"""Small non-PII smoke suite: parser, login, import, activity references."""
 import os
 import tempfile
 from pathlib import Path
@@ -64,19 +64,17 @@ def test_auth_import_and_fieldwork():
         assert second.status_code == 400
         assert client.get("/api/overview").json()["totals"]["scans"] == 3
 
-        fw = client.post("/api/fieldwork", json={
+        activity = client.post("/api/activities", json={
             "employee_code": "DEMO001", "category": "Fieldwork",
-            "location": "Regional office", "reason": "Official onsite assignment",
+            "reference": "FICTIONAL-ORDER-001",
             "start_at": "2026-11-03T09:00", "end_at": "2026-11-03T15:00"
         }, headers=headers)
-        assert fw.status_code == 201, fw.text
-        fid = fw.json()["id"]
-        decision = client.post(f"/api/fieldwork/{fid}/decision",
-                               json={"decision": "approved"}, headers=headers)
-        assert decision.status_code == 200
-        assert client.post(f"/api/fieldwork/{fid}/decision",
-                           json={"decision": "approved"}, headers=headers).status_code == 409
-        assert client.get("/api/fieldwork").json()["items"][0]["status"] == "approved"
+        assert activity.status_code == 201, activity.text
+        assert activity.json()["status"] == "recorded"
+        aid = activity.json()["id"]
+        assert client.get("/api/activities").json()["items"][0]["status"] == "recorded"
+        assert client.post(f"/api/activities/{aid}/void", json={"reason": "Fictional correction"}, headers=headers).status_code == 200
+        assert client.post(f"/api/activities/{aid}/void", json={"reason": "Fictional correction"}, headers=headers).status_code == 409
 
         with connect() as con:
             assert con.execute("SELECT count(*) FROM audit_events").fetchone()[0] == 3

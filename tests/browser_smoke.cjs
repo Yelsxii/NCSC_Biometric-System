@@ -107,17 +107,34 @@ uvicorn.run('app.main:app',host='127.0.0.1',port=int(os.environ['QA_PORT']),log_
     await page.locator('[data-page="fieldwork"]').click();
     const form = page.locator('#fieldwork-form');
     await form.locator('[name="employee_code"]').fill('DEMO001');
-    await form.locator('[name="location"]').fill('Fictional regional office');
+    await form.locator('[name="category"]').selectOption('Travel Order');
+    await form.locator('[name="reference"]').fill('FICTIONAL-TO-001');
     await form.locator('[name="start_at"]').fill('2026-11-20T09:00');
     await form.locator('[name="end_at"]').fill('2026-11-20T16:00');
-    await form.locator('[name="reason"]').fill('Fictional test activity for browser verification');
+    await form.locator('[name="purpose"]').fill('Fictional test activity for browser verification');
     await page.locator('#fieldwork-submit').click();
-    await page.locator('[data-decision="approved"]').click();
-    await page.locator('#decision-dialog[open]').waitFor();
+    await page.locator('#fieldwork-items .tag').filter({hasText:'On file'}).waitFor();
+    assert.equal(await page.locator('[data-decision], #confirm-decision').count(),0);
+    await page.locator('[data-page="dtr"]').click();
+    await page.locator('#dtr-month').fill('2026-11');
+    await page.locator('#dtr-employee').selectOption('DEMO001');
+    await page.getByRole('button',{name:'View daily records'}).click();
+    await page.locator('#dtr-summary').filter({hasText:'2 scans across 1 days'}).waitFor();
+    assert.equal(await page.locator('#dtr-rows tr').count(),30);
+    await page.locator('#dtr-rows').getByText('07:21:07',{exact:true}).waitFor();
+    await page.locator('#dtr-rows').getByText('FICTIONAL-TO-001',{exact:false}).waitFor();
+    assert.equal(await page.locator('#dtr-rows').getByText('Absent',{exact:true}).count(),0);
+    await page.screenshot({animations:'disabled',path:join(root,'docs/monitoring-preview.png'),fullPage:true});
+    await page.locator('[data-page="fieldwork"]').click();
+    await page.getByRole('button',{name:'Void reference',exact:true}).click();
     await page.getByRole('button',{name:'Cancel',exact:true}).click();
-    await page.locator('[data-decision="approved"]').click();
-    await page.locator('#confirm-decision').click();
-    await page.locator('#fieldwork-items .tag.approved').waitFor();
+    assert.equal(await page.locator('#fieldwork-items .tag').textContent(),'On file');
+    await page.getByRole('button',{name:'Void reference',exact:true}).click();
+    await page.locator('#void-reason').fill('Fictional correction test');
+    await page.locator('#confirm-void').click();
+    await page.locator('#fieldwork-items .empty').waitFor();
+    await page.locator('#activity-status').selectOption('voided');
+    await page.locator('#fieldwork-items .tag').filter({hasText:'Voided'}).waitFor();
     await page.reload();
     await page.locator('#workspace:not(.hidden)').waitFor();
     await page.locator('[data-page="overview"]').click();
@@ -139,7 +156,7 @@ uvicorn.run('app.main:app',host='127.0.0.1',port=int(os.environ['QA_PORT']),log_
       assert.ok(submit.y >= 0 && submit.y+submit.height <= 844, 'Sign-in button exceeds viewport');
       if (width === 390) await page.screenshot({animations:'disabled',path:join(root,'docs/mobile-login-preview.png')});
       await signIn();
-      for (const target of ['overview','attendance','imports','fieldwork']) {
+      for (const target of ['overview','attendance','imports','fieldwork','dtr']) {
         await page.locator('[data-page="'+target+'"]').click();
         await fits();
       }
@@ -149,7 +166,7 @@ uvicorn.run('app.main:app',host='127.0.0.1',port=int(os.environ['QA_PORT']),log_
       assert.equal(await page.locator('#login-username').inputValue(),'');
     }
     assert.deepEqual(errors,[]);
-    console.log('PASS: direct sign-in without landing/demo, focus and account help, login errors, password visibility, session restore/logout, import preview/dedup, XLS preview, date filters, fieldwork review, and 1440/768/390/320px layouts.');
+    console.log('PASS: direct sign-in without landing/demo, focus and account help, login errors, password visibility, session restore/logout, import preview/dedup, XLS preview, date filters, activity reference recording/void history, daily monitoring, and 1440/768/390/320px layouts.');
   } finally {
     if (browser) await browser.close();
     server.kill('SIGTERM');

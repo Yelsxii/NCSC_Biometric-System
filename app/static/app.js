@@ -12,13 +12,17 @@ let selectedFile = null;
 let fileVersion = 0;
 let previewReady = false;
 let importBusy = false;
-let pendingDecision = null;
+let pendingVoid = null;
+let activityRequest = 0;
+let monitorRequest = 0;
+let employeeRequest = 0;
 const pageSize = 25;
 const pages = {
   overview: ['Overview', 'Attendance records and official activities.'],
   attendance: ['Attendance logs', 'Filter source scans by employee or date.'],
   imports: ['USB imports', 'Upload and review attendance files.'],
-  fieldwork: ['AJA & fieldwork', 'Create and review official activities.']
+  fieldwork: ['Activity references', 'Existing AJA, fieldwork and travel orders.'],
+  dtr: ['DTR monitoring', 'Check daily scans alongside existing activity references.']
 };
 
 function hydrateIcons(root = document) {
@@ -78,10 +82,15 @@ function showAuth() {
   $('login-password').type = 'password';
   $('toggle-password').setAttribute('aria-label', 'Show password');
   $('toggle-password').setAttribute('aria-pressed', 'false');
-  pendingDecision = null;
+  pendingVoid = null; activityRequest++; monitorRequest++; employeeRequest++;
+  $('void-form').reset(); $('dtr-filter').reset(); $('dtr-rows').innerHTML = '';
+  $('dtr-employee').innerHTML = '<option value="">Choose employee ID</option>';
+  $('known-employees').innerHTML = ''; $('legacy-items').innerHTML = '';
+  $('legacy-activities').classList.add('hidden');
+  $('dtr-summary').textContent = 'Choose an employee and month to compare with the office DTR.';
   $('punch-rows').innerHTML = ''; $('fieldwork-items').innerHTML = ''; $('recent-imports').innerHTML = '';
   $('activity-chart').innerHTML = '';
-  for (const key of ['scans','employees','imports','pending']) $('metric-' + key).textContent = '—';
+  for (const key of ['scans','employees','imports','activities']) $('metric-' + key).textContent = '—';
   $('toast').classList.add('hidden');
   document.title = 'NCSC | Biometric Attendance';
   $('login-username').focus({preventScroll:true});
@@ -98,6 +107,7 @@ function showWorkspace() {
   $('fieldwork-form').querySelectorAll('input, select, textarea, button').forEach(el => { el.disabled = !canWrite; });
   $('import-access-note').classList.toggle('hidden', canWrite);
   resetFile();
+  $('dtr-month').value = new Date().toLocaleDateString('en-CA', {timeZone:'Asia/Manila'}).slice(0,7);
   const hashPage = location.hash.slice(1);
   navigate(pages[hashPage] ? hashPage : 'overview');
 }
@@ -117,7 +127,8 @@ function navigate(page) {
   document.title = pages[page][0] + ' | NCSC Attendance';
   if (page === 'overview') loadOverview();
   if (page === 'attendance') { punchOffset = 0; loadPunches(); }
-  if (page === 'fieldwork') loadFieldwork();
+  if (page === 'fieldwork') { loadFieldwork(); loadEmployees(); }
+  if (page === 'dtr') loadEmployees(true);
 }
 
 function renderChart(days) {
@@ -134,9 +145,7 @@ async function loadOverview() {
   try {
     const result = await api('/api/overview');
     if (context !== session) return;
-    for (const key of ['scans','employees','imports','pending']) $('metric-' + key).textContent = Number(result.totals[key] || 0).toLocaleString();
-    $('nav-pending').textContent = Number(result.totals.pending);
-    $('nav-pending').classList.toggle('hidden', !result.totals.pending);
+    for (const key of ['scans','employees','imports','activities']) $('metric-' + key).textContent = Number(result.totals[key] || 0).toLocaleString();
     renderChart(result.daily_scans);
     $('recent-imports').className = '';
     $('recent-imports').innerHTML = result.recent_imports.length ? result.recent_imports.map(item => '<div class="import-row"><span class="file-icon">' + icon('file') + '</span><div><strong>' + escapeHtml(item.original_name) + '</strong><small>' + escapeHtml(localDate(item.imported_at + 'Z')) + ' · ' + Number(item.total_records).toLocaleString() + ' rows processed</small></div><b>+' + Number(item.inserted_records).toLocaleString() + ' new scans</b></div>').join('') : '<div class="empty">No imports yet. Choose USB imports to preview your first attendance file.</div>';
@@ -205,52 +214,86 @@ async function handleImport(previewOnly) {
 }
 
 async function loadFieldwork() {
-  const context = session;
+  const context = session; const requestId = ++activityRequest;
   try {
-    const result = await api('/api/fieldwork');
-    if (context !== session) return;
-    const filter = $('request-status').value;
+    const result = await api('/api/activities');
+    if (context !== session || requestId !== activityRequest) return;
+    const filter = $('activity-status').value;
     const items = result.items.filter(item => filter === 'all' || item.status === filter);
     $('fieldwork-items').innerHTML = items.length ? items.map(item => {
-      const actions = item.status === 'pending' && context.role === 'admin' ? '<div class="request-buttons"><button class="btn primary" data-decision="approved" data-id="' + Number(item.id) + '">Approve</button><button class="btn outline" data-decision="rejected" data-id="' + Number(item.id) + '">Reject</button></div>' : '';
-      return '<div class="request"><div class="request-head"><strong>' + escapeHtml(item.employee_code) + '<span> · ' + escapeHtml(item.category) + '</span></strong><span class="tag ' + escapeHtml(item.status) + '">' + escapeHtml(item.status[0].toUpperCase() + item.status.slice(1)) + '</span></div><p class="request-location">' + icon('pin') + escapeHtml(item.location) + '</p><p class="request-time">' + escapeHtml(localDate(item.start_at)) + ' ' + escapeHtml(item.start_at.slice(11,16)) + ' – ' + escapeHtml(localDate(item.end_at)) + ' ' + escapeHtml(item.end_at.slice(11,16)) + '</p><p>' + escapeHtml(item.reason) + '</p>' + actions + '</div>';
-    }).join('') : '<div class="empty">No ' + (filter === 'all' ? '' : escapeHtml(filter) + ' ') + 'activity requests found.</div>';
-  } catch (error) { if (context === session) toast(error.message, true); }
+      const action = item.status === 'recorded' && context.role === 'admin' ? '<button class="text-button" type="button" data-void="' + Number(item.id) + '">Void reference</button>' : '';
+      return '<div class="request"><div class="request-head"><strong>' + escapeHtml(item.employee_code) + '<span> · ' + escapeHtml(item.category) + '</span></strong><span class="tag ' + (item.status === 'recorded' ? 'blue-tag' : '') + '">' + (item.status === 'recorded' ? 'On file' : 'Voided') + '</span></div><p class="request-time">' + escapeHtml(localDate(item.start_at)) + ' ' + escapeHtml(item.start_at.slice(11,16)) + ' – ' + escapeHtml(localDate(item.end_at)) + ' ' + escapeHtml(item.end_at.slice(11,16)) + '</p><p><strong>' + escapeHtml(item.reference) + '</strong></p><p>' + escapeHtml(item.purpose) + '</p>' + (item.void_reason ? '<p>Correction: ' + escapeHtml(item.void_reason) + '</p>' : '') + action + '</div>';
+    }).join('') : '<div class="empty">No ' + (filter === 'voided' ? 'voided ' : '') + 'references on file.</div>';
+    $('legacy-activities').classList.toggle('hidden', !result.legacy_items.length);
+    $('legacy-items').innerHTML = result.legacy_items.map(item => '<div class="request"><strong>' + escapeHtml(item.employee_code) + ' · ' + escapeHtml(item.category) + '</strong><p>Previous status: ' + escapeHtml(item.status) + '</p><p>' + escapeHtml(localDate(item.start_at)) + ' – ' + escapeHtml(localDate(item.end_at)) + '</p><p>' + escapeHtml(item.location) + ' · ' + escapeHtml(item.reason) + '</p></div>').join('');
+  } catch (error) { if (context === session && requestId === activityRequest) toast(error.message, true); }
 }
 async function createFieldwork(event) {
   event.preventDefault(); const form = event.currentTarget;
   const context = session;
   const data = Object.fromEntries(new FormData(form));
   if (data.end_at <= data.start_at) { toast('End must be later than start.', true); return; }
+  if (!data.reference.trim() && !data.purpose.trim()) { toast('Enter an existing reference or a short DTR note.', true); return; }
   $('fieldwork-submit').disabled = true;
   try {
-    await api('/api/fieldwork', {method:'POST', body:JSON.stringify(data)});
+    await api('/api/activities', {method:'POST', body:JSON.stringify(data)});
     if (context !== session) return;
-    form.reset(); $('request-status').value = 'all'; toast('Official activity created as pending.');
-    loadFieldwork(); loadOverview();
-  } catch (error) { toast(error.message, true); }
+    form.reset(); $('activity-status').value = 'recorded'; toast('Reference saved. No new approval needed.');
+    loadFieldwork(); loadOverview(); loadEmployees();
+  } catch (error) { if (context === session) toast(error.message, true); }
   finally { $('fieldwork-submit').disabled = session?.role !== 'admin'; }
 }
-function reviewFieldwork(button) {
-  pendingDecision = {id:Number(button.dataset.id), decision:button.dataset.decision};
-  if (!['approved','rejected'].includes(pendingDecision.decision) || !Number.isInteger(pendingDecision.id)) return;
-  $('decision-heading').textContent = pendingDecision.decision === 'approved' ? 'Approve this activity?' : 'Reject this activity?';
-  $('decision-message').textContent = 'Request #' + pendingDecision.id + ' will be marked as ' + pendingDecision.decision + '.';
-  $('confirm-decision').textContent = pendingDecision.decision === 'approved' ? 'Approve activity' : 'Reject activity';
-  openDialog('decision-dialog');
+function openVoid(button) {
+  pendingVoid = Number(button.dataset.void);
+  if (!Number.isInteger(pendingVoid) || pendingVoid < 1) return;
+  $('void-form').reset(); openDialog('void-dialog');
 }
-async function confirmDecision() {
-  if (!pendingDecision) return;
-  const context = session;
-  const decision = {...pendingDecision};
-  $('confirm-decision').disabled = true;
+async function voidReference(event) {
+  event.preventDefault();
+  if (!pendingVoid) return;
+  const context = session; const id = pendingVoid;
+  $('confirm-void').disabled = true;
   try {
-    await api('/api/fieldwork/' + decision.id + '/decision', {method:'POST', body:JSON.stringify({decision:decision.decision})});
+    await api('/api/activities/' + id + '/void', {method:'POST', body:JSON.stringify({reason:$('void-reason').value})});
     if (context !== session) return;
-    $('decision-dialog').close(); toast('Activity ' + decision.decision + '.'); pendingDecision = null;
+    $('void-dialog').close(); pendingVoid = null; toast('Reference voided. History retained.');
     loadFieldwork(); loadOverview();
-  } catch (error) { toast(error.message, true); }
-  finally { $('confirm-decision').disabled = false; }
+  } catch (error) { if (context === session) toast(error.message, true); }
+  finally { $('confirm-void').disabled = false; }
+}
+async function loadEmployees(openMonitor = false) {
+  const context = session; const requestId = ++employeeRequest;
+  try {
+    const result = await api('/api/employees');
+    if (context !== session || requestId !== employeeRequest) return;
+    const selected = $('dtr-employee').value;
+    $('known-employees').innerHTML = result.items.map(code => '<option value="' + escapeHtml(code) + '"></option>').join('');
+    $('dtr-employee').innerHTML = '<option value="">Choose employee ID</option>' + result.items.map(code => '<option value="' + escapeHtml(code) + '">' + escapeHtml(code) + '</option>').join('');
+    if (result.items.includes(selected)) $('dtr-employee').value = selected;
+    else if (openMonitor && result.items.length) $('dtr-employee').value = result.items[0];
+    if (openMonitor && currentPage === 'dtr') loadMonitor();
+  } catch (error) { if (context === session && requestId === employeeRequest) toast(error.message, true); }
+}
+async function loadMonitor() {
+  const context = session; const requestId = ++monitorRequest;
+  const employee = $('dtr-employee').value; const month = $('dtr-month').value;
+  $('dtr-rows').innerHTML = '<tr><td colspan="4">' + (employee ? 'Loading daily records…' : 'No employee selected. Import scans or add an existing reference first.') + '</td></tr>';
+  $('dtr-summary').textContent = 'Choose an employee and month to compare with the office DTR.';
+  if (!employee || !month) return;
+  try {
+    const result = await api('/api/dtr/monitor?' + new URLSearchParams({employee_code:employee, month}));
+    if (context !== session || requestId !== monitorRequest) return;
+    $('dtr-summary').textContent = employee + ' · ' + month + ' · ' + result.summary.scans + ' scans across ' + result.summary.days_with_scans + ' days · ' + result.summary.activity_records + ' activity references';
+    $('dtr-rows').innerHTML = result.days.map(day => {
+      const scans = day.scans.length ? '<div class="scan-times">' + day.scans.map(scan => '<span class="scan-time" title="' + escapeHtml('Device ' + scan.device_id + ' · Status ' + scan.status_code + ' · Verify ' + scan.verification_code + ' · Work code ' + scan.work_code) + '">' + escapeHtml(scan.happened_at.slice(11)) + '</span>').join('') + '</div>' : '—';
+      const references = day.activities.length ? day.activities.map(item => '<div class="monitor-reference"><strong>' + escapeHtml(item.category) + (item.reference ? ' · ' + escapeHtml(item.reference) : '') + '</strong><span>' + escapeHtml(item.purpose) + '</span></div>').join('') : '—';
+      const label = day.coverage === 'scans' ? 'Device scans' : day.coverage === 'reference_only' ? 'Reference only' : 'No records';
+      return '<tr><td><strong>' + escapeHtml(day.date.slice(8)) + '</strong><span class="scan-day">' + escapeHtml(day.day) + '</span></td><td>' + scans + '</td><td>' + references + '</td><td><span class="tag ' + (day.coverage === 'no_records' ? '' : 'blue-tag') + '">' + label + '</span></td></tr>';
+    }).join('');
+  } catch (error) {
+    if (context !== session || requestId !== monitorRequest) return;
+    $('dtr-rows').innerHTML = '<tr><td colspan="4">Daily records could not be loaded. Try again.</td></tr>'; toast(error.message, true);
+  }
 }
 
 async function initialize() {
@@ -262,7 +305,7 @@ async function initialize() {
     if (button.hasAttribute('data-help')) openDialog('help-dialog');
     if (button.dataset.close) $(button.dataset.close).close();
     if (button.dataset.page || button.dataset.go) navigate(button.dataset.page || button.dataset.go);
-    if (button.dataset.decision) reviewFieldwork(button);
+    if (button.dataset.void) openVoid(button);
   });
   document.querySelectorAll('dialog').forEach(dialog => {
     dialog.addEventListener('click', event => {
@@ -304,8 +347,11 @@ async function initialize() {
   $('drop-area').addEventListener('dragleave', () => $('drop-area').classList.remove('drag-over'));
   $('drop-area').addEventListener('drop', event => { event.preventDefault(); $('drop-area').classList.remove('drag-over'); chooseFile(event.dataTransfer.files[0]); });
   $('fieldwork-form').addEventListener('submit', createFieldwork);
-  $('request-status').addEventListener('change', loadFieldwork);
-  $('confirm-decision').addEventListener('click', confirmDecision);
+  $('activity-status').addEventListener('change', loadFieldwork);
+  $('void-form').addEventListener('submit', voidReference);
+  $('dtr-filter').addEventListener('submit', event => { event.preventDefault(); loadMonitor(); });
+  $('dtr-employee').addEventListener('change', loadMonitor);
+  $('dtr-month').addEventListener('change', loadMonitor);
   window.addEventListener('hashchange', () => { if (session && pages[location.hash.slice(1)]) navigate(location.hash.slice(1)); });
   try { session = await api('/api/me'); showWorkspace(); }
   catch (_) { session = null; showAuth(); }

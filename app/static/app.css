@@ -254,6 +254,16 @@ td .scan-day { font-size: .75rem; color: #929db3; }
 .request .request-time { color: #7484a5; font-size: .75rem; }
 .request-buttons { display: flex; gap: 8px; margin-top: 12px; }
 .request-buttons .btn { min-height: 35px; padding: 7px 12px; font-size: .8rem; }
+.monitor-summary { margin: 0; padding: 16px 20px; color: #526383; font-size: .875rem; border-bottom: 1px solid var(--border); line-height: 1.7; }
+.monitor-table { min-width: 650px; }
+.monitor-table td { vertical-align: top; }
+.scan-times { display: flex; flex-wrap: wrap; gap: 6px; max-width: 350px; }
+.scan-time { display: inline-block; font-variant-numeric: tabular-nums; padding: 4px 7px; background: #f0f3fb; color: #354f8f; border-radius: 5px; font-size: .875rem; }
+.monitor-reference { display: grid; gap: 4px; max-width: 350px; white-space: normal; overflow-wrap: anywhere; margin-bottom: 8px; }
+.monitor-reference span { color: var(--muted); }
+.monitor-foot { padding: 0 20px 12px; }
+#legacy-activities { margin-top: 20px; border-top: 1px solid var(--border); padding-top: 16px; font-size: .875rem; }
+#legacy-activities summary { cursor: pointer; color: #526383; }
 .toast { position: fixed; z-index: 50; bottom: 22px; right: 22px; max-width: min(430px, calc(100% - 44px)); border-radius: 10px; padding: 14px 20px; color: #fff; background: #233b79; font-size: .875rem; line-height: 1.7; box-shadow: 0 12px 40px #12275c30; }
 .toast.error { background: #a6354a; }
 .notice { padding: 16px; text-align: center; background: #fff4dc; margin: 0; }

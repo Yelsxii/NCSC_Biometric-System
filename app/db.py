@@ -66,6 +66,25 @@ CREATE TABLE IF NOT EXISTS fieldwork (
  CHECK(end_at > start_at)
 );
 CREATE INDEX IF NOT EXISTS idx_fieldwork_status ON fieldwork(status, start_at);
+CREATE TABLE IF NOT EXISTS activity_records (
+ id INTEGER PRIMARY KEY AUTOINCREMENT,
+ employee_code TEXT NOT NULL,
+ category TEXT NOT NULL CHECK(category IN ('AJA','Fieldwork','Official Business','Travel Order')),
+ reference TEXT NOT NULL DEFAULT '',
+ purpose TEXT NOT NULL DEFAULT '',
+ start_at TEXT NOT NULL,
+ end_at TEXT NOT NULL,
+ status TEXT NOT NULL DEFAULT 'recorded' CHECK(status IN ('recorded','voided')),
+ recorded_by INTEGER NOT NULL REFERENCES users(id),
+ created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+ voided_by INTEGER REFERENCES users(id),
+ voided_at TEXT,
+ void_reason TEXT NOT NULL DEFAULT '',
+ CHECK(end_at > start_at)
+);
+CREATE INDEX IF NOT EXISTS idx_activity_employee ON activity_records(employee_code,start_at,end_at);
+CREATE UNIQUE INDEX IF NOT EXISTS idx_activity_duplicate ON activity_records
+ (employee_code,category,start_at,end_at,reference,purpose) WHERE status='recorded';
 CREATE TABLE IF NOT EXISTS audit_events (
  id INTEGER PRIMARY KEY AUTOINCREMENT,
  actor_id INTEGER NOT NULL REFERENCES users(id),

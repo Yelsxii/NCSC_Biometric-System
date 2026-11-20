@@ -5,6 +5,7 @@ Attendance scans are immutable source events. No LAN/device access in Phase 1.
 from __future__ import annotations
 
 import datetime as dt
+import calendar
 import os
 import re
 import secrets
@@ -86,13 +87,18 @@ class LoginInput(BaseModel):
     password: str = Field(min_length=1, max_length=256)
 
 
-class FieldworkInput(BaseModel):
+class ActivityInput(BaseModel):
     employee_code: str = Field(min_length=1, max_length=64)
-    category: Literal["AJA", "Fieldwork", "Official Business"]
-    location: str = Field(min_length=3, max_length=140)
-    reason: str = Field(min_length=5, max_length=600)
+    category: Literal["AJA", "Fieldwork", "Official Business", "Travel Order"]
+    reference: str = Field(default="", max_length=140)
+    purpose: str = Field(default="", max_length=600)
     start_at: dt.datetime
     end_at: dt.datetime
+
+    @field_validator("employee_code", "reference", "purpose", mode="before")
+    @classmethod
+    def trim_text(cls, value):
+        return value.strip() if isinstance(value, str) else value
 
     @field_validator("employee_code")
     @classmethod
@@ -107,13 +113,22 @@ class FieldworkInput(BaseModel):
             raise ValueError("Use local timestamps without timezone offsets (Asia/Manila).")
         if self.end_at <= self.start_at:
             raise ValueError("End must be later than start.")
-        if self.end_at - self.start_at > dt.timedelta(days=7):
-            raise ValueError("A single entry cannot exceed seven days.")
+        if not all(2000 <= value.year <= 2100 for value in (self.start_at, self.end_at)):
+            raise ValueError("Dates must be between 2000 and 2100.")
+        if self.end_at - self.start_at > dt.timedelta(days=366):
+            raise ValueError("A single record cannot exceed 366 days.")
+        if not self.reference and not self.purpose:
+            raise ValueError("Enter an existing document reference or a short purpose.")
         return self
 
 
-class DecisionInput(BaseModel):
-    decision: Literal["approved", "rejected"]
+class VoidInput(BaseModel):
+    reason: str = Field(min_length=3, max_length=300)
+
+    @field_validator("reason", mode="before")
+    @classmethod
+    def trim_reason(cls, value):
+        return value.strip() if isinstance(value, str) else value
 
 
 @app.get("/")
@@ -155,7 +170,7 @@ def overview(user: dict = Depends(current_user)):
             "scans": con.execute("SELECT COUNT(*) FROM punches").fetchone()[0],
             "employees": con.execute("SELECT COUNT(DISTINCT employee_code) FROM punches").fetchone()[0],
             "imports": con.execute("SELECT COUNT(*) FROM import_batches").fetchone()[0],
-            "pending": con.execute("SELECT COUNT(*) FROM fieldwork WHERE status='pending'").fetchone()[0],
+            "activities": con.execute("SELECT COUNT(*) FROM activity_records WHERE status='recorded'").fetchone()[0],
         }
         recent = [dict(x) for x in con.execute(
             "SELECT id,original_name,total_records,inserted_records,imported_at "
@@ -290,38 +305,121 @@ def list_fieldwork(user: dict = Depends(current_user)):
     return {"items": rows}
 
 
-@app.post("/api/fieldwork", status_code=201)
-def create_fieldwork(payload: FieldworkInput, request: Request, user: dict = Depends(require_admin)):
-    require_csrf(request)
-    with closing(connect()) as con:
-        with con:
-            cur = con.execute(
-                "INSERT INTO fieldwork(employee_code,category,location,reason,start_at,end_at,created_by) "
-                "VALUES(?,?,?,?,?,?,?)",
-                (payload.employee_code,payload.category,payload.location.strip(),
-                 payload.reason.strip(),payload.start_at.isoformat(sep=" "),payload.end_at.isoformat(sep=" "),user["id"]),
-            )
-            fid = cur.lastrowid
-            con.execute(
-                "INSERT INTO audit_events(actor_id,action,entity,entity_id) VALUES(?,?,?,?)",
-                (user["id"],"created","fieldwork",fid),
-            )
-    return {"id": fid, "status": "pending"}
-
-
+@app.post("/api/fieldwork")
 @app.post("/api/fieldwork/{item_id}/decision")
-def review_fieldwork(item_id: int, payload: DecisionInput, request: Request, user: dict = Depends(require_admin)):
+def retired_approval_flow(request: Request, user: dict = Depends(require_admin)):
+    """Keep old records readable; an outdated client must not create new requests."""
+    require_csrf(request)
+    raise HTTPException(410, "Activity approvals have been retired. Record an existing office reference in /api/activities.")
+
+
+@app.get("/api/activities")
+def list_activities(user: dict = Depends(current_user)):
+    with closing(connect()) as con:
+        rows = [dict(x) for x in con.execute(
+            "SELECT id,employee_code,category,reference,purpose,start_at,end_at,status,created_at,void_reason "
+            "FROM activity_records ORDER BY id DESC LIMIT 250"
+        )]
+        legacy = [dict(x) for x in con.execute(
+            "SELECT id,employee_code,category,location,reason,start_at,end_at,status "
+            "FROM fieldwork ORDER BY id DESC LIMIT 250"
+        )]
+    return {"items": rows, "legacy_items": legacy}
+
+
+@app.post("/api/activities", status_code=201)
+def record_activity(payload: ActivityInput, request: Request, user: dict = Depends(require_admin)):
+    require_csrf(request)
+    with closing(connect()) as con:
+        try:
+            with con:
+                cur = con.execute(
+                    "INSERT INTO activity_records(employee_code,category,reference,purpose,start_at,end_at,recorded_by) "
+                    "VALUES(?,?,?,?,?,?,?)",
+                    (payload.employee_code,payload.category,payload.reference,payload.purpose,
+                     payload.start_at.isoformat(sep=" "),payload.end_at.isoformat(sep=" "),user["id"]),
+                )
+                aid = cur.lastrowid
+                con.execute(
+                    "INSERT INTO audit_events(actor_id,action,entity,entity_id) VALUES(?,?,?,?)",
+                    (user["id"],"recorded","activity_record",aid),
+                )
+        except sqlite3.IntegrityError as exc:
+            raise HTTPException(409, "This activity reference has already been recorded.") from exc
+    return {"id": aid, "status": "recorded"}
+
+
+@app.post("/api/activities/{item_id}/void")
+def void_activity(item_id: int, payload: VoidInput, request: Request, user: dict = Depends(require_admin)):
     require_csrf(request)
     with closing(connect()) as con:
         with con:
             cur = con.execute(
-                "UPDATE fieldwork SET status=?,reviewed_by=?,reviewed_at=CURRENT_TIMESTAMP WHERE id=? AND status='pending'",
-                (payload.decision,user["id"],item_id),
+                "UPDATE activity_records SET status='voided',voided_by=?,voided_at=CURRENT_TIMESTAMP,void_reason=? "
+                "WHERE id=? AND status='recorded'", (user["id"],payload.reason,item_id),
             )
             if cur.rowcount != 1:
-                raise HTTPException(409, "Entry not found or already reviewed.")
+                raise HTTPException(409, "Record not found or already voided.")
             con.execute(
-                "INSERT INTO audit_events(actor_id,action,entity,entity_id) VALUES(?,?,?,?)",
-                (user["id"],payload.decision,"fieldwork",item_id),
+                "INSERT INTO audit_events(actor_id,action,entity,entity_id,details) VALUES(?,?,?,?,?)",
+                (user["id"],"voided","activity_record",item_id,payload.reason),
             )
-    return {"ok": True, "status": payload.decision}
+    return {"ok": True, "status": "voided"}
+
+
+@app.get("/api/employees")
+def employee_ids(user: dict = Depends(current_user)):
+    with closing(connect()) as con:
+        items = [r[0] for r in con.execute(
+            "SELECT employee_code FROM punches UNION SELECT employee_code FROM activity_records "
+            "UNION SELECT employee_code FROM fieldwork ORDER BY employee_code"
+        )]
+    return {"items": items}
+
+
+@app.get("/api/dtr/monitor")
+def monitor_dtr(employee_code: str, month: str, user: dict = Depends(current_user)):
+    """Daily evidence for checking the office DTR, without attendance/payroll rules.
+
+    A source event is not assigned an AM/PM slot based on an unverified code.
+    Activity coverage is a reference, never an automatic credit of elapsed hours.
+    """
+    if not CODE_RE.fullmatch(employee_code):
+        raise HTTPException(400, "Choose a valid employee ID.")
+    if not re.fullmatch(r"\d{4}-\d{2}", month):
+        raise HTTPException(400, "Use a month in YYYY-MM format.")
+    try:
+        start = dt.date.fromisoformat(month + "-01")
+    except ValueError as exc:
+        raise HTTPException(400, "Invalid month.") from exc
+    if not 2000 <= start.year <= 2100:
+        raise HTTPException(400, "Dates must be between 2000 and 2100.")
+    day_count = calendar.monthrange(start.year, start.month)[1]
+    end = start + dt.timedelta(days=day_count)
+    with closing(connect()) as con:
+        scans = [dict(x) for x in con.execute(
+            "SELECT id,happened_at,device_id,status_code,verification_code,work_code FROM punches "
+            "WHERE employee_code=? AND happened_at>=? AND happened_at<? ORDER BY happened_at,id LIMIT 10001",
+            (employee_code,start.isoformat(),end.isoformat()),
+        )]
+        activities = [dict(x) for x in con.execute(
+            "SELECT id,category,reference,purpose,start_at,end_at FROM activity_records "
+            "WHERE employee_code=? AND status='recorded' AND start_at<? AND end_at>? ORDER BY start_at,id LIMIT 1001",
+            (employee_code,end.isoformat(),start.isoformat() + " 00:00:00"),
+        )]
+    if len(scans) > 10000 or len(activities) > 1000:
+        raise HTTPException(400, "Too many records for one employee/month. Check the source records.")
+    rows = []
+    for i in range(day_count):
+        date = start + dt.timedelta(days=i)
+        after = (date + dt.timedelta(days=1)).isoformat() + " 00:00:00"
+        before = date.isoformat() + " 00:00:00"
+        day_scans = [s for s in scans if s["happened_at"][:10] == date.isoformat()]
+        support = [a for a in activities if a["start_at"] < after and a["end_at"] > before]
+        rows.append({"date": date.isoformat(), "day": date.strftime("%a"),
+                     "scans": day_scans, "activities": support,
+                     "coverage": "scans" if day_scans else "reference_only" if support else "no_records"})
+    return {"employee_code": employee_code, "month": month, "days": rows,
+            "summary": {"scans": len(scans), "days_with_scans": sum(bool(r["scans"]) for r in rows),
+                        "activity_records": len(activities)},
+            "calculation_status": "not_calculated"}
