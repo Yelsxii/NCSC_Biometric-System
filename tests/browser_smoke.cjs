@@ -104,6 +104,7 @@ uvicorn.run('app.main:app',host='127.0.0.1',port=int(os.environ['QA_PORT']),log_
     await page.locator('[data-employee="1"]').last().click();
     await page.locator('#employee-detail:not(.hidden)').waitFor();
     await page.locator('#detail-name').filter({hasText:'Sample One'}).waitFor();
+    await page.locator('#daily-rows .pill-to').first().waitFor();
     assert.ok((await page.locator('#daily-rows').textContent()).includes('Official Travel'));
     await page.locator('#preview-dtr').click();
     await page.locator('#dtr-dialog[open]').waitFor();
