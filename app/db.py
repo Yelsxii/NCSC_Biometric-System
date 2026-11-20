@@ -66,6 +66,34 @@ CREATE TABLE IF NOT EXISTS fieldwork (
  CHECK(end_at > start_at)
 );
 CREATE INDEX IF NOT EXISTS idx_fieldwork_status ON fieldwork(status, start_at);
+CREATE TABLE IF NOT EXISTS staff (
+ employee_code TEXT PRIMARY KEY,
+ device_name TEXT NOT NULL DEFAULT '',
+ origin TEXT NOT NULL DEFAULT 'attendance' CHECK(origin IN ('attendance','user_export')),
+ first_scan_at TEXT,
+ last_scan_at TEXT,
+ last_roster_sync TEXT
+);
+CREATE INDEX IF NOT EXISTS idx_staff_last_scan ON staff(last_scan_at);
+CREATE TABLE IF NOT EXISTS departments (
+ department_code TEXT PRIMARY KEY,
+ device_name TEXT NOT NULL,
+ last_roster_sync TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+CREATE TABLE IF NOT EXISTS directory_imports (
+ id INTEGER PRIMARY KEY AUTOINCREMENT,
+ file_sha256 TEXT NOT NULL UNIQUE,
+ kind TEXT NOT NULL CHECK(kind IN ('user','department')),
+ record_count INTEGER NOT NULL,
+ imported_by INTEGER NOT NULL REFERENCES users(id),
+ imported_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+CREATE TABLE IF NOT EXISTS work_code_mappings (
+ numeric_code TEXT PRIMARY KEY,
+ label TEXT NOT NULL,
+ created_by INTEGER NOT NULL REFERENCES users(id),
+ updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
 CREATE TABLE IF NOT EXISTS audit_events (
  id INTEGER PRIMARY KEY AUTOINCREMENT,
  actor_id INTEGER NOT NULL REFERENCES users(id),
@@ -81,3 +109,16 @@ CREATE TABLE IF NOT EXISTS audit_events (
 def initialize() -> None:
     with connect() as con:
         con.executescript(SCHEMA)
+        # Backfill staff IDs from pre-existing imported attendance logs, safely
+        # preserving any names later supplied by user.dat.
+        con.execute("""
+            INSERT OR IGNORE INTO staff(employee_code, first_scan_at, last_scan_at)
+            SELECT employee_code, MIN(happened_at), MAX(happened_at)
+            FROM punches GROUP BY employee_code
+        """)
+        con.execute("""
+            UPDATE staff SET
+              first_scan_at=COALESCE(first_scan_at, (SELECT MIN(happened_at) FROM punches WHERE employee_code=staff.employee_code)),
+              last_scan_at=COALESCE((SELECT MAX(happened_at) FROM punches WHERE employee_code=staff.employee_code),last_scan_at)
+            WHERE employee_code IN (SELECT employee_code FROM punches)
+        """)
