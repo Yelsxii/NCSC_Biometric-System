@@ -11,6 +11,9 @@ Local-first, security-conscious **Phase 1 MVP** for importing ZKTeco K14 attenda
 - Admin sign-in with scrypt password hashing, signed session cookie, and CSRF protection
 - USB attendance log **preview** and import
 - Duplicate-safe original scan events and recorded import batches
+- **Staff Directory**: automatically discover unknown employee IDs from attendance logs, then attach device names by importing a safe subset of `user.dat`
+- **Department Directory**: import labels from `department.dat` (employee-to-department assignments are not yet verified)
+- **Numeric Work Codes**: view raw work-code values from attendance exports and maintain labels in the HRIS **without changing the device**
 - Separate fieldwork entries with pending/approved/rejected decisions and an audit trail
 - Raw K14 device status/verification/work codes preserved **without guessing IN or OUT**
 - A future LAN-sync adapter can be added without changing the database's record model
@@ -87,10 +90,31 @@ EMP001<TAB>2026-11-03 07:21:07<TAB>1<TAB>0<TAB>1<TAB>0
 
 Fields: employee ID, scan timestamp, device ID, **raw status code**, **raw verification code**, raw work code. Field meaning should be confirmed with the exact firmware/device configuration before classifying any scan as IN/OUT. The example uses a **fictional** ID.
 
+## Phase 2 USB staff directory and department sync
+
+The K14 has a separate binary `user.dat` export. The supplied sample matches **72-byte user records**, containing name + personnel number in specific fields, while `department.dat` matches **49-byte department records**. These details are firmware-specific; incompatible exports must be rejected instead of guessed.
+
+1. With office authorization, download **User Data** from the K14 to a private USB drive. This may also produce **fingerprint template files** named `template.fp10` or similar. Those files are highly sensitive and are **not required by this app**. Do not upload them to the app, GitHub, or public services.
+2. In the app, open **Staff Directory → Choose user.dat → Preview directory → Sync directory**. Only name and staff ID are extracted; other user-export bytes are not stored.
+3. If available, select `department.dat` using the same importer. It adds department names but **does not assign staff to departments**.
+4. A new employee appearing in an imported **attendance** file will automatically appear as an ID-only staff record. The next `user.dat` snapshot can fill in their name.
+5. The USB workflow is **not live**: new users enrolled on the device won't appear immediately. Future authorized LAN sync may update staff automatically without USB.
+
+**Existing installations:** Pull the latest feature branch and restart Uvicorn. SQLite creates the new tables without deleting prior attendance imports. The Staff Directory will backfill from any existing stored scan IDs.
+
+## Work codes versus shifts
+
+The K14 screens labeled **Select Shift**, **Schedule Type**, and **Default Shift** are scheduling settings, **not** work-code configuration. Do not rename or change shifts to represent AJA / Fieldwork.
+
+- In **Work Codes**, you can define a **numeric value → local display label**, such as `101` → `Official Business`. This mapping is *only inside the HRIS*.
+- The original exported attendance file contained work-code `0` on every observed record; the app cannot infer AJA/Fieldwork statuses from those scans.
+- To enable work codes **on the device itself**, its exact firmware's Work Code settings must be confirmed and tested with the office's approval. A work-code drop-down on the K14 may be a valid device input method; a local HRIS field cannot force the firmware to use a number keypad.
+- A working USB *work-code list download* is not a prerequisite for the HRIS. We only interpret actual recorded code values after confirming them.
+
 ## Data and safety rules
 
 - Never alter the biometric device's historical attendance records. This application has **no K14 write functions**.
-- No fingerprint templates or biometric images are downloaded or stored.
+- **No fingerprint templates or biometric images are imported or stored**. If a USB export includes template files, keep them out of this application and handle them under your office's data-protection procedures.
 - Never commit `.env`, `data/`, `uploads/`, or attendance `.dat` exports.
 - Only authorized HR personnel should access real employee data, even during testing.
 - Uploads are validated (up to 2 MB, 50,000 lines) and the parser reads data as text, not code.
@@ -102,7 +126,7 @@ Fields: employee ID, scan timestamp, device ID, **raw status code**, **raw verif
 
 ## Pilot limitations and next development stages
 
-1. **Employee registry and mapping:** manage verified staff ↔ K14 ID mapping. Currently IDs appear as exported.
+1. **Employee identity verification:** the pilot now imports staff IDs and names from the device; verify official HR employee mapping before using it for DTR/payroll.
 2. **Separate requester/reviewer roles:** the pilot is admin-entered; a production approval flow must enforce distinct approver and requester identities and explicit policy.
 3. **Validated DTR interpretation:** confirm actual firmware status codes, shift rules, breaks, exceptions, and audit requirements with HR before computing time-in/out or payable hours.
 4. **Network sync adapter:** when authorized, verify actual Ethernet connectivity, K14 SDK/protocol, and a **read-only** pull path. The existing import/punch schema is designed for both USB and future LAN sources.
@@ -120,6 +144,7 @@ NCSC_Biometric-System/
 │   ├── db.py               # SQLite schema and persistence
 │   ├── security.py         # salted password hashing
 │   ├── parser.py           # validated raw K14 attendance file parsing
+│   ├── roster.py           # metadata-only user.dat / department.dat parsing
 │   ├── main.py             # authenticated API and application
 │   ├── index.html          # responsive dashboard layout
 │   └── static/
