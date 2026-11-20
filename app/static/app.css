@@ -122,3 +122,137 @@ button:focus-visible,a:focus-visible{outline:3px solid #6499e2;outline-offset:2p
   .connection-details .connection-grid{grid-template-columns:1fr}
   .inline-collapse{padding:11px}
 }
+
+/* Login restoration: original split-panel design from feat/ncsc-theme. */
+.auth-shell{--blue:#1d3795;--blue-dark:#142566;--red:#e41d1d;--border:#e6eaf2;font-size:16px}
+.auth-shell .login-card{display:block;flex-direction:initial;gap:0;padding:0;border:1px solid #e0e5f2;border-radius:22px;overflow:auto}
+.auth-shell .login-layout{height:auto}
+.auth-shell .seal{display:block;border-radius:50%;background:#fff;flex-shrink:0}
+.auth-shell .eyebrow{display:flex;align-items:center;gap:10px;font-weight:650;letter-spacing:.1em}
+.auth-shell .muted{color:#69758e;line-height:1.7}
+.auth-shell .login-form-side .input-with-icon input{height:47px;width:100%;border:1px solid #dae2ef;border-radius:8px;font-size:14px}
+.auth-shell #login-form>label,.auth-shell .password-label label{font-size:13px}
+.auth-shell #login-form .password-label{margin-top:19px}
+.auth-shell #login-submit{font-size:14px;border-radius:8px;background:#1d3795}
+.auth-shell .icon-button{width:36px;height:36px;border:0;border-radius:8px;background:transparent;color:#61708b;display:grid;place-items:center}
+.auth-shell .icon-button:hover{background:#eef1f8}
+.auth-shell .password-toggle{position:absolute;right:6px;top:50%;transform:translateY(-50%)}
+.auth-shell .input-with-icon .inline-icon{position:absolute;left:13px;width:18px;height:18px;color:#94a0b9;pointer-events:none}
+.auth-shell .password-toggle .inline-icon{position:static;pointer-events:auto;color:#61708b}
+.auth-shell #login-password{padding-right:48px}
+.auth-shell #login-form .form-error{background:#fff0f1;border:1px solid #f6d4d8;padding:10px;border-radius:7px;font-size:12px;color:#a72c40}
+.auth-shell { min-height: 100dvh; display: grid; place-items: center; padding: 28px; background: radial-gradient(ellipse at 85% 100%, #ece5f0 0, #ece5f000 48%), #edf1fa; }
+.national-stripe { position: fixed; inset: 0 0 auto; height: 4px; background: linear-gradient(to right, var(--blue) 0 62%, var(--red) 62% 85%, #edc34d 85%); }
+.login-card { position: relative; z-index: 1; width: min(890px, 100%); max-height: calc(100dvh - 56px); overflow: auto; border: 1px solid #e0e5f2; border-radius: 22px; background: #fff; box-shadow: 0 24px 80px #1d326324, 0 4px 14px #1d32630a; }
+.brand-sub { display: block; font-size: .8rem; line-height: 1.6; color: #6d7892; font-weight: 400; }
+.feature-icon, .metric-icon { width: 42px; height: 42px; display: inline-grid; place-items: center; border-radius: 12px; flex-shrink: 0; }
+.login-brand-row { display: flex; align-items: center; justify-content: center; margin-bottom: 20px; }
+.fingerprint-mark { width: 72px; height: 72px; display: grid; place-items: center; border-radius: 20px; border: 1px solid #dfe6fc; background: linear-gradient(145deg, #fff, #eaf0ff); box-shadow: inset 0 1px #fff, 0 7px 20px #1d37950d; }
+.fingerprint-mark img { display: block; }
+.mobile-seal { display: none; }
+
+.login-layout { display: grid; grid-template-columns: .9fr 1.1fr; min-height: 590px; }
+.login-story { position: relative; isolation: isolate; overflow: hidden; background: var(--blue-dark); color: #fff; }
+.login-story::after { position: absolute; content: ""; inset: 0; z-index: -1; background: linear-gradient(155deg, #142b82f5, #1d3795e3 48%, #1626619e); }
+.login-story-photo { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; object-position: 52% 50%; z-index: -2; }
+.login-story-content { padding: 42px 38px; height: 100%; display: flex; flex-direction: column; align-items: flex-start; }
+.login-story .seal { box-shadow: 0 0 0 6px #ffffff19; margin-bottom: 28px; }
+.login-story .eyebrow { font-size: .875rem; letter-spacing: .055em; max-width: 290px; color: #e4ebff; line-height: 1.55; }
+.login-story h2 { font-size: 1.55rem; line-height: 1.35; font-weight: 600; letter-spacing: -.025em; margin: 18px 0; }
+.story-rule { width: 35px; height: 3px; background: #f55359; margin-top: auto; }
+.login-form-side { position: relative; display: flex; flex-direction: column; align-items: center; padding: 42px 48px; background: radial-gradient(circle at 100% 0, #f3f5ff, transparent 40%), #fff; }
+.dialog-close { position: absolute; right: 15px; top: 15px; }
+.login-form-wrap { width: 100%; margin: auto 0; }
+.login-icon { display: inline-grid; place-items: center; background: #edf1ff; color: var(--blue); width: 45px; height: 45px; border-radius: 13px; margin-bottom: 19px; }
+.login-icon .icon { width: 25px; height: 25px; }
+.login-form-side .eyebrow { justify-content: center; text-align: center; font-size: .68rem; color: #7c88a4; letter-spacing: .1em; }
+.login-form-side h1 { text-align: center; font-size: 1.95rem; font-weight: 650; letter-spacing: -.045em; margin: 8px 0; }
+.login-form-side .muted { text-align: center; font-size: .875rem; margin: 0 0 27px; }
+#login-form > label, .password-label label { display: block; font-size: .875rem; font-weight: 600; margin: 0 0 9px; }
+.password-label { display: flex; align-items: center; justify-content: space-between; margin-top: 20px; }
+.password-label .text-button { font-size: .75rem; padding: 0; margin-bottom: 9px; }
+.input-with-icon { position: relative; display: flex; align-items: center; width: 100%; }
+.input-with-icon > .icon { position: absolute; left: 14px; width: 18px; height: 18px; color: #94a0b9; pointer-events: none; }
+.input-with-icon input { padding-left: 42px; }
+.password-toggle { position: absolute; right: 6px; }
+#login-password { padding-right: 44px; }
+#login-submit { margin-top: 26px; min-height: 47px; }
+.form-error { background: #fff0f1; border: 1px solid #f6d4d8; color: #a72c40; border-radius: 8px; padding: 11px 12px; font-size: .875rem; line-height: 1.6; margin: 14px 0 0; }
+.inline-help { font-size: .8rem; line-height: 1.7; color: #6b7893; background: #f5f7fc; border-radius: 9px; padding: 12px; margin: 14px 0; }
+
+/* Restrained government-records tables */
+.records-panel{padding:16px 18px}
+.records-panel .panel-header{margin-bottom:14px}
+.records-panel .panel-header h2{font-size:14px;line-height:1.4}
+.records-table{font-size:13px;min-width:610px}
+.records-table th{background:#edf1f7;color:#344a6f;font-size:12px;text-transform:none;letter-spacing:.01em;font-weight:700;padding:11px 13px;white-space:nowrap}
+.records-table td{font-size:13px;color:#3d4b65;padding:12px 13px;vertical-align:middle}
+.records-table tbody tr:nth-child(even){background:#fbfcfe}
+.records-table tbody tr:hover{background:#edf4ff}
+.records-table .actions-column{width:165px;text-align:right}
+.records-table tbody td:last-child{text-align:right}
+.records-table .id-cell{font-weight:700;font-variant-numeric:tabular-nums;color:#1f3671}
+.records-table .employee-name-cell{font-weight:650;color:#20304d}
+.records-table .date-cell{white-space:nowrap;font-variant-numeric:tabular-nums;color:#4a5c79}
+.records-table .row-action{padding:5px 0;color:#1e3d87;text-decoration:none;font-size:12px}
+.records-table .row-action:hover{text-decoration:underline}
+.records-table .table-empty{padding:29px 15px;text-align:center!important;font-size:12px;color:#77869b;font-weight:400}
+.records-panel .toolbar{align-items:end;margin-bottom:13px;gap:10px}
+.records-panel .toolbar label{font-size:12px;font-weight:650;color:#536681}
+.records-panel .toolbar input,.records-panel .toolbar select{height:38px;min-height:38px;border-radius:5px;font-size:13px}
+.records-panel .toolbar .button{height:38px;border-radius:5px;font-size:12px;padding:0 13px}
+.records-panel .toolbar .search-box{max-width:345px;min-width:190px}
+.records-panel .toolbar .import-button{margin-left:0}
+.inline-icon{width:17px;height:17px;display:inline-block;vertical-align:middle;flex-shrink:0}
+.import-button svg{color:#274b96}
+.activity-badge{display:inline-flex;min-width:82px;align-items:center;justify-content:center;padding:5px 8px;font-weight:700;font-size:11px;border-radius:4px;white-space:nowrap}
+.activity-aja{background:#edf3ff;color:#274b8c;border:1px solid #d4e1fb}
+.activity-travel{background:#fff1f2;color:#9c2a3d;border:1px solid #f1d3d8}
+.code-pill{display:inline-block;border-radius:4px;font:600 12px/1.2 "Segoe UI",Arial,sans-serif;background:#eef1f6;color:#354765;padding:5px 8px;font-variant-numeric:tabular-nums}
+.status-line{display:flex;align-items:center;gap:10px;background:#f7f9fc;padding:12px 14px;border:1px solid #e8edf5;color:#60718c;font-size:12px;line-height:1.6;border-radius:5px}
+.status-dot{width:8px;height:8px;background:#b7c5d8;border-radius:50%;flex-shrink:0}
+#activity-counts{margin-bottom:10px}
+
+/* Compact file-import modal; never permanently occupies attendance page. */
+.file-dialog{width:min(530px,calc(100% - 24px));border:0;border-radius:12px;max-height:calc(100dvh - 48px);overflow:auto;padding:0;background:#fff;color:#172b52;box-shadow:0 25px 70px #0f254c40}
+.file-dialog::backdrop{background:#0c1e43a8}
+.file-dialog-head{display:flex;align-items:center;gap:13px;padding:23px 24px 19px;border-bottom:1px solid #e5eaf2;position:relative}
+.file-dialog-icon{height:43px;width:43px;flex-shrink:0;background:#edf2ff;border:1px solid #d5e1fa;border-radius:10px;display:grid;place-items:center;color:#20468f}
+.file-dialog-icon svg{height:23px;width:23px}
+.file-dialog-head h2{font-size:18px;margin:0 0 3px;letter-spacing:-.02em}
+.file-dialog-head p{font-size:12px;color:#74829a;margin:0;line-height:1.45}
+.modal-x{align-self:flex-start;margin-left:auto;flex-shrink:0;background:#f5f7fb;border:0;border-radius:6px;color:#5d6c83;font-size:24px;line-height:1;width:30px;height:30px;display:grid;place-items:center}
+.modal-x:hover{background:#f6e8eb;color:#a52a3b}
+.file-dialog-body{padding:20px 24px 18px}
+.file-dropzone{min-height:156px;border:1.5px dashed #adc0df;border-radius:9px;background:#f8faff;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;gap:6px;padding:17px 15px;cursor:pointer}
+.file-dropzone:hover,.file-dropzone:focus-within{border-color:#3158a3;background:#f2f6ff}
+.file-dropzone>svg{width:30px;height:30px;color:#32549a;margin-bottom:2px}
+.file-dropzone strong{font-size:13px;color:#253c6b}
+.file-dropzone span{font-size:12px;color:#7a89a0}
+.file-dropzone .selected-file{font-size:12px;color:#1e438a;font-weight:650;overflow-wrap:anywhere}
+.import-message{display:flex;gap:9px;align-items:flex-start;padding:11px 12px;background:#f8fafc;border:1px solid #e7ebf1;border-radius:6px;margin-top:14px;color:#64738b;font-size:12px;line-height:1.55}
+.notice-icon{display:grid;place-items:center;min-width:17px;height:17px;border-radius:50%;background:#dfeaf8;color:#24498e;font-size:11px;font-weight:800;font-style:normal}
+.file-dialog-actions{display:flex;align-items:center;justify-content:flex-end;gap:10px;background:#f9fafc;border-top:1px solid #e4eaf2;padding:14px 24px}
+.file-dialog-actions .button{height:39px;font-size:12px}
+.file-dialog .upload-result{border-radius:6px;margin-top:12px;font-size:12px;font-weight:650;line-height:1.55;white-space:pre-wrap}
+.file-dialog .upload-result.import-success{background:#edf8f3;border:1px solid #bcdccf;border-left:3px solid #268661;color:#216c54}
+.file-dialog .upload-result.import-warning{background:#fff8ed;border:1px solid #eed8b5;border-left:3px solid #ba7d22;color:#876221}
+.file-dialog .upload-result.import-preview{background:#f0f5ff;border:1px solid #dce6fa;border-left:3px solid #315db0;color:#314f87}
+.sr-only{position:absolute!important;width:1px!important;height:1px!important;padding:0!important;margin:-1px!important;overflow:hidden!important;clip:rect(0,0,0,0)!important;white-space:nowrap!important;border:0!important}
+@media(max-width:740px){
+  .auth-shell{padding:16px}
+  .auth-shell .login-card{max-height:calc(100dvh - 32px);border-radius:20px}
+  .auth-shell .login-layout{grid-template-columns:1fr;min-height:auto}
+  .auth-shell .login-story{display:none}
+  .auth-shell .login-form-side{padding:34px 30px 36px}
+  .auth-shell .login-form-wrap{max-width:390px}
+  .auth-shell .fingerprint-mark{display:none}
+  .auth-shell .mobile-seal{display:block}
+  .records-panel{padding:12px}
+  .records-panel .toolbar .search-box{max-width:none}
+  .records-panel .toolbar .button{flex:1}
+  .file-dialog-head{padding:18px 16px}
+  .file-dialog-body{padding:15px 16px}
+  .file-dialog-actions{padding:13px 16px}
+  .file-dialog-actions .button{flex:1}
+}
