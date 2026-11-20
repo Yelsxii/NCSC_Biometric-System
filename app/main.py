@@ -23,9 +23,11 @@ from starlette.middleware.sessions import SessionMiddleware
 
 from app.db import connect, initialize, register_scan_metadata
 from app.parser import MAX_BYTES, digest, parse_attlog
+from app.ingestion import insert_punches
 from app.security import check_password
 from app.reports import preview_k14_report
 from app.registry import parse_staff, clean
+from app.lan import status as lan_status, tcp_probe
 
 load_dotenv()
 secret = os.environ.get("SECRET_KEY", "")
@@ -211,7 +213,7 @@ def overview(user: dict = Depends(current_user)):
                       "scans": counts.get((start + dt.timedelta(days=i)).isoformat(), 0)}
                      for i in range(7)]
     return {"totals": totals, "recent_imports": recent, "daily_scans": daily,
-            "phase": "USB / Local Pilot"}
+            "phase": "Attendance monitoring", "connection": lan_status()}
 
 
 @app.get("/api/punches")
@@ -298,14 +300,7 @@ async def import_file(request: Request, file: UploadFile = File(...), user: dict
                     "VALUES(?,?,?,?,?)", (digest(raw), filename, len(records), 0, user["id"]),
                 )
                 batch_id = cur.lastrowid
-                before = con.total_changes
-                con.executemany(
-                    "INSERT OR IGNORE INTO punches(employee_code,happened_at,device_id,status_code,verification_code,work_code,imported_batch_id) "
-                    "VALUES(?,?,?,?,?,?,?)",
-                    [(p.employee_code,p.happened_at,p.device_id,p.status_code,p.verification_code,p.work_code,batch_id) for p in records],
-                )
-                inserted = con.total_changes - before
-                register_scan_metadata(con)
+                inserted = insert_punches(con, records, batch_id)
                 con.execute("UPDATE import_batches SET inserted_records=? WHERE id=?", (inserted,batch_id))
                 con.execute(
                     "INSERT INTO audit_events(actor_id,action,entity,entity_id,details) VALUES(?,?,?,?,?)",
@@ -363,6 +358,10 @@ def record_activity(payload: ActivityInput, request: Request, user: dict = Depen
                      payload.start_at.isoformat(sep=" "),payload.end_at.isoformat(sep=" "),user["id"]),
                 )
                 aid = cur.lastrowid
+                # Approved-office references may cover staff without any office scans.
+                # Keep those employee IDs in the attendance register as unscanned IDs.
+                con.execute("INSERT OR IGNORE INTO employees(employee_code) VALUES(?)",
+                            (payload.employee_code,))
                 con.execute(
                     "INSERT INTO audit_events(actor_id,action,entity,entity_id) VALUES(?,?,?,?)",
                     (user["id"],"recorded","activity_record",aid),
@@ -545,8 +544,133 @@ def monitor_dtr(employee_code: str, month: str, user: dict = Depends(current_use
         support = [a for a in activities if a["start_at"] < after and a["end_at"] > before]
         rows.append({"date": date.isoformat(), "day": date.strftime("%a"),
                      "scans": day_scans, "activities": support,
-                     "coverage": "scans" if day_scans else "reference_only" if support else "no_records"})
+                     "coverage": "scans" if day_scans else "reference_only" if support else "no_records",
+                     "travel_order": any(a["category"]=="Travel Order" for a in support),
+                     "travel_remark": "OFFICIAL TRAVEL" if any(a["category"]=="Travel Order" for a in support) else "",
+                     "undertime_review": "TO coverage for HR verification" if any(a["category"]=="Travel Order" for a in support) else "Not calculated"})
     return {"employee_code": employee_code, "display_name": employee[0] if employee else "", "month": month, "days": rows,
             "summary": {"scans": len(scans), "days_with_scans": sum(bool(r["scans"]) for r in rows),
                         "activity_records": len(activities)},
             "calculation_status": "not_calculated"}
+
+
+# ── Streamlined employee records ─────────────────────────────────────────────
+
+@app.get("/api/employee-register")
+def employee_register(month: str, q: str = "", user: dict = Depends(current_user)):
+    """Directory-first list for one chosen calendar month, including unscanned staff.
+
+    No scan is interpreted as time-in/out here. The same personnel registry
+    powers offline USB and the future LAN connector.
+    """
+    if not re.fullmatch(r"\d{4}-\d{2}", month):
+        raise HTTPException(400, "Month must be YYYY-MM.")
+    try:
+        start = dt.date.fromisoformat(month + "-01")
+    except ValueError as exc:
+        raise HTTPException(400, "Invalid month.") from exc
+    if not 2000 <= start.year <= 2100:
+        raise HTTPException(400, "Unsupported year.")
+    end = start + dt.timedelta(days=calendar.monthrange(start.year, start.month)[1])
+    search = q.strip()
+    if len(search) > 80 or any(ord(c) < 32 for c in search):
+        raise HTTPException(400, "Invalid search term.")
+    with closing(connect()) as con:
+        rows = [dict(row) for row in con.execute(
+            """SELECT e.employee_code, e.display_name, e.department,
+                      COUNT(p.id) AS scan_count,
+                      COUNT(DISTINCT substr(p.happened_at,1,10)) AS days_with_scans,
+                      MAX(p.happened_at) AS last_scan
+               FROM employees e
+               LEFT JOIN punches p ON p.employee_code=e.employee_code
+                    AND p.happened_at>=? AND p.happened_at<?
+               WHERE (?='' OR instr(lower(e.employee_code),lower(?))>0
+                       OR instr(lower(e.display_name),lower(?))>0)
+               GROUP BY e.employee_code,e.display_name,e.department
+               ORDER BY CASE WHEN e.display_name='' THEN 1 ELSE 0 END,
+                        lower(e.display_name), e.employee_code LIMIT 1000""",
+            (start.isoformat(), end.isoformat(), search, search, search),
+        ).fetchall()]
+    return {"items": rows, "month": month, "search": search,
+            "note": "Scan counts only; no automatic absence or undertime calculation."}
+
+
+# ── LAN configuration without unauthorized reads/writes ────────────────────
+
+@app.get("/api/device/status")
+def device_status(user: dict = Depends(current_user)):
+    return lan_status()
+
+
+@app.post("/api/device/probe")
+def device_probe(request: Request, user: dict = Depends(require_admin)):
+    require_csrf(request)
+    return tcp_probe()
+
+
+@app.get("/api/activities/monitor")
+def monitor_official_activities(
+    month: str,
+    q: str = "",
+    category: Literal["All", "AJA", "Travel Order"] = "All",
+    user: dict = Depends(current_user),
+):
+    """Read-only listing of K14 scans whose work codes have been classified.
+
+    A device work-code event identifies an observed scan, NOT a validated
+    approval or a complete start/end interval. Even for TO references, work-hour
+    credit is not calculated by this query.
+    """
+    if not re.fullmatch(r"\d{4}-\d{2}", month):
+        raise HTTPException(400, "Month must be YYYY-MM.")
+    try:
+        start = dt.date.fromisoformat(month + "-01")
+    except ValueError as exc:
+        raise HTTPException(400, "Invalid month.") from exc
+    if not 2000 <= start.year <= 2100:
+        raise HTTPException(400, "Unsupported year.")
+    end = start + dt.timedelta(days=calendar.monthrange(start.year, start.month)[1])
+    search = q.strip()
+    if len(search) > 80 or any(ord(c) < 32 for c in search):
+        raise HTTPException(400, "Invalid search term.")
+    with closing(connect()) as con:
+        signals = [dict(r) for r in con.execute(
+            """SELECT p.id,p.employee_code,COALESCE(e.display_name,'') AS display_name,
+                      w.activity_type AS category,p.happened_at,p.device_id,p.work_code,w.label
+               FROM punches p
+               JOIN work_codes w ON w.device_id=p.device_id AND w.work_code=p.work_code
+               LEFT JOIN employees e ON e.employee_code=p.employee_code
+               WHERE w.activity_type IN ('AJA','Travel Order')
+                 AND p.happened_at >= ? AND p.happened_at < ?
+                 AND (?='All' OR w.activity_type=?)
+                 AND (?='' OR instr(lower(p.employee_code),lower(?))>0
+                            OR instr(lower(COALESCE(e.display_name,'')),lower(?))>0)
+               ORDER BY p.happened_at DESC,p.id DESC LIMIT 500""",
+            (start.isoformat(), end.isoformat(), category, category, search, search, search),
+        ).fetchall()]
+    items = [{
+        "id": r["id"],
+        "employee_code": r["employee_code"],
+        "display_name": r["display_name"],
+        "category": r["category"],
+        "happened_at": r["happened_at"],
+        "device_id": r["device_id"],
+        "work_code": r["work_code"],
+        "label": r["label"],
+        "verified_by_hr": False,
+        "note": "Device event only; classification does not prove approval, departure/return, or TO coverage.",
+    } for r in signals]
+    items.sort(key=lambda r: (r["happened_at"], r["id"]), reverse=True)
+    return {
+        "month": month, "items": items[:800],
+        "summary": {
+            "employees": len({r["employee_code"] for r in items}),
+            "aja": sum(r["category"] == "AJA" for r in items),
+            "travel_orders": sum(r["category"] == "Travel Order" for r in items),
+            "device_signals": len(signals),
+        },
+        "note": "These are actual K14 scan events classified using locally labeled work codes; "
+                "codes must be verified against device configuration. "
+                "Travel Orders without office scans are NOT detectable from this list; "
+                "official TO coverage requires approved office records for DTR treatment.",
+    }

@@ -1,13 +1,14 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
-  <meta name="theme-color" content="#1d3795"><meta name="description" content="NCSC's local workspace for biometric attendance and official activities.">
-  <title>NCSC | Biometric Attendance</title>
-  <link rel="icon" href="/static/images/ncsc-seal.jpg" type="image/jpeg"><link rel="stylesheet" href="/static/app.css"><script src="/static/app.js" defer></script>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#142650">
+  <title>NCSC | Attendance Records</title>
+  <link rel="stylesheet" href="/static/app.css">
+  <script src="/static/app.js" defer></script>
 </head>
 <body>
-  <noscript><p class="notice">Please enable JavaScript to use the attendance workspace.</p></noscript>
   <main id="login-view" class="auth-shell" aria-labelledby="login-heading">
     <div class="national-stripe" aria-hidden="true"></div>
     <section class="login-card">
@@ -15,8 +16,10 @@
         <aside class="login-story" aria-label="NCSC Biometric Attendance System">
           <img class="login-story-photo" src="/static/images/ncsc-summit.webp" alt="" fetchpriority="high">
           <div class="login-story-content">
-            <img class="seal" src="/static/images/ncsc-seal.jpg" width="96" height="96" alt="NCSC seal">
-            <p class="eyebrow">NATIONAL COMMISSION OF SENIOR CITIZENS</p>
+            <div class="login-story-brand">
+              <img class="seal" src="/static/images/ncsc-seal.jpg" width="112" height="112" alt="NCSC seal">
+              <p class="eyebrow">NATIONAL COMMISSION OF SENIOR CITIZENS</p>
+            </div>
             <h2>Biometric Attendance<br>System</h2>
             <div class="story-rule" aria-hidden="true"></div>
           </div>
@@ -32,12 +35,12 @@
             <p class="muted">Sign in to access attendance records.</p>
             <form id="login-form" autocomplete="on">
               <label for="login-username">Username</label>
-              <div class="input-with-icon"><i data-icon="user"></i><input id="login-username" name="username" required maxlength="40" autocomplete="username" placeholder="Enter your username" autofocus></div>
-              <div class="password-label"><label for="login-password">Password</label><button class="text-button" type="button" id="login-help">Need help?</button></div>
-              <div class="input-with-icon"><i data-icon="lock"></i><input id="login-password" name="password" type="password" required maxlength="256" autocomplete="current-password" placeholder="Enter your password"><button class="icon-button password-toggle" type="button" id="toggle-password" aria-label="Show password" aria-pressed="false"><i data-icon="eye"></i></button></div>
+              <div class="input-with-icon"><svg class="inline-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 21a8 8 0 0 0-16 0"/><circle cx="12" cy="8" r="4"/></svg><input id="login-username" name="username" required maxlength="40" autocomplete="username" placeholder="Enter your username" autofocus></div>
+              <div class="password-label"><label for="login-password">Password</label></div>
+              <div class="input-with-icon"><svg class="inline-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="5" y="10" width="14" height="11" rx="2"/><path d="M8 10V7a4 4 0 0 1 8 0v3"/></svg><input id="login-password" name="password" type="password" required maxlength="256" autocomplete="current-password" placeholder="Enter your password"><button class="icon-button password-toggle" type="button" id="toggle-password" aria-label="Show password" aria-pressed="false"><svg class="inline-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M2 12s4-7 10-7 10 7 10 7-4 7-10 7S2 12 2 12z"/><circle cx="12" cy="12" r="3"/></svg></button></div>
               <p id="login-error" class="form-error hidden" role="alert"></p>
-              <p id="login-help-text" class="inline-help hidden">Contact your system administrator for account or password assistance.</p>
-              <button class="btn primary block" id="login-submit" type="submit">Sign in</button>
+              
+              <button class="button primary wide" id="login-submit" type="submit">Sign in</button>
             </form>
           </div>
         </div>
@@ -45,57 +48,162 @@
     </section>
   </main>
   <div id="workspace" class="workspace hidden">
-    <aside class="sidebar"><a class="brand" href="#overview" aria-label="NCSC Attendance overview"><img class="seal" src="/static/images/ncsc-seal.jpg" width="48" height="48" alt="NCSC seal"><span>NCSC<span class="brand-sub">Attendance workspace</span></span></a><div class="sidebar-label">YOUR WORKSPACE</div>
-      <nav class="workspace-nav" aria-label="Main navigation"><button class="nav-item active" data-page="overview"><i data-icon="grid"></i> Overview</button><button class="nav-item" data-page="dtr"><i data-icon="file"></i> DTR monitoring</button><button class="nav-item" data-page="attendance"><i data-icon="fingerprint"></i> Attendance logs</button><button class="nav-item" data-page="staff"><i data-icon="users"></i> Staff & work codes</button><button class="nav-item" data-page="imports"><i data-icon="upload"></i> USB imports</button><button class="nav-item" data-page="fieldwork"><i data-icon="briefcase"></i> Activity references</button></nav>
-      <div class="sidebar-bottom"><button class="nav-item help-nav" type="button" data-help><i data-icon="help"></i> Help & guidance</button><div class="local-status"><i data-icon="database"></i><div><strong>Local workspace</strong><small>USB import mode</small></div></div><button class="nav-item logout-button" id="logout" type="button"><i data-icon="logout"></i> Sign out</button></div>
+    <aside class="sidebar">
+      <div class="brand">
+        <img src="/static/images/ncsc-seal.jpg" width="45" height="45" alt="">
+        <div><strong>NCSC</strong><span>BIOMETRIC RECORDS</span></div>
+      </div>
+      <div class="nav-title">OPERATIONS</div>
+      <nav class="nav" aria-label="Main navigation">
+        <button class="nav-item active" type="button" data-page="employees"><span class="nav-symbol">▤</span>Employee Attendance</button>
+        <button class="nav-item" type="button" data-page="activities"><span class="nav-symbol">◷</span>AJA / Travel Orders</button>
+        <button class="nav-item" type="button" data-page="staff"><span class="nav-symbol">♙</span>Users & Work Codes</button>
+      </nav>
+      <div class="sidebar-footer">NCSC · Records Monitoring</div>
     </aside>
-    <div class="main-shell"><header class="topbar"><div class="breadcrumb">Workspace <span>/</span> <strong id="current-location">Overview</strong></div><div class="top-actions"><span class="today" id="today"></span><span class="topbar-divider"></span><span class="avatar" id="account-avatar" aria-hidden="true">A</span><div class="account-detail"><strong id="account">Administrator</strong><small id="account-role">Administrator</small></div></div></header>
-      <main id="main-content" tabindex="-1">
-        <div class="page-heading"><div><h1 id="page-heading">Overview</h1><p id="page-description">A clear view of your attendance records and official activities.</p></div><button class="btn primary" id="heading-action" type="button" data-go="imports"><i data-icon="upload"></i> Import attendance</button></div>
-        <section class="page" data-view="overview" aria-label="Attendance overview">
-          <div class="metrics">
-            <article class="metric"><div class="metric-top"><span class="metric-icon blue"><i data-icon="fingerprint"></i></span><span class="metric-period">All time</span></div><strong id="metric-scans">—</strong><h3>Recorded scans</h3><small>Original imported device events</small></article>
-            <article class="metric"><div class="metric-top"><span class="metric-icon red"><i data-icon="users"></i></span><span class="metric-period">All time</span></div><strong id="metric-employees">—</strong><h3>Staff records</h3><small>Device IDs and linked staff names</small></article>
-            <article class="metric"><div class="metric-top"><span class="metric-icon blue"><i data-icon="folder"></i></span><span class="metric-period">All time</span></div><strong id="metric-imports">—</strong><h3>Import batches</h3><small>Attendance files processed</small></article>
-            <article class="metric"><div class="metric-top"><span class="metric-icon gold"><i data-icon="clock"></i></span><span class="metric-period">On file</span></div><strong id="metric-activities">—</strong><h3>Activity references</h3><small>Existing AJA and travel records</small></article>
+
+    <div class="content-shell">
+      <header class="topbar">
+        <div class="topbar-title">NATIONAL COMMISSION OF SENIOR CITIZENS <span>/</span> <strong id="section-name">Employee Attendance</strong></div>
+        <div class="topbar-user"><span class="today" id="today"></span><span class="admin-dot" aria-hidden="true">●</span><strong id="account">Administrator</strong><button id="logout" class="signout" type="button">Sign out</button></div>
+      </header>
+
+      <main id="main-content">
+        <section class="page" data-view="employees">
+          <div class="panel">
+            <div class="panel-header"><div><h2>Attendance register</h2></div></div>
+            <form id="employee-filter" class="toolbar">
+              <label class="search-box">Search staff<input id="employee-search" placeholder="Employee name or ID" autocomplete="off" maxlength="80"></label>
+              <label>Reporting month<input id="register-month" type="month" required></label>
+              <button class="button primary" type="submit">View records</button>
+              <button id="open-attendance-import" class="button outline import-button" type="button" aria-haspopup="dialog">
+                <svg class="inline-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 16V3M7 8l5-5 5 5"/><path d="M4 16v3a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-3"/></svg>
+                Import attendance
+              </button>
+            </form>
+            <div class="table-wrap">
+              <table class="records-table"><thead><tr><th>Employee ID</th><th>Employee name</th><th>Department</th><th class="actions-column">Action</th></tr></thead><tbody id="register-rows"><tr><td colspan="4">Loading employees…</td></tr></tbody></table>
+            </div>
+            <div class="table-note" id="register-count"></div>
           </div>
-          <div class="overview-grid"><article class="panel chart-panel"><div class="section-top"><div><h2>Scan activity</h2><p id="chart-period">Latest seven days of imported records</p></div><span class="chart-legend"><i></i> Device scans</span></div><div id="activity-chart" class="activity-chart"><div class="empty">Import a file to see daily scan activity.</div></div><p class="chart-foot">Counts show recorded scan events, rather than hours worked.</p></article><article class="panel quick-panel"><div class="section-top"><div><h2>Quick actions</h2><p>Attendance and official activities</p></div><i class="quick-spark" data-icon="spark"></i></div><button class="quick-action" type="button" data-go="imports"><span class="feature-icon blue"><i data-icon="upload"></i></span><span><strong>Import attendance</strong><small>Preview a USB export before importing</small></span><i data-icon="chevron"></i></button><button class="quick-action" type="button" data-go="fieldwork"><span class="feature-icon red"><i data-icon="briefcase"></i></span><span><strong>View activity references</strong><small>Existing AJA, fieldwork and travel orders</small></span><i data-icon="chevron"></i></button><button class="quick-action" type="button" data-go="dtr"><span class="feature-icon blue"><i data-icon="file"></i></span><span><strong>Check daily records</strong><small>Scans and references by employee</small></span><i data-icon="chevron"></i></button><div class="quick-note"><i data-icon="shield"></i><span>Original biometric scans stay unchanged.</span></div></article></div>
-          <article class="panel recent-panel"><div class="section-top"><div><h2>Recent imports</h2><p>Your most recently processed attendance files</p></div><button class="text-button" type="button" data-go="imports">Manage imports</button></div><div id="recent-imports" class="empty">Loading imports…</div></article>
+
+          <section id="employee-detail" class="detail-section hidden">
+            <div class="detail-heading">
+              <div><button id="back-to-register" class="text-link" type="button">← Back to employee list</button><h2 id="detail-name">Employee</h2><p><span id="detail-id"></span> <span id="detail-department"></span></p></div>
+              <div class="detail-actions"><button class="button outline" id="preview-dtr" type="button">Preview DTR</button><button class="button primary" id="export-dtr" type="button">Print / Save PDF</button></div>
+            </div>
+            <div class="panel">
+              <div class="panel-header"><div><h2>Daily attendance and activity records</h2><p id="detail-summary">Original device scans and activity classifications.</p></div><label class="month-inline">Month<input id="detail-month" type="month"></label></div>
+              <div class="table-wrap"><table class="records-table"><thead><tr><th>Date</th><th>Device scans (actual)</th><th>Official activity</th><th>DTR monitoring status</th></tr></thead><tbody id="daily-rows"><tr><td colspan="4">Choose an employee to load records.</td></tr></tbody></table></div>
+              <div class="table-note">Device timestamps are not automatically classified into AM/PM In/Out until the actual K14 status rules have been validated. Travel Order coverage does not invent biometric times.</div>
+            </div>
+            <div class="panel raw-panel">
+              <div class="panel-header"><div><h2>Raw biometric event list</h2><p>Audit view of exact events from the selected employee and month.</p></div></div>
+              <div class="table-wrap"><table class="records-table"><thead><tr><th>Timestamp</th><th>Device</th><th>Status</th><th>Work code</th><th>Verification</th></tr></thead><tbody id="detail-events"></tbody></table></div>
+            </div>
+          </section>
         </section>
-        <section class="page hidden" data-view="attendance" aria-label="Attendance logs"><div class="info-banner"><i data-icon="info"></i><span>Device status codes are shown exactly as exported.</span></div><div class="panel table-panel"><form id="filter-form" class="filterbar"><div class="input-with-icon"><i data-icon="search"></i><input id="filter-id" aria-label="Employee ID" placeholder="Search an exact employee ID" maxlength="64"></div><label class="date-filter">From<input id="filter-from" type="date"></label><label class="date-filter">To<input id="filter-to" type="date"></label><button class="btn primary" type="submit">Apply filters</button><button class="btn outline" type="button" id="clear-filter">Reset</button></form><div class="table-scroll"><table><thead><tr><th>Staff / device ID</th><th>Scan date & time</th><th>Device</th><th>Status code</th><th>Verify code</th><th>Work code</th></tr></thead><tbody id="punch-rows"></tbody></table></div><div class="table-bottom"><p id="punch-count">Loading records…</p><div class="pagination"><button class="btn outline" type="button" id="prev-punches" disabled>Previous</button><button class="btn outline" type="button" id="next-punches" disabled>Next</button></div></div></div></section>
-        <section class="page hidden" data-view="imports" aria-label="USB attendance imports"><div class="two-col imports-layout"><article class="panel"><div class="section-top"><div><h2>Upload attendance file</h2><p>Choose a USB export, then review it before saving.</p></div><span class="tag blue-tag">ZKTeco K14</span></div><form id="import-form"><label id="drop-area" class="drop-area" for="attendance-file"><span class="drop-icon"><i data-icon="upload"></i></span><strong>Drop an attendance file here</strong><span>or <b>browse your files</b></span><small>.dat / .txt source logs · .xls report preview · up to 2 MB</small><span id="file-name" class="file-name">No file selected</span></label><input id="attendance-file" type="file" accept=".dat,.txt,.xls" class="sr-only"><div class="button-row"><button class="btn outline" type="button" id="preview-btn"><i data-icon="eye"></i> Preview file</button><button class="btn primary" type="submit" id="import-submit" disabled>Import records</button></div></form><p id="import-error" class="form-error hidden" role="alert"></p><div id="preview-output" class="preview-output hidden" aria-live="polite"></div><button id="view-imported" class="btn outline hidden" type="button" data-go="attendance">View imported attendance</button><button id="report-staff" class="btn outline hidden" type="button" data-go="staff">Import staff names from this report</button><p id="import-access-note" class="inline-help hidden">Sign in with an administrator account to preview or import office files.</p></article><article class="panel import-guide"><p class="eyebrow">USB ATTENDANCE IMPORT</p><h2>Import instructions</h2><ol class="guide-steps"><li><span>1</span><div><strong>Download from your K14</strong><p>USB Manager → Download → Attendance Data.</p></div></li><li><span>2</span><div><strong>Preview the original file</strong><p>Check the date range, employee IDs, and record count.</p></div></li><li><span>3</span><div><strong>Import when ready</strong><p>Existing scans are skipped. Your device stays unchanged.</p></div></li></ol><div class="guide-note"><i data-icon="info"></i><p>Use Staff &amp; work codes to import names from Excel reports. Import original <strong>_attlog.dat</strong> files to preserve exact timestamps and source codes.</p></div></article></div></section>
-        <section class="page hidden" data-view="fieldwork" aria-label="Existing activity references">
-          <div class="two-col fieldwork-layout"><article class="panel"><div class="section-top"><div><h2>Add an existing reference</h2><p>Optional: record an AJA or order already handled by the office.</p></div></div>
-            <form id="fieldwork-form" class="form-grid">
-              <label>Employee ID<input name="employee_code" required maxlength="64" pattern="[A-Za-z0-9._\-]+" placeholder="Device employee ID" list="known-employees"></label>
-              <label>Activity type<select name="category"><option>AJA</option><option>Fieldwork</option><option>Official Business</option><option>Travel Order</option></select></label>
-              <label>Start (Manila time)<input name="start_at" type="datetime-local" required></label>
-              <label>End (Manila time)<input name="end_at" type="datetime-local" required></label>
-              <label class="span-2">Existing document / order number<input name="reference" maxlength="140" placeholder="Reference, if available"></label>
-              <label class="span-2">Purpose / DTR note<textarea name="purpose" maxlength="600" rows="2" placeholder="Short note, if there is no document number"></textarea></label>
-              <button class="btn primary span-2" type="submit" id="fieldwork-submit"><i data-icon="plus"></i> Save reference</button>
-            </form><p class="table-foot">No new application or approval. References do not replace device scans or automatically add work hours.</p>
-          </article><article class="panel"><div class="section-top"><div><h2>Recorded references</h2><p>Existing supporting records for DTR monitoring.</p></div><label class="sr-only" for="activity-status">Filter references</label><select id="activity-status" class="compact-select"><option value="recorded">On file</option><option value="all">All records</option><option value="voided">Voided</option></select></div><div id="fieldwork-items" class="request-list"></div><details id="legacy-activities" class="hidden"><summary>Previous system entries</summary><p class="inline-help">History retained as entered. Previous request statuses are not converted into approved office records.</p><div id="legacy-items"></div></details></article></div>
+
+        <section class="page hidden" data-view="activities">
+          <div class="panel records-panel">
+            <div class="panel-header"><h2>Device-classified activity logs</h2></div>
+            <form id="activity-filter" class="toolbar compact-toolbar">
+              <label class="search-box">Search employee<input id="activity-search" type="search" maxlength="80" placeholder="Name or employee ID"></label>
+              <label>Month<input id="activity-month" type="month" required></label>
+              <label>Activity<select id="activity-category"><option value="All">All activities</option><option value="AJA">AJA</option><option value="Travel Order">Travel Order</option></select></label>
+              <button class="button primary" type="submit">View logs</button>
+            </form>
+            <div class="inline-summary" id="activity-counts"><span>— employees</span><span>— AJA scans</span><span>— Travel Order scans</span></div>
+            <div class="table-wrap"><table class="records-table"><thead><tr><th>Employee ID</th><th>Employee name</th><th>Activity</th><th>Date</th><th>Time</th><th>Work code</th><th class="actions-column">Action</th></tr></thead><tbody id="activity-rows"><tr><td colspan="7">Loading device activity logs…</td></tr></tbody></table></div>
+            <p class="table-note" id="activity-note">Only scans classified using a configured device work code are listed. A scan alone does not verify travel authorization, coverage, or undertime credit.</p>
+          </div>
         </section>
-        <section class="page hidden" data-view="dtr" aria-label="DTR daily monitoring">
-          <article class="panel table-panel"><form id="dtr-filter" class="filterbar"><label class="date-filter">Employee ID<select id="dtr-employee" required><option value="">Choose employee ID</option></select></label><label class="date-filter">Month<input id="dtr-month" type="month" required min="2000-01" max="2100-12"></label><button class="btn primary" type="submit">View daily records</button></form>
-            <p id="dtr-summary" class="monitor-summary" aria-live="polite">Choose an employee and month to compare with the office DTR.</p>
-            <div class="table-scroll"><table class="monitor-table"><thead><tr><th>Date / day</th><th>Device scan times</th><th>AJA / official activity reference</th><th>Records available</th></tr></thead><tbody id="dtr-rows"><tr><td colspan="4">No employee selected.</td></tr></tbody></table></div>
-            <p class="table-foot monitor-foot">Times are original device scans. A blank day does not mean absence. Check AM/PM entries and totals against the office DTR.</p>
-          </article>
+
+        <section class="page hidden" data-view="staff">
+          <div class="panel records-panel">
+            <div class="panel-header"><h2>Device user synchronization</h2>
+              <button type="button" class="button outline import-button" id="open-user-import" aria-haspopup="dialog">
+                <svg class="inline-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 16V3M7 8l5-5 5 5"/><path d="M4 16v3a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-3"/></svg>
+                Import device users
+              </button>
+            </div>
+            <div class="status-line">
+              <span class="status-dot"></span>
+              Device user synchronization can be automated after the K14 LAN connector is verified. USB recovery is the available fallback for now.
+            </div>
+          </div>
+          <div class="panel section-gap">
+            <div class="panel-header"><h2>Work-code classification</h2></div>
+            <div class="table-wrap"><table class="records-table"><thead><tr><th>Device</th><th>Numeric code</th><th>Classification</th><th>Label</th><th>Recorded events</th><th class="actions-column">Action</th></tr></thead><tbody id="code-rows"><tr><td colspan="6">Loading device codes…</td></tr></tbody></table></div>
+            <p class="table-note">Labels here interpret actual device codes; the K14's numeric codes must be configured separately. Raw code 0 is not changed.</p>
+          </div>
+          <details class="connection-details section-gap" id="connection-details">
+            <summary>Connection diagnostics</summary>
+            <div class="panel">
+              <div class="connection-grid">
+                <div><span class="field-label">K14 IP address</span><strong id="lan-ip">192.168.1.201</strong></div>
+                <div><span class="field-label">Communication port</span><strong id="lan-port">4370</strong></div>
+                <div><span class="field-label">Sync status</span><strong id="lan-sync">Not active</strong></div>
+                <div class="connection-action"><button id="probe-lan" type="button" class="button outline">Test connection</button></div>
+              </div>
+              <p class="table-note" id="lan-message">LAN sync is not active until the physical device and read-only SDK are verified.</p>
+              <span class="hidden" id="lan-badge">Not connected</span>
+            </div>
+          </details>
         </section>
-        <section class="page hidden" data-view="staff" aria-label="Staff database and work code mapping">
-          <div class="two-col registry-layout"><article class="panel"><div class="section-top"><div><h2>Staff database</h2><p>Names linked to the same employee IDs used on the device.</p></div><button class="btn primary" id="open-staff-import" type="button">Import staff names</button></div><div class="registry-tools"><input id="staff-search" type="search" aria-label="Search staff" placeholder="Search a name or device ID"><button class="btn outline" id="add-staff" type="button">Add staff</button></div><div class="table-scroll"><table><thead><tr><th>Device ID</th><th>Staff name</th><th>Department</th><th></th></tr></thead><tbody id="staff-rows"></tbody></table></div></article>
-          <article class="panel"><div class="section-top"><div><h2>Device work codes</h2><p>Match the code labels configured on your actual device.</p></div><button class="btn outline" id="add-work-code" type="button">Add code</button></div><div id="work-code-items"></div><p class="table-foot">Unmapped codes stay unclassified. A work code label does not change scan times or approve an activity.</p></article></div><p id="staff-error" class="form-error hidden" role="alert"></p>
-        </section><datalist id="known-employees"></datalist>
       </main>
     </div>
   </div>
-  <dialog id="help-dialog" class="small-dialog" aria-labelledby="help-heading"><button class="icon-button dialog-close" type="button" data-close="help-dialog" aria-label="Close help"><i data-icon="x"></i></button><span class="login-icon"><i data-icon="help"></i></span><p class="eyebrow">NCSC BIOMETRIC SYSTEM</p><h2 id="help-heading">System help</h2><div class="help-items"><div><strong>Signing in</strong><p>Use the account assigned by your system administrator. Contact them for access or password assistance.</p></div><div><strong>Import attendance</strong><p>Choose the original _attlog.dat / .txt export in USB imports, preview it, then select Import records. Excel reports supply staff names in Staff &amp; work codes.</p></div><div><strong>Staff and work codes</strong><p>Import staff names from the K14 .xls report or a CSV roster. Match work code labels with the device. Staff registration stays on the biometric device.</p></div><div><strong>DTR monitoring</strong><p>Compare daily scans with your existing DTR. No extra lunch deduction or automatic absence, overtime, or undertime is applied.</p></div><div><strong>Activity references</strong><p>AJA and travel orders use the existing office process. Add a reference only when useful for checking the DTR; there is no second approval.</p></div></div><button class="btn primary block" type="button" data-close="help-dialog">Got it</button></dialog>
-  <dialog id="void-dialog" class="small-dialog" aria-labelledby="void-heading"><h2 id="void-heading">Void this reference?</h2><p class="muted">Use this to correct an entry. The original reference stays in the record history.</p><form id="void-form" class="form-grid"><label class="span-2">Reason<input id="void-reason" required minlength="3" maxlength="300" placeholder="Reason for correction"></label><div class="button-row span-2"><button class="btn outline" type="button" data-close="void-dialog">Cancel</button><button class="btn primary" id="confirm-void" type="submit">Void reference</button></div></form></dialog>
-  <dialog id="staff-dialog" class="small-dialog" aria-labelledby="staff-heading"><h2 id="staff-heading">Staff details</h2><form id="staff-form" class="form-grid"><label class="span-2">Device employee ID<input id="staff-code" required maxlength="64" pattern="[A-Za-z0-9._\-]+"></label><label class="span-2">Staff name<input id="staff-name" required maxlength="140"></label><label class="span-2">Department<input id="staff-department" maxlength="140"></label><p id="staff-save-error" class="form-error span-2 hidden" role="alert"></p><div class="button-row span-2"><button class="btn outline" type="button" data-close="staff-dialog">Cancel</button><button id="save-staff" class="btn primary" type="submit">Save staff</button></div></form></dialog>
-  <dialog id="work-code-dialog" class="small-dialog" aria-labelledby="work-code-heading"><h2 id="work-code-heading">Work code mapping</h2><form id="work-code-form" class="form-grid"><label>Device ID<input id="work-device" required maxlength="64" pattern="[A-Za-z0-9._\-]+"></label><label>Work code<input id="work-code" required maxlength="64" pattern="[A-Za-z0-9._\-]+"></label><label class="span-2">Label from device<input id="work-label" required maxlength="100" placeholder="Use the actual device label"></label><label class="span-2">Activity type<select id="work-type"><option>Unclassified</option><option>Regular</option><option>AJA</option><option>Fieldwork</option><option>Official Business</option><option>Travel Order</option></select></label><p id="work-save-error" class="form-error span-2 hidden" role="alert"></p><div class="button-row span-2"><button class="btn outline" type="button" data-close="work-code-dialog">Cancel</button><button id="save-work-code" class="btn primary" type="submit">Save mapping</button></div></form></dialog>
-  <dialog id="staff-import-dialog" class="roster-dialog" aria-labelledby="staff-import-heading"><button class="icon-button dialog-close" type="button" data-close="staff-import-dialog" aria-label="Close staff import"><i data-icon="x"></i></button><h2 id="staff-import-heading">Import staff names</h2><p class="muted">Use the K14 .xls report or a UTF-8 CSV roster. Existing names will not be overwritten.</p><label class="roster-file">Staff file<input id="staff-file" type="file" accept=".xls,.csv"></label><p id="roster-selected" class="table-foot"></p><p class="inline-help">CSV columns: employee_code,display_name,department. Department is optional. Binary user.dat backups are not supported.</p><div class="button-row"><button id="preview-staff" class="btn outline" type="button">Preview staff</button><button id="import-staff" class="btn primary" type="button" disabled>Import names</button></div><p id="roster-error" class="form-error hidden" role="alert"></p><div id="roster-preview" class="hidden" aria-live="polite"></div></dialog>
-  <div id="toast" class="toast hidden" role="status" aria-live="polite"></div>
-</body>
-</html>
+
+  <dialog id="dtr-dialog" class="print-dialog">
+    <div class="dialog-bar"><div><strong>DTR preview</strong><span>Review before printing. Unverified scan slots stay blank.</span></div><div><button id="close-dtr" class="button outline" type="button">Close</button><button id="print-dtr" class="button primary" type="button">Print / Save PDF</button></div></div>
+    <div id="print-sheet" class="print-sheet"></div>
+  </dialog>
+
+  <dialog id="attendance-import-dialog" class="file-dialog" aria-labelledby="attendance-import-heading">
+    <div class="file-dialog-head">
+      <div class="file-dialog-icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M12 16V3M7 8l5-5 5 5M4 16v3a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-3"/></svg></div>
+      <div><h2 id="attendance-import-heading">Import attendance logs</h2><p>Recover missing scans from the K14 USB export.</p></div>
+      <button id="close-attendance-import" class="modal-x" aria-label="Close attendance import" type="button">×</button>
+    </div>
+    <form id="usb-form">
+      <div class="file-dialog-body">
+        <label class="file-dropzone" for="usb-file" id="usb-dropzone">
+          <svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"><path d="M12 16V4M8 8l4-4 4 4M5 18h14M5 18v3h14v-3"/></svg>
+          <strong>Choose a K14 attendance file</strong>
+          <span>Click to select your original <b>.dat</b> or <b>.txt</b> log</span>
+          <span id="usb-file-name" class="selected-file">No file selected</span>
+        </label>
+        <input class="sr-only" id="usb-file" type="file" accept=".dat,.txt" required>
+        <div class="import-message"><span class="notice-icon">i</span><span>Only missing scan events are added. Duplicates already stored in the system are skipped; original timestamps remain unchanged.</span></div>
+        <div id="usb-result" class="upload-result hidden" role="status" aria-live="polite"></div>
+      </div>
+      <div class="file-dialog-actions"><button class="button outline" id="usb-preview" type="button">Preview</button><button class="button primary" type="submit">Merge attendance logs</button></div>
+    </form>
+  </dialog>
+  <dialog id="user-import-dialog" class="file-dialog" aria-labelledby="user-import-heading">
+    <div class="file-dialog-head">
+      <div class="file-dialog-icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M12 16V3M7 8l5-5 5 5M4 16v3a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-3"/></svg></div>
+      <div><h2 id="user-import-heading">Import device users</h2><p>Fallback synchronization of employee IDs and names.</p></div>
+      <button id="close-user-import" class="modal-x" aria-label="Close user import" type="button">×</button>
+    </div>
+    <form id="roster-form">
+      <div class="file-dialog-body">
+        <label class="file-dropzone" for="roster-file">
+          <svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"><path d="M12 16V4M8 8l4-4 4 4M5 18h14"/></svg>
+          <strong>Choose an authorized user export</strong>
+          <span>K14 <b>user.dat</b>, report <b>.xls</b>, or roster <b>.csv</b></span>
+          <span id="roster-file-name" class="selected-file">No file selected</span>
+        </label>
+        <input class="sr-only" id="roster-file" type="file" accept=".dat,.xls,.csv" required>
+        <div class="import-message"><span class="notice-icon">i</span><span>Only employee names and IDs are imported. Never select fingerprint template files such as <b>template.fp10</b>.</span></div>
+        <div id="roster-result" class="upload-result hidden" role="status" aria-live="polite"></div>
+      </div>
+      <div class="file-dialog-actions"><button class="button outline" id="roster-preview" type="button">Preview</button><button class="button primary" type="submit">Synchronize users</button></div>
+    </form>
+  </dialog>
+
+  <dialog id="code-dialog" class="edit-dialog"><form id="code-form"><h2>Work code label</h2><p>Map a device code locally without modifying the K14.</p><input id="code-device" type="hidden"><label>Numeric device code<input id="code-number" readonly></label><label>Local label<input id="code-label" required maxlength="100"></label><label>Activity type<select id="code-activity"><option>Unclassified</option><option>Regular</option><option>AJA</option><option>Fieldwork</option><option>Official Business</option><option>Travel Order</option></select></label><div class="button-row"><button id="close-code" type="button" class="button outline">Cancel</button><button class="button primary" type="submit">Save mapping</button></div></form></dialog>
+
+  <div class="toast hidden" id="toast" role="status" aria-live="polite"></div>
+</body></html>

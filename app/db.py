@@ -122,4 +122,5 @@ def initialize() -> None:
 def register_scan_metadata(con: sqlite3.Connection) -> None:
     """Register IDs/codes seen in logs without inventing names or code meanings."""
     con.execute("INSERT OR IGNORE INTO employees(employee_code) SELECT DISTINCT employee_code FROM punches")
+    con.execute("INSERT OR IGNORE INTO employees(employee_code) SELECT DISTINCT employee_code FROM activity_records WHERE status='recorded'")
     con.execute("INSERT OR IGNORE INTO work_codes(device_id,work_code) SELECT DISTINCT device_id,work_code FROM punches")
