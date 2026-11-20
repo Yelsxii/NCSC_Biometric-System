@@ -57,6 +57,9 @@ function showApp(){
   $('login-view').classList.add('hidden');
   $('workspace').classList.remove('hidden');
   $('account').textContent=session.username;
+  const canWrite=session.role==='admin';
+  document.querySelectorAll('#activity-form input,#activity-form select,#activity-form button,#usb-form button,#roster-form button')
+    .forEach(el=>el.disabled=!canWrite);
   $('register-month').value=currentMonth();
   $('detail-month').value=currentMonth();
   navigate('overview');
@@ -405,10 +408,6 @@ async function initialize(){
   });
   $('close-code').addEventListener('click',()=>$('code-dialog').close());
   $('code-form').addEventListener('submit',saveCode);
-  if(session?.role!=='admin'){
-    document.querySelectorAll('#activity-form input,#activity-form select,#activity-form button,#usb-form button,#roster-form button')
-      .forEach(el=>el.disabled=true);
-  }
   try{session=await api('/api/me');showApp();}
   catch(_){session=null;showLogin();}
 }
