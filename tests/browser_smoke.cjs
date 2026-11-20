@@ -81,7 +81,7 @@ uvicorn.run('app.main:app',host='127.0.0.1',port=int(os.environ['QA_PORT']),log_
 
     // Overlapping backup contains 3 old events + one new event. Do not double-count.
     const overlap=Buffer.concat([attlog,Buffer.from(
-      '2\\t2026-11-04 10:30:00\\t1\\t0\\t1\\t101\\n')]);
+      '2\t2026-11-04 10:30:00\t1\t0\t1\t101\n')]);
     await page.locator('#usb-file').setInputFiles({
       name:'overlap_attlog.dat',mimeType:'application/octet-stream',buffer:overlap
     });
