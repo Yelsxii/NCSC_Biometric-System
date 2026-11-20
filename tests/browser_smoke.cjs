@@ -91,6 +91,7 @@ uvicorn.run('app.main:app',host='127.0.0.1',port=int(os.environ['QA_PORT']),log_
     await page.locator('#usb-result').filter({hasText:/Imported 1 new scans; 3 duplicate records ignored/}).waitFor();
 
     await page.locator('[data-page="staff"]').click();
+    await page.locator('#connection-details summary').click();
     await page.locator('#lan-sync').filter({hasText:/Not active/}).waitFor();
 
     // Import a fictional roster: staff appears by name in the monthly register.
