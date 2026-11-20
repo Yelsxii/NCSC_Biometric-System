@@ -35,42 +35,33 @@
       </div>
       <div class="nav-title">OPERATIONS</div>
       <nav class="nav" aria-label="Main navigation">
-        <button class="nav-item active" type="button" data-page="overview"><span class="nav-symbol">▦</span>Overview</button>
-        <button class="nav-item" type="button" data-page="employees"><span class="nav-symbol">▤</span>Employee Records</button>
-        <button class="nav-item" type="button" data-page="activities"><span class="nav-symbol">◷</span>Official Activities</button>
-        <button class="nav-item" type="button" data-page="device"><span class="nav-symbol">⇄</span>Device & Imports</button>
+        <button class="nav-item active" type="button" data-page="employees"><span class="nav-symbol">▤</span>Employee Attendance</button>
+        <button class="nav-item" type="button" data-page="activities"><span class="nav-symbol">◷</span>AJA / Travel Orders</button>
+        <button class="nav-item" type="button" data-page="staff"><span class="nav-symbol">♙</span>Staff Management</button>
       </nav>
       <div class="sidebar-footer">NCSC · Records Monitoring</div>
     </aside>
 
     <div class="content-shell">
       <header class="topbar">
-        <div class="topbar-title">NATIONAL COMMISSION OF SENIOR CITIZENS <span>/</span> <strong id="section-name">Overview</strong></div>
+        <div class="topbar-title">NATIONAL COMMISSION OF SENIOR CITIZENS <span>/</span> <strong id="section-name">Employee Attendance</strong></div>
         <div class="topbar-user"><span class="today" id="today"></span><span class="admin-dot" aria-hidden="true">●</span><strong id="account">Administrator</strong><button id="logout" class="signout" type="button">Sign out</button></div>
       </header>
 
       <main id="main-content">
-        <div class="page-heading"><div><h1 id="page-title">Overview</h1><p id="page-description">Attendance records and official activity monitoring</p></div><span id="system-label" class="system-label">NCSC DTR Monitoring</span></div>
-
-        <section class="page" data-view="overview">
-          <div class="stats">
-            <div class="stat"><span>Registered employees</span><b id="metric-employees">—</b></div>
-            <div class="stat"><span>Biometric scans</span><b id="metric-scans">—</b></div>
-            <div class="stat"><span>Activity references</span><b id="metric-activities">—</b></div>
-            <div class="stat"><span>USB import batches</span><b id="metric-imports">—</b></div>
-          </div>
-          <div class="panel compact-panel">
-            <div class="panel-header"><div><h2>Records overview</h2><p>Operational status of the local monitoring database.</p></div><button class="button outline" type="button" data-go="employees">View employee records</button></div>
-            <div class="overview-grid">
-              <div><span class="field-label">Device integration</span><strong id="overview-device-status">Checking configuration…</strong><small id="overview-device-note">The original K14 remains unchanged.</small></div>
-              <div><span class="field-label">Recent USB imports</span><div id="recent-imports" class="mini-list">No files imported yet.</div></div>
-            </div>
-          </div>
-        </section>
-
-        <section class="page hidden" data-view="employees">
+        <section class="page" data-view="employees">
           <div class="panel">
-            <div class="panel-header"><div><h2>Employee attendance register</h2><p>Search by name or employee ID. Select a record to view its monthly DTR evidence.</p></div></div>
+            <div class="panel-header"><div><h2>Attendance register</h2><p>Select an employee to open monthly scans and DTR preview.</p></div><button class="button outline" id="toggle-attendance-import" type="button">Import attendance log</button></div>
+            <div id="attendance-import" class="inline-collapse hidden">
+              <div class="inline-collapse-heading"><strong>USB attendance recovery</strong><span>Use when LAN sync is unavailable or records are missing. Matching scans are merged without duplicate counting.</span></div>
+              <form id="usb-form" class="inline-upload">
+                <label>Original K14 attendance file<input id="usb-file" type="file" accept=".dat,.txt,.xls" required></label>
+                <button class="button outline" id="usb-preview" type="button">Preview file</button>
+                <button class="button primary" type="submit">Import missing scans</button>
+              </form>
+              <div id="usb-result" class="upload-result hidden" role="status"></div>
+              <p class="table-note">Only .dat/.txt source logs can add scan events. Exact duplicates are skipped; original records are never overwritten.</p>
+            </div>
             <form id="employee-filter" class="toolbar">
               <label class="search-box">Search staff<input id="employee-search" placeholder="Employee name or ID" autocomplete="off" maxlength="80"></label>
               <label>Reporting month<input id="register-month" type="month" required></label>
@@ -101,61 +92,53 @@
 
         <section class="page hidden" data-view="activities">
           <div class="panel">
-            <div class="panel-header"><div><h2>Existing AJA and Travel Order references</h2><p>Monitor office-approved activities. This is not another application or approval system.</p></div></div>
-            <form id="activity-form" class="activity-form">
-              <label>Employee ID<input id="activity-employee" required maxlength="64" placeholder="Existing device ID"></label>
-              <label>Type<select id="activity-type"><option>AJA</option><option>Travel Order</option><option>Official Business</option><option>Fieldwork</option></select></label>
-              <label>Document reference<input id="activity-reference" maxlength="140" placeholder="Existing approval / TO no."></label>
-              <label>Purpose<input id="activity-purpose" maxlength="600" placeholder="Purpose / destination"></label>
-              <label>From<input id="activity-start" type="datetime-local" required></label>
-              <label>To<input id="activity-end" type="datetime-local" required></label>
-              <button class="button primary activity-submit" type="submit">Record reference</button>
+            <div class="panel-header"><div><h2>Activity monitoring list</h2><p>Employees with AJA / Travel Order references or corresponding device work-code scans.</p></div></div>
+            <form id="activity-filter" class="toolbar">
+              <label class="search-box">Search employee<input id="activity-search" type="search" maxlength="80" placeholder="Name or employee ID"></label>
+              <label>Month<input id="activity-month" type="month" required></label>
+              <label>Activity<select id="activity-category"><option value="All">All activities</option><option value="AJA">AJA</option><option value="Travel Order">Travel Order</option></select></label>
+              <button class="button primary" type="submit">Apply filters</button>
             </form>
-            <p class="table-note">For full-day Travel Orders, enter the start at 00:00 on the first covered date and the end at 00:00 on the day after the last covered date. AJA requires actual documented start and end times.</p>
-          </div>
-          <div class="panel section-gap">
-            <div class="panel-header"><h2>Recorded references</h2><span class="pill-neutral">Source: existing office documents</span></div>
-            <div class="table-wrap"><table class="records-table"><thead><tr><th>Employee</th><th>Activity</th><th>Coverage</th><th>Reference</th><th>Status</th><th></th></tr></thead><tbody id="activity-rows"><tr><td colspan="6">No official activity references recorded.</td></tr></tbody></table></div>
+            <div class="inline-summary" id="activity-counts"><span>— employees</span><span>— AJA entries</span><span>— Travel Order entries</span></div>
+            <div class="table-wrap"><table class="records-table"><thead><tr><th>Employee ID</th><th>Name</th><th>Activity</th><th>Date / Time</th><th>Reference / Code</th><th>Data source</th><th></th></tr></thead><tbody id="activity-rows"><tr><td colspan="7">Loading monitored activities…</td></tr></tbody></table></div>
+            <p id="activity-note" class="table-note">Monitoring only. An AJA work-code scan is not automatically a verified departure or return. Full-day Travel Orders without office scans require an existing official record; no clock times are fabricated.</p>
           </div>
         </section>
 
-        <section class="page hidden" data-view="device">
+        <section class="page hidden" data-view="staff">
           <div class="panel">
-            <div class="panel-header"><div><h2>Biometric device connectivity</h2><p>ZKTeco K14 · LAN connection prepared for deployment</p></div><span id="lan-badge" class="pill-neutral">Not connected</span></div>
-            <div class="connection-grid">
-              <div><span class="field-label">Configured device IP</span><strong id="lan-ip">192.168.1.201</strong></div>
-              <div><span class="field-label">Communication port</span><strong id="lan-port">4370</strong></div>
-              <div><span class="field-label">Synchronization</span><strong id="lan-sync">Not enabled</strong></div>
-              <div class="connection-action"><button id="probe-lan" type="button" class="button outline">Test LAN connection</button></div>
-            </div>
-            <p id="lan-message" class="table-note">LAN automatic sync needs authorized network access and a validated read-only connector. USB import remains operational.</p>
+            <div class="panel-header"><div><h2>Staff directory</h2><p>Registered employee IDs and names. Manual details are a fallback; fingerprint enrollment remains on the K14.</p></div><button class="button outline" id="add-staff" type="button">Add staff manually</button></div>
+            <div class="toolbar"><label class="search-box">Find staff<input id="staff-search" type="search" maxlength="80" placeholder="Employee ID or name"></label><span id="staff-count" class="toolbar-count"></span></div>
+            <div class="table-wrap"><table class="records-table"><thead><tr><th>Employee ID</th><th>Employee name</th><th>Department</th><th>Record source</th><th></th></tr></thead><tbody id="staff-rows"><tr><td colspan="5">Loading staff…</td></tr></tbody></table></div>
           </div>
-
           <div class="panel section-gap">
-            <div class="panel-header"><div><h2>USB attendance import</h2><p>Fallback when network synchronization is unavailable. Accepts original K14 .dat/.txt attendance logs.</p></div><span class="pill-neutral">Backup import method</span></div>
-            <form id="usb-form" class="inline-upload">
-              <label>Attendance file<input id="usb-file" type="file" accept=".dat,.txt,.xls" required></label>
-              <button class="button outline" id="usb-preview" type="button">Preview</button>
-              <button class="button primary" type="submit">Import scans</button>
-            </form>
-            <div id="usb-result" class="upload-result hidden" role="status"></div>
-          </div>
-
-          <div class="panel section-gap">
-            <div class="panel-header"><div><h2>Device user directory</h2><p>Sync staff IDs and names from the K14's user.dat file (or .xls / CSV). Fingerprint templates are never imported.</p></div></div>
+            <div class="panel-header"><div><h2>Staff data recovery</h2><p>Restore names and employee IDs from K14 user.dat, an exported .xls report, or a CSV roster. Conflicting names are not overwritten automatically.</p></div></div>
             <form id="roster-form" class="inline-upload">
-              <label>Staff file<input id="roster-file" type="file" accept=".dat,.xls,.csv" required></label>
+              <label>Staff export<input id="roster-file" type="file" accept=".dat,.xls,.csv" required></label>
               <button id="roster-preview" class="button outline" type="button">Preview</button>
-              <button class="button primary" type="submit">Sync staff</button>
+              <button class="button primary" type="submit">Sync staff records</button>
             </form>
             <div id="roster-result" class="upload-result hidden" role="status"></div>
+            <p class="table-note">Never upload fingerprint templates or files such as template.fp10. This importer reads names and IDs only.</p>
           </div>
-
           <div class="panel section-gap">
-            <div class="panel-header"><div><h2>Work code interpretation</h2><p>Original numeric codes recorded by the K14. Code 0 remains unchanged and unclassified until verified.</p></div></div>
-            <div class="table-wrap"><table class="records-table"><thead><tr><th>Device</th><th>Work code</th><th>Local label</th><th>Activity type</th><th>Records</th><th></th></tr></thead><tbody id="code-rows"><tr><td colspan="6">Loading codes…</td></tr></tbody></table></div>
-            <p class="table-note">These labels are for HRIS interpretation; configuring a new numeric code on the physical K14 must be performed and verified separately with supervisor approval.</p>
+            <div class="panel-header"><div><h2>Device work-code labels</h2><p>Local interpretation of actual numeric codes from attendance scans. Code 0 stays unchanged.</p></div></div>
+            <div class="table-wrap"><table class="records-table"><thead><tr><th>Device</th><th>Work code</th><th>Local label</th><th>Activity</th><th>Scans</th><th></th></tr></thead><tbody id="code-rows"><tr><td colspan="6">Loading codes…</td></tr></tbody></table></div>
+            <p class="table-note">Editing a label does not create a code on the physical K14 or change its stored scans.</p>
           </div>
+          <details class="connection-details section-gap" id="connection-details">
+            <summary>LAN connection readiness</summary>
+            <div class="panel">
+              <div class="connection-grid">
+                <div><span class="field-label">K14 IP</span><strong id="lan-ip">192.168.1.201</strong></div>
+                <div><span class="field-label">Port</span><strong id="lan-port">4370</strong></div>
+                <div><span class="field-label">Synchronization</span><strong id="lan-sync">Not active</strong></div>
+                <div class="connection-action"><button id="probe-lan" type="button" class="button outline">Check connection</button></div>
+              </div>
+              <p id="lan-message" class="table-note">LAN synchronization is not active until a compatible read-only connector is validated on the physical device.</p>
+              <span id="lan-badge" class="hidden" aria-live="polite">Not synchronized</span>
+            </div>
+          </details>
         </section>
       </main>
     </div>
@@ -164,6 +147,17 @@
   <dialog id="dtr-dialog" class="print-dialog">
     <div class="dialog-bar"><div><strong>DTR preview</strong><span>Review before printing. Unverified scan slots stay blank.</span></div><div><button id="close-dtr" class="button outline" type="button">Close</button><button id="print-dtr" class="button primary" type="button">Print / Save PDF</button></div></div>
     <div id="print-sheet" class="print-sheet"></div>
+  </dialog>
+
+  <dialog id="staff-dialog" class="edit-dialog">
+    <form id="staff-form">
+      <h2 id="staff-dialog-heading">Staff information</h2>
+      <p>Manual fallback for the staff directory only. This does not register fingerprints on the device.</p>
+      <label>Device employee ID<input id="staff-code" maxlength="64" pattern="[A-Za-z0-9._\\-]+" required></label>
+      <label>Employee name<input id="staff-name" maxlength="140" required></label>
+      <label>Department<input id="staff-department" maxlength="140"></label>
+      <div class="button-row"><button class="button outline" id="close-staff" type="button">Cancel</button><button class="button primary" type="submit">Save staff</button></div>
+    </form>
   </dialog>
 
   <dialog id="code-dialog" class="edit-dialog"><form id="code-form"><h2>Work code label</h2><p>Map a device code locally without modifying the K14.</p><input id="code-device" type="hidden"><label>Numeric device code<input id="code-number" readonly></label><label>Local label<input id="code-label" required maxlength="100"></label><label>Activity type<select id="code-activity"><option>Unclassified</option><option>Regular</option><option>AJA</option><option>Fieldwork</option><option>Official Business</option><option>Travel Order</option></select></label><div class="button-row"><button id="close-code" type="button" class="button outline">Cancel</button><button class="button primary" type="submit">Save mapping</button></div></form></dialog>
