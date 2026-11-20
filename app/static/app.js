@@ -2,7 +2,7 @@
 
 const $ = id => document.getElementById(id);
 const escapeHtml = value => String(value ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
-const icon = name => '<svg class="icon" aria-hidden="true"><use href="/static/icons.svg#' + name.replace(/[^a-z]/g, '') + '"></use></svg>';
+const icon = name => '<svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><use href="/static/icons.svg#' + name.replace(/[^a-z]/g, '') + '"></use></svg>';
 let session = null;
 let currentPage = 'overview';
 let toastTimer;
@@ -15,10 +15,10 @@ let importBusy = false;
 let pendingDecision = null;
 const pageSize = 25;
 const pages = {
-  overview: ['Overview', 'YOUR WORKDAY, AT A GLANCE', 'A clear view of your attendance records and official activities.'],
-  attendance: ['Attendance logs', 'EVERY SCAN, IN ONE PLACE', 'Browse original device events by employee and date.'],
-  imports: ['USB imports', 'FROM DEVICE TO WORKSPACE', 'Preview your files and bring in original attendance records.'],
-  fieldwork: ['AJA & fieldwork', 'SERVICE BEYOND THE OFFICE', 'Keep official activities organized, with a clear review trail.']
+  overview: ['Overview', 'Attendance records and official activities.'],
+  attendance: ['Attendance logs', 'Filter source scans by employee or date.'],
+  imports: ['USB imports', 'Upload and review attendance files.'],
+  fieldwork: ['AJA & fieldwork', 'Create and review official activities.']
 };
 
 function hydrateIcons(root = document) {
@@ -43,19 +43,8 @@ function dayLabel(value) {
   return new Date(value.slice(0, 10) + 'T12:00:00+08:00').toLocaleDateString('en-PH', {timeZone:'Asia/Manila', weekday:'short'});
 }
 function openDialog(id) { if (!$(id).open) $(id).showModal(); }
-function openLogin() {
-  $('login-error').classList.add('hidden');
-  $('login-help-text').classList.add('hidden');
-  $('login-password').value = '';
-  $('login-password').type = 'password';
-  $('toggle-password').setAttribute('aria-label', 'Show password');
-  $('toggle-password').setAttribute('aria-pressed', 'false');
-  openDialog('login-dialog');
-  $('login-username').focus();
-}
 
 async function api(path, options = {}) {
-  if (session?.demo) return demoResponse(path, options);
   const headers = new Headers(options.headers || {});
   if (session?.csrf && options.method && options.method !== 'GET') headers.set('X-CSRF-Token', session.csrf);
   if (options.body && !(options.body instanceof FormData)) headers.set('Content-Type', 'application/json');
@@ -64,7 +53,7 @@ async function api(path, options = {}) {
   try { result = await response.json(); } catch (_) { result = {}; }
   if (!response.ok) {
     if (response.status === 401 && !path.endsWith('/login') && !path.endsWith('/me')) {
-      session = null; showAuth(); openLogin();
+      session = null; showAuth();
     }
     let detail = result.detail || 'Request failed (' + response.status + '). Please try again.';
     if (Array.isArray(detail)) detail = detail.map(x => x.msg).join('; ');
@@ -85,21 +74,26 @@ function showAuth() {
   document.querySelectorAll('dialog[open]').forEach(dialog => dialog.close());
   $('login-view').classList.remove('hidden'); $('workspace').classList.add('hidden');
   $('login-form').reset(); $('fieldwork-form').reset(); $('filter-form').reset(); resetFile();
+  $('login-error').classList.add('hidden'); $('login-help-text').classList.add('hidden');
+  $('login-password').type = 'password';
+  $('toggle-password').setAttribute('aria-label', 'Show password');
+  $('toggle-password').setAttribute('aria-pressed', 'false');
+  pendingDecision = null;
   $('punch-rows').innerHTML = ''; $('fieldwork-items').innerHTML = ''; $('recent-imports').innerHTML = '';
   $('activity-chart').innerHTML = '';
   for (const key of ['scans','employees','imports','pending']) $('metric-' + key).textContent = '—';
   $('toast').classList.add('hidden');
   document.title = 'NCSC | Biometric Attendance';
+  $('login-username').focus({preventScroll:true});
 }
 function showWorkspace() {
-  $('login-dialog').close(); $('login-form').reset();
+  $('login-form').reset();
   $('login-view').classList.add('hidden'); $('workspace').classList.remove('hidden');
-  $('account').textContent = session.demo ? 'Sample preview' : session.username;
-  $('account-avatar').textContent = session.demo ? 'P' : session.username.slice(0, 1).toUpperCase();
-  $('account-role').textContent = session.demo ? 'Explore the workspace' : session.role === 'admin' ? 'Administrator' : 'Reviewer';
-  $('logout').innerHTML = icon('logout') + (session.demo ? ' Exit preview' : ' Sign out');
-  $('demo-banner').classList.toggle('hidden', !session.demo);
-  const canWrite = session.role === 'admin' && !session.demo;
+  $('account').textContent = session.username;
+  $('account-avatar').textContent = session.username.slice(0, 1).toUpperCase();
+  $('account-role').textContent = session.role === 'admin' ? 'Administrator' : 'Reviewer';
+  $('logout').innerHTML = icon('logout') + ' Sign out';
+  const canWrite = session.role === 'admin';
   $('preview-btn').disabled = !canWrite;
   $('fieldwork-form').querySelectorAll('input, select, textarea, button').forEach(el => { el.disabled = !canWrite; });
   $('import-access-note').classList.toggle('hidden', canWrite);
@@ -116,7 +110,7 @@ function navigate(page) {
     if (el.dataset.page === page) el.setAttribute('aria-current', 'page'); else el.removeAttribute('aria-current');
   });
   $('page-heading').textContent = pages[page][0]; $('current-location').textContent = pages[page][0];
-  $('page-eyebrow').textContent = pages[page][1]; $('page-description').textContent = pages[page][2];
+  $('page-description').textContent = pages[page][1];
   $('heading-action').classList.toggle('hidden', page === 'imports' || page === 'fieldwork');
   $('main-content').scrollTop = 0;
   history.replaceState(null, '', '#' + page);
@@ -205,7 +199,7 @@ async function handleImport(previewOnly) {
     if (context === session && version === fileVersion) { previewReady = false; $('preview-output').classList.add('hidden'); toast(error.message, true); }
   } finally {
     importBusy = false; $('preview-btn').innerHTML = icon('eye') + ' Preview file';
-    $('preview-btn').disabled = session?.role !== 'admin' || Boolean(session?.demo);
+    $('preview-btn').disabled = session?.role !== 'admin';
     $('import-submit').disabled = !previewReady;
   }
 }
@@ -218,7 +212,7 @@ async function loadFieldwork() {
     const filter = $('request-status').value;
     const items = result.items.filter(item => filter === 'all' || item.status === filter);
     $('fieldwork-items').innerHTML = items.length ? items.map(item => {
-      const actions = item.status === 'pending' && context.role === 'admin' && !context.demo ? '<div class="request-buttons"><button class="btn primary" data-decision="approved" data-id="' + Number(item.id) + '">Approve</button><button class="btn outline" data-decision="rejected" data-id="' + Number(item.id) + '">Reject</button></div>' : '';
+      const actions = item.status === 'pending' && context.role === 'admin' ? '<div class="request-buttons"><button class="btn primary" data-decision="approved" data-id="' + Number(item.id) + '">Approve</button><button class="btn outline" data-decision="rejected" data-id="' + Number(item.id) + '">Reject</button></div>' : '';
       return '<div class="request"><div class="request-head"><strong>' + escapeHtml(item.employee_code) + '<span> · ' + escapeHtml(item.category) + '</span></strong><span class="tag ' + escapeHtml(item.status) + '">' + escapeHtml(item.status[0].toUpperCase() + item.status.slice(1)) + '</span></div><p class="request-location">' + icon('pin') + escapeHtml(item.location) + '</p><p class="request-time">' + escapeHtml(localDate(item.start_at)) + ' ' + escapeHtml(item.start_at.slice(11,16)) + ' – ' + escapeHtml(localDate(item.end_at)) + ' ' + escapeHtml(item.end_at.slice(11,16)) + '</p><p>' + escapeHtml(item.reason) + '</p>' + actions + '</div>';
     }).join('') : '<div class="empty">No ' + (filter === 'all' ? '' : escapeHtml(filter) + ' ') + 'activity requests found.</div>';
   } catch (error) { if (context === session) toast(error.message, true); }
@@ -235,7 +229,7 @@ async function createFieldwork(event) {
     form.reset(); $('request-status').value = 'all'; toast('Official activity created as pending.');
     loadFieldwork(); loadOverview();
   } catch (error) { toast(error.message, true); }
-  finally { $('fieldwork-submit').disabled = session?.role !== 'admin' || Boolean(session?.demo); }
+  finally { $('fieldwork-submit').disabled = session?.role !== 'admin'; }
 }
 function reviewFieldwork(button) {
   pendingDecision = {id:Number(button.dataset.id), decision:button.dataset.decision};
@@ -259,31 +253,12 @@ async function confirmDecision() {
   finally { $('confirm-decision').disabled = false; }
 }
 
-// This isolated read-only preview never sends fictional records to the API or stores them.
-function demoResponse(path, options) {
-  if (options.method && options.method !== 'GET') throw new Error('Sign in to manage office records. This preview is read-only.');
-  const url = new URL(path, location.origin);
-  const dates = ['2026-11-13','2026-11-14','2026-11-15','2026-11-16','2026-11-17','2026-11-18','2026-11-19'];
-  const counts = [20,0,0,24,22,24,21];
-  const punches = dates.flatMap((date, d) => Array.from({length:counts[d]}, (_, i) => ({id:d*30+i, employee_code:'DEMO' + String(i % 12 + 1).padStart(3,'0'), happened_at:date + (i < 12 ? ' 07:' + String(30+i).padStart(2,'0') + ':00' : ' 17:' + String(5+i).padStart(2,'0') + ':00'), device_id:'1', status_code:i < 12 ? '0' : '4', verification_code:'1', work_code:'0'}))).sort((a,b) => b.happened_at.localeCompare(a.happened_at));
-  if (url.pathname === '/api/overview') return {totals:{scans:punches.length, employees:12, imports:2, pending:2}, daily_scans:dates.map((date,i) => ({date, scans:counts[i]})), recent_imports:[{id:2,original_name:'sample_november.txt',total_records:67,inserted_records:67,imported_at:'2026-11-19 02:15:00'}, {id:1,original_name:'sample_week_two.txt',total_records:44,inserted_records:44,imported_at:'2026-11-16 01:30:00'}]};
-  if (url.pathname === '/api/punches') {
-    const filtered = punches.filter(p => (!url.searchParams.get('employee_code') || p.employee_code === url.searchParams.get('employee_code')) && (!url.searchParams.get('date_from') || p.happened_at.slice(0,10) >= url.searchParams.get('date_from')) && (!url.searchParams.get('date_to') || p.happened_at.slice(0,10) <= url.searchParams.get('date_to')));
-    const offset = Number(url.searchParams.get('offset') || 0);
-    return {items:filtered.slice(offset, offset + pageSize), total:filtered.length};
-  }
-  if (url.pathname === '/api/fieldwork') return {items:[{id:3,employee_code:'DEMO003',category:'Fieldwork',location:'Sample regional assignment',reason:'Fictional example: coordination for a senior citizens activity.',start_at:'2026-11-20 09:00:00',end_at:'2026-11-20 16:00:00',status:'pending'}, {id:2,employee_code:'DEMO008',category:'AJA',location:'Sample satellite office',reason:'Fictional example: official off-site assignment.',start_at:'2026-11-19 08:00:00',end_at:'2026-11-19 17:00:00',status:'pending'}, {id:1,employee_code:'DEMO001',category:'Official Business',location:'Sample partner office',reason:'Fictional example: inter-agency coordination meeting.',start_at:'2026-11-18 09:00:00',end_at:'2026-11-18 12:00:00',status:'approved'}]};
-  throw new Error('This action requires sign in.');
-}
-
 async function initialize() {
   hydrateIcons();
   $('today').textContent = new Date().toLocaleDateString('en-PH', {timeZone:'Asia/Manila',day:'numeric',month:'long',year:'numeric'});
-  $('copyright-year').textContent = new Date().getFullYear();
   document.addEventListener('click', event => {
     const button = event.target.closest('button');
     if (!button) return;
-    if (button.hasAttribute('data-login')) openLogin();
     if (button.hasAttribute('data-help')) openDialog('help-dialog');
     if (button.dataset.close) $(button.dataset.close).close();
     if (button.dataset.page || button.dataset.go) navigate(button.dataset.page || button.dataset.go);
@@ -295,7 +270,6 @@ async function initialize() {
       if (event.target === dialog && (event.clientX < box.left || event.clientX > box.right || event.clientY < box.top || event.clientY > box.bottom)) dialog.close();
     });
   });
-  $('login-dialog').addEventListener('close', () => { $('login-password').value = ''; });
   $('toggle-password').addEventListener('click', () => {
     const reveal = $('login-password').type === 'password';
     $('login-password').type = reveal ? 'text' : 'password';
@@ -303,21 +277,17 @@ async function initialize() {
     $('toggle-password').setAttribute('aria-pressed', String(reveal));
   });
   $('login-help').addEventListener('click', () => $('login-help-text').classList.toggle('hidden'));
-  $('explore-demo').addEventListener('click', () => { session = {username:'preview',role:'preview',demo:true}; showWorkspace(); });
   $('login-form').addEventListener('submit', async event => {
     event.preventDefault(); $('login-submit').disabled = true; $('login-submit').textContent = 'Signing in…'; $('login-error').classList.add('hidden');
     try {
-      // A preview session has no API credentials and cannot intercept actual sign-in.
-      const prior = session; if (prior?.demo) session = null;
-      try { session = await api('/api/login', {method:'POST',body:JSON.stringify({username:$('login-username').value,password:$('login-password').value})}); }
-      catch (error) { session = prior; throw error; }
+      session = await api('/api/login', {method:'POST',body:JSON.stringify({username:$('login-username').value,password:$('login-password').value})});
       showWorkspace();
     } catch (error) { $('login-error').textContent = error.message; $('login-error').classList.remove('hidden'); }
-    finally { $('login-submit').disabled = false; $('login-submit').textContent = 'Sign in to workspace'; }
+    finally { $('login-submit').disabled = false; $('login-submit').textContent = 'Sign in'; }
   });
   $('logout').addEventListener('click', async () => {
     $('logout').disabled = true;
-    try { if (!session?.demo) await api('/api/logout', {method:'POST'}); session = null; showAuth(); }
+    try { await api('/api/logout', {method:'POST'}); session = null; showAuth(); }
     catch (error) { toast(error.message, true); }
     finally { $('logout').disabled = false; }
   });
@@ -337,7 +307,7 @@ async function initialize() {
   $('request-status').addEventListener('change', loadFieldwork);
   $('confirm-decision').addEventListener('click', confirmDecision);
   window.addEventListener('hashchange', () => { if (session && pages[location.hash.slice(1)]) navigate(location.hash.slice(1)); });
-  try { const restored = await api('/api/me'); if (!session?.demo) { session = restored; showWorkspace(); } }
-  catch (_) { if (!session?.demo) showAuth(); }
+  try { session = await api('/api/me'); showWorkspace(); }
+  catch (_) { session = null; showAuth(); }
 }
 document.addEventListener('DOMContentLoaded', initialize);

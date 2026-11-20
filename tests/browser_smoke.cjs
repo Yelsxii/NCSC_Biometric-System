@@ -49,19 +49,26 @@ uvicorn.run('app.main:app',host='127.0.0.1',port=int(os.environ['QA_PORT']),log_
     page.on('pageerror', error => errors.push(error.message));
     const restored = page.waitForResponse(r => r.url().endsWith('/api/me'));
     await page.goto(base);
-    await page.locator('#explore-demo').waitFor();
     await restored;
     mkdirSync(join(root,'docs'), {recursive:true});
     const fits = async () => assert.ok(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth), 'Page exceeds viewport width');
+    await page.locator('#login-view:not(.hidden)').waitFor();
+    const signIn = async () => {
+      await page.locator('#login-username').fill('qa-admin');
+      await page.locator('#login-password').fill(password);
+      await page.locator('#login-submit').click();
+      await page.locator('#workspace:not(.hidden)').waitFor();
+    };
     await fits();
-    await page.screenshot({animations:'disabled',path:join(root,'docs/welcome-preview.png'),fullPage:true});
-    await page.getByRole('button',{name:'Sign in',exact:true}).click();
-    await page.locator('#login-dialog[open]').waitFor();
-    assert.equal(await page.locator('#login-username').evaluate(el => el === document.activeElement), true);
-    await page.screenshot({animations:'disabled',path:join(root,'docs/login-preview.png')});
+    assert.equal(await page.locator('.welcome-shell, #explore-demo, #login-dialog').count(),0);
+    assert.equal(await page.locator('#workspace').isVisible(),false);
+    assert.equal(await page.locator('#login-username').evaluate(el => el === document.activeElement),true);
     await page.keyboard.press('Escape');
-    assert.equal(await page.locator('#login-dialog').evaluate(el => el.open),false);
-    await page.getByRole('button',{name:'Open your workspace'}).click();
+    assert.equal(await page.locator('#login-view').isVisible(),true);
+    await page.screenshot({animations:'disabled',path:join(root,'docs/login-preview.png')});
+    await page.locator('#login-help').click();
+    await page.locator('#login-help-text:not(.hidden)').waitFor();
+    await page.locator('#login-help').click();
     await page.locator('#login-username').fill('qa-admin');
     await page.locator('#login-password').fill('wrong-password');
     await page.locator('#login-submit').click();
@@ -113,13 +120,12 @@ uvicorn.run('app.main:app',host='127.0.0.1',port=int(os.environ['QA_PORT']),log_
     await page.locator('#fieldwork-items .tag.approved').waitFor();
     await page.reload();
     await page.locator('#workspace:not(.hidden)').waitFor();
+    await page.locator('[data-page="overview"]').click();
+    await page.locator('#metric-scans').filter({hasText:/^3$/}).waitFor();
+    await page.screenshot({animations:'disabled',path:join(root,'docs/dashboard-preview.png'),fullPage:true});
     await page.locator('#logout').click();
     await page.locator('#login-view:not(.hidden)').waitFor();
     assert.equal((await context.request.get(base+'/api/overview')).status(),401);
-    await page.locator('#explore-demo').click();
-    await page.locator('[data-page="overview"]').click();
-    await page.locator('#metric-scans').filter({hasText:'111'}).waitFor();
-    await page.screenshot({animations:'disabled',path:join(root,'docs/dashboard-preview.png'),fullPage:true});
     for (const width of [768,390,320]) {
       await page.setViewportSize({width,height:844});
       const restore = page.waitForResponse(r => r.url().endsWith('/api/me'));
@@ -127,21 +133,23 @@ uvicorn.run('app.main:app',host='127.0.0.1',port=int(os.environ['QA_PORT']),log_
       await restore;
       await page.locator('#login-view:not(.hidden)').waitFor();
       await fits();
-      await page.getByRole('button',{name:'Sign in',exact:true}).click();
-      await page.locator('#login-dialog[open]').waitFor();
-      const dialog = await page.locator('#login-dialog').boundingBox();
-      assert.ok(dialog.x >= 0 && dialog.x+dialog.width <= width, 'Login dialog exceeds viewport');
+      const card = await page.locator('.login-card').boundingBox();
+      assert.ok(card.x >= 0 && card.x+card.width <= width, 'Sign-in card exceeds viewport');
+      const submit = await page.locator('#login-submit').boundingBox();
+      assert.ok(submit.y >= 0 && submit.y+submit.height <= 844, 'Sign-in button exceeds viewport');
       if (width === 390) await page.screenshot({animations:'disabled',path:join(root,'docs/mobile-login-preview.png')});
-      await page.keyboard.press('Escape');
-      await page.locator('#explore-demo').click();
+      await signIn();
       for (const target of ['overview','attendance','imports','fieldwork']) {
         await page.locator('[data-page="'+target+'"]').click();
         await fits();
       }
-      assert.equal(await page.locator('#fieldwork-submit').isEnabled(),false);
+      assert.equal(await page.locator('#fieldwork-submit').isEnabled(),true);
+      await page.locator('#logout').click();
+      await page.locator('#login-view:not(.hidden)').waitFor();
+      assert.equal(await page.locator('#login-username').inputValue(),'');
     }
     assert.deepEqual(errors,[]);
-    console.log('PASS: welcome, overlay focus/Escape, login errors, sign-in/session/logout, import preview/dedup, XLS preview, date filtering, fieldwork review, read-only demo and 1440/768/390/320px layouts.');
+    console.log('PASS: direct sign-in without landing/demo, focus and account help, login errors, password visibility, session restore/logout, import preview/dedup, XLS preview, date filters, fieldwork review, and 1440/768/390/320px layouts.');
   } finally {
     if (browser) await browser.close();
     server.kill('SIGTERM');

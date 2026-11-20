@@ -15,8 +15,7 @@ Local-first, security-conscious **Phase 1 MVP** for importing ZKTeco K14 attenda
 - Raw K14 device status/verification/work codes preserved **without guessing IN or OUT**
 - A future LAN-sync adapter can be added without changing the database's record model
 - NCSC blue, red, and white theme with the supplied seal and locally served NCSC photography
-- Welcome page with an accessible sign-in overlay, password visibility control, and inline login errors
-- Read-only, fictional-data preview available through **Explore preview**, without an account
+- Direct sign-in page with NCSC photography, a fingerprint emblem, password visibility control, and inline login errors
 - Daily scan chart, date filters, paginated source logs, and activity status filters
 - Read-only **K14 .xls report preview**, kept separate from raw attendance imports
 
@@ -24,7 +23,7 @@ Local-first, security-conscious **Phase 1 MVP** for importing ZKTeco K14 attenda
 
 The dashboard screenshot uses explicitly fictional sample records.
 
-![NCSC sign-in overlay](docs/login-preview.webp)
+![NCSC sign-in page](docs/login-preview.webp)
 
 ![NCSC attendance dashboard with fictional data](docs/dashboard-preview.webp)
 
@@ -83,7 +82,7 @@ Choose a private username and a strong password of 12+ characters. These are sto
 
 Open **http://127.0.0.1:8000** in your browser and sign in.
 
-The welcome page opens first. Select **Sign in** or **Open your workspace** for the login overlay. **Explore preview** shows fictional sample data without signing in or writing to the local database. Existing accounts and attendance data need no migration for this theme update.
+The sign-in page opens directly. Enter your existing office account to access attendance records. Existing accounts and attendance data need no migration for this interface update.
 
 Press **Ctrl+C** to stop. The SQLite database is created at `data/ncsc.sqlite3`, which is ignored by Git.
 
@@ -165,7 +164,7 @@ NCSC_Biometric-System/
 .\.venv\Scripts\python.exe -m pytest -q
 ```
 
-GitHub Actions also runs an isolated Chromium smoke check for the sign-in overlay, session restore/logout, raw-log preview/import/deduplication, Excel report preview, filtering, fieldwork decisions, and 1440/768/390/320px layouts. Its `ncsc-design-previews` artifact contains screenshots with fictional data only.
+GitHub Actions also runs an isolated Chromium smoke check for direct sign-in, session restore/logout, raw-log preview/import/deduplication, Excel report preview, filtering, fieldwork decisions, and 1440/768/390/320px layouts. Its `ncsc-design-previews` artifact contains screenshots with fictional data only.
 
 Optional local browser check (Node.js is needed only for this check):
 
