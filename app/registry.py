@@ -8,6 +8,7 @@ import struct
 import xlrd
 
 from app.parser import CODE, MAX_BYTES
+from app.roster import parse_user_dat
 
 
 def clean(value: object, limit: int, title: str) -> str:
@@ -86,8 +87,14 @@ def parse_staff(raw: bytes, filename: str) -> list[dict]:
         finally:
             if book is not None:
                 book.release_resources()
+    elif filename.lower().replace("\\\\", "/").split("/")[-1] == "user.dat":
+        # Firmware-specific verified layout. Import employee ID + name only.
+        # No fingerprint templates, passwords, cards, privileges or PIN hashes
+        # are copied to application storage.
+        items = [staff_row(entry.employee_code, entry.device_name)
+                 for entry in parse_user_dat(raw)]
     else:
-        raise ValueError("Use the K14 .xls report or a staff .csv. Binary user.dat backups are not supported.")
+        raise ValueError("Use the K14 user.dat, .xls report, or a staff .csv file. Never upload fingerprint templates.")
     if not items:
         raise ValueError("No staff names found in the selected file.")
     unique = {}
