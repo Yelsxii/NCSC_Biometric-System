@@ -54,11 +54,11 @@ uvicorn.run('app.main:app',host='127.0.0.1',port=int(os.environ['QA_PORT']),log_
     mkdirSync(join(root,'docs'), {recursive:true});
     const fits = async () => assert.ok(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth), 'Page exceeds viewport width');
     await fits();
-    await page.screenshot({path:join(root,'docs/welcome-preview.png'),fullPage:true});
+    await page.screenshot({animations:'disabled',path:join(root,'docs/welcome-preview.png'),fullPage:true});
     await page.getByRole('button',{name:'Sign in',exact:true}).click();
     await page.locator('#login-dialog[open]').waitFor();
     assert.equal(await page.locator('#login-username').evaluate(el => el === document.activeElement), true);
-    await page.screenshot({path:join(root,'docs/login-preview.png')});
+    await page.screenshot({animations:'disabled',path:join(root,'docs/login-preview.png')});
     await page.keyboard.press('Escape');
     assert.equal(await page.locator('#login-dialog').evaluate(el => el.open),false);
     await page.getByRole('button',{name:'Open your workspace'}).click();
@@ -119,7 +119,7 @@ uvicorn.run('app.main:app',host='127.0.0.1',port=int(os.environ['QA_PORT']),log_
     await page.locator('#explore-demo').click();
     await page.locator('[data-page="overview"]').click();
     await page.locator('#metric-scans').filter({hasText:'111'}).waitFor();
-    await page.screenshot({path:join(root,'docs/dashboard-preview.png'),fullPage:true});
+    await page.screenshot({animations:'disabled',path:join(root,'docs/dashboard-preview.png'),fullPage:true});
     for (const width of [768,390,320]) {
       await page.setViewportSize({width,height:844});
       const restore = page.waitForResponse(r => r.url().endsWith('/api/me'));
@@ -131,7 +131,7 @@ uvicorn.run('app.main:app',host='127.0.0.1',port=int(os.environ['QA_PORT']),log_
       await page.locator('#login-dialog[open]').waitFor();
       const dialog = await page.locator('#login-dialog').boundingBox();
       assert.ok(dialog.x >= 0 && dialog.x+dialog.width <= width, 'Login dialog exceeds viewport');
-      if (width === 390) await page.screenshot({path:join(root,'docs/mobile-login-preview.png')});
+      if (width === 390) await page.screenshot({animations:'disabled',path:join(root,'docs/mobile-login-preview.png')});
       await page.keyboard.press('Escape');
       await page.locator('#explore-demo').click();
       for (const target of ['overview','attendance','imports','fieldwork']) {
