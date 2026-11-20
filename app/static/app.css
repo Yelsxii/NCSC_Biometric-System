@@ -257,6 +257,7 @@ td .scan-day { font-size: .75rem; color: #929db3; }
 .monitor-summary { margin: 0; padding: 16px 20px; color: #526383; font-size: .875rem; border-bottom: 1px solid var(--border); line-height: 1.7; }
 .monitor-table { min-width: 650px; }
 .monitor-table td { vertical-align: top; }
+.monitor-table .scan-day { display: block; margin-top: 4px; }
 .scan-times { display: flex; flex-wrap: wrap; gap: 6px; max-width: 350px; }
 .scan-time { display: inline-block; font-variant-numeric: tabular-nums; padding: 4px 7px; background: #f0f3fb; color: #354f8f; border-radius: 5px; font-size: .875rem; }
 .monitor-reference { display: grid; gap: 4px; max-width: 350px; white-space: normal; overflow-wrap: anywhere; margin-bottom: 8px; }

@@ -119,7 +119,7 @@ uvicorn.run('app.main:app',host='127.0.0.1',port=int(os.environ['QA_PORT']),log_
     await page.locator('#dtr-month').fill('2026-11');
     await page.locator('#dtr-employee').selectOption('DEMO001');
     await page.getByRole('button',{name:'View daily records'}).click();
-    await page.locator('#dtr-summary').filter({hasText:'2 scans across 1 days'}).waitFor();
+    await page.locator('#dtr-summary').filter({hasText:'Scans: 2 · Days with scans: 1'}).waitFor();
     assert.equal(await page.locator('#dtr-rows tr').count(),30);
     await page.locator('#dtr-rows').getByText('07:21:07',{exact:true}).waitFor();
     await page.locator('#dtr-rows').getByText('FICTIONAL-TO-001',{exact:false}).waitFor();

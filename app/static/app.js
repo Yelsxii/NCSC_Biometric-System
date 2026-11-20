@@ -283,7 +283,7 @@ async function loadMonitor() {
   try {
     const result = await api('/api/dtr/monitor?' + new URLSearchParams({employee_code:employee, month}));
     if (context !== session || requestId !== monitorRequest) return;
-    $('dtr-summary').textContent = employee + ' · ' + month + ' · ' + result.summary.scans + ' scans across ' + result.summary.days_with_scans + ' days · ' + result.summary.activity_records + ' activity references';
+    $('dtr-summary').textContent = employee + ' · ' + month + ' · Scans: ' + result.summary.scans + ' · Days with scans: ' + result.summary.days_with_scans + ' · References: ' + result.summary.activity_records;
     $('dtr-rows').innerHTML = result.days.map(day => {
       const scans = day.scans.length ? '<div class="scan-times">' + day.scans.map(scan => '<span class="scan-time" title="' + escapeHtml('Device ' + scan.device_id + ' · Status ' + scan.status_code + ' · Verify ' + scan.verification_code + ' · Work code ' + scan.work_code) + '">' + escapeHtml(scan.happened_at.slice(11)) + '</span>').join('') + '</div>' : '—';
       const references = day.activities.length ? day.activities.map(item => '<div class="monitor-reference"><strong>' + escapeHtml(item.category) + (item.reference ? ' · ' + escapeHtml(item.reference) : '') + '</strong><span>' + escapeHtml(item.purpose) + '</span></div>').join('') : '—';
