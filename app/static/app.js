@@ -386,7 +386,8 @@ async function loadDetail({quiet=false}={}){
     $('detail-category').innerHTML=categoryBadge(data.employment_type);
     const monthText=new Date(data.month+'-01T12:00:00').toLocaleDateString('en-PH',{month:'long',year:'numeric'});
     const scanCount=data.summary.scans||0;
-    $('attendance-month-status').textContent=scanCount?
+    const monthStatus=$('attendance-month-status');
+    if(monthStatus)monthStatus.textContent=scanCount?
       scanCount+' original biometric scan'+(scanCount===1?'':'s')+' for '+monthText+
       ' · Green = reviewed, blue preview = source evidence only.':
       'No biometric scans found for this employee in '+monthText+
