@@ -588,7 +588,7 @@ def monitor_dtr(employee_code: str, month: str, user: dict = Depends(current_use
             (employee_code,start.isoformat(),end.isoformat()),
         )]
         employee = con.execute(
-            "SELECT e.display_name,e.department,ep.employment_type,ep.position FROM employees e "
+            "SELECT e.display_name,e.name_source,e.department,ep.employment_type,ep.position FROM employees e "
             "LEFT JOIN employee_profiles ep ON ep.employee_code=e.employee_code WHERE e.employee_code=?",
             (employee_code,),
         ).fetchone()
@@ -616,6 +616,7 @@ def monitor_dtr(employee_code: str, month: str, user: dict = Depends(current_use
     for day in rows:
         day["activity_mappings"] = activity_pairs(day["scans"])
     return {"employee_code": employee_code, "display_name": employee[0] if employee else "",
+            "name_source": employee["name_source"] if employee else "scan",
             "department": employee["department"] if employee else "",
             "employment_type": employee["employment_type"] if employee else None,
             "position": employee["position"] if employee else "", "month": month, "days": rows,
@@ -663,7 +664,7 @@ def employee_register(month: str, q: str = "", user: dict = Depends(current_user
         raise HTTPException(400, "Invalid search term.")
     with closing(connect()) as con:
         rows = [dict(row) for row in con.execute(
-            """SELECT e.employee_code, e.display_name, e.department, ep.employment_type, ep.position,
+            """SELECT e.employee_code, e.display_name, e.name_source, e.department, ep.employment_type, ep.position,
                       COUNT(p.id) AS scan_count,
                       COUNT(DISTINCT substr(p.happened_at,1,10)) AS days_with_scans,
                       MAX(p.happened_at) AS last_scan
@@ -673,7 +674,7 @@ def employee_register(month: str, q: str = "", user: dict = Depends(current_user
                     AND p.happened_at>=? AND p.happened_at<?
                WHERE (?='' OR instr(lower(e.employee_code),lower(?))>0
                        OR instr(lower(e.display_name),lower(?))>0)
-               GROUP BY e.employee_code,e.display_name,e.department
+               GROUP BY e.employee_code,e.display_name,e.name_source,e.department
                ORDER BY CASE WHEN e.display_name='' THEN 1 ELSE 0 END,
                         lower(e.display_name), e.employee_code LIMIT 1000""",
             (start.isoformat(), end.isoformat(), search, search, search),
