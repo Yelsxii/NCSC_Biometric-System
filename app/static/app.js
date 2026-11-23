@@ -285,20 +285,50 @@ function dayActivities(day){
   if(!labels.length && day.is_weekend)labels.push('<span class="weekend-label">'+esc(day.day==='Sat'?'Saturday':'Sunday')+'</span>');
   return labels.join(' ')||'<span class="empty-cell">—</span>';
 }
+function activityScanCell(day){
+  // Work-code times are raw scan evidence. No device code is presumed to mean IN or OUT.
+  const kinds=['AJA','Travel Order'];
+  const scans=day.scans.filter(event=>kinds.includes(event.activity_type));
+  const references=(day.activities||[]).filter(item=>kinds.includes(item.category));
+  if(!scans.length && !references.length)
+    return '<td class="activity-evidence"><span class="empty-cell">—</span></td>';
+  const blocks=[];
+  for(const kind of kinds){
+    const matched=scans.filter(event=>event.activity_type===kind);
+    const recorded=references.filter(item=>item.category===kind);
+    if(!matched.length && !recorded.length)continue;
+    const cls=kind==='AJA'?'aja':'travel';
+    const device=matched.length?
+      '<div class="evidence-time-list"><span class="evidence-source">Device scans</span>'+
+      matched.map(event=>'<span class="evidence-time" title="Original device scan · WC '+esc(event.work_code||'—')+'">'+
+        esc(event.happened_at.slice(11,16))+'</span>').join('')+'</div>':'';
+    const periods=recorded.map(item=>{
+      const start=String(item.start_at||''),end=String(item.end_at||'');
+      const range=start.slice(0,10)===day.date && end.slice(0,10)===day.date ?
+        start.slice(11,16)+'–'+end.slice(11,16) :
+        start.slice(0,10)===day.date?'Starts '+start.slice(11,16):
+        end.slice(0,10)===day.date?'Ends '+end.slice(11,16):'Multi-day';
+      return '<div class="evidence-reference" title="Recorded activity window; not a device time punch · '+
+        esc(start)+' to '+esc(end)+'">Reference: '+esc(range)+'</div>';
+    }).join('');
+    blocks.push('<div class="evidence-group evidence-'+cls+'"><span class="evidence-kind">'+
+      esc(kind)+'</span>'+device+periods+'</div>');
+  }
+  return '<td class="activity-evidence">'+blocks.join('')+'</td>';
+}
 function slotCell(day,key){
   const event=day.slots[key];
-  const special=['holiday','travel','aja'].includes(day.tone);
-  const tone=special?day.tone:event?'entry':day.is_future||day.is_weekend?'neutral':'missing';
+  const tone=event?'entry':day.is_future||day.is_weekend?'neutral':'missing';
   const hint=event?event.happened_at.slice(11)+' · Work code: '+(event.work_code||'not supplied')+' · Status: '+event.status_code:
     (day.is_future?'Upcoming':day.is_weekend?'No entry':'No entry / not assigned');
   return '<td class="time-slot slot-'+tone+'" title="'+esc(hint)+'">'+
     (event?'<span class="time-value">'+esc(event.happened_at.slice(11,16))+'</span>'+
-      (event.work_code!==''?'<span class="time-code">WC '+esc(event.work_code)+'</span>':''):'<span class="no-time">—</span>')+'</td>';
+      (event.work_code && event.work_code!=='0' && event.activity_type!=='Regular'?'<span class="time-code">WC '+esc(event.work_code)+'</span>':''):'<span class="no-time">—</span>')+'</td>';
 }
 async function loadDetail({quiet=false}={}){
   if (!selectedEmployee) return;
   const serial=++detailRequest,month=$('detail-month').value||currentMonth(),code=selectedEmployee;
-  if(!quiet)$('daily-rows').innerHTML='<tr><td colspan="10" class="table-empty">Loading attendance…</td></tr>';
+  if(!quiet)$('daily-rows').innerHTML='<tr><td colspan="11" class="table-empty">Loading attendance…</td></tr>';
   try{
     const data=await api('/api/dtr/monitor?'+new URLSearchParams({employee_code:code,month}));
     if(serial!==detailRequest || code!==selectedEmployee || month!==$('detail-month').value || currentPage!=='employees' || !session)return;
@@ -321,13 +351,13 @@ async function loadDetail({quiet=false}={}){
         '<td class="undertime-value" title="'+(ut===null?'For review':'Reviewed undertime')+'">'+(ut===null?'—':Math.floor(ut/60))+'</td>'+
         '<td class="undertime-value">'+(ut===null?'—':String(ut%60).padStart(2,'0'))+'</td>'+
         '<td class="gip-total '+(gip?'':'hidden')+'" title="'+(total===null?'Four verified entries required':total+' elapsed seconds')+'">'+esc(totalText)+'</td>'+
-        '<td class="day-activities">'+dayActivities(day)+'</td><td class="day-action"><button type="button" class="button outline edit-day" data-edit-day="'+esc(day.date)+'" aria-label="'+(session.role==='admin'?'Edit':'View')+' attendance for '+esc(day.date)+'">'+editIcon()+(session.role==='admin'?'Edit':'View')+'</button>'+
+        activityScanCell(day)+'<td class="day-activities">'+dayActivities(day)+'</td><td class="day-action"><button type="button" class="button outline edit-day" data-edit-day="'+esc(day.date)+'" aria-label="'+(session.role==='admin'?'Edit':'View')+' attendance for '+esc(day.date)+'">'+editIcon()+(session.role==='admin'?'Edit':'View')+'</button>'+
         (day.unassigned_count?'<span class="unassigned-count">'+day.unassigned_count+' to place</span>':'')+'</td></tr>';
     }).join('');
     $('daily-table-wrap').scrollTop=scroll;
   }catch(error){
     if(serial!==detailRequest || code!==selectedEmployee || currentPage!=='employees' || !session)return;
-    if(!quiet){$('daily-rows').innerHTML='<tr><td colspan="10" class="table-empty">Unable to load attendance.</td></tr>';toast(error.message,true);}
+    if(!quiet){$('daily-rows').innerHTML='<tr><td colspan="11" class="table-empty">Unable to load attendance.</td></tr>';toast(error.message,true);}
   }
 }
 function openDayReview(date){
@@ -351,8 +381,8 @@ function openDayReview(date){
   $('review-remark').value=day.review.remark;
   for(const id of ['review-ut-hours','review-ut-minutes','review-activity','review-reference','review-remark'])$(id).disabled=!editable;
   $('save-day-review').classList.toggle('hidden',!editable);$('save-day-review').disabled=false;
-  $('place-four-entries').classList.toggle('hidden',!editable||day.scans.length!==4);
-  $('review-entry-hint').textContent=day.scans.length?day.scans.length+' original entries available. Choose the verified entry for each slot.':'No device entries for this date.';
+  $('place-four-entries').classList.toggle('hidden',!editable||day.scans.filter(event=>event.activity_type==='Regular').length!==4);
+  $('review-entry-hint').textContent=day.scans.length?day.scans.length+' original device entries. AJA / Travel Order scans are separate evidence; assign regular AM/PM slots only after verification.':'No device entries for this date.';
   $('review-existing-activities').innerHTML=day.display_activities.map(x=>'<span class="day-badge">'+esc(x.category)+(x.reference?' · '+esc(x.reference):'')+'</span>').join('');
   $('day-review-dialog').showModal();
 }
@@ -709,7 +739,7 @@ async function initialize(){
   $('cancel-day-review').addEventListener('click',()=>$('day-review-dialog').close());
   $('day-review-dialog').addEventListener('close',()=>{dayReviewContext=null;});
   $('place-four-entries').addEventListener('click',()=>{
-    const events=dayReviewContext?.day.scans;if(events?.length!==4)return;
+    const events=dayReviewContext?.day.scans.filter(event=>event.activity_type==='Regular');if(events?.length!==4)return;
     ['am-in','am-out','pm-in','pm-out'].forEach((key,i)=>$('review-'+key).value=events[i].id);
   });
   $('open-calendar').addEventListener('click',openCalendar);
