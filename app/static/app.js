@@ -143,8 +143,10 @@ function categoryBadge(value){
 }
 function employeeCell(row){
   const name=row.display_name||'Name not verified';
+  const source=row.name_source==='device' && !row.employment_type?
+    '<small class="device-name-hint">From K14 · name needs HR verification</small>':'';
   return '<div class="employee-cell"><span class="name-avatar" aria-hidden="true">'+esc(name.slice(0,1).toUpperCase())+
-    '</span><span><strong>'+esc(name)+'</strong>'+(row.position?'<small>'+esc(row.position)+'</small>':'')+'</span></div>';
+    '</span><span><strong>'+esc(name)+'</strong>'+source+(row.position?'<small>'+esc(row.position)+'</small>':'')+'</span></div>';
 }
 function renderRegister(){
     const total=lastEmployeeRows.length,pages=Math.max(1,Math.ceil(total/EMPLOYEE_PAGE_SIZE));
@@ -379,6 +381,7 @@ async function loadDetail({quiet=false}={}){
     activeDtr=data;
     selectedName=data.display_name||'Name not registered';
     $('detail-name').textContent=selectedName;
+    $('detail-name').title=data.name_source==='device'?'Name from K14 device; verify with HR':'Employee attendance';
     $('detail-department').textContent=data.department||'—';
     $('detail-category').innerHTML=categoryBadge(data.employment_type);
     const monthText=new Date(data.month+'-01T12:00:00').toLocaleDateString('en-PH',{month:'long',year:'numeric'});
