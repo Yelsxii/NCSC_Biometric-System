@@ -416,3 +416,21 @@ button:focus-visible,a:focus-visible{outline:3px solid #6499e2;outline-offset:2p
   .attendance-sheet .sheet-meta{min-width:90px}
   .attendance-sheet .month-inline{margin-left:0}
 }
+
+/* Work-code direction mapping: compact, readable and review-first. */
+.mapping-note{margin:0 0 11px;font-size:11px;color:#63748e}
+.direction-pill{display:inline-flex;align-items:center;justify-content:center;padding:3px 7px;border-radius:4px;font-size:10px;font-weight:750;white-space:nowrap;background:#f0f2f6;color:#68768a;border:1px solid #dce3ec}
+.direction-pill.direction-in{background:#e7f4ed;border-color:#bfdfcf;color:#28634e}
+.direction-pill.direction-out{background:#eaf0ff;border-color:#cddbf7;color:#345a99}
+.direction-pill.direction-unmapped{background:#fff7e8;border-color:#f0dbb7;color:#8e6229}
+.dtr-grid .activity-evidence{min-width:185px;max-width:270px}
+.evidence-direction-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:5px;margin:4px 0 2px}
+.evidence-direction{display:flex;justify-content:space-between;gap:5px;align-items:center;border-radius:3px;background:#fff;border:1px solid #d5e0ee;padding:4px 5px}
+.evidence-direction b{font-size:9px;color:#546a8c}
+.evidence-direction strong{font-size:11px;font-variant-numeric:tabular-nums;color:#263e69}
+.evidence-status{display:block;font-size:9px;line-height:1.45;overflow-wrap:anywhere}
+.evidence-status.mapped{color:#27614c}
+.evidence-status.review{color:#995c21;font-weight:650}
+.evidence-raw{font-size:9px;line-height:1.4;color:#63748c;margin-top:3px;overflow-wrap:anywhere}
+#code-direction-field{margin-top:6px}
+#code-direction-help{margin:7px 0 0}
