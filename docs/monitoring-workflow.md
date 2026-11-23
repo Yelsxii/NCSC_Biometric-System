@@ -14,7 +14,7 @@ The office monitors its existing DTR. This application is not a second AJA or tr
 
 Choose a device employee ID and month. The view lists every calendar day, its day name, original scan times and any references covering that date. A reference can span several days. Its ending timestamp is exclusive, so an order ending at midnight is not displayed on the following day. Voided references stay in reference history and are excluded from daily monitoring.
 
-The displayed coverage labels mean only **Device scans**, **Reference only**, or **No records**. They do not mean present, absent, on approved leave, complete hours, or undertime. Weekends are identified by their day name; holidays and work schedules are not inferred.
+Employee Attendance now uses the [monthly DTR table](employee-attendance.md), with explicitly reviewed AM/PM slot selections, activity colors and undertime Hours/Minutes. The legacy API coverage labels still mean only **Device scans**, **Reference only**, or **No records**. They do not mean present, absent, on approved leave, complete hours, or undertime. Weekends are identified by day name; holidays are labeled explicitly through the office calendar, and work schedules are not inferred.
 
 There is no additional lunch deduction, fixed workday assumption, travel-duration credit, overtime rule, or automatic classification of raw device codes. Fingerprint scans cannot supply an AJA purpose or document number that was never recorded in the device. A document reference does not create a physical scan.
 

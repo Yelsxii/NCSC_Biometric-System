@@ -265,6 +265,18 @@ with connect() as con:
     assert.equal(await page.locator('#activity-rows tr').count(),1);
     assert.equal((await page.locator('#activity-rows').textContent()).includes('DEMO-TO-001'),false);
 
+    // Additional fictional daily punches exercise the DTR slot editor.
+    const dailySeed=await page.evaluate(async()=>{
+      const body=new FormData();
+      body.append('file',new File([
+        '1\t2026-11-02 07:30:07\t1\t9\t1\t0\n'+
+        '1\t2026-11-02 12:00:11\t1\t9\t1\t0\n'+
+        '1\t2026-11-02 13:00:13\t1\t9\t1\t0\n'+
+        '1\t2026-11-02 17:00:17\t1\t9\t1\t0\n'
+      ],'fictional-day.dat'));
+      return (await fetch('/api/imports',{method:'POST',headers:{'X-CSRF-Token':session.csrf},body})).status;
+    });
+    assert.equal(dailySeed,200);
     await page.locator('[data-page="employees"]').click();
     await page.locator('#register-month').fill('2026-11');
     await page.locator('#employee-filter button[type="submit"]').click();
@@ -272,12 +284,49 @@ with connect() as con:
     await page.locator('[data-employee="1"]').last().click();
     await page.locator('#employee-detail:not(.hidden)').waitFor();
     await page.locator('#detail-name').filter({hasText:'Sample One'}).waitFor();
-    await page.locator('#daily-rows .pill-to').first().waitFor();
-    assert.ok((await page.locator('#daily-rows').textContent()).includes('Official Travel'));
+    await page.locator('#daily-rows .travel-badge').first().waitFor();
+    assert.ok((await page.locator('#daily-rows').textContent()).includes('Travel Order'));
     assert.equal(await page.locator('#daily-rows tr').count(),30);
     assert.equal(await page.locator('#print-dtr').count(),0);
     assert.equal(await page.locator('#export-dtr').count(),0);
+    assert.equal(await page.locator('#detail-events').count(),0);
+    assert.equal(await page.locator('#detail-id').count(),0);
+    assert.equal(await page.locator('#employee-detail table').count(),1);
+    assert.equal(await page.locator('.page-heading').count(),0);
+    assert.equal(await page.locator('.breadcrumb-home').count(),0);
+    const day=page.locator('#daily-rows [data-date="2026-11-02"]');
+    assert.equal(await day.locator('.time-value').count(),0);
+    await day.locator('[data-edit-day]').click();
+    await page.locator('#day-review-dialog[open]').waitFor();
+    await page.locator('#place-four-entries').click();
+    await page.locator('#review-ut-hours').fill('0');
+    await page.locator('#review-ut-minutes').fill('0');
+    await page.locator('#review-remark').fill('Verified fictional entries');
+    await page.screenshot({path:join(root,'docs/attendance-editor-preview.png'),animations:'disabled'});
+    await page.locator('#save-day-review').click();
+    await page.locator('#day-review-dialog').waitFor({state:'hidden'});
+    await day.locator('.time-value').filter({hasText:'07:30'}).waitFor();
+    assert.equal(await day.locator('.time-value').count(),4);
+    assert.equal(await day.locator('.time-code').first().textContent(),'WC 0');
+    assert.equal(await day.locator('.undertime-value').first().textContent(),'0');
+    const compact=await day.boundingBox();
+    assert.ok(compact.height<=43,'Daily rows should stay compact: '+compact.height);
+    await page.locator('#open-calendar').click();
+    await page.locator('#calendar-date').selectOption('2026-11-11');
+    await page.locator('#calendar-name').fill('Sample office holiday');
+    await page.locator('#save-calendar').click();
+    await page.locator('#calendar-dialog').waitFor({state:'hidden'});
+    await page.locator('[data-date="2026-11-11"].day-holiday').waitFor();
     await page.screenshot({path:join(root,'docs/employee-records-preview.png'),animations:'disabled'});
+    await page.setViewportSize({width:390,height:800});
+    await page.screenshot({path:join(root,'docs/mobile-attendance-preview.png'),animations:'disabled'});
+    await day.locator('[data-edit-day]').click();
+    const dayPopup=await page.locator('#day-review-dialog').boundingBox();
+    const daySave=await page.locator('#save-day-review').boundingBox();
+    assert.ok(dayPopup.x>=0 && dayPopup.x+dayPopup.width<=391);
+    assert.ok(daySave.y+daySave.height<=800);
+    await page.locator('#cancel-day-review').click();
+    await page.setViewportSize({width:1440,height:900});
     await page.locator('#back-to-register').click();
     await page.screenshot({path:join(root,'docs/attendance-preview.png'),animations:'disabled'});
 

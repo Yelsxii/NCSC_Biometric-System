@@ -32,7 +32,7 @@ async function app() {
         contains:x=>classes.has(x),toggle:(x,on)=>on?classes.add(x):classes.delete(x)},
       addEventListener(){},setAttribute(){},reset(){},focus(){document.activeElement=this;}});
   }
-  const state = {data:statusData(),statusFetch:null,postFetch:null};
+  const state = {data:statusData(),statusFetch:null,postFetch:null,registerFetch:null,detailFetch:null};
   const context = vm.createContext({document,console,Headers,FormData,AbortController,URLSearchParams,
     window:{history:{replaceState(){}},location:{reload(){reloads++;}}},
     setTimeout:(fn,delay)=>{timers.set(++nextTimer,{fn,delay});return nextTimer;},
@@ -44,7 +44,9 @@ async function app() {
       if(path==='/api/device/sync')
         return state.postFetch ? state.postFetch(options) : response({records_inserted:0});
       if(path==='/api/me')return response({username:'synthetic-admin',role:'admin',csrf:'test'});
-      if(path==='/api/work-codes' || path.startsWith('/api/employee-register?'))return response({items:[]});
+      if(path==='/api/work-codes')return response({items:[]});
+      if(path.startsWith('/api/employee-register?'))return state.registerFetch?state.registerFetch():response({items:[]});
+      if(path.startsWith('/api/dtr/monitor?'))return state.detailFetch?state.detailFetch():response(detailData());
       throw new Error('Unexpected request: '+path);
     }});
   vm.runInContext(source,context);
@@ -52,8 +54,8 @@ async function app() {
   await settle();
   const run = code=>vm.runInContext(code,context);
   const statusCalls=()=>calls.filter(x=>x.path==='/api/device/status');
-  const tick=async()=>{
-    const timer=[...timers].find(([,x])=>x.delay===5000);
+  const tick=async(delay=5000)=>{
+    const timer=[...timers].find(([,x])=>x.delay===delay);
     if(!timer)return false;
     timers.delete(timer[0]);timer[1].fn();await settle();return true;
   };
@@ -204,4 +206,67 @@ test('live status does not re-enable the manual button during an import', async(
   finish(response({records_inserted:0}));
   await manual;
   assert.equal(ui.elements.get('sync-connector').disabled,false);
+});
+
+function detailData(time='08:00:07', month='2026-11'){
+  const event={id:1,happened_at:month+'-02 '+time,work_code:'0',status_code:'9'};
+  return {display_name:'Synthetic Employee',department:'Test Unit',employment_type:'COS',month,
+    days:[{date:month+'-02',day:'Mon',tone:'entry',is_future:false,is_weekend:false,
+      slots:{am_in:event,am_out:null,pm_in:null,pm_out:null},scans:[event],unassigned_count:0,
+      calendar:{holiday_name:'',version:0},display_activities:[],daily_total_seconds:null,
+      review:{version:1,undertime_minutes:null,remark:'',activity_type:'',activity_reference:''}}]};
+}
+
+test('monthly attendance updates quietly and retains the table scroll position',async()=>{
+  const ui=await app();
+  await ui.run("openEmployee('1')");
+  ui.elements.get('daily-table-wrap').scrollTop=230;
+  ui.state.detailFetch=()=>response(detailData('08:01:09'));
+  assert.equal(await ui.tick(10000),true);
+  assert.match(ui.elements.get('daily-rows').innerHTML,/08:01/);
+  assert.equal(ui.elements.get('daily-table-wrap').scrollTop,230);
+  assert.equal(ui.calls.filter(x=>(x.method||'GET')!=='GET').length,0);
+  assert.equal(ui.reloads(),0);
+});
+
+test('attendance refresh pauses for an open editor and while the tab is hidden',async()=>{
+  const ui=await app();
+  await ui.run("openEmployee('1')");
+  const before=ui.calls.filter(x=>x.path.startsWith('/api/dtr/monitor?')).length;
+  ui.document.querySelectorAll=selector=>selector==='dialog[open]'?[{}]:[];
+  ui.elements.get('review-remark').value='Unsaved review';
+  await ui.tick(10000);
+  assert.equal(ui.calls.filter(x=>x.path.startsWith('/api/dtr/monitor?')).length,before);
+  assert.equal(ui.elements.get('review-remark').value,'Unsaved review');
+  await ui.visible(false);
+  assert.equal(await ui.tick(10000),false);
+  ui.document.querySelectorAll=()=>[];
+  await ui.visible(true);
+  assert.equal(ui.calls.filter(x=>x.path.startsWith('/api/dtr/monitor?')).length,before+1);
+});
+
+test('late monthly responses cannot replace another month or a closed employee view',async()=>{
+  const ui=await app();
+  await ui.run("openEmployee('1')");
+  let finish;
+  ui.state.detailFetch=()=>new Promise(resolve=>{finish=resolve;});
+  await ui.tick(10000);
+  ui.elements.get('detail-month').value='2026-12';
+  ui.elements.get('daily-rows').innerHTML='New month display';
+  finish(response(detailData('09:00:00')));await settle();
+  assert.equal(ui.elements.get('daily-rows').innerHTML,'New month display');
+  await ui.run("navigate('staff')");
+  assert.equal(await ui.tick(10000),false);
+});
+
+test('attendance refresh retains evidence through temporary errors and retries',async()=>{
+  const ui=await app();
+  await ui.run("openEmployee('1')");
+  const before=ui.elements.get('daily-rows').innerHTML;
+  ui.state.detailFetch=()=>{throw new Error('Temporary connection failure');};
+  await ui.tick(10000);
+  assert.equal(ui.elements.get('daily-rows').innerHTML,before);
+  ui.state.detailFetch=()=>response(detailData('08:02:10'));
+  await ui.tick(10000);
+  assert.match(ui.elements.get('daily-rows').innerHTML,/08:02/);
 });

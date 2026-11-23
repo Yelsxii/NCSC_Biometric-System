@@ -31,6 +31,7 @@ from app.reports import preview_k14_report
 from app.registry import parse_staff, clean
 from app.lan import status as lan_status, tcp_probe
 from app.profiles import RegistrationInput, ProfileUpdateInput, get_profile, list_profiles, save_profile
+from app.attendance import DayReviewInput, CalendarInput, decorate_days, save_day_review, save_calendar
 
 load_dotenv()
 secret = os.environ.get("SECRET_KEY", "")
@@ -568,7 +569,11 @@ def monitor_dtr(employee_code: str, month: str, user: dict = Depends(current_use
             "WHERE p.employee_code=? AND p.happened_at>=? AND p.happened_at<? ORDER BY p.happened_at,p.id LIMIT 10001",
             (employee_code,start.isoformat(),end.isoformat()),
         )]
-        employee = con.execute("SELECT display_name FROM employees WHERE employee_code=?", (employee_code,)).fetchone()
+        employee = con.execute(
+            "SELECT e.display_name,e.department,ep.employment_type,ep.position FROM employees e "
+            "LEFT JOIN employee_profiles ep ON ep.employee_code=e.employee_code WHERE e.employee_code=?",
+            (employee_code,),
+        ).fetchone()
         activities = [dict(x) for x in con.execute(
             "SELECT id,category,reference,purpose,start_at,end_at FROM activity_records "
             "WHERE employee_code=? AND status='recorded' AND start_at<? AND end_at>? ORDER BY start_at,id LIMIT 1001",
@@ -589,10 +594,30 @@ def monitor_dtr(employee_code: str, month: str, user: dict = Depends(current_use
                      "travel_order": any(a["category"]=="Travel Order" for a in support),
                      "travel_remark": "OFFICIAL TRAVEL" if any(a["category"]=="Travel Order" for a in support) else "",
                      "undertime_review": "TO coverage for HR verification" if any(a["category"]=="Travel Order" for a in support) else "Not calculated"})
-    return {"employee_code": employee_code, "display_name": employee[0] if employee else "", "month": month, "days": rows,
+    decorate_days(employee_code, rows)
+    return {"employee_code": employee_code, "display_name": employee[0] if employee else "",
+            "department": employee["department"] if employee else "",
+            "employment_type": employee["employment_type"] if employee else None,
+            "position": employee["position"] if employee else "", "month": month, "days": rows,
             "summary": {"scans": len(scans), "days_with_scans": sum(bool(r["scans"]) for r in rows),
                         "activity_records": len(activities)},
             "calculation_status": "not_calculated"}
+
+
+@app.put("/api/attendance/{employee_code}/{date}")
+def review_attendance_day(employee_code: str, date: str, payload: DayReviewInput, request: Request,
+                          user: dict = Depends(require_admin)):
+    require_csrf(request)
+    if not CODE_RE.fullmatch(employee_code):
+        raise HTTPException(400, "Choose a valid employee.")
+    return save_day_review(employee_code, date, payload, user["id"])
+
+
+@app.put("/api/attendance-calendar/{date}")
+def update_attendance_calendar(date: str, payload: CalendarInput, request: Request,
+                               user: dict = Depends(require_admin)):
+    require_csrf(request)
+    return save_calendar(date, payload, user["id"])
 
 
 # ── Streamlined employee records ─────────────────────────────────────────────

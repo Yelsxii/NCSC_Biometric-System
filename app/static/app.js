@@ -24,6 +24,11 @@ let profileRequest = 0;
 let profileFormToken = 0;
 let profileEditing = null;
 let profileVersion = null;
+let profileReturn = null;
+let detailRequest = 0;
+let dayReviewContext = null;
+let attendanceRefreshTimer = null;
+let attendanceRefreshEpoch = 0;
 const DEVICE_REFRESH_MS = 5000;
 let deviceRefreshTimer = null;
 let deviceRefreshEpoch = 0;
@@ -64,6 +69,8 @@ async function api(path,options={}) {
 }
 function showLogin(){
   stopDeviceRefresh();
+  stopAttendanceRefresh();
+  selectedEmployee=null;activeDtr=null;dayReviewContext=null;detailRequest++;
   document.querySelectorAll('dialog[open]').forEach(dialog=>dialog.close());
   $('login-view').classList.remove('hidden');
   $('workspace').classList.add('hidden');
@@ -83,6 +90,7 @@ function showApp(){
   $('open-user-import').disabled=!canWrite;
   $('open-profile').disabled=!canWrite;
   $('register-from-attendance').disabled=!canWrite;
+  $('open-calendar').disabled=!canWrite;
   $('register-month').value=currentMonth();
   $('detail-month').value=currentMonth();
   $('activity-month').value=currentMonth();
@@ -91,6 +99,7 @@ function showApp(){
 function navigate(page){
   if (!session || !titles[page]) return;
   stopDeviceRefresh();
+  stopAttendanceRefresh();
   currentPage=page;
   document.querySelectorAll('[data-view]').forEach(node=>node.classList.toggle('hidden',node.dataset.view!==page));
   document.querySelectorAll('[data-page]').forEach(node=>{
@@ -105,25 +114,26 @@ function navigate(page){
     $('employee-detail').classList.add('hidden');
     $('attendance-register-panel').classList.remove('hidden');
     selectedEmployee=null;activeDtr=null;
+    startAttendanceRefresh();
     return loadRegister();
   }
   if (page==='profiles') return loadProfiles();
   if (page==='activities') return loadActivities();
   if (page==='staff') {startDeviceRefresh();return loadDevice();}
 }
-async function loadRegister(){
+async function loadRegister({quiet=false}={}){
   const serial=++requestSerial;
   const month=$('register-month').value||currentMonth();
   const q=$('employee-search').value.trim();
-  $('register-rows').innerHTML='<tr><td colspan="5" class="table-empty">Loading attendance register…</td></tr>';
+  if(!quiet)$('register-rows').innerHTML='<tr><td colspan="4" class="table-empty">Loading employees…</td></tr>';
   try {
     const result=await api('/api/employee-register?'+new URLSearchParams({month,q}));
     if (serial!==requestSerial||currentPage!=='employees') return;
     lastEmployeeRows=result.items;
     renderRegister();
   }catch(error){
-    $('register-rows').innerHTML='<tr><td colspan="5" class="table-empty">Unable to load employee attendance.</td></tr>';
-    toast(error.message,true);
+    if(serial!==requestSerial || currentPage!=='employees' || !session)return;
+    if(!quiet){$('register-rows').innerHTML='<tr><td colspan="4" class="table-empty">Unable to load employee attendance.</td></tr>';toast(error.message,true);}
   }
 }
 function categoryBadge(value){
@@ -144,24 +154,24 @@ function renderRegister(){
     $('register-page').textContent='Page '+registerPage+' of '+pages;
     $('register-prev').disabled=registerPage===1;$('register-next').disabled=registerPage===pages;
     $('register-rows').innerHTML=rows.length?rows.map(row=>
-      '<tr class="click-row" tabindex="0" role="button" data-employee="'+esc(row.employee_code)+'">'+
-      '<td class="id-cell">'+esc(row.employee_code)+'</td>'+
+      '<tr>'+
       '<td class="employee-name-cell">'+employeeCell(row)+'</td>'+
       '<td>'+categoryBadge(row.employment_type)+'</td>'+
       '<td>'+esc(row.department||'—')+'</td>'+
-      '<td><button type="button" class="text-link row-action" data-employee="'+esc(row.employee_code)+'">View attendance <span aria-hidden="true">→</span></button></td>'+
+      '<td><div class="row-buttons"><button type="button" class="button outline row-action" data-employee="'+esc(row.employee_code)+'">View attendance</button>'+
+      (session?.role==='admin'?'<button type="button" class="icon-button" data-edit-profile="'+esc(row.employee_code)+'" aria-label="Edit employee profile" title="Edit employee profile">'+editIcon()+'</button>':'')+'</div></td>'+
       '</tr>'
-    ).join(''):'<tr><td colspan="5" class="table-empty">No employees found. Register an employee or adjust your search.</td></tr>';
+    ).join(''):'<tr><td colspan="4" class="table-empty">No employees found.</td></tr>';
 }
 async function openEmployee(code){
   if (!code) return;
   selectedEmployee=code;
   const row=lastEmployeeRows.find(x=>x.employee_code===code);
-  selectedName=row?.display_name||'Employee '+code;
+  selectedName=row?.display_name||'Name not registered';
   selectedDepartment=row?.department||'';
   $('detail-name').textContent=selectedName;
-  $('detail-id').textContent='Device employee ID: '+code;
-  $('detail-department').textContent=selectedDepartment?' · '+selectedDepartment:'';
+  $('detail-department').textContent=selectedDepartment||'—';
+  $('detail-category').innerHTML=categoryBadge(row?.employment_type);
   $('detail-month').value=$('register-month').value;
   $('employee-detail').classList.remove('hidden');
   $('attendance-register-panel').classList.add('hidden');
@@ -208,6 +218,7 @@ async function loadProfiles(){
 async function openProfile(code=null){
   if(session?.role!=='admin')return;
   const token=++profileFormToken;
+  profileReturn={page:currentPage,employee:selectedEmployee,month:$('detail-month').value};
   profileEditing=null;profileVersion=null;
   $('profile-form').reset();$('profile-id').readOnly=false;
   $('profile-error').classList.add('hidden');$('save-profile').disabled=false;
@@ -251,56 +262,156 @@ async function saveProfile(event){
     $('profile-dialog').close();
     toast(editing?'Employee profile updated.':'Employee profile registered.');
     if(!editing){profilePage=1;profileCategory='All';$('profile-search').value=code;$('profile-status').value='All';}
-    await navigate('profiles');
+    if(profileReturn?.page==='employees'){
+      const previous=profileReturn;
+      await loadRegister();
+      if(previous.employee){await openEmployee(previous.employee);$('detail-month').value=previous.month;await loadDetail();}
+    }else await navigate('profiles');
   }catch(error){
     if(session===account){$('profile-error').textContent=error.message;$('profile-error').classList.remove('hidden');}
   }finally{$('save-profile').disabled=false;}
 }
-function statusForDay(day){
-  if (day.activities.some(x=>x.category==='Travel Order')) return '<span class="pill-neutral pill-to">Official Travel reference</span>';
-  if (day.activities.some(x=>x.category==='AJA')) return '<span class="pill-neutral pill-aja">AJA reference</span>';
-  if (day.scans.length) return '<span class="pill-neutral pill-regular">Biometric scans</span>';
-  return '<span class="empty-cell">No records / for review</span>';
+function editIcon(){
+  return '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" aria-hidden="true"><path d="m15 5 4 4M4 20l4-1 12-12a2.8 2.8 0 0 0-4-4L4 15z"/></svg>';
 }
-function timeList(scans){
-  if (!scans.length) return '<span class="empty-cell">—</span>';
-  return '<div class="scan-tags">'+scans.map(x=>
-    '<span class="scan-tag" title="'+esc('Device '+x.device_id+' · status '+x.status_code+' · work code '+x.work_code)+'">'+
-    esc(x.happened_at.slice(11,16))+'</span>').join('')+'</div>';
+function dayActivities(day){
+  const labels=[];
+  if(day.calendar.holiday_name)labels.push('<span class="day-badge holiday-badge">'+esc(day.calendar.holiday_name)+'</span>');
+  for(const item of day.display_activities){
+    const kind=item.category==='Travel Order'?'travel':item.category==='AJA'?'aja':'official';
+    labels.push('<span class="day-badge '+kind+'-badge" title="'+esc(item.reference)+'">'+esc(item.category)+'</span>');
+  }
+  if(day.review.remark)labels.push('<span class="day-remark" title="'+esc(day.review.remark)+'">'+esc(day.review.remark)+'</span>');
+  if(!labels.length && day.is_weekend)labels.push('<span class="weekend-label">'+esc(day.day==='Sat'?'Saturday':'Sunday')+'</span>');
+  return labels.join(' ')||'<span class="empty-cell">—</span>';
 }
-function activityList(activities){
-  if (!activities.length) return '<span class="empty-cell">—</span>';
-  return activities.map(x=>'<span class="ref-line"><strong>'+esc(x.category)+'</strong>'+
-    (x.reference?' · '+esc(x.reference):'')+
-    (x.category==='AJA'?' · '+esc(x.start_at.slice(11,16))+'–'+esc(x.end_at.slice(11,16)):'')+
-    '</span>').join('');
+function slotCell(day,key){
+  const event=day.slots[key];
+  const special=['holiday','travel','aja'].includes(day.tone);
+  const tone=special?day.tone:event?'entry':day.is_future||day.is_weekend?'neutral':'missing';
+  const hint=event?event.happened_at.slice(11)+' · Work code: '+(event.work_code||'not supplied')+' · Status: '+event.status_code:
+    (day.is_future?'Upcoming':day.is_weekend?'No entry':'No entry / not assigned');
+  return '<td class="time-slot slot-'+tone+'" title="'+esc(hint)+'">'+
+    (event?'<span class="time-value">'+esc(event.happened_at.slice(11,16))+'</span>'+
+      (event.work_code!==''?'<span class="time-code">WC '+esc(event.work_code)+'</span>':''):'<span class="no-time">—</span>')+'</td>';
 }
-async function loadDetail(){
+async function loadDetail({quiet=false}={}){
   if (!selectedEmployee) return;
-  const month=$('detail-month').value||currentMonth();
-  const code=selectedEmployee;
-  $('daily-rows').innerHTML='<tr><td colspan="4">Loading daily records…</td></tr>';
+  const serial=++detailRequest,month=$('detail-month').value||currentMonth(),code=selectedEmployee;
+  if(!quiet)$('daily-rows').innerHTML='<tr><td colspan="10" class="table-empty">Loading attendance…</td></tr>';
   try{
     const data=await api('/api/dtr/monitor?'+new URLSearchParams({employee_code:code,month}));
-    if (code!==selectedEmployee || month!==$('detail-month').value) return;
+    if(serial!==detailRequest || code!==selectedEmployee || month!==$('detail-month').value || currentPage!=='employees' || !session)return;
+    if(quiet && document.querySelectorAll('dialog[open]').length)return;
     activeDtr=data;
-    $('detail-summary').textContent=month+' · '+data.summary.scans+' actual scans · '+data.summary.activity_records+' activity references';
-    $('daily-rows').innerHTML=data.days.map(day=>
-      '<tr><td>'+esc(day.date.slice(8))+' '+esc(day.day)+'</td><td>'+timeList(day.scans)+'</td>'+
-      '<td>'+activityList(day.activities)+'</td><td>'+statusForDay(day)+'</td></tr>'
-    ).join('');
-    const first=month+'-01';
-    const last=data.days.at(-1).date;
-    const events=await api('/api/punches?'+new URLSearchParams({employee_code:code,date_from:first,date_to:last,limit:'250'}));
-    $('detail-events').innerHTML=events.items.length ? events.items.map(item=>
-      '<tr><td>'+esc(item.happened_at)+'</td><td>'+esc(item.device_id)+'</td>'+
-      '<td>'+esc(item.status_code)+'</td><td>'+esc(item.work_code)+(item.work_label?' · '+esc(item.work_label):'')+
-      '</td><td>'+esc(item.verification_code)+'</td></tr>').join('') :
-      '<tr><td colspan="5">No device events for this period.</td></tr>';
+    selectedName=data.display_name||'Name not registered';
+    $('detail-name').textContent=selectedName;
+    $('detail-department').textContent=data.department||'—';
+    $('detail-category').innerHTML=categoryBadge(data.employment_type);
+    const gip=data.employment_type==='GIP';
+    document.querySelectorAll('.gip-total').forEach(node=>node.classList.toggle('hidden',!gip));
+    const scroll=$('daily-table-wrap').scrollTop;
+    $('daily-rows').innerHTML=data.days.map(day=>{
+      const ut=day.review.undertime_minutes;
+      const total=day.daily_total_seconds;
+      const totalText=total===null?'—':Math.floor(total/3600)+':'+String(Math.floor(total%3600/60)).padStart(2,'0');
+      return '<tr class="day-row day-'+esc(day.tone)+'" data-date="'+esc(day.date)+'">'+
+        '<td class="dtr-date"><strong>'+esc(day.date.slice(8))+'</strong><span>'+esc(day.day)+'</span></td>'+
+        ['am_in','am_out','pm_in','pm_out'].map(key=>slotCell(day,key)).join('')+
+        '<td class="undertime-value" title="'+(ut===null?'For review':'Reviewed undertime')+'">'+(ut===null?'—':Math.floor(ut/60))+'</td>'+
+        '<td class="undertime-value">'+(ut===null?'—':String(ut%60).padStart(2,'0'))+'</td>'+
+        '<td class="gip-total '+(gip?'':'hidden')+'" title="'+(total===null?'Four verified entries required':total+' elapsed seconds')+'">'+esc(totalText)+'</td>'+
+        '<td class="day-activities">'+dayActivities(day)+'</td><td class="day-action"><button type="button" class="button outline edit-day" data-edit-day="'+esc(day.date)+'" aria-label="'+(session.role==='admin'?'Edit':'View')+' attendance for '+esc(day.date)+'">'+editIcon()+(session.role==='admin'?'Edit':'View')+'</button>'+
+        (day.unassigned_count?'<span class="unassigned-count">'+day.unassigned_count+' to place</span>':'')+'</td></tr>';
+    }).join('');
+    $('daily-table-wrap').scrollTop=scroll;
   }catch(error){
-    $('daily-rows').innerHTML='<tr><td colspan="4">Could not load this employee’s monthly records.</td></tr>';
-    toast(error.message,true);
+    if(serial!==detailRequest || code!==selectedEmployee || currentPage!=='employees' || !session)return;
+    if(!quiet){$('daily-rows').innerHTML='<tr><td colspan="10" class="table-empty">Unable to load attendance.</td></tr>';toast(error.message,true);}
   }
+}
+function openDayReview(date){
+  const day=activeDtr?.days.find(x=>x.date===date);
+  if(!day || !session)return;
+  dayReviewContext={code:selectedEmployee,month:activeDtr.month,day,account:session};
+  const editable=session.role==='admin';
+  $('day-review-form').reset();$('day-review-error').classList.add('hidden');
+  $('day-review-heading').textContent=editable?'Edit attendance':'Attendance entries';
+  $('day-review-context').textContent=selectedName+' · '+date+' ('+day.day+')';
+  const options='<option value="">— No entry —</option>'+day.scans.map(event=>
+    '<option value="'+event.id+'">'+esc(event.happened_at.slice(11))+' · WC '+esc(event.work_code||'—')+' · Status '+esc(event.status_code)+'</option>').join('');
+  for(const key of ['am_in','am_out','pm_in','pm_out']){
+    const node=$('review-'+key.replace('_','-'));node.innerHTML=options;node.value=day.slots[key]?.id||'';node.disabled=!editable;
+  }
+  const minutes=day.review.undertime_minutes;
+  $('review-ut-hours').value=minutes===null?'':Math.floor(minutes/60);
+  $('review-ut-minutes').value=minutes===null?'':minutes%60;
+  $('review-activity').value=day.review.activity_type;
+  $('review-reference').value=day.review.activity_reference;
+  $('review-remark').value=day.review.remark;
+  for(const id of ['review-ut-hours','review-ut-minutes','review-activity','review-reference','review-remark'])$(id).disabled=!editable;
+  $('save-day-review').classList.toggle('hidden',!editable);$('save-day-review').disabled=false;
+  $('place-four-entries').classList.toggle('hidden',!editable||day.scans.length!==4);
+  $('review-entry-hint').textContent=day.scans.length?day.scans.length+' original entries available. Choose the verified entry for each slot.':'No device entries for this date.';
+  $('review-existing-activities').innerHTML=day.display_activities.map(x=>'<span class="day-badge">'+esc(x.category)+(x.reference?' · '+esc(x.reference):'')+'</span>').join('');
+  $('day-review-dialog').showModal();
+}
+async function saveDayReview(event){
+  event.preventDefault();
+  const context=dayReviewContext;
+  if(!context || context.account!==session || session.role!=='admin')return;
+  const payload={version:context.day.review.version};
+  for(const key of ['am_in','am_out','pm_in','pm_out']){
+    const value=$('review-'+key.replace('_','-')).value;payload[key]=value?Number(value):null;
+  }
+  const h=$('review-ut-hours').value,m=$('review-ut-minutes').value;
+  payload.undertime_minutes=h===''&&m===''?null:Number(h||0)*60+Number(m||0);
+  payload.activity_type=$('review-activity').value;
+  payload.activity_reference=$('review-reference').value.trim();payload.remark=$('review-remark').value.trim();
+  $('save-day-review').disabled=true;$('day-review-error').classList.add('hidden');
+  try{
+    await api('/api/attendance/'+encodeURIComponent(context.code)+'/'+context.day.date,{method:'PUT',body:JSON.stringify(payload)});
+    if(context.account!==session)return;
+    $('day-review-dialog').close();toast('Attendance review saved.');
+    if(selectedEmployee===context.code && $('detail-month').value===context.month)await loadDetail({quiet:true});
+  }catch(error){if(context.account===session){$('day-review-error').textContent=error.message;$('day-review-error').classList.remove('hidden');}}
+  finally{$('save-day-review').disabled=false;}
+}
+function calendarDateChanged(){
+  const day=activeDtr?.days.find(x=>x.date===$('calendar-date').value);
+  $('calendar-name').value=day?.calendar.holiday_name||'';$('calendar-error').classList.add('hidden');
+}
+function openCalendar(){
+  if(!activeDtr || session?.role!=='admin')return;
+  $('calendar-date').innerHTML=activeDtr.days.map(day=>'<option value="'+day.date+'">'+day.date+' ('+day.day+')</option>').join('');
+  calendarDateChanged();$('calendar-dialog').showModal();
+}
+async function saveCalendar(event){
+  event.preventDefault();
+  if(!activeDtr || session?.role!=='admin')return;
+  const day=activeDtr.days.find(x=>x.date===$('calendar-date').value),account=session;
+  if(!day)return;
+  $('save-calendar').disabled=true;$('calendar-error').classList.add('hidden');
+  try{
+    await api('/api/attendance-calendar/'+day.date,{method:'PUT',body:JSON.stringify({version:day.calendar.version,holiday_name:$('calendar-name').value.trim()})});
+    if(session!==account)return;
+    $('calendar-dialog').close();toast('Attendance calendar updated.');await loadDetail({quiet:true});
+  }catch(error){if(session===account){$('calendar-error').textContent=error.message;$('calendar-error').classList.remove('hidden');}}
+  finally{$('save-calendar').disabled=false;}
+}
+function stopAttendanceRefresh(){attendanceRefreshEpoch++;clearTimeout(attendanceRefreshTimer);attendanceRefreshTimer=null;}
+function startAttendanceRefresh(){
+  stopAttendanceRefresh();
+  const epoch=attendanceRefreshEpoch;
+  const tick=async()=>{
+    if(epoch!==attendanceRefreshEpoch || currentPage!=='employees' || !session || document.hidden)return;
+    if(!document.querySelectorAll('dialog[open]').length){
+      if(selectedEmployee)await loadDetail({quiet:true});else await loadRegister({quiet:true});
+    }
+    if(epoch===attendanceRefreshEpoch && currentPage==='employees' && session && !document.hidden)
+      attendanceRefreshTimer=setTimeout(tick,10000);
+  };
+  if(currentPage==='employees' && session && !document.hidden)attendanceRefreshTimer=setTimeout(tick,10000);
 }
 async function loadActivities(){
   const token=++activityRequest;
@@ -318,7 +429,6 @@ async function loadActivities(){
       '<span><b>'+counts.employees+'</b> employees</span>'+
       '<span><b>'+counts.aja+'</b> AJA scans</span>'+
       '<span><b>'+counts.travel_orders+'</b> Travel Order scans</span>';
-    $('activity-note').textContent=data.note;
     $('activity-rows').innerHTML=data.items.length?data.items.map(item=>{
       const instant=item.happened_at||'';
       const badge=item.category==='AJA'?'activity-aja':'activity-travel';
@@ -524,9 +634,16 @@ async function initialize(){
   document.addEventListener('visibilitychange',()=>{
     if(document.hidden){
       stopDeviceRefresh();
+      stopAttendanceRefresh();
     }else if(deviceRefreshAllowed()){
       startDeviceRefresh();
       void refreshDeviceStatus({quiet:true,fresh:true});
+    }
+    if(!document.hidden && session && currentPage==='employees'){
+      startAttendanceRefresh();
+      if(!document.querySelectorAll('dialog[open]').length){
+        if(selectedEmployee)void loadDetail({quiet:true});else void loadRegister({quiet:true});
+      }
     }
   });
   $('today').textContent=new Intl.DateTimeFormat('en-PH',{
@@ -572,6 +689,7 @@ async function initialize(){
     const button=event.target.closest('[data-edit-profile]');if(button)openProfile(button.dataset.editProfile);
   });
   $('register-rows').addEventListener('click',e=>{
+    const edit=e.target.closest('[data-edit-profile]');if(edit){openProfile(edit.dataset.editProfile);return;}
     const row=e.target.closest('[data-employee]');if(row)openEmployee(row.dataset.employee);
   });
   $('register-rows').addEventListener('keydown',e=>{
@@ -579,10 +697,26 @@ async function initialize(){
     if(row && (e.key==='Enter'||e.key===' ')){e.preventDefault();openEmployee(row.dataset.employee);}
   });
   $('back-to-register').addEventListener('click',()=>{
-    $('employee-detail').classList.add('hidden');selectedEmployee=null;activeDtr=null;
+    $('employee-detail').classList.add('hidden');selectedEmployee=null;activeDtr=null;detailRequest++;
     $('attendance-register-panel').classList.remove('hidden');
   });
-  $('detail-month').addEventListener('change',loadDetail);
+  $('detail-month').addEventListener('change',()=>{$('register-month').value=$('detail-month').value;loadDetail();});
+  $('daily-rows').addEventListener('click',event=>{
+    const button=event.target.closest('[data-edit-day]');if(button)openDayReview(button.dataset.editDay);
+  });
+  $('day-review-form').addEventListener('submit',saveDayReview);
+  $('close-day-review').addEventListener('click',()=>$('day-review-dialog').close());
+  $('cancel-day-review').addEventListener('click',()=>$('day-review-dialog').close());
+  $('day-review-dialog').addEventListener('close',()=>{dayReviewContext=null;});
+  $('place-four-entries').addEventListener('click',()=>{
+    const events=dayReviewContext?.day.scans;if(events?.length!==4)return;
+    ['am-in','am-out','pm-in','pm-out'].forEach((key,i)=>$('review-'+key).value=events[i].id);
+  });
+  $('open-calendar').addEventListener('click',openCalendar);
+  $('calendar-date').addEventListener('change',calendarDateChanged);
+  $('calendar-form').addEventListener('submit',saveCalendar);
+  $('close-calendar').addEventListener('click',()=>$('calendar-dialog').close());
+  $('cancel-calendar').addEventListener('click',()=>$('calendar-dialog').close());
   $('activity-filter').addEventListener('submit',e=>{e.preventDefault();loadActivities();});
   $('activity-rows').addEventListener('click',e=>{
     const node=e.target.closest('[data-monitor-employee]');

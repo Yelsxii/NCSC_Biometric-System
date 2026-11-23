@@ -95,3 +95,97 @@
 .profile-dialog>form{max-height:none}
 .app-dialog .file-dialog-body{min-height:0}
 @media(max-width:740px){.profile-dialog[open]{height:calc(100dvh - 24px)}.profile-dialog>form{max-height:none}}
+
+/* Attendance workspace: one compact monthly sheet, no duplicate page banners. */
+.workspace .topbar-title{margin:0;font-size:16px;line-height:1.25;font-weight:650;letter-spacing:-.025em;color:#2d4067;display:block}
+.workspace #main-content{padding-top:18px}
+.workspace .text-link{display:inline-flex;align-items:center;justify-content:center;text-decoration:none!important;border:1px solid #e4e9f3;background:#fff;border-radius:7px;padding:6px 9px;color:#63728d;line-height:1.2}
+.workspace .text-link:hover{background:#f5f7fc;border-color:#cbd5ea;color:#304565}
+.workspace .row-buttons{display:flex;gap:7px;justify-content:flex-end;align-items:center}
+.workspace .icon-button{width:30px;height:30px;min-height:30px;padding:6px;display:inline-grid;place-items:center;border:1px solid #e1e7f1;border-radius:8px;background:#fff;color:#6a7b99;flex-shrink:0}
+.workspace .icon-button:hover{border-color:#bfcae1;background:#f4f7ff;color:#344f86}
+.workspace .icon-button svg,.workspace .edit-day svg{width:15px;height:15px;flex-shrink:0}
+.workspace .attendance-directory{min-width:610px;font-size:12px}
+.workspace .attendance-directory th{padding:9px 12px;height:32px;font-size:10px}
+.workspace .attendance-directory td{padding:7px 12px;height:41px}
+.workspace .attendance-directory .employee-cell{gap:9px}
+.workspace .attendance-directory .employee-cell strong{font-size:11.5px;text-transform:uppercase;letter-spacing:.015em}
+.workspace .attendance-directory .name-avatar{width:26px;height:26px;border-radius:8px}
+.workspace .attendance-directory .button{height:29px;min-height:29px;padding:0 10px;font-size:10px}
+.workspace .attendance-directory .actions-column{width:190px}
+.workspace .detail-section{overflow:hidden;padding:0;display:flex;flex-direction:column}
+.workspace .attendance-sheet{display:flex;flex:1;min-height:0;flex-direction:column;margin:0!important;overflow:hidden;padding:17px 18px 12px}
+.workspace .sheet-header{display:flex;align-items:center;gap:21px;flex-shrink:0;padding:0 0 16px;border-bottom:1px solid #edf0f7}
+.workspace .back-button{width:32px;height:32px;min-height:32px;background:#f7f9fe;border-color:#e7ecf7}
+.workspace .back-button svg{width:19px;height:19px}
+.workspace .sheet-identity{flex:1;min-width:140px}
+.workspace .metadata-label{font-size:9px;text-transform:uppercase;letter-spacing:.07em;font-weight:600;color:#9ba7bb;display:block;margin-bottom:6px}
+.workspace .sheet-identity h2{font-size:15px;line-height:1.35;letter-spacing:.025em;text-transform:uppercase;font-weight:650;color:#344667;margin:0}
+.workspace .sheet-meta{min-width:85px;max-width:180px;font-size:11px}
+.workspace .sheet-meta strong{font-size:11px;font-weight:550;color:#687995}
+.workspace .sheet-header .month-inline{min-width:143px;font-size:9px;display:flex;flex-direction:column;margin:0;gap:5px}
+.workspace .sheet-header input{height:32px;min-height:32px;padding:5px 8px;font-size:11px}
+.workspace .sheet-toolbar{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:12px 0;flex-shrink:0}
+.workspace .sheet-toolbar .button{height:27px;min-height:27px;font-size:9px;padding:0 10px}
+.workspace .attendance-legend{display:flex;align-items:center;flex-wrap:wrap;gap:8px 16px;font-size:9px;color:#8b98ae}
+.workspace .attendance-legend>span{display:flex;gap:6px;align-items:center;white-space:nowrap}
+.workspace .attendance-legend>span::before{content:"";width:7px;height:7px;border-radius:3px;display:inline-block;border:1px solid #e5e9f2}
+.workspace .legend-missing::before{background:#ffdbe7!important;border-color:#f4c3d4!important}
+.workspace .legend-entry::before,.workspace .legend-aja::before{background:#ffedb1!important;border-color:#edda9a!important}
+.workspace .legend-holiday::before{background:#cfe9ff!important;border-color:#b6d8f5!important}
+.workspace .legend-travel::before{background:#e5dafa!important;border-color:#d0beee!important}
+.workspace #daily-table-wrap{flex:1;min-height:0;max-height:none;border:1px solid #e9edf5;border-radius:8px}
+.workspace .dtr-grid{min-width:850px;width:100%;table-layout:fixed;font-size:11px;font-variant-numeric:tabular-nums}
+.workspace .dtr-grid thead th{text-align:center;padding:6px 7px;height:28px;font-size:9px;color:#7b8ba8;border-right:1px solid #e8edf6;border-radius:0;background:#f5f7fc;border-bottom:1px solid #e6ebf5}
+.workspace .dtr-grid thead tr:first-child th{top:0;height:28px;z-index:3}
+.workspace .dtr-grid thead tr:last-child th{top:28px;z-index:2;background:#fafbfe;font-size:9px;font-weight:500}
+.workspace .dtr-grid th:first-child{width:91px}
+.workspace .dtr-grid th[rowspan="2"]:last-child{width:90px}
+.workspace .dtr-grid th[rowspan="2"]:nth-last-child(2){width:186px}
+.workspace .dtr-grid th[colspan="2"]:nth-child(4){width:108px}
+.workspace .dtr-grid th.gip-total{width:80px}
+.workspace .dtr-grid td{height:34px;line-height:1.3;padding:5px 8px;text-align:center;border-right:1px solid #eff2f7;border-bottom:1px solid #e9edf5;font-size:11px;vertical-align:middle}
+.workspace .dtr-grid tbody tr:nth-child(even){background:#fff}
+.workspace .dtr-grid tbody tr:hover td{box-shadow:inset 0 1px #536fa009,inset 0 -1px #536fa009}
+.workspace .dtr-grid .dtr-date{text-align:left;padding-left:12px;white-space:nowrap;color:#8b98ac}
+.workspace .dtr-date strong{display:inline;font-size:11px;font-weight:600;color:#4e6080;margin-right:7px}
+.workspace .dtr-date span{font-size:9px}
+.workspace .dtr-grid .time-slot{padding:4px 6px}
+.workspace .time-value{font-size:11px;color:#776331;font-weight:550}
+.workspace .time-code{font-size:7px;display:inline-block;border-left:1px solid #e5d6a2;padding-left:5px;margin-left:5px;color:#a79563;white-space:nowrap}
+.workspace .no-time{font-size:12px;color:#c698a8}
+.workspace .slot-missing{background:#fff0f5!important}
+.workspace .slot-entry,.workspace .slot-aja{background:#fff9e8!important}
+.workspace .slot-holiday{background:#edf6ff!important}
+.workspace .slot-travel{background:#f4effd!important}
+.workspace .slot-neutral{background:#f8f9fc!important}
+.workspace .slot-holiday .time-value,.workspace .slot-holiday .no-time{color:#7b9dba}
+.workspace .slot-travel .time-value,.workspace .slot-travel .no-time{color:#9a84b4}
+.workspace .slot-neutral .no-time{color:#c6cddb}
+.workspace .day-holiday .dtr-date{box-shadow:inset 3px 0 #8fc4ec;background:#f4f9ff}
+.workspace .day-travel .dtr-date{box-shadow:inset 3px 0 #b8a0dc;background:#f8f4fe}
+.workspace .day-aja .dtr-date{box-shadow:inset 3px 0 #e1c266;background:#fffaf0}
+.workspace .day-weekend .dtr-date,.workspace .day-future .dtr-date{background:#f8f9fc}
+.workspace .dtr-grid .undertime-value{color:#8a7183;font-size:10px}
+.workspace .dtr-grid .day-activities{text-align:left;padding-left:10px;font-size:9px;line-height:1.5}
+.workspace .day-badge,.app-dialog .day-badge{font-size:8px;border-radius:4px;padding:2px 5px;line-height:1.4;display:inline-block;background:#f1f4fa;color:#8996ad;max-width:100%;vertical-align:middle}
+.workspace .holiday-badge{background:#e6f2ff;color:#7198b8}
+.workspace .aja-badge{background:#fff2c5;color:#a88b3e}
+.workspace .travel-badge{background:#eee5fb;color:#9b7dbc}
+.workspace .official-badge{background:#edf3fb;color:#7b96b3}
+.workspace .day-remark{display:block;max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:8px;color:#97a2b5}
+.workspace .weekend-label{color:#b2bac9;font-size:9px}
+.workspace .day-action{white-space:nowrap}
+.workspace .edit-day{height:24px;min-height:24px;padding:0 7px;font-size:9px;gap:4px;color:#8190aa}
+.workspace .edit-day svg{width:11px;height:11px}
+.workspace .unassigned-count{font-size:7px;display:block;color:#ad92a0;line-height:1.2;margin-top:3px}
+.app-dialog .form-section-heading{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:12px}
+.app-dialog .form-section-heading .form-section-title{margin:0}
+.app-dialog .form-section-heading .button{height:25px;min-height:25px;font-size:8px;padding:0 8px}
+.app-dialog.day-review-dialog{width:min(610px,calc(100vw - 32px))}
+.app-dialog .review-remark-label{font-size:10px;color:#7e8da8;display:block;margin-top:14px}
+.app-dialog .review-activities{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:12px}
+.app-dialog .review-activities:empty{display:none}
+.app-dialog .day-slots select{font-variant-numeric:tabular-nums;font-size:10px}
+@media(max-width:1100px){.workspace .sheet-header{gap:13px}.workspace .sheet-meta{min-width:65px;max-width:120px}.workspace .sheet-identity h2{font-size:13px}}
+@media(max-width:740px){.workspace .topbar-title{display:block!important;font-size:12px;max-width:57%;white-space:normal}.workspace .topbar-user{gap:7px;margin-left:0}.workspace .topbar-user .admin-dot{display:none}.workspace .topbar-user strong{max-width:68px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.workspace #main-content{padding-top:12px}.workspace .sheet-header{flex-wrap:wrap;gap:12px;align-items:center;padding-bottom:12px}.workspace .sheet-identity{flex:1;min-width:190px}.workspace .sheet-identity h2{font-size:13px}.workspace .sheet-meta{min-width:70px;max-width:120px;flex:1}.workspace .sheet-header .month-inline{min-width:125px;flex:1}.workspace .sheet-meta strong{font-size:10px}.workspace .attendance-sheet{padding:12px 10px 10px}.workspace .attendance-legend{gap:6px 11px;font-size:8px}.workspace .attendance-legend>span{gap:4px}.workspace .sheet-toolbar{align-items:flex-start;padding:10px 0}.workspace .attendance-directory .actions-column{width:174px}.workspace .attendance-directory td{height:38px;padding:6px 10px}.workspace .dtr-grid td{height:33px;padding:4px 6px}.app-dialog.day-review-dialog{width:calc(100vw - 24px)}.app-dialog .day-slots select{font-size:9px;padding-left:5px;padding-right:4px}}

@@ -126,6 +126,29 @@ CREATE TABLE IF NOT EXISTS work_codes (
  updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
  PRIMARY KEY(device_id,work_code)
 );
+CREATE TABLE IF NOT EXISTS attendance_day_reviews (
+ employee_code TEXT NOT NULL REFERENCES employees(employee_code),
+ attendance_date TEXT NOT NULL,
+ am_in INTEGER REFERENCES punches(id),
+ am_out INTEGER REFERENCES punches(id),
+ pm_in INTEGER REFERENCES punches(id),
+ pm_out INTEGER REFERENCES punches(id),
+ undertime_minutes INTEGER CHECK(undertime_minutes BETWEEN 0 AND 1440),
+ activity_type TEXT NOT NULL DEFAULT '',
+ activity_reference TEXT NOT NULL DEFAULT '',
+ remark TEXT NOT NULL DEFAULT '',
+ version INTEGER NOT NULL DEFAULT 1,
+ reviewed_by INTEGER NOT NULL REFERENCES users(id),
+ reviewed_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+ PRIMARY KEY(employee_code,attendance_date)
+);
+CREATE TABLE IF NOT EXISTS attendance_calendar (
+ attendance_date TEXT PRIMARY KEY,
+ holiday_name TEXT NOT NULL DEFAULT '',
+ version INTEGER NOT NULL DEFAULT 1,
+ updated_by INTEGER NOT NULL REFERENCES users(id),
+ updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
 CREATE TABLE IF NOT EXISTS fieldwork (
  id INTEGER PRIMARY KEY AUTOINCREMENT,
  employee_code TEXT NOT NULL,
@@ -175,14 +198,15 @@ CREATE TABLE IF NOT EXISTS audit_events (
 
 def initialize() -> None:
     with _INITIALIZE_LOCK, closing(connect()) as con, con:
-        # Preserve a recoverable snapshot before adding registration to an
-        # existing populated database. No attendance rows are rewritten.
+        # Preserve a recoverable snapshot before additive workflow migrations
+        # on a populated database. No original attendance rows are rewritten.
         tables = {row[0] for row in con.execute("SELECT name FROM sqlite_master WHERE type='table'")}
-        if "employee_profiles" not in tables and "punches" in tables:
+        phase = "profiles" if "employee_profiles" not in tables else "attendance" if "attendance_day_reviews" not in tables else None
+        if phase and "punches" in tables:
             if con.execute("SELECT COUNT(*) FROM punches").fetchone()[0]:
                 folder = database_path().parent / "backups"
                 folder.mkdir(parents=True, exist_ok=True)
-                name = f"before-profiles-{datetime.now():%Y%m%d-%H%M%S}-{uuid.uuid4().hex[:6]}.sqlite3"
+                name = f"before-{phase}-{datetime.now():%Y%m%d-%H%M%S}-{uuid.uuid4().hex[:6]}.sqlite3"
                 with closing(sqlite3.connect(folder / name)) as backup:
                     con.backup(backup)
         con.executescript(SCHEMA)
