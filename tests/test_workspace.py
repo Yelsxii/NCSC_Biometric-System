@@ -75,3 +75,11 @@ def test_reviewer_cannot_preview_uploads_or_create_activities(admin):
     assert client.post("/api/activities", json={
         "employee_code": "DEMO001", "category": "AJA", "reference": "Fictional example activity", "start_at": "2026-11-20T08:00", "end_at": "2026-11-20T17:00"
     }, headers=headers).status_code == 403
+def test_approved_login_is_unchanged_by_workspace_redesign():
+    import hashlib
+    from pathlib import Path
+    root = Path(__file__).resolve().parents[1]
+    html = (root / 'app/index.html').read_text()
+    login = html[html.index('  <main id="login-view"'):html.index('  <div id="workspace"')]
+    assert hashlib.sha256(login.encode()).hexdigest() == '7747e13d08dbd533be0f0fba0770abf1351d0c6d4d67a130d42f7ada0a0bc8fd'
+    assert hashlib.sha256((root / 'app/static/app.css').read_text().encode()).hexdigest() == '8f9f479005bb86da6c50656668d530972ae8f116cd483c7b7bfef84be3802149'

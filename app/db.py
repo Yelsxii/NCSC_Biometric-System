@@ -7,7 +7,15 @@ timestamp; the connector's raw values remain in k14_sync_events.
 from __future__ import annotations
 import os
 import sqlite3
+import threading
+import uuid
+from contextlib import closing
+from datetime import datetime
 from pathlib import Path
+
+from app.device_access import LEGACY_ALLOWED_IDS
+
+_INITIALIZE_LOCK = threading.Lock()
 
 
 def database_path() -> Path:
@@ -91,6 +99,25 @@ CREATE TABLE IF NOT EXISTS employees (
  name_source TEXT NOT NULL DEFAULT 'scan',
  updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
+CREATE TABLE IF NOT EXISTS employee_profiles (
+ employee_code TEXT PRIMARY KEY REFERENCES employees(employee_code),
+ first_name TEXT NOT NULL,
+ middle_name TEXT NOT NULL DEFAULT '',
+ last_name TEXT NOT NULL,
+ suffix TEXT NOT NULL DEFAULT '',
+ employment_type TEXT NOT NULL CHECK(employment_type IN ('COS','Permanent','GIP','OJT')),
+ position TEXT NOT NULL DEFAULT '',
+ version INTEGER NOT NULL DEFAULT 1,
+ registered_by INTEGER NOT NULL REFERENCES users(id),
+ registered_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+ updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+CREATE TABLE IF NOT EXISTS k14_authorizations (
+ employee_code TEXT PRIMARY KEY,
+ sync_authorized INTEGER NOT NULL DEFAULT 0 CHECK(sync_authorized IN (0,1)),
+ updated_by INTEGER REFERENCES users(id),
+ updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
 CREATE TABLE IF NOT EXISTS work_codes (
  device_id TEXT NOT NULL,
  work_code TEXT NOT NULL,
@@ -147,9 +174,23 @@ CREATE TABLE IF NOT EXISTS audit_events (
 
 
 def initialize() -> None:
-    with connect() as con:
+    with _INITIALIZE_LOCK, closing(connect()) as con, con:
+        # Preserve a recoverable snapshot before adding registration to an
+        # existing populated database. No attendance rows are rewritten.
+        tables = {row[0] for row in con.execute("SELECT name FROM sqlite_master WHERE type='table'")}
+        if "employee_profiles" not in tables and "punches" in tables:
+            if con.execute("SELECT COUNT(*) FROM punches").fetchone()[0]:
+                folder = database_path().parent / "backups"
+                folder.mkdir(parents=True, exist_ok=True)
+                name = f"before-profiles-{datetime.now():%Y%m%d-%H%M%S}-{uuid.uuid4().hex[:6]}.sqlite3"
+                with closing(sqlite3.connect(folder / name)) as backup:
+                    con.backup(backup)
         con.executescript(SCHEMA)
         migrate(con)
+        con.executemany(
+            "INSERT OR IGNORE INTO k14_authorizations(employee_code,sync_authorized) VALUES(?,1)",
+            [(code,) for code in sorted(LEGACY_ALLOWED_IDS)],
+        )
         register_scan_metadata(con)
 
 

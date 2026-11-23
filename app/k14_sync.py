@@ -30,8 +30,9 @@ from pathlib import Path
 
 from app.db import connect, database_path, initialize, register_scan_metadata
 from app.lan import settings
+from app.device_access import LEGACY_ALLOWED_IDS, authorized_ids
 
-ALLOWED_IDS = frozenset(str(number) for number in list(range(1, 13)) + [14, 18])
+ALLOWED_IDS = LEGACY_ALLOWED_IDS  # Bootstrap only; running reads use the registry.
 DEFAULT_INTERVAL_SECONDS = 60
 REQUIRED_COLUMNS = (
     "device_ip",
@@ -183,8 +184,8 @@ def verify_schema(source: sqlite3.Connection) -> None:
         raise ValueError("Connector attendance_raw primary key does not match the verified K14 pilot schema.")
 
 
-def _acceptable(device_ip: str, employee_id: str, happened: str, status: str, punch_type: str, received: str, host: str) -> bool:
-    if device_ip != host or employee_id not in ALLOWED_IDS:
+def _acceptable(device_ip: str, employee_id: str, happened: str, status: str, punch_type: str, received: str, host: str, allowed: frozenset[str]) -> bool:
+    if device_ip != host or employee_id not in allowed:
         return False
     if not all(CODE.fullmatch(value) for value in (device_ip, employee_id, status, punch_type)):
         return False
@@ -231,6 +232,7 @@ def write_website(rows: list[sqlite3.Row], actor_id: int | None, started: str, s
     inserted = already = skipped = 0
     with connect() as con:
         con.execute("BEGIN IMMEDIATE")
+        allowed = authorized_ids(con)
         batch_id = None
         admin_id = actor_id
         for row in rows:
@@ -240,7 +242,7 @@ def write_website(rows: list[sqlite3.Row], actor_id: int | None, started: str, s
             status = "" if row["device_status"] is None else str(row["device_status"]).strip()
             punch_type = "" if row["device_punch_type"] is None else str(row["device_punch_type"]).strip()
             received = "" if row["received_at_utc"] is None else str(row["received_at_utc"]).strip()
-            if not _acceptable(device_ip, employee_id, happened, status, punch_type, received, host):
+            if not _acceptable(device_ip, employee_id, happened, status, punch_type, received, host, allowed):
                 skipped += 1
                 continue
             linked = con.execute(

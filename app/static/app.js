@@ -16,6 +16,14 @@ let requestSerial = 0;
 let rosterPreviewOkay = false;
 let usbPreviewOkay = false;
 let connectorReadPending = false;
+const EMPLOYEE_PAGE_SIZE = 15;
+let registerPage = 1;
+let profilePage = 1;
+let profileCategory = 'All';
+let profileRequest = 0;
+let profileFormToken = 0;
+let profileEditing = null;
+let profileVersion = null;
 const DEVICE_REFRESH_MS = 5000;
 let deviceRefreshTimer = null;
 let deviceRefreshEpoch = 0;
@@ -23,6 +31,7 @@ let deviceStatusRequest = null;
 let deviceStatusController = null;
 const titles = {
   employees:'Employee Attendance',
+  profiles:'Employee profiles',
   activities:'AJA / Travel Orders',
   staff:'Users & Work Codes'
 };
@@ -55,6 +64,7 @@ async function api(path,options={}) {
 }
 function showLogin(){
   stopDeviceRefresh();
+  document.querySelectorAll('dialog[open]').forEach(dialog=>dialog.close());
   $('login-view').classList.remove('hidden');
   $('workspace').classList.add('hidden');
   $('login-password').value='';
@@ -71,6 +81,8 @@ function showApp(){
     .forEach(el=>el.disabled=!canWrite);
   $('open-attendance-import').disabled=!canWrite;
   $('open-user-import').disabled=!canWrite;
+  $('open-profile').disabled=!canWrite;
+  $('register-from-attendance').disabled=!canWrite;
   $('register-month').value=currentMonth();
   $('detail-month').value=currentMonth();
   $('activity-month').value=currentMonth();
@@ -89,7 +101,13 @@ function navigate(page){
   $('section-name').textContent=titles[page];
   document.title=titles[page]+' | NCSC Records';
   window.history.replaceState(null,'','#'+page);
-  if (page==='employees') return loadRegister();
+  if (page==='employees') {
+    $('employee-detail').classList.add('hidden');
+    $('attendance-register-panel').classList.remove('hidden');
+    selectedEmployee=null;activeDtr=null;
+    return loadRegister();
+  }
+  if (page==='profiles') return loadProfiles();
   if (page==='activities') return loadActivities();
   if (page==='staff') {startDeviceRefresh();return loadDevice();}
 }
@@ -97,24 +115,43 @@ async function loadRegister(){
   const serial=++requestSerial;
   const month=$('register-month').value||currentMonth();
   const q=$('employee-search').value.trim();
-  $('register-rows').innerHTML='<tr><td colspan="4" class="table-empty">Loading attendance register…</td></tr>';
+  $('register-rows').innerHTML='<tr><td colspan="5" class="table-empty">Loading attendance register…</td></tr>';
   try {
     const result=await api('/api/employee-register?'+new URLSearchParams({month,q}));
     if (serial!==requestSerial||currentPage!=='employees') return;
     lastEmployeeRows=result.items;
-    $('register-count').textContent=result.items.length+' employee'+(result.items.length===1?'':'s')+' found';
-    $('register-rows').innerHTML=result.items.length?result.items.map(row=>
+    renderRegister();
+  }catch(error){
+    $('register-rows').innerHTML='<tr><td colspan="5" class="table-empty">Unable to load employee attendance.</td></tr>';
+    toast(error.message,true);
+  }
+}
+function categoryBadge(value){
+  const kind={COS:'cos',Permanent:'permanent',GIP:'gip',OJT:'ojt'}[value];
+  return '<span class="tag tag-'+(kind||'neutral')+'">'+esc(value||'Not set')+'</span>';
+}
+function employeeCell(row){
+  const name=row.display_name||'Name not verified';
+  return '<div class="employee-cell"><span class="name-avatar" aria-hidden="true">'+esc(name.slice(0,1).toUpperCase())+
+    '</span><span><strong>'+esc(name)+'</strong>'+(row.position?'<small>'+esc(row.position)+'</small>':'')+'</span></div>';
+}
+function renderRegister(){
+    const total=lastEmployeeRows.length,pages=Math.max(1,Math.ceil(total/EMPLOYEE_PAGE_SIZE));
+    registerPage=Math.max(1,Math.min(registerPage,pages));
+    const start=(registerPage-1)*EMPLOYEE_PAGE_SIZE;
+    const rows=lastEmployeeRows.slice(start,start+EMPLOYEE_PAGE_SIZE);
+    $('register-count').textContent=total?('Showing '+(start+1)+'–'+Math.min(start+EMPLOYEE_PAGE_SIZE,total)+' of '+total+' employees'):'No employees found';
+    $('register-page').textContent='Page '+registerPage+' of '+pages;
+    $('register-prev').disabled=registerPage===1;$('register-next').disabled=registerPage===pages;
+    $('register-rows').innerHTML=rows.length?rows.map(row=>
       '<tr class="click-row" tabindex="0" role="button" data-employee="'+esc(row.employee_code)+'">'+
       '<td class="id-cell">'+esc(row.employee_code)+'</td>'+
-      '<td class="employee-name-cell">'+esc(row.display_name||'Name not synchronized')+'</td>'+
+      '<td class="employee-name-cell">'+employeeCell(row)+'</td>'+
+      '<td>'+categoryBadge(row.employment_type)+'</td>'+
       '<td>'+esc(row.department||'—')+'</td>'+
       '<td><button type="button" class="text-link row-action" data-employee="'+esc(row.employee_code)+'">View attendance <span aria-hidden="true">→</span></button></td>'+
       '</tr>'
-    ).join(''):'<tr><td colspan="4" class="table-empty">No employees found. Try a different name, ID, or month.</td></tr>';
-  }catch(error){
-    $('register-rows').innerHTML='<tr><td colspan="4" class="table-empty">Unable to load employee attendance.</td></tr>';
-    toast(error.message,true);
-  }
+    ).join(''):'<tr><td colspan="5" class="table-empty">No employees found. Register an employee or adjust your search.</td></tr>';
 }
 async function openEmployee(code){
   if (!code) return;
@@ -127,17 +164,97 @@ async function openEmployee(code){
   $('detail-department').textContent=selectedDepartment?' · '+selectedDepartment:'';
   $('detail-month').value=$('register-month').value;
   $('employee-detail').classList.remove('hidden');
+  $('attendance-register-panel').classList.add('hidden');
   await loadDetail();
-  $('employee-detail').scrollIntoView({block:'start',behavior:'smooth'});
+  $('main-content').scrollTop=0;
 }
-function fullDayTravel(day){
-  // The activity is an existing office reference, not proof of credited hours.
-  const from=day.date+' 00:00:00';
-  const to=new Date(day.date+'T12:00:00+08:00');
-  to.setUTCDate(to.getUTCDate()+1);
-  const end=to.toISOString().slice(0,10)+' 00:00:00';
-  return day.activities.some(a=>
-    a.category==='Travel Order' && a.start_at<=from && a.end_at>=end);
+
+function updateProfileTabs(){
+  document.querySelectorAll('[data-profile-category]').forEach(node=>{
+    const active=node.dataset.profileCategory===profileCategory;
+    node.classList.toggle('active',active);node.setAttribute('aria-pressed',String(active));
+  });
+}
+async function loadProfiles(){
+  const serial=++profileRequest;
+  updateProfileTabs();
+  $('profile-rows').innerHTML='<tr><td colspan="7" class="table-empty">Loading employee profiles…</td></tr>';
+  try{
+    const data=await api('/api/employee-profiles?'+new URLSearchParams({
+      q:$('profile-search').value.trim(),category:profileCategory,status:$('profile-status').value,
+      page:String(profilePage),limit:String(EMPLOYEE_PAGE_SIZE)}));
+    if(serial!==profileRequest || currentPage!=='profiles' || !session)return;
+    const pages=Math.max(1,Math.ceil(data.total/EMPLOYEE_PAGE_SIZE));
+    if(profilePage>pages){profilePage=pages;return loadProfiles();}
+    $('profile-total-badge').textContent=data.summary.total;
+    for(const kind of ['COS','Permanent','GIP','OJT'])
+      $('profile-'+kind.toLowerCase()+'-badge').textContent=data.summary.categories[kind];
+    $('profile-summary').textContent=data.summary.total+' employees · '+data.summary.registered+' verified profiles · '+data.summary.needs_details+' need details';
+    $('profile-count').textContent=data.total?('Showing '+((profilePage-1)*EMPLOYEE_PAGE_SIZE+1)+'–'+Math.min(profilePage*EMPLOYEE_PAGE_SIZE,data.total)+' of '+data.total+' employees'):'No matching employees';
+    $('profile-page').textContent='Page '+profilePage+' of '+pages;
+    $('profile-prev').disabled=profilePage===1;$('profile-next').disabled=profilePage===pages;
+    $('profile-rows').innerHTML=data.items.length?data.items.map(row=>
+      '<tr><td class="id-cell">'+esc(row.employee_code)+'</td><td>'+employeeCell(row)+'</td><td>'+categoryBadge(row.employment_type)+'</td><td>'+esc(row.department||'—')+'</td>'+
+      '<td><span class="tag '+(row.sync_authorized?'tag-success':'tag-paused')+'"><span class="tag-dot"></span>'+(row.sync_authorized?'Enabled':'Paused')+'</span></td>'+
+      '<td><span class="tag '+(row.profile_complete?'tag-neutral':'tag-paused')+'">'+(row.profile_complete?'Registered':'Needs details')+'</span></td>'+
+      '<td>'+(session.role==='admin'?'<button type="button" class="text-link" data-edit-profile="'+esc(row.employee_code)+'">'+(row.profile_complete?'Edit profile':'Complete profile')+'</button>':'—')+'</td></tr>'
+    ).join(''):'<tr><td colspan="7" class="table-empty">No matching employees. Adjust your filters or register an enrolled K14 ID.</td></tr>';
+  }catch(error){
+    if(serial!==profileRequest)return;
+    $('profile-rows').innerHTML='<tr><td colspan="7" class="table-empty">Unable to load employee profiles.</td></tr>';
+    toast(error.message,true);
+  }
+}
+async function openProfile(code=null){
+  if(session?.role!=='admin')return;
+  const token=++profileFormToken;
+  profileEditing=null;profileVersion=null;
+  $('profile-form').reset();$('profile-id').readOnly=false;
+  $('profile-error').classList.add('hidden');$('save-profile').disabled=false;
+  $('profile-heading').textContent='Register employee';$('save-profile').textContent='Register employee';
+  $('profile-context').textContent='Link an enrolled K14 ID to a verified employee profile.';
+  $('profile-id-hint').textContent='Enter the ID already enrolled on the K14. Keep any leading zeroes.';
+  try{
+    if(code){
+      const data=await api('/api/employee-profiles/'+encodeURIComponent(code));
+      if(token!==profileFormToken || session?.role!=='admin')return;
+      profileEditing=data.profile_complete?code:null;profileVersion=data.version;
+      $('profile-id').value=code;$('profile-id').readOnly=true;
+      for(const [field,key] of [['first','first_name'],['middle','middle_name'],['last','last_name'],['suffix','suffix'],['type','employment_type'],['department','department'],['position','position']])
+        $('profile-'+field).value=data[key]||'';
+      $('profile-sync').checked=data.sync_authorized;
+      $('profile-heading').textContent=data.profile_complete?'Edit employee profile':'Complete employee profile';
+      $('save-profile').textContent=data.profile_complete?'Save changes':'Complete profile';
+      $('profile-context').textContent='K14 ID '+code+(data.display_name?' · Current name: '+data.display_name:'');
+      $('profile-id-hint').textContent='This existing K14 ID stays fixed. Saving verified details preserves all linked scans.';
+    }
+    $('profile-confirm').checked=false;
+    $('profile-dialog').showModal();
+    $(code?'profile-first':'profile-id').focus();
+  }catch(error){toast(error.message,true);}
+}
+async function saveProfile(event){
+  event.preventDefault();
+  if(session?.role!=='admin')return;
+  const account=session,code=$('profile-id').value.trim();
+  const payload={};
+  for(const [field,key] of [['first','first_name'],['middle','middle_name'],['last','last_name'],['suffix','suffix'],['type','employment_type'],['department','department'],['position','position']])
+    payload[key]=$('profile-'+field).value.trim();
+  payload.sync_authorized=$('profile-sync').checked;
+  payload.device_enrollment_confirmed=$('profile-confirm').checked;
+  const editing=profileEditing;
+  if(editing)payload.version=profileVersion;else payload.employee_code=code;
+  $('save-profile').disabled=true;$('profile-error').classList.add('hidden');
+  try{
+    await api('/api/employee-profiles'+(editing?'/'+encodeURIComponent(editing):''),{method:editing?'PUT':'POST',body:JSON.stringify(payload)});
+    if(session!==account)return;
+    $('profile-dialog').close();
+    toast(editing?'Employee profile updated.':'Employee profile registered.');
+    if(!editing){profilePage=1;profileCategory='All';$('profile-search').value=code;$('profile-status').value='All';}
+    await navigate('profiles');
+  }catch(error){
+    if(session===account){$('profile-error').textContent=error.message;$('profile-error').classList.remove('hidden');}
+  }finally{$('save-profile').disabled=false;}
 }
 function statusForDay(day){
   if (day.activities.some(x=>x.category==='Travel Order')) return '<span class="pill-neutral pill-to">Official Travel reference</span>';
@@ -184,45 +301,6 @@ async function loadDetail(){
     $('daily-rows').innerHTML='<tr><td colspan="4">Could not load this employee’s monthly records.</td></tr>';
     toast(error.message,true);
   }
-}
-function buildDtrSheet(){
-  if (!activeDtr) return;
-  const fmt=new Intl.DateTimeFormat('en-PH',{year:'numeric',month:'long',timeZone:'Asia/Manila'});
-  const monthName=fmt.format(new Date(activeDtr.month+'-15T12:00:00+08:00'));
-  const rows=activeDtr.days.map(day=>{
-    const travel=day.activities.filter(x=>x.category==='Travel Order');
-    const aja=day.activities.filter(x=>x.category==='AJA');
-    const other=day.activities.filter(x=>x.category!=='Travel Order'&&x.category!=='AJA');
-    // No conversion of an unidentified K14 scan into official AM/PM slots.
-    const remarks=travel.length
-      ?'OFFICIAL TRAVEL'+(travel[0].reference?' · '+travel[0].reference:'')
-      :aja.length
-        ?'AJA '+aja.map(x=>x.start_at.slice(11,16)+'–'+x.end_at.slice(11,16)).join(', ')
-        :other.length
-          ?other.map(x=>x.category).join(', ')
-          :day.scans.length?'Scans: '+day.scans.map(x=>x.happened_at.slice(11,16)).join(', '):'';
-    const full=travel.length>0;
-    return '<tr class="'+(full?'to-row':'')+'"><td>'+esc(day.date.slice(8))+'</td>'+
-      '<td>—</td><td>—</td><td>—</td><td>—</td><td>—</td><td>—</td>'+
-      '<td>'+esc(remarks)+'</td></tr>';
-  }).join('');
-  $('print-sheet').innerHTML=
-    '<header class="dtr-header"><small>REPUBLIC OF THE PHILIPPINES</small><p>Civil Service Form No. 48 · Review layout</p>'+
-    '<h2>DAILY TIME RECORD</h2></header>'+
-    '<div class="dtr-keyline"><div><span>Name: <b>'+esc(selectedName)+'</b></span><span>Employee ID: '+esc(selectedEmployee)+'</span></div>'+
-    '<div><span>Month: '+esc(monthName)+'</span><span>Office: NCSC</span></div></div>'+
-    '<table class="dtr-table"><thead><tr><th rowspan="2">Day</th><th colspan="2">AM</th><th colspan="2">PM</th>'+
-    '<th colspan="2">Undertime</th><th rowspan="2">Remarks / reference</th></tr>'+
-    '<tr><th>In</th><th>Out</th><th>In</th><th>Out</th><th>Hours</th><th>Min.</th></tr></thead>'+
-    '<tbody>'+rows+'</tbody></table>'+
-    '<div class="dtr-warning"><b>REVIEW COPY — NOT AN OFFICIAL CERTIFIED DTR.</b> Original device scans are not yet verified as AM/PM In or Out. Blank cells are intentional. Official Travel references are displayed instead of fabricated clock times. HR must validate activity coverage, attendance codes, undertime rules, signatures and the approved Form 48 template before certification.</div>'+
-    '<div class="dtr-footer"><div>Employee signature / certification</div><div>Authorized official / verifier</div></div>';
-}
-function openDtr(print=false){
-  if (!selectedEmployee || !activeDtr){toast('Open an employee record first.',true);return;}
-  buildDtrSheet();
-  if (!$('dtr-dialog').open) $('dtr-dialog').showModal();
-  if (print) window.print();
 }
 async function loadActivities(){
   const token=++activityRequest;
@@ -474,7 +552,24 @@ async function initialize(){
   document.querySelectorAll('[data-page],[data-go]').forEach(node=>
     node.addEventListener('click',()=>navigate(node.dataset.page||node.dataset.go)));
   $('employee-filter').addEventListener('submit',e=>{
-    e.preventDefault();$('employee-detail').classList.add('hidden');selectedEmployee=null;activeDtr=null;loadRegister();
+    e.preventDefault();registerPage=1;$('employee-detail').classList.add('hidden');selectedEmployee=null;activeDtr=null;loadRegister();
+  });
+  $('register-prev').addEventListener('click',()=>{registerPage--;renderRegister();});
+  $('register-next').addEventListener('click',()=>{registerPage++;renderRegister();});
+  $('open-profile').addEventListener('click',()=>openProfile());
+  $('register-from-attendance').addEventListener('click',()=>openProfile());
+  $('close-profile').addEventListener('click',()=>$('profile-dialog').close());
+  $('cancel-profile').addEventListener('click',()=>$('profile-dialog').close());
+  $('profile-dialog').addEventListener('close',()=>profileFormToken++);
+  $('profile-form').addEventListener('submit',saveProfile);
+  $('profile-filter').addEventListener('submit',event=>{event.preventDefault();profilePage=1;loadProfiles();});
+  document.querySelectorAll('[data-profile-category]').forEach(node=>node.addEventListener('click',()=>{
+    profileCategory=node.dataset.profileCategory;profilePage=1;loadProfiles();
+  }));
+  $('profile-prev').addEventListener('click',()=>{profilePage--;loadProfiles();});
+  $('profile-next').addEventListener('click',()=>{profilePage++;loadProfiles();});
+  $('profile-rows').addEventListener('click',event=>{
+    const button=event.target.closest('[data-edit-profile]');if(button)openProfile(button.dataset.editProfile);
   });
   $('register-rows').addEventListener('click',e=>{
     const row=e.target.closest('[data-employee]');if(row)openEmployee(row.dataset.employee);
@@ -485,13 +580,9 @@ async function initialize(){
   });
   $('back-to-register').addEventListener('click',()=>{
     $('employee-detail').classList.add('hidden');selectedEmployee=null;activeDtr=null;
-    $('employee-filter').scrollIntoView({block:'start',behavior:'smooth'});
+    $('attendance-register-panel').classList.remove('hidden');
   });
   $('detail-month').addEventListener('change',loadDetail);
-  $('preview-dtr').addEventListener('click',()=>openDtr(false));
-  $('export-dtr').addEventListener('click',()=>openDtr(true));
-  $('close-dtr').addEventListener('click',()=>$('dtr-dialog').close());
-  $('print-dtr').addEventListener('click',()=>window.print());
   $('activity-filter').addEventListener('submit',e=>{e.preventDefault();loadActivities();});
   $('activity-rows').addEventListener('click',e=>{
     const node=e.target.closest('[data-monitor-employee]');

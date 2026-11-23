@@ -3,7 +3,10 @@ from __future__ import annotations
 import getpass
 import json
 import re
+import os
+import subprocess
 import sys
+from pathlib import Path
 from dotenv import load_dotenv
 from app.db import connect, initialize
 from app.security import hash_password
@@ -24,6 +27,27 @@ def sync_k14() -> None:
 def main() -> None:
     load_dotenv()
     command = sys.argv[1:]
+    if command == ["poll-k14"]:
+        from app.k14_sync import connector_path, sync_interval
+        from app.db import database_path
+        from app.lan import settings
+        initialize()
+        configured = os.getenv("K14_POLLER_PYTHON", "").strip()
+        default = Path(os.getenv("USERPROFILE", str(Path.home()))) / "OneDrive/Desktop/.venv/Scripts/python.exe"
+        python = Path(os.path.expandvars(configured)).expanduser() if configured else default
+        if not python.is_file():
+            raise SystemExit("Set K14_POLLER_PYTHON to the existing Python executable with pyzk installed.")
+        cfg = settings()
+        args = [str(python), "-m", "app.k14_poller", "--host", cfg.host, "--port", str(cfg.port),
+                "--loop", "--interval", str(sync_interval()), "--db", str(connector_path().resolve()),
+                "--registry-db", str(database_path().resolve())]
+        if os.getenv("K14_USE_UDP", "false").lower() == "true":
+            args.append("--udp")
+        try:
+            result = subprocess.call(args, cwd=Path(__file__).resolve().parents[1])
+        except KeyboardInterrupt:
+            return
+        raise SystemExit(result)
     if command == ["sync-k14"]:
         sync_k14()
         return
@@ -39,7 +63,7 @@ def main() -> None:
         print(json.dumps(info, indent=2, ensure_ascii=False))
         return
     if command != ["create-admin"]:
-        raise SystemExit("Usage: python -m app.cli create-admin | sync-k14 | k14-status")
+        raise SystemExit("Usage: python -m app.cli create-admin | sync-k14 | k14-status | poll-k14")
     initialize()
     username = input("Admin username: ").strip().lower()
     if not re.fullmatch(r"[a-z0-9._-]{3,40}", username):

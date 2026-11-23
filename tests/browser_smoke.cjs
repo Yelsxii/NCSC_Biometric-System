@@ -107,7 +107,7 @@ uvicorn.run('app.main:app',host='127.0.0.1',port=int(os.environ['QA_PORT']),log_
     await page.locator('#login-submit').click();
     await page.locator('#workspace:not(.hidden)').waitFor();
     await page.locator('[data-page="employees"].active').waitFor();
-    assert.equal(await page.locator('[data-page]').count(),3);
+    assert.equal(await page.locator('[data-page]').count(),4);
     assert.equal(await page.locator('[data-page="overview"]').count(),0);
     assert.equal(await page.locator('#page-description').count(),0);
 
@@ -274,16 +274,96 @@ with connect() as con:
     await page.locator('#detail-name').filter({hasText:'Sample One'}).waitFor();
     await page.locator('#daily-rows .pill-to').first().waitFor();
     assert.ok((await page.locator('#daily-rows').textContent()).includes('Official Travel'));
-    await page.locator('#preview-dtr').click();
-    await page.locator('#dtr-dialog[open]').waitFor();
-    assert.equal(await page.locator('#print-sheet .dtr-table tbody tr').count(),30);
-    assert.ok((await page.locator('#print-sheet').textContent()).includes('OFFICIAL TRAVEL'));
-    assert.ok((await page.locator('#print-sheet').textContent()).includes('REVIEW COPY'));
-    await page.screenshot({path:join(root,'docs/dtr-preview.png'),animations:'disabled'});
-    await page.locator('#close-dtr').click();
+    assert.equal(await page.locator('#daily-rows tr').count(),30);
+    assert.equal(await page.locator('#print-dtr').count(),0);
+    assert.equal(await page.locator('#export-dtr').count(),0);
     await page.screenshot({path:join(root,'docs/employee-records-preview.png'),animations:'disabled'});
     await page.locator('#back-to-register').click();
     await page.screenshot({path:join(root,'docs/attendance-preview.png'),animations:'disabled'});
+
+    // Complete an existing identity without replacing its attendance or ID.
+    await page.locator('[data-page="profiles"]').click();
+    await page.locator('[data-edit-profile="1"]').click();
+    await page.locator('#profile-dialog[open]').waitFor();
+    assert.equal(await page.locator('#profile-id').getAttribute('readonly'),'');
+    await page.locator('#profile-first').fill('Sample');
+    await page.locator('#profile-last').fill('One');
+    await page.locator('#profile-type').selectOption('Permanent');
+    await page.locator('#profile-position').fill('Records Analyst');
+    await page.locator('#profile-confirm').check();
+    await page.locator('#save-profile').click();
+    await page.locator('#profile-dialog').waitFor({state:'hidden'});
+    await page.locator('#profile-rows').getByText('Permanent',{exact:true}).waitFor();
+
+    // Register a new approved ID and preserve a duplicate attempt as an error.
+    await page.locator('#open-profile').click();
+    await page.locator('#profile-id').fill('25');
+    await page.locator('#profile-first').fill('Example');
+    await page.locator('#profile-last').fill('Employee');
+    await page.locator('#profile-type').selectOption('COS');
+    await page.locator('#profile-department').fill('Sample Office');
+    await page.locator('#profile-confirm').check();
+    await page.screenshot({path:join(root,'docs/employee-registration-preview.png'),animations:'disabled'});
+    await page.locator('#save-profile').click();
+    await page.locator('#profile-dialog').waitFor({state:'hidden'});
+    await page.locator('[data-edit-profile="25"]').waitFor();
+    await page.locator('#open-profile').click();
+    await page.locator('#profile-id').fill('25');
+    await page.locator('#profile-first').fill('Wrong duplicate');
+    await page.locator('#profile-last').fill('Name');
+    await page.locator('#profile-type').selectOption('COS');
+    await page.locator('#profile-confirm').check();
+    await page.locator('#save-profile').click();
+    await page.locator('#profile-error').filter({hasText:/already has a profile/}).waitFor();
+    await page.locator('#cancel-profile').click();
+
+    // Fictional profiles fill the list, exercising category tabs and pagination.
+    const seeded=await page.evaluate(async()=>{
+      for(let i=30;i<43;i++){
+        const response=await fetch('/api/employee-profiles',{
+          method:'POST',credentials:'same-origin',
+          headers:{'Content-Type':'application/json','X-CSRF-Token':session.csrf},
+          body:JSON.stringify({employee_code:String(i),first_name:'Sample '+i,last_name:'Employee',
+            employment_type:['COS','Permanent','GIP','OJT'][i%4],department:'Sample Office',
+            position:'Example designation',sync_authorized:true,device_enrollment_confirmed:true})
+        });
+        if(response.status!==201)return response.text();
+      }
+      return 'ok';
+    });
+    assert.equal(seeded,'ok');
+    await page.locator('#profile-search').fill('');
+    await page.locator('#profile-filter button[type="submit"]').click();
+    await page.locator('#profile-total-badge').filter({hasText:/^16$/}).waitFor();
+    assert.equal(await page.locator('#profile-rows tr').count(),15);
+    await page.locator('#profile-next').click();
+    await page.locator('#profile-page').filter({hasText:'Page 2 of 2'}).waitFor();
+    assert.equal(await page.locator('#profile-rows tr').count(),1);
+    await page.locator('#profile-prev').click();
+    await page.locator('#profile-page').filter({hasText:'Page 1 of 2'}).waitFor();
+    await page.screenshot({path:join(root,'docs/employee-profiles-preview.png'),animations:'disabled'});
+    await page.locator('[data-profile-category="GIP"]').click();
+    await page.locator('#profile-rows .tag-gip').first().waitFor();
+    assert.equal(await page.locator('#profile-rows .tag-cos').count(),0);
+
+    const layout=await page.evaluate(()=>({
+      buttonHeight:document.querySelector('#open-profile').getBoundingClientRect().height,
+      scrollbar:getComputedStyle(document.querySelector('#main-content')).scrollbarWidth,
+      pageHeight:document.documentElement.scrollHeight,viewport:window.innerHeight
+    }));
+    assert.ok(layout.buttonHeight<=35);
+    assert.equal(layout.scrollbar,'none');
+    assert.ok(layout.pageHeight<=layout.viewport+1);
+
+    // Keep long popup forms usable on mobile with an accessible visible footer.
+    await page.setViewportSize({width:390,height:800});
+    await page.locator('#open-profile').click();
+    const popup=await page.locator('#profile-dialog').boundingBox();
+    const save=await page.locator('#save-profile').boundingBox();
+    assert.ok(popup.x>=0 && popup.x+popup.width<=391);
+    assert.ok(save.y+save.height<=800);
+    await page.screenshot({path:join(root,'docs/mobile-registration-preview.png'),animations:'disabled'});
+    await page.locator('#cancel-profile').click();
 
     // No unintended horizontal overflow on a normal phone viewport.
     await page.setViewportSize({width:390,height:800});

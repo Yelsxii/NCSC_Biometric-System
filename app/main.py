@@ -30,6 +30,7 @@ from app.security import check_password
 from app.reports import preview_k14_report
 from app.registry import parse_staff, clean
 from app.lan import status as lan_status, tcp_probe
+from app.profiles import RegistrationInput, ProfileUpdateInput, get_profile, list_profiles, save_profile
 
 load_dotenv()
 secret = os.environ.get("SECRET_KEY", "")
@@ -160,6 +161,30 @@ class WorkCodeInput(BaseModel):
     @classmethod
     def valid_label(cls, value):
         return clean(value, 100, "Work code label") if isinstance(value, str) else value
+
+
+@app.get("/api/employee-profiles")
+def employee_profiles(q: str = "", category: str = "All", status: str = "All", page: int = 1,
+                      limit: int = 15, user: dict = Depends(current_user)):
+    return list_profiles(q.strip(), category, status, page, limit)
+
+
+@app.get("/api/employee-profiles/{employee_code}")
+def employee_profile(employee_code: str, user: dict = Depends(current_user)):
+    return get_profile(employee_code)
+
+
+@app.post("/api/employee-profiles", status_code=201)
+def register_employee_profile(payload: RegistrationInput, request: Request, user: dict = Depends(require_admin)):
+    require_csrf(request)
+    return save_profile(payload.employee_code, payload, user["id"], creating=True)
+
+
+@app.put("/api/employee-profiles/{employee_code}")
+def update_employee_profile(employee_code: str, payload: ProfileUpdateInput, request: Request,
+                            user: dict = Depends(require_admin)):
+    require_csrf(request)
+    return save_profile(employee_code, payload, user["id"], creating=False)
 
 
 @app.get("/")
@@ -415,6 +440,8 @@ def save_employee(employee_code: str, payload: EmployeeInput, request: Request, 
     if not CODE_RE.fullmatch(employee_code):
         raise HTTPException(400, "Invalid employee ID.")
     with closing(connect()) as con, con:
+        if con.execute("SELECT 1 FROM employee_profiles WHERE employee_code=?", (employee_code,)).fetchone():
+            raise HTTPException(409, "Use Edit profile to update this employee's verified name and department.")
         con.execute(
             "INSERT INTO employees(employee_code,display_name,department,name_source) VALUES(?,?,?,'manual') "
             "ON CONFLICT(employee_code) DO UPDATE SET display_name=excluded.display_name,department=excluded.department,"
@@ -428,9 +455,14 @@ def save_employee(employee_code: str, payload: EmployeeInput, request: Request, 
 
 def roster_changes(con, rows: list[dict]) -> list[dict]:
     existing = {r["employee_code"]: dict(r) for r in con.execute("SELECT * FROM employees")}
+    verified = {r[0] for r in con.execute("SELECT employee_code FROM employee_profiles")}
     result = []
     for row in rows:
         old = existing.get(row["employee_code"])
+        if row["employee_code"] in verified:
+            same = row["display_name"] == old["display_name"] and (not row["department"] or row["department"] == old["department"])
+            result.append({**row, "change": "unchanged" if same else "conflict", "existing_name": old["display_name"]})
+            continue
         change = "new"
         if old:
             conflict = any(old[key] and row[key] and old[key] != row[key] for key in ("display_name", "department"))
@@ -586,11 +618,12 @@ def employee_register(month: str, q: str = "", user: dict = Depends(current_user
         raise HTTPException(400, "Invalid search term.")
     with closing(connect()) as con:
         rows = [dict(row) for row in con.execute(
-            """SELECT e.employee_code, e.display_name, e.department,
+            """SELECT e.employee_code, e.display_name, e.department, ep.employment_type, ep.position,
                       COUNT(p.id) AS scan_count,
                       COUNT(DISTINCT substr(p.happened_at,1,10)) AS days_with_scans,
                       MAX(p.happened_at) AS last_scan
                FROM employees e
+               LEFT JOIN employee_profiles ep ON ep.employee_code=e.employee_code
                LEFT JOIN punches p ON p.employee_code=e.employee_code
                     AND p.happened_at>=? AND p.happened_at<?
                WHERE (?='' OR instr(lower(e.employee_code),lower(?))>0

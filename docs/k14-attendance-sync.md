@@ -1,6 +1,6 @@
 # K14 attendance sync handover
 
-The website imports attendance from the connector SQLite file. It does not open the K14, enroll users, clear logs, or copy fingerprint templates. The existing `k14_auto_sync.py` poller remains the only program that connects to the device. That poller is outside this repository. The source supplied by the administrator has been reviewed: loop mode reconnects after failures, waits for the interval, disconnects in `finally`, and saves only unique records for the permitted IDs. A physical network-interruption test is still required before claiming recovery has been verified on the device.
+The website imports attendance from the connector SQLite file. It does not open the K14, enroll users, clear logs, or copy fingerprint templates. The repository's `app.k14_poller` now performs collection using the existing SDK environment. It is based on the supplied working Desktop pilot and follows the website's administrator-managed authorization list. The Desktop script remains untouched. A physical network-interruption test is still required before claiming recovery has been verified on the device.
 
 ## What was verified
 
@@ -21,7 +21,7 @@ Primary key: `device_ip`, `employee_id`, `punch_time_local`, `device_status`, `d
 
 The connector database has no verification column and no work-code column. The website does not invent either value. A connector-only punch stores `device_status` in Status and `device_punch_type` in Verification, leaves Work code blank, and stores the device IP in Device. None of those values are time in, time out, undertime, or overtime.
 
-Allowed device IDs copied into the website: 1–12, 14, and 18. IDs 13, 15, 16, and 17 are skipped.
+The bootstrap authorization list is unchanged: IDs 1–12, 14 and 18. Other IDs remain excluded until an administrator explicitly registers and authorizes them in **Employee profiles**. Both the repository collector and website importer read current permissions from `k14_authorizations`. Pausing an employee never deletes existing attendance.
 
 A connector event links to an existing employee/timestamp instead of adding another punch. Exact USB duplicates are skipped. If USB arrives after a connector row, its device, status, verification, and work-code fields enrich that placeholder; the connector's raw values stay in `k14_sync_events`. Different original USB codes at the same second are retained as distinct events. Original employee IDs and timestamps are retained.
 
@@ -55,19 +55,19 @@ Exact root causes, configuration values, and PowerShell verification: [Diagnosti
 
 ## Device poller
 
-Keep the poller and the website as two programs. Start the poller only with office authorization, using its existing virtual environment. The administrator confirmed these options with the existing script's `--help`. From the Cursor PowerShell terminal, the current pilot locations are:
+Keep the collector and website as two foreground programs. Stop the previous Desktop-script collector, then from a second Cursor PowerShell terminal in the repository start the current collector:
 
 ```powershell
-& "$env:USERPROFILE\OneDrive\Desktop\.venv\Scripts\python.exe" "$env:USERPROFILE\OneDrive\Desktop\k14_auto_sync.py" --host 192.168.254.201 --port 4370 --loop --interval 60 --db "$env:LOCALAPPDATA\NCSC-K14-Pilot\attendance.sqlite3"
+.\.venv\Scripts\python.exe -m app.cli poll-k14
 ```
 
-That command is read-only attendance collection. Do not add flags or code that clear attendance, write users, or download templates. Do not point `--db` at a cloud-synced folder or at `data\ncsc.sqlite3`.
+The launcher uses local `.env` settings and the existing SDK Python at `%USERPROFILE%\OneDrive\Desktop\.venv\Scripts\python.exe`, unless `K14_POLLER_PYTHON` specifies another approved environment. The website database is opened read-only for authorization lookup, while attendance is written only to the separate existing connector file. See [registration and collector update](employee-registration.md). The old Desktop script still uses its old fixed ID list and must not remain running in parallel.
 
 When explicitly enabled, the website imports on startup and then waits **60 seconds** between attempts by default. It retries source/database failures on the next cycle, retains existing attendance, and wakes the timer on shutdown. Run one website process/worker on the approved host. Restart after changing `.env`. An existing `K14_SYNC_INTERVAL_SECONDS=300` is an explicit override and remains 300 until edited. See [the 60-second update guide](k14-live-refresh.md) for the exact steps to update both running processes.
 
 Both programs wait after completing a cycle, so transfer time adds to the configured interval. With two independent 60-second cycles, a normal new scan may take about two minutes plus processing and the next UI status check to appear. The device poller still reads the whole device history each time; observe its duration and normal scanning behavior during this shorter-interval pilot.
 
-The reviewed poller source reconnects/retries after read failures, disconnects in `finally`, and retains already collected rows. Before unattended operation, validate a temporary network interruption on the approved host, restore connectivity, and confirm that new scans reach both databases exactly once. Website tests cover importer recovery; they do not replace that physical-device check.
+The collector reconnects/retries after read failures, disconnects in `finally`, and retains already collected rows. Synthetic tests verify failure/recovery and permissions changing between cycles. Before unattended operation, validate a temporary network interruption on the approved host, restore connectivity, and confirm that new scans reach both databases exactly once.
 
 ## Tests
 
@@ -79,7 +79,7 @@ The tests build a fictional connector database. They do not read the office file
 
 ## Backup
 
-Arrange an approved backup of the existing website database before updating the installation. Preserve existing backups. This diagnostics change does not alter `app/db.py`, replace a database, or create an office backup remotely. Use the office's backup/restore procedure for the installed database.
+The registration migration adds two tables and creates a consistent local backup before migrating a populated website database. Existing punches and IDs are retained. Preserve existing backups and follow the office's approved backup/restore procedure; see [migration details](employee-registration.md).
 
 ## Do not commit
 
