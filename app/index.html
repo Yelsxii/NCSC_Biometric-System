@@ -7,6 +7,7 @@
   <title>NCSC | Attendance Records</title>
   <link rel="stylesheet" href="/static/app.css">
   <link rel="stylesheet" href="/static/workspace.css?v=attendance-2">
+  <link rel="stylesheet" href="/static/attendance-detail.css?v=aja-to-directions-1">
   <script src="/static/app.js?v=attendance-2" defer></script>
 </head>
 <body>
@@ -130,7 +131,7 @@
 
         <section class="page hidden" data-view="activities">
           <div class="panel records-panel">
-            <div class="panel-header"><h2>Device-classified activity logs</h2></div>
+            <div class="panel-header"><h2>Device-classified activity logs</h2></div><p class="table-note mapping-note">Directions are based on mapped work codes in source scans. The current LAN connector does not carry a separate work-code field, so an ordinary LAN-only scan cannot be classified as AJA or Travel Order. Use an authorized source export with actual work codes.</p>
             <form id="activity-filter" class="toolbar compact-toolbar">
               <label class="search-box">Search employee<input id="activity-search" type="search" maxlength="80" placeholder="Name or employee ID"></label>
               <label>Month<input id="activity-month" type="month" required></label>
@@ -138,7 +139,7 @@
               <button class="button primary" type="submit">View logs</button>
             </form>
             <div class="inline-summary" id="activity-counts"><span>— employees</span><span>— AJA scans</span><span>— Travel Order scans</span></div>
-            <div class="table-wrap"><table class="records-table"><thead><tr><th>Employee ID</th><th>Employee name</th><th>Activity</th><th>Date</th><th>Time</th><th>Work code</th><th class="actions-column">Action</th></tr></thead><tbody id="activity-rows"><tr><td colspan="7">Loading device activity logs…</td></tr></tbody></table></div>
+            <div class="table-wrap"><table class="records-table"><thead><tr><th>Employee ID</th><th>Employee name</th><th>Activity</th><th>Direction</th><th>Date</th><th>Time</th><th>Work code</th><th class="actions-column">Action</th></tr></thead><tbody id="activity-rows"><tr><td colspan="8">Loading device activity logs…</td></tr></tbody></table></div>
           </div>
         </section>
 
@@ -152,8 +153,8 @@
             </div>
           </div>
           <div class="panel section-gap">
-            <div class="panel-header"><h2>Work-code classification</h2></div>
-            <div class="table-wrap"><table class="records-table"><thead><tr><th>Device</th><th>Numeric code</th><th>Classification</th><th>Label</th><th>Recorded events</th><th class="actions-column">Action</th></tr></thead><tbody id="code-rows"><tr><td colspan="6">Loading device codes…</td></tr></tbody></table></div>
+            <div class="panel-header"><h2>Work-code classification</h2></div><p class="table-note mapping-note">Map the codes actually present in your device exports. Set IN/OUT only for AJA or Travel Order. Mappings are local to this website and never change the K14 device.</p>
+            <div class="table-wrap"><table class="records-table"><thead><tr><th>Device</th><th>Numeric code</th><th>Classification</th><th>IN / OUT</th><th>Label</th><th>Recorded events</th><th class="actions-column">Action</th></tr></thead><tbody id="code-rows"><tr><td colspan="7">Loading device codes…</td></tr></tbody></table></div>
           </div>
           <details class="connection-details section-gap" id="connection-details">
             <summary>Connection diagnostics</summary>
@@ -278,7 +279,7 @@
     </form>
   </dialog>
 
-  <dialog id="code-dialog" class="edit-dialog app-dialog" aria-labelledby="code-heading"><form id="code-form"><div class="app-dialog-head"><div><p class="page-eyebrow">DEVICE CLASSIFICATION</p><h2 id="code-heading">Work code label</h2><p>Label a device code for attendance review.</p></div></div><div class="app-dialog-body"><input id="code-device" type="hidden"><label>Numeric device code<input id="code-number" readonly></label><label>Local label<input id="code-label" required maxlength="100"></label><label>Activity type<select id="code-activity"><option>Unclassified</option><option>Regular</option><option>AJA</option><option>Fieldwork</option><option>Official Business</option><option>Travel Order</option></select></label></div><div class="app-dialog-footer"><button id="close-code" type="button" class="button outline">Cancel</button><button class="button primary" type="submit">Save mapping</button></div></form></dialog>
+  <dialog id="code-dialog" class="edit-dialog app-dialog" aria-labelledby="code-heading"><form id="code-form"><div class="app-dialog-head"><div><p class="page-eyebrow">DEVICE CLASSIFICATION</p><h2 id="code-heading">Work code label</h2><p>Choose the activity and a verified scan direction. This does not program the device.</p></div></div><div class="app-dialog-body"><input id="code-device" type="hidden"><label>Numeric device code<input id="code-number" readonly></label><label>Local label<input id="code-label" required maxlength="100"></label><label>Activity type<select id="code-activity"><option>Unclassified</option><option>Regular</option><option>AJA</option><option>Fieldwork</option><option>Official Business</option><option>Travel Order</option></select></label><label id="code-direction-field">Scan direction<select id="code-direction"><option value="Unspecified">Unspecified — review required</option><option value="IN">Time In</option><option value="OUT">Time Out</option></select></label><p class="field-hint" id="code-direction-help">A scan can be paired only when the date contains exactly one configured IN and one later OUT of the same activity.</p></div><div class="app-dialog-footer"><button id="close-code" type="button" class="button outline">Cancel</button><button class="button primary" type="submit">Save mapping</button></div></form></dialog>
 
   <div class="toast hidden" id="toast" role="status" aria-live="polite"></div>
 </body></html>

@@ -34,6 +34,7 @@ let deviceRefreshTimer = null;
 let deviceRefreshEpoch = 0;
 let deviceStatusRequest = null;
 let deviceStatusController = null;
+let workCodeRows = [];
 const titles = {
   employees:'Employee Attendance',
   profiles:'Employee profiles',
@@ -286,22 +287,34 @@ function dayActivities(day){
   return labels.join(' ')||'<span class="empty-cell">—</span>';
 }
 function activityScanCell(day){
-  // Work-code times are raw scan evidence. No device code is presumed to mean IN or OUT.
+  // Directions originate only from administrator-configured work-code roles.
+  // Do not guess a missing IN/OUT or convert a reference period into a punch.
   const kinds=['AJA','Travel Order'];
-  const scans=day.scans.filter(event=>kinds.includes(event.activity_type));
+  const mappings=day.activity_mappings||[];
   const references=(day.activities||[]).filter(item=>kinds.includes(item.category));
-  if(!scans.length && !references.length)
+  if(!mappings.length && !references.length)
     return '<td class="activity-evidence"><span class="empty-cell">—</span></td>';
   const blocks=[];
   for(const kind of kinds){
-    const matched=scans.filter(event=>event.activity_type===kind);
+    const pair=mappings.find(item=>item.category===kind);
     const recorded=references.filter(item=>item.category===kind);
-    if(!matched.length && !recorded.length)continue;
+    if(!pair && !recorded.length)continue;
     const cls=kind==='AJA'?'aja':'travel';
-    const device=matched.length?
-      '<div class="evidence-time-list"><span class="evidence-source">Device scans</span>'+
-      matched.map(event=>'<span class="evidence-time" title="Original device scan · WC '+esc(event.work_code||'—')+'">'+
-        esc(event.happened_at.slice(11,16))+'</span>').join('')+'</div>':'';
+    let device='';
+    if(pair){
+      const time=event=>event?esc(event.happened_at.slice(11,16)):'—';
+      const cells='<div class="evidence-direction-grid">'+
+        '<span class="evidence-direction"><b>IN</b><strong>'+time(pair.time_in)+'</strong></span>'+
+        '<span class="evidence-direction"><b>OUT</b><strong>'+time(pair.time_out)+'</strong></span></div>';
+      const status=pair.status==='code_matched'?
+        '<span class="evidence-status mapped">Code-matched · not credited</span>':
+        '<span class="evidence-status review" title="'+esc(pair.review_note)+'">Review: '+esc(pair.review_note)+'</span>';
+      const raw=pair.status==='needs_review'?
+        '<div class="evidence-raw">Source scans: '+pair.events.map(event=>
+          esc(event.happened_at.slice(11,16))+' ('+esc(event.direction)+', WC '+esc(event.work_code)+')'
+        ).join(' · ')+'</div>':'';
+      device=cells+status+raw;
+    }
     const periods=recorded.map(item=>{
       const start=String(item.start_at||''),end=String(item.end_at||'');
       const range=start.slice(0,10)===day.date && end.slice(0,10)===day.date ?
@@ -316,6 +329,12 @@ function activityScanCell(day){
   }
   return '<td class="activity-evidence">'+blocks.join('')+'</td>';
 }
+function regularReviewCandidates(day){
+  // Keep the existing admin-initiated four-punch review for raw/unclassified
+  // codes; explicitly classified official activity scans are never included.
+  return day.scans.filter(event=>
+    !['AJA','Travel Order','Fieldwork','Official Business'].includes(event.activity_type));
+}
 function slotCell(day,key){
   const event=day.slots[key];
   const tone=event?'entry':day.is_future||day.is_weekend?'neutral':'missing';
@@ -323,7 +342,7 @@ function slotCell(day,key){
     (day.is_future?'Upcoming':day.is_weekend?'No entry':'No entry / not assigned');
   return '<td class="time-slot slot-'+tone+'" title="'+esc(hint)+'">'+
     (event?'<span class="time-value">'+esc(event.happened_at.slice(11,16))+'</span>'+
-      (event.work_code && event.work_code!=='0' && event.activity_type!=='Regular'?'<span class="time-code">WC '+esc(event.work_code)+'</span>':''):'<span class="no-time">—</span>')+'</td>';
+      (event.work_code!==''?'<span class="time-code">WC '+esc(event.work_code)+'</span>':''):'<span class="no-time">—</span>')+'</td>';
 }
 async function loadDetail({quiet=false}={}){
   if (!selectedEmployee) return;
@@ -381,7 +400,7 @@ function openDayReview(date){
   $('review-remark').value=day.review.remark;
   for(const id of ['review-ut-hours','review-ut-minutes','review-activity','review-reference','review-remark'])$(id).disabled=!editable;
   $('save-day-review').classList.toggle('hidden',!editable);$('save-day-review').disabled=false;
-  $('place-four-entries').classList.toggle('hidden',!editable||day.scans.filter(event=>event.activity_type==='Regular').length!==4);
+  $('place-four-entries').classList.toggle('hidden',!editable||regularReviewCandidates(day).length!==4);
   $('review-entry-hint').textContent=day.scans.length?day.scans.length+' original device entries. AJA / Travel Order scans are separate evidence; assign regular AM/PM slots only after verification.':'No device entries for this date.';
   $('review-existing-activities').innerHTML=day.display_activities.map(x=>'<span class="day-badge">'+esc(x.category)+(x.reference?' · '+esc(x.reference):'')+'</span>').join('');
   $('day-review-dialog').showModal();
@@ -450,7 +469,7 @@ async function loadActivities(){
     category:$('activity-category').value,
     q:$('activity-search').value.trim()
   });
-  $('activity-rows').innerHTML='<tr><td colspan="7" class="table-empty">Loading activity logs…</td></tr>';
+  $('activity-rows').innerHTML='<tr><td colspan="8" class="table-empty">Loading activity logs…</td></tr>';
   try{
     const data=await api('/api/activities/monitor?'+params);
     if(token!==activityRequest||currentPage!=='activities')return;
@@ -464,16 +483,17 @@ async function loadActivities(){
       const badge=item.category==='AJA'?'activity-aja':'activity-travel';
       return '<tr><td class="id-cell">'+esc(item.employee_code)+'</td>'+
         '<td class="employee-name-cell">'+esc(item.display_name||'Name not synchronized')+'</td>'+
-        '<td><span class="activity-badge '+badge+'">'+esc(item.category)+'</span></td>'+
+        '<td><span class="activity-badge '+badge+'">'+esc(item.category)+'</span></td>'+ 
+        '<td><span class="direction-pill '+(item.direction==='IN'?'direction-in':item.direction==='OUT'?'direction-out':'direction-unmapped')+'">'+esc(item.direction||'Unspecified')+'</span></td>'+
         '<td class="date-cell">'+esc(instant.slice(0,10))+'</td>'+
         '<td class="date-cell">'+esc(instant.slice(11,19))+'</td>'+
         '<td><span class="code-pill">'+esc(item.work_code)+'</span></td>'+
         '<td><button class="text-link row-action" type="button" data-monitor-employee="'+
           esc(item.employee_code)+'">View attendance <span aria-hidden="true">→</span></button></td></tr>';
-    }).join(''):'<tr><td colspan="7" class="table-empty">No device-classified AJA or Travel Order scans found for these filters.</td></tr>';
+    }).join(''):'<tr><td colspan="8" class="table-empty">No device-classified AJA or Travel Order scans found for these filters.</td></tr>';
   }catch(error){
     if(token!==activityRequest)return;
-    $('activity-rows').innerHTML='<tr><td colspan="7" class="table-empty">Unable to load activity logs.</td></tr>';
+    $('activity-rows').innerHTML='<tr><td colspan="8" class="table-empty">Unable to load activity logs.</td></tr>';
     toast(error.message,true);
   }
 }
@@ -567,13 +587,14 @@ async function loadDevice(){
     if(epoch!==deviceRefreshEpoch || session!==account || currentPage!=='staff')return;
     const codes=await api('/api/work-codes');
     if(epoch!==deviceRefreshEpoch || session!==account || currentPage!=='staff')return;
+    workCodeRows=codes.items;
     $('code-rows').innerHTML=codes.items.length?codes.items.map(row=>
       '<tr><td>'+esc(row.device_id)+'</td><td><span class="code-pill">'+esc(row.work_code)+'</span></td>'+
-      '<td>'+esc(row.activity_type)+'</td><td>'+esc(row.label||'Unmapped')+'</td>'+
+      '<td>'+esc(row.activity_type)+'</td><td><span class="direction-pill '+(row.direction==='IN'?'direction-in':row.direction==='OUT'?'direction-out':'direction-unmapped')+'">'+esc(row.direction||'Unspecified')+'</span></td><td>'+esc(row.label||'Unmapped')+'</td>'+
       '<td>'+Number(row.scan_count||0)+'</td>'+
       '<td>'+(session.role==='admin'?'<button class="text-link" type="button" data-map-code="'+
-      esc(row.device_id)+'|'+esc(row.work_code)+'">Edit label</button>':'')+'</td></tr>'
-    ).join(''):'<tr><td colspan="6">Import a biometric log to discover device work codes.</td></tr>';
+      esc(row.device_id)+'|'+esc(row.work_code)+'">Edit mapping</button>':'')+'</td></tr>'
+    ).join(''):'<tr><td colspan="7">Import a biometric log to discover device work codes.</td></tr>';
   }catch(error){toast(error.message,true);}
 }
 async function syncConnector(){
@@ -643,11 +664,20 @@ async function processRoster(previewOnly){
     if(!previewOnly){rosterPreviewOkay=false;toast('Device user names synchronized from file.');}
   }catch(error){toast(error.message,true);}
 }
+function updateCodeDirectionVisibility(){
+  const permitted=['AJA','Travel Order'].includes($('code-activity').value);
+  $('code-direction-field').classList.toggle('hidden',!permitted);
+  $('code-direction-help').classList.toggle('hidden',!permitted);
+  if(!permitted)$('code-direction').value='Unspecified';
+}
 function openCodeEditor(device,code){
+  const saved=workCodeRows.find(row=>row.device_id===device && row.work_code===code);
   $('code-device').value=device;
   $('code-number').value=code;
-  $('code-label').value='';
-  $('code-activity').value='Unclassified';
+  $('code-label').value=saved?.label||'';
+  $('code-activity').value=saved?.activity_type||'Unclassified';
+  $('code-direction').value=saved?.direction||'Unspecified';
+  updateCodeDirectionVisibility();
   $('code-dialog').showModal();
 }
 async function saveCode(event){
@@ -655,9 +685,14 @@ async function saveCode(event){
   const device=$('code-device').value,code=$('code-number').value;
   try{
     await api('/api/work-codes/'+encodeURIComponent(device)+'/'+encodeURIComponent(code),{
-      method:'PUT',body:JSON.stringify({label:$('code-label').value,activity_type:$('code-activity').value})
+      method:'PUT',body:JSON.stringify({
+        label:$('code-label').value,
+        activity_type:$('code-activity').value,
+        direction:$('code-direction').value
+      })
     });
-    $('code-dialog').close();toast('Local code mapping saved. K14 device unchanged.');loadDevice();
+    $('code-dialog').close();toast('IN/OUT code mapping saved locally. K14 device unchanged.');loadDevice();
+    if(selectedEmployee && currentPage==='employees')void loadDetail({quiet:true});
   }catch(error){toast(error.message,true);}
 }
 async function initialize(){
@@ -739,7 +774,7 @@ async function initialize(){
   $('cancel-day-review').addEventListener('click',()=>$('day-review-dialog').close());
   $('day-review-dialog').addEventListener('close',()=>{dayReviewContext=null;});
   $('place-four-entries').addEventListener('click',()=>{
-    const events=dayReviewContext?.day.scans.filter(event=>event.activity_type==='Regular');if(events?.length!==4)return;
+    const events=dayReviewContext?.day?regularReviewCandidates(dayReviewContext.day):[];if(events.length!==4)return;
     ['am-in','am-out','pm-in','pm-out'].forEach((key,i)=>$('review-'+key).value=events[i].id);
   });
   $('open-calendar').addEventListener('click',openCalendar);
@@ -789,6 +824,7 @@ async function initialize(){
     const node=e.target.closest('[data-map-code]');if(!node)return;
     const [device,code]=node.dataset.mapCode.split('|');openCodeEditor(device,code);
   });
+  $('code-activity').addEventListener('change',updateCodeDirectionVisibility);
   $('close-code').addEventListener('click',()=>$('code-dialog').close());
   $('code-form').addEventListener('submit',saveCode);
   try{session=await api('/api/me');showApp();}
