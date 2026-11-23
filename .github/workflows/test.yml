@@ -22,6 +22,11 @@ jobs:
           SECRET_KEY: github-actions-test-only-long-random-like-secret-12345
           DATABASE_PATH: data/ci.sqlite3
         run: python -m pytest -q
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - name: Check live diagnostics behavior
+        run: node --test tests/device_live_refresh.cjs
   browser-smoke:
     runs-on: ubuntu-latest
     permissions:

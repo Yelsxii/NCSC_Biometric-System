@@ -1,6 +1,6 @@
 # K14 attendance sync handover
 
-The website imports attendance from the connector SQLite file. It does not open the K14, enroll users, clear logs, or copy fingerprint templates. The existing `k14_auto_sync.py` poller remains the only program that connects to the device. That poller is not included in this repository, so its network retry behavior has not been reviewed here.
+The website imports attendance from the connector SQLite file. It does not open the K14, enroll users, clear logs, or copy fingerprint templates. The existing `k14_auto_sync.py` poller remains the only program that connects to the device. That poller is outside this repository. The source supplied by the administrator has been reviewed: loop mode reconnects after failures, waits for the interval, disconnects in `finally`, and saves only unique records for the permitted IDs. A physical network-interruption test is still required before claiming recovery has been verified on the device.
 
 ## What was verified
 
@@ -37,6 +37,8 @@ The script listens on `127.0.0.1:8000` only. Open http://127.0.0.1:8000 on this 
 
 Sign in as an administrator, open **Users & Work Codes**, expand **Connection diagnostics**, and use **Read connector database**. The panel separately shows automatic imports, local file availability, total attendance records, last successful synchronization, new records from that success, and the latest result/error. A repeated successful import with zero new rows shows **Success — No new records**. Manual reads work while the automatic timer and TCP probe are disabled.
 
+While **Users & Work Codes** is visible, the display checks status every **5 seconds** without reloading or starting an import. It leaves the work-code editor and focus intact. It pauses on hidden tabs, navigation away, and logout; returning to the tab refreshes immediately. Temporary UI request failures keep the last displayed result and retry. This display interval is separate from the **60-second** device and website import intervals.
+
 **Available (local file)** proves file readability and the expected table schema only. A cache can remain readable while the K14 is offline. Neither a zero-new-record success nor a TCP handshake proves that device polling is running. A live device status needs an actual poller heartbeat/last-poll result; do not infer it from the most recent attendance timestamp.
 
 USB import stays on **Employee Attendance** → **Import attendance**.
@@ -53,17 +55,19 @@ Exact root causes, configuration values, and PowerShell verification: [Diagnosti
 
 ## Device poller
 
-Keep the poller and the website as two programs. Start the poller only with office authorization, from its own folder and virtual environment. The previously documented invocation below must be checked against the actual external script's `--help` before use:
+Keep the poller and the website as two programs. Start the poller only with office authorization, using its existing virtual environment. The administrator confirmed these options with the existing script's `--help`. From the Cursor PowerShell terminal, the current pilot locations are:
 
 ```powershell
-python .\k14_auto_sync.py --host 192.168.254.201 --port 4370 --loop --interval 300 --db "$env:LOCALAPPDATA\NCSC-K14-Pilot\attendance.sqlite3"
+& "$env:USERPROFILE\OneDrive\Desktop\.venv\Scripts\python.exe" "$env:USERPROFILE\OneDrive\Desktop\k14_auto_sync.py" --host 192.168.254.201 --port 4370 --loop --interval 60 --db "$env:LOCALAPPDATA\NCSC-K14-Pilot\attendance.sqlite3"
 ```
 
 That command is read-only attendance collection. Do not add flags or code that clear attendance, write users, or download templates. Do not point `--db` at a cloud-synced folder or at `data\ncsc.sqlite3`.
 
-When explicitly enabled, the website imports on startup and then waits 300 seconds between attempts. It retries source/database failures on the next cycle, retains existing attendance, and wakes the timer on shutdown. Run one website process/worker on the approved host. Restart after changing `.env`.
+When explicitly enabled, the website imports on startup and then waits **60 seconds** between attempts by default. It retries source/database failures on the next cycle, retains existing attendance, and wakes the timer on shutdown. Run one website process/worker on the approved host. Restart after changing `.env`. An existing `K14_SYNC_INTERVAL_SECONDS=300` is an explicit override and remains 300 until edited. See [the 60-second update guide](k14-live-refresh.md) for the exact steps to update both running processes.
 
-Before unattended operation, review the actual poller for reconnect/retry after LAN/Wi-Fi interruptions, safe connection cleanup, and retention of already collected rows. Validate a temporary network interruption on the approved host, restore connectivity, and confirm that new scans reach both databases exactly once. Website tests cover importer recovery; they cannot verify this external poller.
+Both programs wait after completing a cycle, so transfer time adds to the configured interval. With two independent 60-second cycles, a normal new scan may take about two minutes plus processing and the next UI status check to appear. The device poller still reads the whole device history each time; observe its duration and normal scanning behavior during this shorter-interval pilot.
+
+The reviewed poller source reconnects/retries after read failures, disconnects in `finally`, and retains already collected rows. Before unattended operation, validate a temporary network interruption on the approved host, restore connectivity, and confirm that new scans reach both databases exactly once. Website tests cover importer recovery; they do not replace that physical-device check.
 
 ## Tests
 
@@ -97,6 +101,6 @@ No deployment or Windows scheduled task has been created by this change. After o
 1. Install the website and the reviewed poller under fixed office-managed local paths with their Python environments already prepared. Retain accounts, secrets, and the existing databases. Restrict file permissions to the approved account and administrators.
 2. Point both processes at the same absolute connector path. A service/task account can have a different `LOCALAPPDATA`; do not assume it resolves to the interactive user's file. Allow the website to read the connector and write its own database.
 3. Configure two separate startup tasks/services under the approved account, with explicit working directories, restart after failure, and one instance each. Avoid credentials in command arguments. No task-registration command is run by this repository.
-4. Use the website virtual environment's `python.exe` with arguments `-m uvicorn app.main:app --host 127.0.0.1 --port 8000 --workers 1`, and set **Start in** to the repository root. Enable `K14_ATTENDANCE_SYNC_ENABLED=true` locally for this approved process. Configure the reviewed external poller separately at 300 seconds.
+4. Use the website virtual environment's `python.exe` with arguments `-m uvicorn app.main:app --host 127.0.0.1 --port 8000 --workers 1`, and set **Start in** to the repository root. Enable `K14_ATTENDANCE_SYNC_ENABLED=true` and `K14_SYNC_INTERVAL_SECONDS=60` locally for this approved process. Configure the reviewed external poller separately at 60 seconds.
 5. Test boot/login startup, recovery, newly scanned attendance, duplicates, and approved backup/restore procedures. Protect and retain operational logs according to office policy. Access from other PCs needs a separate authorized hosting/authentication/HTTPS configuration.
 6. Give staff a desktop shortcut to `http://127.0.0.1:8000` on the approved host and a named administrator to contact if scans are missing. Staff use their website account, Employee Attendance, View attendance, and DTR preview; they do not need Git, Cursor, Python, or Node.js commands. Administrators can use diagnostics or USB backup when needed.

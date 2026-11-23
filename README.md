@@ -9,7 +9,7 @@ NCSC records-oriented prototype using **FastAPI + SQLite**, with a restrained **
 - **Employee Attendance (default):** Search by employee ID or name, filter month, and open detailed daily scans / DTR preview. The register table deliberately shows employee ID, name, department and **View attendance** only; scan-count and last-scan columns were removed as nonessential.
 - **Import attendance:** A compact **Import attendance** button sits next to **View records** and opens an accessible modal. Admins preview the original K14 `.dat`/`.txt` USB export, then merge it. Existing scan records are never overwritten; duplicate events are skipped while new source events are appended. File import remains a fallback if LAN sync is unavailable.
 - **AJA / Travel Orders:** Read-only **device-classified scan event list**, filterable by employee and month/type. Columns show employee, activity, exact recorded date/time and numeric work code. **No office reference column, no new TO/AJA filing form.** The list uses existing local labels for codes found on K14 scans; code 0 is untouched. A work-code scan alone is not evidence of approved activity, start/end interval, or DTR time credit.
-- **Users & Work Codes:** No staff directory listing or manual-add form. Existing user-data recovery is available via a small **Import device users** modal for K14 `user.dat`, `.xls` or `.csv`. Work-code mappings remain accessible, with device network diagnostics hidden under an expandable section.
+- **Users & Work Codes:** No staff directory listing or manual-add form. Existing user-data recovery is available via a small **Import device users** modal for K14 `user.dat`, `.xls` or `.csv`. Work-code mappings remain accessible, with device network diagnostics hidden under an expandable section. Diagnostics refresh automatically every 5 seconds while the page is visible, preserving open editors.
 - **Login:** The original **split-panel NCSC login** from `feat/ncsc-theme` has been restored, including its photo, seal and fingerprint sign-in panel. Only redundant help affordances were removed.
 
 ## K14 data limitations
@@ -62,6 +62,8 @@ The working poller stores punches in `%LOCALAPPDATA%\NCSC-K14-Pilot\attendance.s
 
 Update the K14 values in the **existing** private `.env`; retain the existing database path, secret, and other settings. `K14_ATTENDANCE_SYNC_ENABLED=false` leaves the timer off but permits authenticated administrator reads. Set it true only for an authorized automatic file-import process. The starter respects `.env` and existing process environment variables.
 
+The import interval now defaults to **60 seconds**. Update an existing `K14_SYNC_INTERVAL_SECONDS=300` to `60` and restart; an explicit old value overrides the new default. Restart the separate poller with `--interval 60` too. Cursor terminal steps: [Live display and 60-second sync](docs/k14-live-refresh.md). UI status checks every 5 seconds do not contact the device or trigger an import.
+
 Development start:
 
 ```powershell
@@ -86,5 +88,11 @@ Diagnosis of the disabled-import issue, exact local settings, and verification c
 ```
 
 The automated browser test is in `tests/browser_smoke.cjs` and requires Node + Playwright; CI publishes screenshots of fictional data.
+
+Live diagnostics behavior can also be checked without browser dependencies:
+
+```powershell
+node --test tests/device_live_refresh.cjs
+```
 
 **Privacy:** This repository is public. Do not commit `.env`, employee `user.dat`, `template.fp10`, attendance `_attlog.dat`, SQLite databases or actual office HR files.

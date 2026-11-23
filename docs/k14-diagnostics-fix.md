@@ -26,7 +26,7 @@ K14_PORT=4370
 K14_CONNECTOR_DB=%LOCALAPPDATA%\NCSC-K14-Pilot\attendance.sqlite3
 K14_LAN_PROBE_ENABLED=false
 K14_ATTENDANCE_SYNC_ENABLED=false
-K14_SYNC_INTERVAL_SECONDS=300
+K14_SYNC_INTERVAL_SECONDS=60
 ```
 
 Manual reads work with these settings. The website opens the connector with `mode=ro` and `query_only=ON`; the authenticated admin action writes only imported events/history to the existing website database. The source file must exist and have the verified `attendance_raw` schema. No missing connector file is created. The API cannot supply a different file path.
@@ -97,7 +97,7 @@ Tests use temporary synthetic databases, not office data. Do not test outages by
 | `docs/k14-attendance-sync.md` | Approved host startup, external poller limitations and staff handover |
 | `docs/k14-diagnostics-fix.md` | Root causes, settings, verification commands and validation record |
 
-Validation in the editing environment: baseline **37 tests passed**; after changes **46 tests passed**. JavaScript syntax checks and `git diff --check` passed. Synthetic volume testing read **5,736** rows, inserted **4,986** eligible rows, skipped **750**, and inserted **0** on repeat; connector file bytes stayed unchanged. API tests also verify admin/CSRF restrictions, preserved raw codes, retained success history through an outage, recovery, and the five-minute retry timer.
+Validation for the original diagnostics fix: baseline **37 tests passed**; after changes **46 tests passed**. JavaScript syntax checks and `git diff --check` passed. Synthetic volume testing read **5,736** rows, inserted **4,986** eligible rows, skipped **750**, and inserted **0** on repeat; connector file bytes stayed unchanged. API tests also verify admin/CSRF restrictions, preserved raw codes, retained success history through an outage, recovery, and the then-five-minute retry timer. The later live-display/60-second change is documented in [the update guide](k14-live-refresh.md).
 
 The browser suite was attempted but Chromium could not launch: the environment rejected its process-singleton socket with `Operation not permitted`. Its new browser assertions remain unexecuted here. PowerShell was unavailable in this Linux environment, so Windows command execution and actual K14/network tests remain for the approved host. No live office files or device connection were used.
 

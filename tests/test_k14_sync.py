@@ -1,5 +1,6 @@
 """Read-only K14 connector import. Uses fictional punches, never the office database."""
 import sqlite3
+import pytest
 from contextlib import closing
 from pathlib import Path
 
@@ -18,6 +19,19 @@ CREATE TABLE attendance_raw (
 )
 """
 HOST = "192.168.254.201"
+
+
+@pytest.mark.parametrize("configured,expected", [
+    (None, 60), ("60", 60), ("300", 300), ("invalid", 60),
+    ("0", 60), ("59", 60), ("86401", 60),
+])
+def test_sync_interval_defaults_to_sixty_and_honors_valid_overrides(monkeypatch, configured, expected):
+    from app.k14_sync import sync_interval
+    if configured is None:
+        monkeypatch.delenv("K14_SYNC_INTERVAL_SECONDS", raising=False)
+    else:
+        monkeypatch.setenv("K14_SYNC_INTERVAL_SECONDS", configured)
+    assert sync_interval() == expected
 
 
 def _connector(path: Path, rows: list[tuple]) -> None:
@@ -229,7 +243,7 @@ def test_source_outage_keeps_attendance_and_recovers(admin, monkeypatch, tmp_pat
         assert [tuple(row) for row in con.execute("SELECT * FROM punches")] == before
 
 
-def test_background_timer_retries_missing_source_every_five_minutes(admin, monkeypatch, tmp_path):
+def test_background_timer_retries_missing_source_every_sixty_seconds(admin, monkeypatch, tmp_path):
     from app import k14_sync
     path = tmp_path / "attendance.sqlite3"
     _enable(monkeypatch, path)
@@ -247,7 +261,7 @@ def test_background_timer_retries_missing_source_every_five_minutes(admin, monke
     stop = ThreeCycles()
     monkeypatch.setattr(k14_sync, "_STOP", stop)
     k14_sync._loop()
-    assert stop.delays == [300, 300, 300]
+    assert stop.delays == [60, 60, 60]
     with closing(connect()) as con:
         runs = [tuple(row) for row in con.execute("SELECT outcome,records_inserted FROM k14_sync_runs ORDER BY id")]
         assert runs == [("error", 0), ("success", 1), ("success", 0)]
@@ -261,7 +275,7 @@ def test_worker_retries_even_when_error_cannot_be_saved(monkeypatch, caplog):
         def is_set(self):
             return len(calls) == 2
         def wait(self, delay):
-            assert delay == 300
+            assert delay == 60
     def flaky_sync(actor):
         calls.append(actor)
         if len(calls) == 1:

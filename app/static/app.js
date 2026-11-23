@@ -16,6 +16,11 @@ let requestSerial = 0;
 let rosterPreviewOkay = false;
 let usbPreviewOkay = false;
 let connectorReadPending = false;
+const DEVICE_REFRESH_MS = 5000;
+let deviceRefreshTimer = null;
+let deviceRefreshEpoch = 0;
+let deviceStatusRequest = null;
+let deviceStatusController = null;
 const titles = {
   employees:'Employee Attendance',
   activities:'AJA / Travel Orders',
@@ -49,6 +54,7 @@ async function api(path,options={}) {
   return data;
 }
 function showLogin(){
+  stopDeviceRefresh();
   $('login-view').classList.remove('hidden');
   $('workspace').classList.add('hidden');
   $('login-password').value='';
@@ -72,6 +78,7 @@ function showApp(){
 }
 function navigate(page){
   if (!session || !titles[page]) return;
+  stopDeviceRefresh();
   currentPage=page;
   document.querySelectorAll('[data-view]').forEach(node=>node.classList.toggle('hidden',node.dataset.view!==page));
   document.querySelectorAll('[data-page]').forEach(node=>{
@@ -84,7 +91,7 @@ function navigate(page){
   window.history.replaceState(null,'','#'+page);
   if (page==='employees') return loadRegister();
   if (page==='activities') return loadActivities();
-  if (page==='staff') return loadDevice();
+  if (page==='staff') {startDeviceRefresh();return loadDevice();}
 }
 async function loadRegister(){
   const serial=++requestSerial;
@@ -258,9 +265,32 @@ async function viewActivityEmployee(code){
   await navigate('employees');
   await openEmployee(code);
 }
-async function loadDevice(){
-  try{
-    const data=await api('/api/device/status');
+function deviceRefreshAllowed(){
+  return Boolean(session && currentPage==='staff' && !document.hidden);
+}
+function deviceRefreshMessage(message){
+  if($('lan-live-status').textContent!==message)$('lan-live-status').textContent=message;
+}
+function stopDeviceRefresh(){
+  deviceRefreshEpoch++;
+  clearTimeout(deviceRefreshTimer);
+  deviceRefreshTimer=null;
+  deviceStatusController?.abort();
+}
+function startDeviceRefresh(){
+  stopDeviceRefresh();
+  if(!deviceRefreshAllowed())return;
+  const epoch=deviceRefreshEpoch;
+  const tick=async()=>{
+    deviceRefreshTimer=null;
+    if(epoch!==deviceRefreshEpoch || !deviceRefreshAllowed())return;
+    await refreshDeviceStatus({quiet:true});
+    if(epoch===deviceRefreshEpoch && deviceRefreshAllowed())
+      deviceRefreshTimer=setTimeout(tick,DEVICE_REFRESH_MS);
+  };
+  deviceRefreshTimer=setTimeout(tick,DEVICE_REFRESH_MS);
+}
+function renderDeviceStatus(data){
     $('lan-ip').textContent=data.host;
     $('lan-port').textContent=data.port??'—';
     $('lan-badge').textContent=data.sync_enabled?'Connector sync on':'Not synchronized';
@@ -279,7 +309,46 @@ async function loadDevice(){
       sync.connector_available?'':sync.connector_message].filter(Boolean).filter((value,index,items)=>items.indexOf(value)===index).join(' ');
     $('probe-lan').disabled=session.role!=='admin'||!data.probe_enabled;
     $('sync-connector').disabled=session.role!=='admin'||connectorReadPending;
+}
+async function refreshDeviceStatus({quiet=false,fresh=false}={}){
+  // Keep one status request in flight. A manual read waits, then fetches fresh.
+  while(deviceStatusRequest){
+    await deviceStatusRequest;
+    if(!fresh)return;
+  }
+  if(!deviceRefreshAllowed())return;
+  const epoch=deviceRefreshEpoch,account=session;
+  const controller=new AbortController();
+  deviceStatusController=controller;
+  const timeout=setTimeout(()=>controller.abort(),15000);
+  const stillCurrent=()=>epoch===deviceRefreshEpoch && session===account && deviceRefreshAllowed();
+  const request=(async()=>{
+    try{
+      const data=await api('/api/device/status',{signal:controller.signal,cache:'no-store'});
+      if(!stillCurrent())return;
+      renderDeviceStatus(data);
+      deviceRefreshMessage('Status updates automatically every 5 seconds.');
+    }catch(error){
+      if(!stillCurrent())return;
+      deviceRefreshMessage('Live status temporarily unavailable. Retrying automatically.');
+      if(!quiet)toast(error.name==='AbortError'?'Status request timed out. Retrying automatically.':error.message,true);
+    }
+  })();
+  deviceStatusRequest=request;
+  try{await request;}
+  finally{
+    clearTimeout(timeout);
+    if(deviceStatusRequest===request)deviceStatusRequest=null;
+    if(deviceStatusController===controller)deviceStatusController=null;
+  }
+}
+async function loadDevice(){
+  const epoch=deviceRefreshEpoch,account=session;
+  try{
+    await refreshDeviceStatus({fresh:true});
+    if(epoch!==deviceRefreshEpoch || session!==account || currentPage!=='staff')return;
     const codes=await api('/api/work-codes');
+    if(epoch!==deviceRefreshEpoch || session!==account || currentPage!=='staff')return;
     $('code-rows').innerHTML=codes.items.length?codes.items.map(row=>
       '<tr><td>'+esc(row.device_id)+'</td><td><span class="code-pill">'+esc(row.work_code)+'</span></td>'+
       '<td>'+esc(row.activity_type)+'</td><td>'+esc(row.label||'Unmapped')+'</td>'+
@@ -374,6 +443,14 @@ async function saveCode(event){
   }catch(error){toast(error.message,true);}
 }
 async function initialize(){
+  document.addEventListener('visibilitychange',()=>{
+    if(document.hidden){
+      stopDeviceRefresh();
+    }else if(deviceRefreshAllowed()){
+      startDeviceRefresh();
+      void refreshDeviceStatus({quiet:true,fresh:true});
+    }
+  });
   $('today').textContent=new Intl.DateTimeFormat('en-PH',{
     day:'numeric',month:'short',year:'numeric',timeZone:'Asia/Manila'
   }).format(new Date());

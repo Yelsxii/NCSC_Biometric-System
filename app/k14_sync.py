@@ -32,6 +32,7 @@ from app.db import connect, database_path, initialize, register_scan_metadata
 from app.lan import settings
 
 ALLOWED_IDS = frozenset(str(number) for number in list(range(1, 13)) + [14, 18])
+DEFAULT_INTERVAL_SECONDS = 60
 REQUIRED_COLUMNS = (
     "device_ip",
     "employee_id",
@@ -93,10 +94,10 @@ def enabled() -> bool:
 
 def sync_interval() -> int:
     try:
-        value = int(os.getenv("K14_SYNC_INTERVAL_SECONDS", "300"))
+        value = int(os.getenv("K14_SYNC_INTERVAL_SECONDS", str(DEFAULT_INTERVAL_SECONDS)))
     except ValueError:
-        return 300
-    return value if 60 <= value <= 86400 else 300
+        return DEFAULT_INTERVAL_SECONDS
+    return value if 60 <= value <= 86400 else DEFAULT_INTERVAL_SECONDS
 
 
 def connector_path() -> Path:

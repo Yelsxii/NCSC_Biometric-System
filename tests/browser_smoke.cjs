@@ -1,7 +1,7 @@
 /* Headless end-to-end smoke test with fictional staff/attendance only. */
 const { chromium } = require('playwright');
 const assert = require('node:assert/strict');
-const { spawn } = require('node:child_process');
+const { spawn, spawnSync } = require('node:child_process');
 const { mkdtempSync, mkdirSync, rmSync, renameSync } = require('node:fs');
 const { tmpdir } = require('node:os');
 const { join, resolve } = require('node:path');
@@ -177,6 +177,39 @@ uvicorn.run('app.main:app',host='127.0.0.1',port=int(os.environ['QA_PORT']),log_
     await page.locator('#sync-connector').click();
     await page.locator('#lan-sync-result').filter({hasText:'Success — No new records'}).waitFor();
     await page.screenshot({path:join(tmp,'connector-diagnostics.png'),animations:'disabled'});
+
+    // A background importer changes real synthetic data while this page stays
+    // open. Status must update by GET polling, keeping the editor untouched.
+    await page.locator('[data-map-code="1|101"]').click();
+    await page.locator('#code-label').fill('Unsaved live-refresh check');
+    const liveUrl=page.url();
+    let manualReads=0;
+    const countManual=request=>{
+      if(request.method()==='POST' && new URL(request.url()).pathname==='/api/device/sync')manualReads++;
+    };
+    page.on('request',countManual);
+    const imported=spawnSync(python,['-c',`
+import os, sqlite3
+from app.k14_sync import run_sync
+from app.db import connect
+with sqlite3.connect(os.environ['K14_CONNECTOR_DB']) as con:
+    con.execute('INSERT INTO attendance_raw VALUES(?,?,?,?,?,?)',
+                ('192.168.254.201','1','2026-11-03 08:00:02','2','5','2026-11-23 03:01:00'))
+assert run_sync(None, manual=True)['records_inserted'] == 1
+with connect() as con:
+    con.execute("UPDATE k14_sync_runs SET finished_at='2026-11-23 15:01:00' WHERE id=(SELECT MAX(id) FROM k14_sync_runs)")
+`],{cwd:root,env,encoding:'utf8'});
+    assert.equal(imported.status,0,imported.stderr);
+    await page.locator('#lan-total-records').filter({hasText:/^7$/}).waitFor();
+    await page.locator('#lan-last-sync').filter({hasText:'2026-11-23 15:01:00'}).waitFor();
+    assert.equal(await page.locator('#lan-sync-result').textContent(),'Success — 1 new record');
+    assert.equal(page.url(),liveUrl);
+    assert.equal(manualReads,0);
+    assert.equal(await page.locator('#code-dialog').getAttribute('open'),'');
+    assert.equal(await page.locator('#code-label').inputValue(),'Unsaved live-refresh check');
+    assert.equal(await page.evaluate(()=>document.activeElement.id),'code-label');
+    page.off('request',countManual);
+    await page.locator('#close-code').click();
 
     // Import a fictional roster: staff appears by name in the monthly register.
     const roster=Buffer.from('employee_code,display_name,department\n1,Sample One,Sample Section\n2,Sample Two,Sample Section\n');

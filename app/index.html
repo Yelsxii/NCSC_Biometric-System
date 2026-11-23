@@ -6,7 +6,7 @@
   <meta name="theme-color" content="#142650">
   <title>NCSC | Attendance Records</title>
   <link rel="stylesheet" href="/static/app.css">
-  <script src="/static/app.js" defer></script>
+  <script src="/static/app.js?v=live-sync-60" defer></script>
 </head>
 <body>
   <main id="login-view" class="auth-shell" aria-labelledby="login-heading">
@@ -158,6 +158,7 @@
                 <div class="connection-action"><button id="sync-connector" type="button" class="button outline">Read connector database</button></div>
               </div>
               <p class="table-note" id="lan-sync-error"></p>
+              <p class="table-note" id="lan-live-status" role="status" aria-live="polite">Status updates automatically every 5 seconds.</p>
               <p class="table-note" id="lan-message">Loading local connector diagnostics…</p>
               <span class="hidden" id="lan-badge">Not connected</span>
             </div>
