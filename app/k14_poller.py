@@ -1,7 +1,8 @@
 """Foreground read-only K14 collector, using the website's approved ID registry.
 
 Based on the existing working pilot. No enrollment, clock change, deletion,
-user-profile retrieval, or template retrieval operations are performed.
+fingerprint/template retrieval operations are performed. The optional name reader
+reads only user IDs and visible display names for approved staff.
 """
 from __future__ import annotations
 
@@ -36,6 +37,66 @@ def read_attendance(host: str, port: int, use_udp: bool, allowed: frozenset[str]
                 conn.disconnect()
             except Exception:
                 pass
+
+
+def read_device_names(host: str, port: int, use_udp: bool,
+                      allowed: frozenset[str]) -> list[tuple[str, str]]:
+    """Read K14 user ID and display name only; do not retain cards, passwords or templates.
+
+    An office-authorized read is filtered to the approved staff IDs before
+    names leave the collector process. The device is never modified.
+    """
+    from zk import ZK
+    from app.registry import staff_row
+
+    device = ZK(host, port=port, timeout=20, password=0,
+                force_udp=use_udp, ommit_ping=False)
+    conn = None
+    try:
+        conn = device.connect()
+        users = conn.get_users() or []
+        names = []
+        for user in users:
+            code = str(getattr(user, "user_id", "")).strip()
+            if code not in allowed:
+                continue
+            try:
+                row = staff_row(code, getattr(user, "name", ""))
+            except ValueError:
+                continue
+            names.append((row["employee_code"], row["display_name"]))
+        return names
+    finally:
+        if conn is not None:
+            try:
+                conn.disconnect()
+            except Exception:
+                pass
+
+
+def save_device_names(path: Path, host: str, rows: list[tuple[str, str]]) -> int:
+    """Additive connector metadata; never changes device attendance rows."""
+    path.parent.mkdir(parents=True, exist_ok=True)
+    with closing(sqlite3.connect(path, timeout=30)) as con, con:
+        con.execute("""CREATE TABLE IF NOT EXISTS device_user_names (
+            device_ip TEXT NOT NULL,
+            employee_id TEXT NOT NULL,
+            display_name TEXT NOT NULL,
+            received_at_utc TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+            PRIMARY KEY(device_ip, employee_id)
+        )""")
+        changed = 0
+        for code, name in rows:
+            old = con.execute("SELECT display_name FROM device_user_names "
+                              "WHERE device_ip=? AND employee_id=?", (host, code)).fetchone()
+            if old and old[0] == name:
+                continue
+            con.execute("""INSERT INTO device_user_names(device_ip,employee_id,display_name)
+                VALUES(?,?,?) ON CONFLICT(device_ip,employee_id) DO UPDATE SET
+                display_name=excluded.display_name,received_at_utc=CURRENT_TIMESTAMP""",
+                (host, code, name))
+            changed += 1
+        return changed
 
 
 def save_new(path: Path, host: str, records: list) -> int:
@@ -82,6 +143,7 @@ def main(argv=None) -> int:
     if path.suffix.lower() not in (".db", ".sqlite3"):
         parser.error("--db must have a .db or .sqlite3 extension")
     print("K14 read-only collector; employee IDs are approved through the website. Ctrl+C stops collection.", flush=True)
+    cycle = 0
     try:
         while True:
             stamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
@@ -96,6 +158,16 @@ def main(argv=None) -> int:
                     current = read_authorized_ids(registry)
                     rows = [row for row in rows if row[0] in current]
                     added = save_new(path, args.host, rows)
+                    # Refresh approved employee names about every 10 minutes.
+                    # A name-reader failure never blocks attendance collection.
+                    if cycle % 10 == 0:
+                        try:
+                            names = read_device_names(args.host, args.port, args.udp, current)
+                            current_again = read_authorized_ids(registry)
+                            names = [(code, name) for code, name in names if code in current_again]
+                            save_device_names(path, args.host, names)
+                        except Exception:
+                            print(f"[{stamp}] Device name sync unavailable; attendance preserved.", flush=True)
                     print(f"[{stamp}] Connection OK; {total} device logs; {len(rows)} approved records; added {added} new records.", flush=True)
             except Exception:
                 print(f"[{stamp}] Collection failed. Check device connectivity, registry access and local storage. Retrying next cycle.", flush=True)
@@ -103,6 +175,7 @@ def main(argv=None) -> int:
                     return 1
             if not args.loop:
                 return 0
+            cycle += 1
             time.sleep(args.interval)
     except KeyboardInterrupt:
         print("Polling stopped. Original device records are unchanged.", flush=True)
