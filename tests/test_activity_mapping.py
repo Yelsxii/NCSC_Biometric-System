@@ -1,8 +1,10 @@
 """Work-code directions are explicit, reversible and never invent punches."""
 from contextlib import closing
+import sqlite3
+
 
 from app.activity_mapping import activity_pairs
-from app.db import connect
+from app.db import connect, initialize
 
 
 def event(instant, category="AJA", direction="Unspecified", work_code="11", ident=1):
@@ -109,3 +111,25 @@ def test_api_mapping_requires_explicit_direction_and_preserves_raw_punches(admin
     assert review["days"][11]["activity_mappings"][0]["time_in"] is None
     with closing(connect()) as con:
         assert con.execute("SELECT COUNT(*) FROM punches").fetchone()[0] == 5
+
+
+def test_existing_work_code_rows_migrate_without_inventing_directions(tmp_path, monkeypatch):
+    old = tmp_path / "old.ncsc.sqlite3"
+    with sqlite3.connect(old) as con:
+        con.execute("""CREATE TABLE work_codes(
+            device_id TEXT NOT NULL, work_code TEXT NOT NULL,
+            label TEXT NOT NULL DEFAULT '',
+            activity_type TEXT NOT NULL DEFAULT 'Unclassified',
+            updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+            PRIMARY KEY(device_id,work_code)
+        )""")
+        con.execute("INSERT INTO work_codes(device_id,work_code,label,activity_type) "
+                    "VALUES('1','55','Old AJA code','AJA')")
+    monkeypatch.setenv("DATABASE_PATH", str(old))
+    initialize()
+    initialize()  # Repeatable schema migration
+    with closing(connect()) as con:
+        value = con.execute(
+            "SELECT label,activity_type,direction FROM work_codes WHERE device_id='1' AND work_code='55'"
+        ).fetchone()
+        assert tuple(value) == ("Old AJA code", "AJA", "Unspecified")
