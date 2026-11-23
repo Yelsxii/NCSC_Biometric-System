@@ -2,7 +2,7 @@
 
 NCSC records-oriented prototype using **FastAPI + SQLite**, with a restrained **navy-blue/red** layout. Development branch: `feat/ncsc-dtr-workflow`, based on `feat/ncsc-theme`.
 
-> **Pilot only.** The system does **not** yet automatically synchronize with the K14, certify an official DTR, interpret unverified time-in/time-out codes, or credit undertime for official travel.
+> **Pilot only.** Attendance can be imported automatically from the existing local K14 connector file when explicitly enabled. Device polling remains a separate program. The system does not certify an official DTR, interpret unverified time-in/time-out codes, or credit undertime for official travel.
 
 ## Records-first interface
 
@@ -26,23 +26,20 @@ The current print view is labeled **REVIEW COPY**. It uses an A4 printable revie
 
 ## Set up in Cursor / Windows PowerShell
 
-If you currently have an unfinished Git merge or local edits, run `git status` **before switching**. Don't discard conflict-resolution work with a destructive reset.
-
-After your repository is in a safe, clean state:
+Continue on the existing `feat/ncsc-dtr-workflow` branch. Verify the checkout before editing; do not discard local work or change branches:
 
 ```powershell
-git fetch origin
-git switch -c feat/ncsc-dtr-workflow --track origin/feat/ncsc-dtr-workflow
+git status --short --branch
+git branch --show-current
+git log -1 --oneline
 ```
 
-If the branch already exists locally, use `git switch feat/ncsc-dtr-workflow` and `git pull --ff-only origin feat/ncsc-dtr-workflow`.
-
-The existing `.env`, SQLite database, administrator account and virtual environment are kept locally when switching branches. New machine:
+Retain the existing `.env`, SQLite database, administrator account and virtual environment during updates. For a new machine only:
 
 ```powershell
 py -3 -m venv .venv
 .\.venv\Scripts\python.exe -m pip install -r requirements.txt
-Copy-Item .env.example .env
+if (-not (Test-Path .env)) { Copy-Item .env.example .env }
 ```
 
 Generate a strong random secret for `SECRET_KEY` in the local `.env` and create a private administrator account via `python -m app.cli create-admin` (virtual environment's Python). Never commit the secret or actual HR data.
@@ -63,7 +60,9 @@ The working poller stores punches in `%LOCALAPPDATA%\NCSC-K14-Pilot\attendance.s
 .\scripts\Start-NcscLocal.ps1
 ```
 
-Development start, after the variables in `.env.example` are copied into the private `.env` and `K14_ATTENDANCE_SYNC_ENABLED` is set true:
+Update the K14 values in the **existing** private `.env`; retain the existing database path, secret, and other settings. `K14_ATTENDANCE_SYNC_ENABLED=false` leaves the timer off but permits authenticated administrator reads. Set it true only for an authorized automatic file-import process. The starter respects `.env` and existing process environment variables.
+
+Development start:
 
 ```powershell
 .\.venv\Scripts\python.exe -m uvicorn app.main:app --host 127.0.0.1 --port 8000 --reload
@@ -76,6 +75,8 @@ One manual read, without starting the website:
 ```
 
 Keep `K14_LAN_PROBE_ENABLED=false` unless the office authorizes a TCP probe. The probe still does not collect attendance. Handover steps and the separate device poller are in `docs/k14-attendance-sync.md`.
+
+Diagnosis of the disabled-import issue, exact local settings, and verification commands: `docs/k14-diagnostics-fix.md`.
 
 ### Tests
 

@@ -18,13 +18,14 @@ from __future__ import annotations
 
 import datetime as dt
 import hashlib
+import logging
 import os
 import re
 import sqlite3
 import sys
 import threading
-import time
 import uuid
+from contextlib import contextmanager
 from pathlib import Path
 
 from app.db import connect, database_path, initialize, register_scan_metadata
@@ -49,17 +50,63 @@ PRIMARY_KEY = (
 CODE = re.compile(r"^[A-Za-z0-9._-]{1,64}$")
 TIMESTAMP = re.compile(r"^\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}$")
 _LOCK = threading.Lock()
-_STARTED = False
+_WORKER_LOCK = threading.Lock()
+_STOP = threading.Event()
+_THREAD: threading.Thread | None = None
+
+# Only application-authored messages may reach the UI or the sync history.
+_SAFE_ERRORS = frozenset({
+    "Automatic connector imports are turned off.",
+    "Attendance connector sync is turned off.",  # Older saved attempts.
+    "Set K14_CONNECTOR_DB to the connector SQLite file.",
+    "K14_CONNECTOR_DB must be an absolute local file path with defined environment variables.",
+    "Connector database was not found.",
+    "Connector database must not be read from a personal cloud-synced folder.",
+    "The connector database must stay separate from the website database.",
+    "Could not open the connector database read-only.",
+    "Could not read the connector attendance table.",
+    "Connector database has no attendance_raw table.",
+    "Connector attendance_raw primary key does not match the verified K14 pilot schema.",
+    "No administrator account is available to attribute new attendance records.",
+    "K14_HOST must be a literal private IPv4 address.",
+    "K14_HOST must be a private, non-loopback IPv4 address.",
+    "K14_PORT must be a valid TCP port.",
+    "Could not read the connector database or update the website database.",
+})
+
+
+def safe_error(message: str) -> str:
+    if message in _SAFE_ERRORS:
+        return message
+    prefix = "Connector attendance_raw is missing columns: "
+    if message.startswith(prefix):
+        missing = message[len(prefix):].split(", ")
+        if missing and all(column in REQUIRED_COLUMNS for column in missing):
+            return message
+    return "Synchronization failed. Review the local connector settings and try again."
 
 
 def enabled() -> bool:
+    """Enable the automatic timer; explicit administrator reads are separate."""
     return os.getenv("K14_ATTENDANCE_SYNC_ENABLED", "false").lower() == "true"
+
+
+def sync_interval() -> int:
+    try:
+        value = int(os.getenv("K14_SYNC_INTERVAL_SECONDS", "300"))
+    except ValueError:
+        return 300
+    return value if 60 <= value <= 86400 else 300
 
 
 def connector_path() -> Path:
     raw = os.getenv("K14_CONNECTOR_DB", "").strip()
     if raw:
-        return Path(raw).expanduser()
+        raw = re.sub(r"%([A-Za-z_][A-Za-z0-9_]*)%", lambda match: os.getenv(match[1], match[0]), raw)
+        path = Path(os.path.expandvars(raw)).expanduser()
+        if not path.is_absolute() or "%" in str(path) or "$" in str(path) or str(path).startswith(("\\\\", "//")):
+            raise ValueError("K14_CONNECTOR_DB must be an absolute local file path with defined environment variables.")
+        return path
     local = os.getenv("LOCALAPPDATA", "").strip()
     if not local:
         raise ValueError("Set K14_CONNECTOR_DB to the connector SQLite file.")
@@ -75,13 +122,15 @@ def _cloud_synced(path: Path) -> bool:
     return any(name in text for name in ("onedrive", "dropbox", "google drive", "icloud"))
 
 
-def read_connector(path: Path) -> list[sqlite3.Row]:
+@contextmanager
+def _open_connector(path: Path):
     resolved = path.expanduser().resolve()
     if not resolved.is_file():
         raise ValueError("Connector database was not found.")
     if _cloud_synced(resolved):
         raise ValueError("Connector database must not be read from a personal cloud-synced folder.")
-    if resolved == database_path().expanduser().resolve():
+    website = database_path().expanduser().resolve()
+    if resolved == website or (website.exists() and resolved.samefile(website)):
         raise ValueError("The connector database must stay separate from the website database.")
     uri = resolved.as_uri() + "?mode=ro"
     try:
@@ -92,15 +141,32 @@ def read_connector(path: Path) -> list[sqlite3.Row]:
     try:
         source.execute("PRAGMA query_only=ON")
         verify_schema(source)
-        return list(source.execute(
-            """SELECT device_ip, employee_id, punch_time_local, device_status,
-                      device_punch_type, received_at_utc
-               FROM attendance_raw"""
-        ))
+        yield source
     except sqlite3.Error as exc:
         raise ValueError("Could not read the connector attendance table.") from exc
     finally:
         source.close()
+
+
+def read_connector(path: Path) -> list[sqlite3.Row]:
+    with _open_connector(path) as source:
+        return list(source.execute(
+            """SELECT device_ip, employee_id, punch_time_local, device_status,
+                      device_punch_type, received_at_utc FROM attendance_raw"""
+        ))
+
+
+def connector_availability() -> dict:
+    """Check local readability/schema only. This cannot prove the K14 is online."""
+    try:
+        with _open_connector(connector_path()):
+            pass
+        return {"connector_available": True, "connector_message": "Available (local file)"}
+    except ValueError as exc:
+        message = safe_error(str(exc))
+    except (sqlite3.Error, OSError, RuntimeError):
+        message = "Could not open the connector database read-only."
+    return {"connector_available": False, "connector_message": message}
 
 
 def verify_schema(source: sqlite3.Connection) -> None:
@@ -111,7 +177,7 @@ def verify_schema(source: sqlite3.Connection) -> None:
     missing = [column for column in REQUIRED_COLUMNS if column not in names]
     if missing:
         raise ValueError("Connector attendance_raw is missing columns: " + ", ".join(missing))
-    primary = tuple(row[1] for row in info if row[5])
+    primary = tuple(row[1] for row in sorted(info, key=lambda row: row[5]) if row[5])
     if primary != PRIMARY_KEY:
         raise ValueError("Connector attendance_raw primary key does not match the verified K14 pilot schema.")
 
@@ -270,6 +336,7 @@ def write_website(rows: list[sqlite3.Row], actor_id: int | None, started: str, s
 
 
 def _remember_error(started: str, message: str, actor_id: int | None, records_read: int = 0) -> dict:
+    message = safe_error(message)
     initialize()
     finished = _stamp()
     with connect() as con:
@@ -284,20 +351,20 @@ def _remember_error(started: str, message: str, actor_id: int | None, records_re
     return result
 
 
-def run_sync(actor_id: int | None = None) -> dict:
-    """Import new connector rows. Safe to repeat; existing punches are kept."""
+def run_sync(actor_id: int | None = None, *, manual: bool = False) -> dict:
+    """Import locally, on an explicit admin/CLI request or an enabled timer."""
     with _LOCK:
-        initialize()
         started = _stamp()
         try:
-            if not enabled():
-                raise ValueError("Attendance connector sync is turned off.")
+            initialize()
+            if not manual and not enabled():
+                raise ValueError("Automatic connector imports are turned off.")
             path = connector_path()
             rows = read_connector(path)
             return write_website(rows, actor_id, started, path.name)
         except ValueError as exc:
             return _remember_error(started, str(exc), actor_id)
-        except (sqlite3.Error, OSError):
+        except (sqlite3.Error, OSError, RuntimeError):
             return _remember_error(
                 started,
                 "Could not read the connector database or update the website database.",
@@ -313,18 +380,40 @@ def status_view(include_errors: bool) -> dict:
                FROM k14_sync_runs WHERE outcome='success' ORDER BY id DESC LIMIT 1"""
         ).fetchone()
         latest = con.execute(
-            "SELECT outcome,finished_at,error_message FROM k14_sync_runs ORDER BY id DESC LIMIT 1"
+            "SELECT outcome,finished_at,error_message,records_inserted FROM k14_sync_runs ORDER BY id DESC LIMIT 1"
         ).fetchone()
+        total = con.execute("SELECT COUNT(*) FROM punches").fetchone()[0]
+        connector_total = con.execute("SELECT COUNT(DISTINCT punch_id) FROM k14_sync_events").fetchone()[0]
     error_text = ""
     error_at = None
     if latest and latest["outcome"] == "error":
         error_at = latest["finished_at"]
         if include_errors:
-            error_text = latest["error_message"]
+            error_text = safe_error(latest["error_message"])
         elif latest["error_message"]:
             error_text = "An administrator can review the synchronization error."
+    result_label = "Not yet synchronized"
+    if latest:
+        if latest["outcome"] == "error":
+            result_label = "Error"
+        elif latest["records_inserted"] == 0:
+            result_label = "Success — No new records"
+        else:
+            count = latest["records_inserted"]
+            result_label = f"Success — {count} new record{'s' if count != 1 else ''}"
+    availability = connector_availability()
+    if not include_errors and not availability["connector_available"]:
+        availability["connector_message"] = "An administrator can review the connector configuration."
     return {
         "enabled": enabled(),
+        "interval_seconds": sync_interval(),
+        "in_progress": _LOCK.locked(),
+        **availability,
+        "total_imported": total,
+        "total_connector_imported": connector_total,
+        "latest_outcome": None if latest is None else latest["outcome"],
+        "latest_result": result_label,
+        "latest_finished_at": None if latest is None else latest["finished_at"],
         "last_success_at": None if success is None else success["finished_at"],
         "last_inserted": None if success is None else success["records_inserted"],
         "last_already_present": None if success is None else success["records_already_present"],
@@ -345,23 +434,29 @@ def autostart_allowed() -> bool:
 
 
 def _loop() -> None:
-    while True:
-        run_sync(None)
+    while not _STOP.is_set():
         try:
-            delay = int(os.getenv("K14_SYNC_INTERVAL_SECONDS", "300"))
-        except ValueError:
-            delay = 300
-        if delay < 60:
-            delay = 300
-        time.sleep(delay)
+            run_sync(None)
+        except (sqlite3.Error, OSError, ValueError, RuntimeError):
+            # Even if the website database cannot save the error, retry next cycle.
+            logging.getLogger(__name__).error("Connector import could not run; it will retry on the next cycle.")
+        _STOP.wait(sync_interval())
 
 
 def start_background_sync() -> None:
-    global _STARTED
+    global _THREAD
     if not autostart_allowed():
         return
-    with _LOCK:
-        if _STARTED:
+    with _WORKER_LOCK:
+        if _THREAD is not None and _THREAD.is_alive():
             return
-        _STARTED = True
-    threading.Thread(target=_loop, name="k14-attendance-sync", daemon=True).start()
+        _STOP.clear()
+        _THREAD = threading.Thread(target=_loop, name="k14-attendance-sync", daemon=True)
+        _THREAD.start()
+
+
+def stop_background_sync() -> None:
+    with _WORKER_LOCK:
+        _STOP.set()
+        if _THREAD is not None:
+            _THREAD.join(timeout=5)

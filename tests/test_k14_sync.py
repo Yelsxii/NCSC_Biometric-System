@@ -178,8 +178,227 @@ def test_connector_reader_rejects_the_website_database(admin, monkeypatch, tmp_p
     assert "get_templates" not in text
 
 
-def test_sync_endpoint_is_off_until_enabled(admin):
+def test_manual_read_does_not_require_automatic_imports_or_tcp_probe(admin, monkeypatch, tmp_path):
     client, headers = admin
-    monkey_off = client.post("/api/device/sync", headers=headers)
-    assert monkey_off.status_code == 409
+    path = tmp_path / "attendance.sqlite3"
+    _connector(path, [(HOST, "7", "2026-11-02 07:21:07", "1", "0", "2026-11-23 03:23:42")])
+    _enable(monkeypatch, path)
+    monkeypatch.setenv("K14_ATTENDANCE_SYNC_ENABLED", "false")
+    monkeypatch.delenv("K14_HOST")
+    def unexpected_socket(*args, **kwargs):
+        raise AssertionError("A local connector import attempted a network connection")
+    monkeypatch.setattr("app.lan.socket.create_connection", unexpected_socket)
+    assert client.post("/api/device/sync", headers=headers).json()["records_inserted"] == 1
+    assert client.post("/api/device/sync", headers=headers).json()["records_inserted"] == 0
+    status = client.get("/api/device/status").json()
+    assert status["host"] == HOST
+    assert status["probe_enabled"] is False
+    assert status["sync_enabled"] is False
+    sync = status["attendance_sync"]
+    assert sync["connector_available"] is True
+    assert sync["latest_result"] == "Success — No new records"
+    assert sync["last_error"] == ""
+    assert sync["total_imported"] == sync["total_connector_imported"] == 1
     assert client.post("/api/device/sync").status_code == 403
+
+
+def test_source_outage_keeps_attendance_and_recovers(admin, monkeypatch, tmp_path):
+    client, headers = admin
+    path = tmp_path / "attendance.sqlite3"
+    _connector(path, [(HOST, "7", "2026-11-02 07:21:07", "2", "5", "2026-11-23 03:23:42")])
+    _enable(monkeypatch, path)
+    assert client.post("/api/device/sync", headers=headers).json()["records_inserted"] == 1
+    success_at = client.get("/api/device/status").json()["attendance_sync"]["last_success_at"]
+    with closing(connect()) as con:
+        before = [tuple(row) for row in con.execute("SELECT * FROM punches")]
+    moved = path.rename(tmp_path / "temporarily-unavailable.sqlite3")
+    assert client.post("/api/device/sync", headers=headers).status_code == 409
+    sync = client.get("/api/device/status").json()["attendance_sync"]
+    assert sync["last_success_at"] == success_at
+    assert sync["latest_result"] == "Error"
+    assert sync["connector_available"] is False
+    assert sync["total_imported"] == 1
+    assert str(tmp_path) not in sync["last_error"]
+    assert not path.exists()
+    moved.rename(path)
+    assert client.post("/api/device/sync", headers=headers).json()["records_inserted"] == 0
+    sync = client.get("/api/device/status").json()["attendance_sync"]
+    assert sync["last_error"] == ""
+    assert sync["latest_result"] == "Success — No new records"
+    with closing(connect()) as con:
+        assert [tuple(row) for row in con.execute("SELECT * FROM punches")] == before
+
+
+def test_background_timer_retries_missing_source_every_five_minutes(admin, monkeypatch, tmp_path):
+    from app import k14_sync
+    path = tmp_path / "attendance.sqlite3"
+    _enable(monkeypatch, path)
+    monkeypatch.delenv("K14_SYNC_INTERVAL_SECONDS", raising=False)
+    class ThreeCycles:
+        delays = []
+        def set(self):
+            pass
+        def is_set(self):
+            return len(self.delays) == 3
+        def wait(self, delay):
+            self.delays.append(delay)
+            if len(self.delays) == 1:
+                _connector(path, [(HOST, "7", "2026-11-02 07:21:07", "1", "0", "2026-11-23 03:23:42")])
+    stop = ThreeCycles()
+    monkeypatch.setattr(k14_sync, "_STOP", stop)
+    k14_sync._loop()
+    assert stop.delays == [300, 300, 300]
+    with closing(connect()) as con:
+        runs = [tuple(row) for row in con.execute("SELECT outcome,records_inserted FROM k14_sync_runs ORDER BY id")]
+        assert runs == [("error", 0), ("success", 1), ("success", 0)]
+        assert con.execute("SELECT COUNT(*) FROM punches").fetchone()[0] == 1
+
+
+def test_worker_retries_even_when_error_cannot_be_saved(monkeypatch, caplog):
+    from app import k14_sync
+    calls = []
+    class TwoCycles:
+        def is_set(self):
+            return len(calls) == 2
+        def wait(self, delay):
+            assert delay == 300
+    def flaky_sync(actor):
+        calls.append(actor)
+        if len(calls) == 1:
+            raise sqlite3.OperationalError("private-path-and-token")
+    monkeypatch.setattr(k14_sync, "_STOP", TwoCycles())
+    monkeypatch.setattr(k14_sync, "run_sync", flaky_sync)
+    monkeypatch.setenv("K14_SYNC_INTERVAL_SECONDS", "invalid")
+    k14_sync._loop()
+    assert len(calls) == 2
+    assert "will retry" in caplog.text
+    assert "private-path-and-token" not in caplog.text
+
+
+def test_worker_stops_and_can_restart_without_duplicate_threads(monkeypatch):
+    import threading
+    from app import k14_sync
+    called = threading.Event()
+    calls = []
+    def fake_sync(actor):
+        calls.append(actor)
+        called.set()
+    monkeypatch.setattr(k14_sync, "_THREAD", None)
+    monkeypatch.setattr(k14_sync, "_STOP", threading.Event())
+    monkeypatch.setattr(k14_sync, "run_sync", fake_sync)
+    monkeypatch.setattr(k14_sync, "autostart_allowed", lambda: True)
+    try:
+        k14_sync.start_background_sync()
+        assert called.wait(2)
+        worker = k14_sync._THREAD
+        k14_sync.start_background_sync()
+        assert k14_sync._THREAD is worker
+        k14_sync.stop_background_sync()
+        assert not worker.is_alive()
+        called.clear()
+        k14_sync.start_background_sync()
+        assert called.wait(2)
+        assert len(calls) == 2
+    finally:
+        k14_sync.stop_background_sync()
+
+
+def test_windows_environment_path_and_invalid_settings_are_sanitized(admin, monkeypatch, tmp_path):
+    client, headers = admin
+    path = tmp_path / "NCSC-K14-Pilot" / "attendance.sqlite3"
+    path.parent.mkdir()
+    _connector(path, [(HOST, "7", "2026-11-02 07:21:07", "1", "0", "2026-11-23 03:23:42")])
+    _enable(monkeypatch, path)
+    monkeypatch.setenv("LOCALAPPDATA", str(tmp_path))
+    monkeypatch.setenv("K14_CONNECTOR_DB", "%LOCALAPPDATA%/NCSC-K14-Pilot/attendance.sqlite3")
+    assert client.post("/api/device/sync", headers=headers).status_code == 200
+    monkeypatch.setenv("K14_PORT", "private-path-and-token")
+    info = client.get("/api/device/status")
+    assert info.status_code == 200
+    assert info.json()["configuration_error"] == "K14_PORT must be a valid TCP port."
+    failed = client.post("/api/device/sync", headers=headers)
+    assert failed.status_code == 409
+    assert "private-path-and-token" not in failed.text
+    assert "private-path-and-token" not in client.get("/api/device/status").text
+    monkeypatch.setenv("K14_CONNECTOR_DB", "%NCSC_UNSET_TEST_VARIABLE%/private.sqlite3")
+    monkeypatch.delenv("NCSC_UNSET_TEST_VARIABLE", raising=False)
+    assert client.post("/api/device/sync", headers=headers).status_code == 409
+    assert "private.sqlite3" not in client.get("/api/device/status").text
+
+
+def test_saved_unknown_errors_do_not_expose_paths_or_credentials(admin):
+    client, _ = admin
+    with closing(connect()) as con, con:
+        con.execute("INSERT INTO k14_sync_runs(started_at,outcome,error_message) VALUES('2026-11-23','error',?)",
+                    ("C:/Users/Private/secret.sqlite3 password=private-token",))
+    status = client.get("/api/device/status")
+    assert status.status_code == 200
+    assert "private-token" not in status.text
+    assert "secret.sqlite3" not in status.text
+    assert "Review the local connector settings" in status.json()["attendance_sync"]["last_error"]
+
+
+def test_cli_manual_import_and_status_work_with_timer_off(admin, monkeypatch, tmp_path, capsys):
+    import json
+    import sys
+    from app.cli import main
+    path = tmp_path / "attendance.sqlite3"
+    _connector(path, [(HOST, "7", "2026-11-02 07:21:07", "1", "0", "2026-11-23 03:23:42")])
+    _enable(monkeypatch, path)
+    monkeypatch.setenv("K14_ATTENDANCE_SYNC_ENABLED", "false")
+    monkeypatch.setattr(sys, "argv", ["app.cli", "k14-status"])
+    main()
+    before = json.loads(capsys.readouterr().out)
+    assert before["host"] == HOST
+    assert before["attendance_sync"]["connector_available"] is True
+    assert before["sync_enabled"] is False
+    monkeypatch.setattr(sys, "argv", ["app.cli", "sync-k14"])
+    main()
+    assert "Outcome: success; read 1; new 1" in capsys.readouterr().out
+    main()
+    assert "Outcome: success; read 1; new 0" in capsys.readouterr().out
+    monkeypatch.setattr(sys, "argv", ["app.cli", "k14-status"])
+    main()
+    after = json.loads(capsys.readouterr().out)["attendance_sync"]
+    assert after["latest_result"] == "Success — No new records"
+    assert after["total_imported"] == 1
+
+
+def test_usb_codes_at_same_time_survive_connector_deduplication(admin, monkeypatch, tmp_path):
+    client, headers = admin
+    path = tmp_path / "attendance.sqlite3"
+    _connector(path, [(HOST, "7", "2026-11-02 07:21:07", "2", "5", "2026-11-23 03:23:42")])
+    _enable(monkeypatch, path)
+    assert client.post("/api/device/sync", headers=headers).status_code == 200
+    usb = (b"7\t2026-11-02 07:21:07\t1\t0\t1\t15\n"
+           b"7\t2026-11-02 07:21:07\t1\t0\t1\t16\n")
+    result = client.post("/api/imports", files={"file": ("backup.dat", usb)}, headers=headers)
+    assert result.status_code == 200
+    assert result.json()["inserted"] == 1
+    assert client.post("/api/device/sync", headers=headers).json()["records_inserted"] == 0
+    with closing(connect()) as con:
+        assert [row[0] for row in con.execute("SELECT work_code FROM punches ORDER BY id")] == ["15", "16"]
+        assert tuple(con.execute("SELECT device_status,device_punch_type FROM k14_sync_events").fetchone()) == ("2", "5")
+
+
+def test_synthetic_pilot_volume_is_idempotent_and_keeps_source_unchanged(admin, monkeypatch, tmp_path):
+    import datetime as dt
+    from app.k14_sync import ALLOWED_IDS
+    client, headers = admin
+    path = tmp_path / "attendance.sqlite3"
+    ids = sorted(ALLOWED_IDS, key=int)
+    start = dt.datetime(2026, 10, 1)
+    rows = [(HOST, ids[index % 14] if index < 4986 else "13",
+             (start + dt.timedelta(seconds=index)).isoformat(sep=" "), "2", "5", "2026-11-23 03:23:42")
+            for index in range(5736)]
+    _connector(path, rows)
+    source_before = path.read_bytes()
+    _enable(monkeypatch, path)
+    first = client.post("/api/device/sync", headers=headers).json()
+    assert (first["records_read"], first["records_inserted"], first["records_skipped"]) == (5736, 4986, 750)
+    second = client.post("/api/device/sync", headers=headers).json()
+    assert (second["records_inserted"], second["records_already_present"]) == (0, 4986)
+    sync = client.get("/api/device/status").json()["attendance_sync"]
+    assert sync["total_imported"] == 4986
+    assert sync["latest_result"] == "Success — No new records"
+    assert path.read_bytes() == source_before

@@ -15,6 +15,7 @@ let toastTimer = null;
 let requestSerial = 0;
 let rosterPreviewOkay = false;
 let usbPreviewOkay = false;
+let connectorReadPending = false;
 const titles = {
   employees:'Employee Attendance',
   activities:'AJA / Travel Orders',
@@ -261,17 +262,23 @@ async function loadDevice(){
   try{
     const data=await api('/api/device/status');
     $('lan-ip').textContent=data.host;
-    $('lan-port').textContent=data.port;
-    $('lan-sync').textContent=data.sync_enabled?'Reading connector':'Not active';
+    $('lan-port').textContent=data.port??'—';
     $('lan-badge').textContent=data.sync_enabled?'Connector sync on':'Not synchronized';
     $('lan-message').textContent=data.message;
     const sync=data.attendance_sync||{};
+    $('lan-sync').textContent=sync.in_progress?'Import in progress':
+      (sync.enabled?'On · every '+sync.interval_seconds+' seconds':'Off · Manual reads available');
+    $('lan-connector').textContent=sync.connector_available?'Available (local file)':'Unavailable';
+    $('lan-connector').title=sync.connector_message||'';
+    $('lan-total-records').textContent=Number(sync.total_imported||0).toLocaleString();
+    $('lan-probe-status').textContent=data.probe_enabled?'Enabled':'Disabled';
     $('lan-last-sync').textContent=sync.last_success_at||'—';
     $('lan-new-records').textContent=sync.last_inserted==null?'—':String(sync.last_inserted);
-    $('lan-sync-result').textContent=sync.last_error?'Error':(sync.last_success_at?'OK':'—');
-    $('lan-sync-error').textContent=sync.last_error||'';
-    $('probe-lan').disabled=session.role!=='admin';
-    $('sync-connector').disabled=session.role!=='admin';
+    $('lan-sync-result').textContent=sync.latest_result||'Not yet synchronized';
+    $('lan-sync-error').textContent=[data.configuration_error,sync.last_error,
+      sync.connector_available?'':sync.connector_message].filter(Boolean).filter((value,index,items)=>items.indexOf(value)===index).join(' ');
+    $('probe-lan').disabled=session.role!=='admin'||!data.probe_enabled;
+    $('sync-connector').disabled=session.role!=='admin'||connectorReadPending;
     const codes=await api('/api/work-codes');
     $('code-rows').innerHTML=codes.items.length?codes.items.map(row=>
       '<tr><td>'+esc(row.device_id)+'</td><td><span class="code-pill">'+esc(row.work_code)+'</span></td>'+
@@ -283,15 +290,18 @@ async function loadDevice(){
   }catch(error){toast(error.message,true);}
 }
 async function syncConnector(){
+  if(connectorReadPending)return;
+  connectorReadPending=true;
   $('sync-connector').disabled=true;
   try{
     const data=await api('/api/device/sync',{method:'POST'});
-    toast('Connector read finished. '+data.records_inserted+' new records.');
+    const added=data.records_inserted;
+    toast(added===0?'Success — No new records':'Success — '+added+' new record'+(added===1?'':'s')+'.');
     await loadDevice();
   }catch(error){
     toast(error.message,true);
     try{await loadDevice();}catch(_){}
-  }finally{$('sync-connector').disabled=session.role!=='admin';}
+  }finally{connectorReadPending=false;$('sync-connector').disabled=session?.role!=='admin';}
 }
 async function probeDevice(){
   $('probe-lan').disabled=true;

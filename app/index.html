@@ -141,19 +141,24 @@
             <summary>Connection diagnostics</summary>
             <div class="panel">
               <div class="connection-grid">
-                <div><span class="field-label">K14 IP address</span><strong id="lan-ip">192.168.1.201</strong></div>
-                <div><span class="field-label">Communication port</span><strong id="lan-port">4370</strong></div>
-                <div><span class="field-label">Sync status</span><strong id="lan-sync">Not active</strong></div>
-                <div class="connection-action"><button id="probe-lan" type="button" class="button outline">Test connection</button></div>
+                <div><span class="field-label">Configured K14 IP address</span><strong id="lan-ip">—</strong></div>
+                <div><span class="field-label">Communication port</span><strong id="lan-port">—</strong></div>
+                <div><span class="field-label">Automatic connector imports</span><strong id="lan-sync">Loading…</strong></div>
+                <div class="connection-action"><button id="probe-lan" type="button" class="button outline">Test TCP port</button></div>
+              </div>
+              <div class="connection-grid">
+                <div><span class="field-label">Connector database</span><strong id="lan-connector">—</strong></div>
+                <div><span class="field-label">Total attendance records</span><strong id="lan-total-records">—</strong></div>
+                <div><span class="field-label">Optional TCP probe</span><strong id="lan-probe-status">—</strong></div>
               </div>
               <div class="connection-grid" id="attendance-sync-grid">
                 <div><span class="field-label">Last successful synchronization</span><strong id="lan-last-sync">—</strong></div>
-                <div><span class="field-label">New records</span><strong id="lan-new-records">—</strong></div>
+                <div><span class="field-label">New records (last success)</span><strong id="lan-new-records">—</strong></div>
                 <div><span class="field-label">Latest result</span><strong id="lan-sync-result">—</strong></div>
                 <div class="connection-action"><button id="sync-connector" type="button" class="button outline">Read connector database</button></div>
               </div>
               <p class="table-note" id="lan-sync-error"></p>
-              <p class="table-note" id="lan-message">LAN sync is not active until the physical device and read-only SDK are verified.</p>
+              <p class="table-note" id="lan-message">Loading local connector diagnostics…</p>
               <span class="hidden" id="lan-badge">Not connected</span>
             </div>
           </details>

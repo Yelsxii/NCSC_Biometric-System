@@ -1,6 +1,7 @@
 """Use: python -m app.cli create-admin"""
 from __future__ import annotations
 import getpass
+import json
 import re
 import sys
 from dotenv import load_dotenv
@@ -10,7 +11,7 @@ from app.security import hash_password
 
 def sync_k14() -> None:
     from app.k14_sync import run_sync
-    result = run_sync(None)
+    result = run_sync(None, manual=True)
     print(
         "Outcome: {outcome}; read {records_read}; new {records_inserted}; "
         "already present {records_already_present}; skipped {records_skipped}".format(**result)
@@ -26,8 +27,19 @@ def main() -> None:
     if command == ["sync-k14"]:
         sync_k14()
         return
+    if command == ["k14-status"]:
+        from app.k14_sync import safe_error, status_view
+        from app.lan import status
+        try:
+            info = status()
+        except ValueError as exc:
+            raise SystemExit(safe_error(str(exc))) from exc
+        info["attendance_sync"] = status_view(include_errors=True)
+        info["sync_enabled"] = info["attendance_sync"]["enabled"]
+        print(json.dumps(info, indent=2, ensure_ascii=False))
+        return
     if command != ["create-admin"]:
-        raise SystemExit("Usage: python -m app.cli create-admin | sync-k14")
+        raise SystemExit("Usage: python -m app.cli create-admin | sync-k14 | k14-status")
     initialize()
     username = input("Admin username: ").strip().lower()
     if not re.fullmatch(r"[a-z0-9._-]{3,40}", username):

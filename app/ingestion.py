@@ -41,8 +41,9 @@ def insert_punches(con: sqlite3.Connection, records: Iterable[Punch], batch_id: 
             except sqlite3.IntegrityError:
                 pass
             continue
-        if existing:
-            continue
+        # Distinct USB codes at the same timestamp are still original events.
+        # Only the connector placeholder above may be enriched; exact USB
+        # duplicates are handled by the comparison/unique constraint.
         cur = con.execute(
             """INSERT OR IGNORE INTO punches
                (employee_code,happened_at,device_id,status_code,verification_code,work_code,imported_batch_id,source)

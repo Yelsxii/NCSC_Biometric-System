@@ -25,7 +25,7 @@ from starlette.middleware.sessions import SessionMiddleware
 from app.db import connect, initialize, register_scan_metadata
 from app.parser import MAX_BYTES, digest, parse_attlog
 from app.ingestion import insert_punches
-from app.k14_sync import run_sync, start_background_sync, status_view
+from app.k14_sync import run_sync, safe_error, start_background_sync, status_view, stop_background_sync
 from app.security import check_password
 from app.reports import preview_k14_report
 from app.registry import parse_staff, clean
@@ -51,6 +51,11 @@ CODE_RE = re.compile(r"^[A-Za-z0-9._-]{1,64}$")
 def on_startup() -> None:
     initialize()
     start_background_sync()
+
+
+@app.on_event("shutdown")
+def on_shutdown() -> None:
+    stop_background_sync()
 
 
 @app.middleware("http")
@@ -602,16 +607,20 @@ def employee_register(month: str, q: str = "", user: dict = Depends(current_user
 # ── LAN configuration without unauthorized reads/writes ────────────────────
 
 def _device_payload(user: dict) -> dict:
-    payload = lan_status()
+    try:
+        payload = lan_status()
+    except ValueError as exc:
+        payload = {"host": "Invalid configuration", "port": None, "probe_enabled": False,
+                   "configuration_error": safe_error(str(exc))}
     sync = status_view(include_errors=user["role"] == "admin")
     payload["sync_enabled"] = sync["enabled"]
     payload["attendance_sync"] = sync
-    if sync["enabled"]:
-        payload["mode"] = "USB import + read-only K14 connector database"
-        payload["message"] = (
-            "Attendance sync reads the local connector database only. It does not connect to the K14, "
-            "import fingerprint templates, or change device records. USB import remains available."
-        )
+    payload["mode"] = "Local connector database + USB backup"
+    payload["message"] = (
+        "Administrators can read the local connector file with automatic imports off. "
+        "The optional TCP test does not control imports or confirm that device polling is running. "
+        "Restart the website after changing local settings."
+    )
     return payload
 
 
@@ -624,7 +633,7 @@ def device_status(user: dict = Depends(current_user)):
 def device_sync(request: Request, user: dict = Depends(require_admin)):
     """Copy new rows from the connector SQLite file. Does not open the K14."""
     require_csrf(request)
-    result = run_sync(actor_id=user["id"])
+    result = run_sync(actor_id=user["id"], manual=True)
     if result["outcome"] != "success":
         raise HTTPException(409, result["error_message"] or "Connector sync failed.")
     return result
@@ -633,7 +642,10 @@ def device_sync(request: Request, user: dict = Depends(require_admin)):
 @app.post("/api/device/probe")
 def device_probe(request: Request, user: dict = Depends(require_admin)):
     require_csrf(request)
-    return tcp_probe()
+    try:
+        return tcp_probe()
+    except ValueError as exc:
+        raise HTTPException(409, safe_error(str(exc))) from exc
 
 
 @app.get("/api/activities/monitor")

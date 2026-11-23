@@ -2,7 +2,7 @@
 const { chromium } = require('playwright');
 const assert = require('node:assert/strict');
 const { spawn } = require('node:child_process');
-const { mkdtempSync, mkdirSync, rmSync } = require('node:fs');
+const { mkdtempSync, mkdirSync, rmSync, renameSync } = require('node:fs');
 const { tmpdir } = require('node:os');
 const { join, resolve } = require('node:path');
 const { randomBytes } = require('node:crypto');
@@ -22,18 +22,28 @@ const net = require('node:net');
     DATABASE_PATH:join(tmp,'test.sqlite3'),
     QA_PASSWORD:password, QA_PORT:String(port),
     K14_ATTENDANCE_SYNC_ENABLED:'false',
+    K14_CONNECTOR_DB:join(tmp,'connector.sqlite3'),
+    K14_HOST:'192.168.254.201',
     K14_LAN_PROBE_ENABLED:'false'
   };
   const python = process.env.TEST_PYTHON ||
     join(root,'.venv',process.platform==='win32'?'Scripts/python.exe':'bin/python');
   const server = spawn(python,['-u','-c',`
-import os, uvicorn
+import os, sqlite3, uvicorn
 from app.db import initialize, connect
 from app.security import hash_password
 initialize()
 with connect() as con:
     con.execute("INSERT INTO users(username,password_hash,role) VALUES(?,?,'admin')",
                 ('qa-admin',hash_password(os.environ['QA_PASSWORD'])))
+with sqlite3.connect(os.environ['K14_CONNECTOR_DB']) as con:
+    con.execute('''CREATE TABLE attendance_raw (
+        device_ip TEXT, employee_id TEXT, punch_time_local TEXT,
+        device_status TEXT, device_punch_type TEXT, received_at_utc TEXT,
+        PRIMARY KEY(device_ip,employee_id,punch_time_local,device_status,device_punch_type))''')
+    con.executemany('INSERT INTO attendance_raw VALUES(?,?,?,?,?,?)', [
+        ('192.168.254.201','1','2026-11-03 08:00:00','2','5','2026-11-23 03:00:00'),
+        ('192.168.254.201','1','2026-11-03 08:00:01','2','5','2026-11-23 03:00:00')])
 uvicorn.run('app.main:app',host='127.0.0.1',port=int(os.environ['QA_PORT']),log_level='error')
 `],{cwd:root,env,stdio:['ignore','pipe','pipe']});
   let stderr='';
@@ -140,7 +150,33 @@ uvicorn.run('app.main:app',host='127.0.0.1',port=int(os.environ['QA_PORT']),log_
     assert.equal(await page.locator('#staff-form').count(),0);
     await page.screenshot({path:join(root,'docs/users-codes-preview.png'),animations:'disabled'});
     await page.locator('#connection-details summary').click();
-    await page.locator('#lan-sync').filter({hasText:/Not active/}).waitFor();
+    await page.locator('#lan-sync').filter({hasText:/Off · Manual reads available/}).waitFor();
+    assert.equal(await page.locator('#lan-ip').textContent(),'192.168.254.201');
+    assert.equal(await page.locator('#lan-connector').textContent(),'Available (local file)');
+    assert.equal(await page.locator('#lan-total-records').textContent(),'5');
+    assert.equal(await page.locator('#probe-lan').isDisabled(),true);
+    await page.locator('#sync-connector').click();
+    await page.locator('#lan-sync-result').filter({hasText:'Success — 1 new record'}).waitFor();
+    assert.equal(await page.locator('#lan-total-records').textContent(),'6');
+    assert.equal(await page.locator('#lan-new-records').textContent(),'1');
+    await page.locator('#sync-connector:enabled').waitFor();
+    await page.locator('#sync-connector').click();
+    await page.locator('#lan-sync-result').filter({hasText:'Success — No new records'}).waitFor();
+    assert.equal(await page.locator('#lan-new-records').textContent(),'0');
+    const lastSuccess=await page.locator('#lan-last-sync').textContent();
+    // A missing source affects this attempt, not the existing attendance.
+    await page.locator('#sync-connector:enabled').waitFor();
+    renameSync(env.K14_CONNECTOR_DB,join(tmp,'offline.sqlite3'));
+    await page.locator('#sync-connector').click();
+    await page.locator('#lan-sync-result').filter({hasText:'Error'}).waitFor();
+    assert.equal(await page.locator('#lan-last-sync').textContent(),lastSuccess);
+    assert.equal(await page.locator('#lan-total-records').textContent(),'6');
+    assert.equal(await page.locator('#lan-sync-error').textContent(),'Connector database was not found.');
+    await page.locator('#sync-connector:enabled').waitFor();
+    renameSync(join(tmp,'offline.sqlite3'),env.K14_CONNECTOR_DB);
+    await page.locator('#sync-connector').click();
+    await page.locator('#lan-sync-result').filter({hasText:'Success — No new records'}).waitFor();
+    await page.screenshot({path:join(tmp,'connector-diagnostics.png'),animations:'disabled'});
 
     // Import a fictional roster: staff appears by name in the monthly register.
     const roster=Buffer.from('employee_code,display_name,department\n1,Sample One,Sample Section\n2,Sample Two,Sample Section\n');

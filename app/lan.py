@@ -1,10 +1,4 @@
-"""K14 LAN readiness: safe read-only network check and future sync seam.
-
-This module DOES NOT implement a ZKTeco protocol or send attendance commands.
-No biometric templates are handled. Import logic is shared with USB by using
-the same punches schema; future firmware-compatible connector must be reviewed
-before enabling actual synchronization.
-"""
+"""Optional TCP diagnostics, independent of local connector database imports."""
 from __future__ import annotations
 
 import ipaddress
@@ -21,14 +15,17 @@ class LanSettings:
 
 
 def settings() -> LanSettings:
-    host = os.getenv("K14_HOST", "192.168.1.201").strip()
+    host = os.getenv("K14_HOST", "192.168.254.201").strip()
     try:
         address = ipaddress.ip_address(host)
     except ValueError as exc:
         raise ValueError("K14_HOST must be a literal private IPv4 address.") from exc
     if address.version != 4 or not address.is_private or address.is_loopback or address.is_link_local:
         raise ValueError("K14_HOST must be a private, non-loopback IPv4 address.")
-    port = int(os.getenv("K14_PORT", "4370"))
+    try:
+        port = int(os.getenv("K14_PORT", "4370"))
+    except ValueError as exc:
+        raise ValueError("K14_PORT must be a valid TCP port.") from exc
     if not 1 <= port <= 65535:
         raise ValueError("K14_PORT must be a valid TCP port.")
     enabled = os.getenv("K14_LAN_PROBE_ENABLED", "false").lower() == "true"
@@ -42,9 +39,9 @@ def status() -> dict:
         "port": cfg.port,
         "probe_enabled": cfg.enabled,
         "sync_enabled": False,
-        "mode": "USB import + LAN-ready architecture",
-        "message": "LAN sync is not active. Enable an authorized network probe after wiring. "
-                   "Actual data retrieval requires a validated read-only device SDK.",
+        "mode": "Local connector database + USB backup",
+        "message": "Attendance imports read the local connector database. "
+                   "The optional TCP test is separate and does not collect attendance.",
     }
 
 
