@@ -1,6 +1,7 @@
 """NCSC Biometric Attendance System — local-only FastAPI application.
 
-Attendance scans are immutable source events. No LAN/device access in Phase 1.
+Attendance scans stay on this machine. Connector sync reads a local SQLite
+file and does not open the K14.
 """
 from __future__ import annotations
 
@@ -24,6 +25,7 @@ from starlette.middleware.sessions import SessionMiddleware
 from app.db import connect, initialize, register_scan_metadata
 from app.parser import MAX_BYTES, digest, parse_attlog
 from app.ingestion import insert_punches
+from app.k14_sync import run_sync, start_background_sync, status_view
 from app.security import check_password
 from app.reports import preview_k14_report
 from app.registry import parse_staff, clean
@@ -48,6 +50,7 @@ CODE_RE = re.compile(r"^[A-Za-z0-9._-]{1,64}$")
 @app.on_event("startup")
 def on_startup() -> None:
     initialize()
+    start_background_sync()
 
 
 @app.middleware("http")
@@ -213,7 +216,8 @@ def overview(user: dict = Depends(current_user)):
                       "scans": counts.get((start + dt.timedelta(days=i)).isoformat(), 0)}
                      for i in range(7)]
     return {"totals": totals, "recent_imports": recent, "daily_scans": daily,
-            "phase": "Attendance monitoring", "connection": lan_status()}
+            "phase": "Attendance monitoring", "connection": _device_payload(user),
+            "attendance_sync": status_view(include_errors=user["role"] == "admin")}
 
 
 @app.get("/api/punches")
@@ -597,9 +601,33 @@ def employee_register(month: str, q: str = "", user: dict = Depends(current_user
 
 # ── LAN configuration without unauthorized reads/writes ────────────────────
 
+def _device_payload(user: dict) -> dict:
+    payload = lan_status()
+    sync = status_view(include_errors=user["role"] == "admin")
+    payload["sync_enabled"] = sync["enabled"]
+    payload["attendance_sync"] = sync
+    if sync["enabled"]:
+        payload["mode"] = "USB import + read-only K14 connector database"
+        payload["message"] = (
+            "Attendance sync reads the local connector database only. It does not connect to the K14, "
+            "import fingerprint templates, or change device records. USB import remains available."
+        )
+    return payload
+
+
 @app.get("/api/device/status")
 def device_status(user: dict = Depends(current_user)):
-    return lan_status()
+    return _device_payload(user)
+
+
+@app.post("/api/device/sync")
+def device_sync(request: Request, user: dict = Depends(require_admin)):
+    """Copy new rows from the connector SQLite file. Does not open the K14."""
+    require_csrf(request)
+    result = run_sync(actor_id=user["id"])
+    if result["outcome"] != "success":
+        raise HTTPException(409, result["error_message"] or "Connector sync failed.")
+    return result
 
 
 @app.post("/api/device/probe")

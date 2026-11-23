@@ -4,7 +4,7 @@ The office monitors its existing DTR. This application is not a second AJA or tr
 
 | Record | Source | Treatment in this revision |
 | --- | --- | --- |
-| Biometric scans | Original K14 USB export; LAN integration later | Preserve exact timestamp, employee ID and device codes; group by day for checking |
+| Biometric scans | K14 USB export, or the local read-only connector database | Preserve exact timestamp, employee ID and raw device codes; group by day for checking |
 | AJA / fieldwork / official business / travel order | Existing office record | Optional reference or short note, saved directly without another approval |
 | Incorrect reference | Authorized administrator | Void with a reason; retain the original and audit event |
 | Previous application entries | Old system table | Retain original pending/approved/rejected statuses as read-only history |
@@ -26,4 +26,4 @@ Schema initialization only adds tables/indexes. It does not rewrite or approve o
 
 ## Remaining integration
 
-Automatic AM/PM filling, undertime calculation and exact NCSC printable DTR export are not delivered by the monitoring screen. They require verified device code mapping and alignment with the existing DTR fields/formulas. LAN connectivity and a connector to the existing AJA/order register are also separate integrations. The monitoring revision must not be presented as having those connections already running.
+Automatic AM/PM filling, undertime calculation and exact NCSC printable DTR export are not delivered by the monitoring screen. They require verified device code mapping and alignment with the existing DTR fields/formulas. The attendance connector copies raw punches only. It does not connect to the office AJA or travel-order register, and it does not decide time in, time out, undertime, or overtime.

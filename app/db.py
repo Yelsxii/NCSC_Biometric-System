@@ -1,4 +1,9 @@
-"""SQLite schema and connections. Device records remain immutable after import."""
+"""SQLite schema and connections.
+
+Imported attendance timestamps and employee IDs stay as first recorded.
+A connector-created row may receive USB export fields once for that same
+timestamp; the connector's raw values remain in k14_sync_events.
+"""
 from __future__ import annotations
 import os
 import sqlite3
@@ -45,12 +50,40 @@ CREATE TABLE IF NOT EXISTS punches (
  verification_code TEXT NOT NULL,
  work_code TEXT NOT NULL,
  imported_batch_id INTEGER NOT NULL REFERENCES import_batches(id),
+ source TEXT NOT NULL DEFAULT 'usb',
  created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
  UNIQUE(employee_code,happened_at,device_id,status_code,verification_code,work_code)
 );
 CREATE INDEX IF NOT EXISTS idx_punch_date ON punches(happened_at);
 CREATE INDEX IF NOT EXISTS idx_punch_employee ON punches(employee_code,happened_at);
 CREATE INDEX IF NOT EXISTS idx_punch_work_code ON punches(device_id,work_code);
+CREATE TABLE IF NOT EXISTS k14_sync_events (
+ id INTEGER PRIMARY KEY AUTOINCREMENT,
+ device_ip TEXT NOT NULL,
+ employee_id TEXT NOT NULL,
+ punch_time_local TEXT NOT NULL,
+ device_status TEXT NOT NULL,
+ device_punch_type TEXT NOT NULL,
+ received_at_utc TEXT NOT NULL,
+ punch_id INTEGER REFERENCES punches(id),
+ link_reason TEXT NOT NULL CHECK(link_reason IN ('inserted','matched_existing_timestamp')),
+ synced_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+ UNIQUE(device_ip, employee_id, punch_time_local, device_status, device_punch_type)
+);
+CREATE INDEX IF NOT EXISTS idx_k14_sync_employee ON k14_sync_events(employee_id, punch_time_local);
+CREATE TABLE IF NOT EXISTS k14_sync_runs (
+ id INTEGER PRIMARY KEY AUTOINCREMENT,
+ started_at TEXT NOT NULL,
+ finished_at TEXT,
+ outcome TEXT NOT NULL CHECK(outcome IN ('success','error')),
+ source_name TEXT NOT NULL DEFAULT '',
+ records_read INTEGER NOT NULL DEFAULT 0,
+ records_inserted INTEGER NOT NULL DEFAULT 0,
+ records_already_present INTEGER NOT NULL DEFAULT 0,
+ records_skipped INTEGER NOT NULL DEFAULT 0,
+ error_message TEXT NOT NULL DEFAULT '',
+ actor_id INTEGER REFERENCES users(id)
+);
 CREATE TABLE IF NOT EXISTS employees (
  employee_code TEXT PRIMARY KEY,
  display_name TEXT NOT NULL DEFAULT '',
@@ -116,11 +149,22 @@ CREATE TABLE IF NOT EXISTS audit_events (
 def initialize() -> None:
     with connect() as con:
         con.executescript(SCHEMA)
+        migrate(con)
         register_scan_metadata(con)
+
+
+def migrate(con: sqlite3.Connection) -> None:
+    """Add columns and sync tables without rewriting existing attendance rows."""
+    columns = {row[1] for row in con.execute("PRAGMA table_info(punches)")}
+    if "source" not in columns:
+        con.execute("ALTER TABLE punches ADD COLUMN source TEXT NOT NULL DEFAULT 'usb'")
 
 
 def register_scan_metadata(con: sqlite3.Connection) -> None:
     """Register IDs/codes seen in logs without inventing names or code meanings."""
     con.execute("INSERT OR IGNORE INTO employees(employee_code) SELECT DISTINCT employee_code FROM punches")
     con.execute("INSERT OR IGNORE INTO employees(employee_code) SELECT DISTINCT employee_code FROM activity_records WHERE status='recorded'")
-    con.execute("INSERT OR IGNORE INTO work_codes(device_id,work_code) SELECT DISTINCT device_id,work_code FROM punches")
+    con.execute(
+        "INSERT OR IGNORE INTO work_codes(device_id,work_code) "
+        "SELECT DISTINCT device_id,work_code FROM punches WHERE work_code<>''"
+    )

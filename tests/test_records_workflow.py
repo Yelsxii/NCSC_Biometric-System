@@ -68,6 +68,7 @@ def test_lan_probe_never_runs_without_opt_in(admin, monkeypatch):
     monkeypatch.setenv("K14_HOST","192.168.1.201")
     monkeypatch.setenv("K14_PORT","4370")
     monkeypatch.delenv("K14_LAN_PROBE_ENABLED",raising=False)
+    monkeypatch.delenv("K14_ATTENDANCE_SYNC_ENABLED",raising=False)
     info = client.get("/api/device/status")
     assert info.status_code == 200
     assert info.json()["sync_enabled"] is False

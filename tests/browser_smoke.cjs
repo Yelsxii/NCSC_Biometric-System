@@ -20,7 +20,9 @@ const net = require('node:net');
     ...process.env,
     SECRET_KEY:randomBytes(40).toString('hex'),
     DATABASE_PATH:join(tmp,'test.sqlite3'),
-    QA_PASSWORD:password, QA_PORT:String(port)
+    QA_PASSWORD:password, QA_PORT:String(port),
+    K14_ATTENDANCE_SYNC_ENABLED:'false',
+    K14_LAN_PROBE_ENABLED:'false'
   };
   const python = process.env.TEST_PYTHON ||
     join(root,'.venv',process.platform==='win32'?'Scripts/python.exe':'bin/python');

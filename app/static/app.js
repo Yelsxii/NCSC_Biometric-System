@@ -262,10 +262,16 @@ async function loadDevice(){
     const data=await api('/api/device/status');
     $('lan-ip').textContent=data.host;
     $('lan-port').textContent=data.port;
-    $('lan-sync').textContent=data.sync_enabled?'Enabled':'Not active';
-    $('lan-badge').textContent=data.sync_enabled?'Connected':'Not synchronized';
+    $('lan-sync').textContent=data.sync_enabled?'Reading connector':'Not active';
+    $('lan-badge').textContent=data.sync_enabled?'Connector sync on':'Not synchronized';
     $('lan-message').textContent=data.message;
+    const sync=data.attendance_sync||{};
+    $('lan-last-sync').textContent=sync.last_success_at||'—';
+    $('lan-new-records').textContent=sync.last_inserted==null?'—':String(sync.last_inserted);
+    $('lan-sync-result').textContent=sync.last_error?'Error':(sync.last_success_at?'OK':'—');
+    $('lan-sync-error').textContent=sync.last_error||'';
     $('probe-lan').disabled=session.role!=='admin';
+    $('sync-connector').disabled=session.role!=='admin';
     const codes=await api('/api/work-codes');
     $('code-rows').innerHTML=codes.items.length?codes.items.map(row=>
       '<tr><td>'+esc(row.device_id)+'</td><td><span class="code-pill">'+esc(row.work_code)+'</span></td>'+
@@ -275,6 +281,17 @@ async function loadDevice(){
       esc(row.device_id)+'|'+esc(row.work_code)+'">Edit label</button>':'')+'</td></tr>'
     ).join(''):'<tr><td colspan="6">Import a biometric log to discover device work codes.</td></tr>';
   }catch(error){toast(error.message,true);}
+}
+async function syncConnector(){
+  $('sync-connector').disabled=true;
+  try{
+    const data=await api('/api/device/sync',{method:'POST'});
+    toast('Connector read finished. '+data.records_inserted+' new records.');
+    await loadDevice();
+  }catch(error){
+    toast(error.message,true);
+    try{await loadDevice();}catch(_){}
+  }finally{$('sync-connector').disabled=session.role!=='admin';}
 }
 async function probeDevice(){
   $('probe-lan').disabled=true;
@@ -425,6 +442,7 @@ async function initialize(){
   $('roster-preview').addEventListener('click',()=>processRoster(true));
   $('roster-form').addEventListener('submit',e=>{e.preventDefault();processRoster(false);});
   $('probe-lan').addEventListener('click',probeDevice);
+  $('sync-connector').addEventListener('click',syncConnector);
   $('code-rows').addEventListener('click',e=>{
     const node=e.target.closest('[data-map-code]');if(!node)return;
     const [device,code]=node.dataset.mapCode.split('|');openCodeEditor(device,code);

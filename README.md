@@ -14,7 +14,7 @@ NCSC records-oriented prototype using **FastAPI + SQLite**, with a restrained **
 
 ## K14 data limitations
 
-The application currently has a tested USB import path, not live LAN synchronization. An authorized K14 network connection and verified **read-only SDK connector** are needed to automatically fetch user profiles, attendance and supported work-code metadata.
+USB import remains the backup. Automatic attendance import reads the local connector SQLite file produced by the existing read-only poller. The website does not open the K14, does not copy fingerprint templates, and does not replace either database. See `docs/k14-attendance-sync.md`.
 
 **Official Travel without a fingerprint scan cannot show up in the device-only activity log.** Existing approved office TO records are still necessary to mark days as Official Travel in DTR review. The absence of a device scan must never create fake 8 AM / 5 PM times or automatically justify attendance credit.
 
@@ -55,17 +55,27 @@ Start:
 
 Visit http://127.0.0.1:8000.
 
-### Future authorized K14 LAN setup
+### Local K14 connector sync
 
-The device was observed at IP `192.168.1.201`, port `4370`, DHCP OFF, but there was no Ethernet cable, and the development PC was on `192.168.254.0/24`. Configure cabling and subnet **with office authorization** before any probe. The optional check needs settings in the local `.env`:
+The working poller stores punches in `%LOCALAPPDATA%\NCSC-K14-Pilot\attendance.sqlite3`. The website reads that file on a timer when sync is enabled. It does not bind a public interface and it does not send commands to `192.168.254.201`.
 
-```dotenv
-K14_HOST=192.168.1.201
-K14_PORT=4370
-K14_LAN_PROBE_ENABLED=false
+```powershell
+.\scripts\Start-NcscLocal.ps1
 ```
 
-Never enable live data access just because TCP port 4370 is open. Firmware-compatible, audited, read-only device retrieval must be tested, and it must not read fingerprint templates or issue device write/delete commands. See `app/lan.py` and `app/ingestion.py`.
+Development start, after the variables in `.env.example` are copied into the private `.env` and `K14_ATTENDANCE_SYNC_ENABLED` is set true:
+
+```powershell
+.\.venv\Scripts\python.exe -m uvicorn app.main:app --host 127.0.0.1 --port 8000 --reload
+```
+
+One manual read, without starting the website:
+
+```powershell
+.\.venv\Scripts\python.exe -m app.cli sync-k14
+```
+
+Keep `K14_LAN_PROBE_ENABLED=false` unless the office authorizes a TCP probe. The probe still does not collect attendance. Handover steps and the separate device poller are in `docs/k14-attendance-sync.md`.
 
 ### Tests
 

@@ -95,7 +95,7 @@
             <div class="panel">
               <div class="panel-header"><div><h2>Daily attendance and activity records</h2><p id="detail-summary">Original device scans and activity classifications.</p></div><label class="month-inline">Month<input id="detail-month" type="month"></label></div>
               <div class="table-wrap"><table class="records-table"><thead><tr><th>Date</th><th>Device scans (actual)</th><th>Official activity</th><th>DTR monitoring status</th></tr></thead><tbody id="daily-rows"><tr><td colspan="4">Choose an employee to load records.</td></tr></tbody></table></div>
-              <div class="table-note">Device timestamps are not automatically classified into AM/PM In/Out until the actual K14 status rules have been validated. Travel Order coverage does not invent biometric times.</div>
+              <div class="table-note">Device timestamps are not automatically classified into AM/PM In/Out until the actual K14 status rules have been validated. Connector rows keep raw device_status and device_punch_type values; a blank work code was not stored by the connector. Travel Order coverage does not invent biometric times.</div>
             </div>
             <div class="panel raw-panel">
               <div class="panel-header"><div><h2>Raw biometric event list</h2><p>Audit view of exact events from the selected employee and month.</p></div></div>
@@ -146,6 +146,13 @@
                 <div><span class="field-label">Sync status</span><strong id="lan-sync">Not active</strong></div>
                 <div class="connection-action"><button id="probe-lan" type="button" class="button outline">Test connection</button></div>
               </div>
+              <div class="connection-grid" id="attendance-sync-grid">
+                <div><span class="field-label">Last successful synchronization</span><strong id="lan-last-sync">—</strong></div>
+                <div><span class="field-label">New records</span><strong id="lan-new-records">—</strong></div>
+                <div><span class="field-label">Latest result</span><strong id="lan-sync-result">—</strong></div>
+                <div class="connection-action"><button id="sync-connector" type="button" class="button outline">Read connector database</button></div>
+              </div>
+              <p class="table-note" id="lan-sync-error"></p>
               <p class="table-note" id="lan-message">LAN sync is not active until the physical device and read-only SDK are verified.</p>
               <span class="hidden" id="lan-badge">Not connected</span>
             </div>

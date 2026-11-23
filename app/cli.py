@@ -8,10 +8,26 @@ from app.db import connect, initialize
 from app.security import hash_password
 
 
+def sync_k14() -> None:
+    from app.k14_sync import run_sync
+    result = run_sync(None)
+    print(
+        "Outcome: {outcome}; read {records_read}; new {records_inserted}; "
+        "already present {records_already_present}; skipped {records_skipped}".format(**result)
+    )
+    if result["outcome"] != "success":
+        print(result["error_message"] or "Connector sync failed.")
+        raise SystemExit(1)
+
+
 def main() -> None:
     load_dotenv()
-    if sys.argv[1:] != ["create-admin"]:
-        raise SystemExit("Usage: python -m app.cli create-admin")
+    command = sys.argv[1:]
+    if command == ["sync-k14"]:
+        sync_k14()
+        return
+    if command != ["create-admin"]:
+        raise SystemExit("Usage: python -m app.cli create-admin | sync-k14")
     initialize()
     username = input("Admin username: ").strip().lower()
     if not re.fullmatch(r"[a-z0-9._-]{3,40}", username):
