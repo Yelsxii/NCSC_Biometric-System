@@ -9,6 +9,7 @@ Verified connector table attendance_raw:
   received_at_utc
   PRIMARY KEY (device_ip, employee_id, punch_time_local, device_status, device_punch_type)
 
+The optional device_user_names table stores approved ID/name metadata only.
 The connector does not store a USB device number, a separate verification
 mode, or a work code. Those USB fields are left blank until a USB export of
 the same employee and timestamp arrives. device_status and device_punch_type
@@ -31,6 +32,7 @@ from pathlib import Path
 from app.db import connect, database_path, initialize, register_scan_metadata
 from app.lan import settings
 from app.device_access import LEGACY_ALLOWED_IDS, authorized_ids
+from app.registry import staff_row
 
 ALLOWED_IDS = LEGACY_ALLOWED_IDS  # Bootstrap only; running reads use the registry.
 DEFAULT_INTERVAL_SECONDS = 60
@@ -158,6 +160,57 @@ def read_connector(path: Path) -> list[sqlite3.Row]:
         ))
 
 
+def read_connector_names(path: Path) -> list[sqlite3.Row]:
+    """Read only optional approved device-name metadata; old pollers remain supported."""
+    with _open_connector(path) as source:
+        table = source.execute(
+            "SELECT name FROM sqlite_master WHERE type='table' AND name='device_user_names'"
+        ).fetchone()
+        if not table:
+            return []
+        return list(source.execute(
+            "SELECT device_ip,employee_id,display_name FROM device_user_names LIMIT 5001"
+        ))
+
+
+def import_device_names(con: sqlite3.Connection, rows: list[sqlite3.Row],
+                        host: str, allowed: frozenset[str]) -> int:
+    """Fill placeholder names only; never replace verified, roster or manual names."""
+    if len(rows) > 5000:
+        raise ValueError("Too many device names; review the connector source.")
+    updated = 0
+    for item in rows:
+        device = str(item["device_ip"] or "").strip()
+        code = str(item["employee_id"] or "").strip()
+        if device != host or code not in allowed or not CODE.fullmatch(code):
+            continue
+        try:
+            info = staff_row(code, item["display_name"])
+        except ValueError:
+            continue
+        name = info["display_name"]
+        old = con.execute(
+            "SELECT e.display_name,e.name_source, "
+            "EXISTS(SELECT 1 FROM employee_profiles p WHERE p.employee_code=e.employee_code) AS verified "
+            "FROM employees e WHERE e.employee_code=?", (code,)
+        ).fetchone()
+        if old is not None and (
+            old["verified"] or old["name_source"] in ("manual", "roster", "profile")
+            or (old["display_name"] and old["name_source"] != "device")
+        ):
+            continue
+        if old is not None and old["display_name"] == name:
+            continue
+        con.execute(
+            "INSERT INTO employees(employee_code,display_name,name_source) VALUES(?,?,'device') "
+            "ON CONFLICT(employee_code) DO UPDATE SET display_name=excluded.display_name,"
+            "name_source='device',updated_at=CURRENT_TIMESTAMP",
+            (code, name),
+        )
+        updated += 1
+    return updated
+
+
 def connector_availability() -> dict:
     """Check local readability/schema only. This cannot prove the K14 is online."""
     try:
@@ -227,7 +280,8 @@ def _empty(outcome: str, error_message: str, started: str, records_read: int = 0
     }
 
 
-def write_website(rows: list[sqlite3.Row], actor_id: int | None, started: str, source_name: str) -> dict:
+def write_website(rows: list[sqlite3.Row], actor_id: int | None, started: str, source_name: str,
+                  device_names: list[sqlite3.Row] | None = None) -> dict:
     host = settings().host
     inserted = already = skipped = 0
     with connect() as con:
@@ -324,6 +378,7 @@ def write_website(rows: list[sqlite3.Row], actor_id: int | None, started: str, s
                     (actor_id, "import", "k14_sync", batch_id, f"{inserted} new connector records"),
                 )
         register_scan_metadata(con)
+        names_updated = import_device_names(con, device_names or [], host, allowed)
         finished = _record_run(
             con, started, "success", source_name, len(rows), inserted, already, skipped, "", actor_id,
         )
@@ -333,6 +388,7 @@ def write_website(rows: list[sqlite3.Row], actor_id: int | None, started: str, s
         "records_inserted": inserted,
         "records_already_present": already,
         "records_skipped": skipped,
+        "names_updated": names_updated,
         "error_message": "",
         "finished_at": finished,
     }
@@ -364,7 +420,8 @@ def run_sync(actor_id: int | None = None, *, manual: bool = False) -> dict:
                 raise ValueError("Automatic connector imports are turned off.")
             path = connector_path()
             rows = read_connector(path)
-            return write_website(rows, actor_id, started, path.name)
+            names = read_connector_names(path)
+            return write_website(rows, actor_id, started, path.name, names)
         except ValueError as exc:
             return _remember_error(started, str(exc), actor_id)
         except (sqlite3.Error, OSError, RuntimeError):
