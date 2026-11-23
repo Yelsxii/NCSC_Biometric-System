@@ -123,6 +123,7 @@ CREATE TABLE IF NOT EXISTS work_codes (
  work_code TEXT NOT NULL,
  label TEXT NOT NULL DEFAULT '',
  activity_type TEXT NOT NULL DEFAULT 'Unclassified',
+ direction TEXT NOT NULL DEFAULT 'Unspecified' CHECK(direction IN ('Unspecified','IN','OUT')),
  updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
  PRIMARY KEY(device_id,work_code)
 );
@@ -201,7 +202,10 @@ def initialize() -> None:
         # Preserve a recoverable snapshot before additive workflow migrations
         # on a populated database. No original attendance rows are rewritten.
         tables = {row[0] for row in con.execute("SELECT name FROM sqlite_master WHERE type='table'")}
-        phase = "profiles" if "employee_profiles" not in tables else "attendance" if "attendance_day_reviews" not in tables else None
+        phase = ("profiles" if "employee_profiles" not in tables else
+                 "attendance" if "attendance_day_reviews" not in tables else
+                 "activity-directions" if "work_codes" in tables and
+                 "direction" not in {row[1] for row in con.execute("PRAGMA table_info(work_codes)")} else None)
         if phase and "punches" in tables:
             if con.execute("SELECT COUNT(*) FROM punches").fetchone()[0]:
                 folder = database_path().parent / "backups"
@@ -223,6 +227,11 @@ def migrate(con: sqlite3.Connection) -> None:
     columns = {row[1] for row in con.execute("PRAGMA table_info(punches)")}
     if "source" not in columns:
         con.execute("ALTER TABLE punches ADD COLUMN source TEXT NOT NULL DEFAULT 'usb'")
+    work_columns = {row[1] for row in con.execute("PRAGMA table_info(work_codes)")}
+    if "direction" not in work_columns:
+        # Existing mappings remain Unspecified; no historic scan is reinterpreted.
+        con.execute("ALTER TABLE work_codes ADD COLUMN direction TEXT NOT NULL DEFAULT 'Unspecified' "
+                    "CHECK(direction IN ('Unspecified','IN','OUT'))")
 
 
 def register_scan_metadata(con: sqlite3.Connection) -> None:
