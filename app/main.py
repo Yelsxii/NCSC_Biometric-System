@@ -7,6 +7,7 @@ from __future__ import annotations
 
 import datetime as dt
 import calendar
+import json
 import os
 import re
 import secrets
@@ -32,6 +33,7 @@ from app.registry import parse_staff, clean
 from app.lan import status as lan_status, tcp_probe
 from app.profiles import RegistrationInput, ProfileUpdateInput, get_profile, list_profiles, save_profile
 from app.attendance import DayReviewInput, CalendarInput, decorate_days, save_day_review, save_calendar
+from app.activity_mapping import activity_pairs
 
 load_dotenv()
 secret = os.environ.get("SECRET_KEY", "")
@@ -157,6 +159,13 @@ class EmployeeInput(BaseModel):
 class WorkCodeInput(BaseModel):
     label: str = Field(min_length=1, max_length=100)
     activity_type: Literal["Unclassified", "Regular", "AJA", "Fieldwork", "Official Business", "Travel Order"]
+    direction: Literal["Unspecified", "IN", "OUT"] = "Unspecified"
+
+    @model_validator(mode="after")
+    def direction_matches_activity(self):
+        if self.activity_type not in ("AJA", "Travel Order") and self.direction != "Unspecified":
+            raise ValueError("IN/OUT mapping is only for AJA or Travel Order.")
+        return self
 
     @field_validator("label", mode="before")
     @classmethod
@@ -533,13 +542,22 @@ def save_work_code(device_id: str, work_code: str, payload: WorkCodeInput, reque
     if not CODE_RE.fullmatch(device_id) or not CODE_RE.fullmatch(work_code):
         raise HTTPException(400, "Invalid device or work code.")
     with closing(connect()) as con, con:
+        previous = con.execute(
+            "SELECT label,activity_type,direction FROM work_codes WHERE device_id=? AND work_code=?",
+            (device_id, work_code),
+        ).fetchone()
         con.execute(
-            "INSERT INTO work_codes(device_id,work_code,label,activity_type) VALUES(?,?,?,?) "
-            "ON CONFLICT(device_id,work_code) DO UPDATE SET label=excluded.label,activity_type=excluded.activity_type,updated_at=CURRENT_TIMESTAMP",
-            (device_id,work_code,payload.label,payload.activity_type),
+            "INSERT INTO work_codes(device_id,work_code,label,activity_type,direction) VALUES(?,?,?,?,?) "
+            "ON CONFLICT(device_id,work_code) DO UPDATE SET label=excluded.label,activity_type=excluded.activity_type,"
+            "direction=excluded.direction,updated_at=CURRENT_TIMESTAMP",
+            (device_id,work_code,payload.label,payload.activity_type,payload.direction),
         )
         con.execute("INSERT INTO audit_events(actor_id,action,entity,entity_id,details) VALUES(?,?,?,0,?)",
-                    (user["id"],"mapped","work_code",device_id + ":" + work_code))
+                    (user["id"],"mapped","work_code",json.dumps({
+                        "device_id": device_id, "work_code": work_code,
+                        "before": dict(previous) if previous else None,
+                        "after": payload.model_dump(),
+                    })))
     return {"ok": True}
 
 
@@ -564,7 +582,7 @@ def monitor_dtr(employee_code: str, month: str, user: dict = Depends(current_use
     end = start + dt.timedelta(days=day_count)
     with closing(connect()) as con:
         scans = [dict(x) for x in con.execute(
-            "SELECT p.id,p.happened_at,p.device_id,p.status_code,p.verification_code,p.work_code,w.label AS work_label,w.activity_type "
+            "SELECT p.id,p.happened_at,p.device_id,p.status_code,p.verification_code,p.work_code,w.label AS work_label,w.activity_type,w.direction AS work_direction "
             "FROM punches p LEFT JOIN work_codes w ON w.device_id=p.device_id AND w.work_code=p.work_code "
             "WHERE p.employee_code=? AND p.happened_at>=? AND p.happened_at<? ORDER BY p.happened_at,p.id LIMIT 10001",
             (employee_code,start.isoformat(),end.isoformat()),
@@ -595,6 +613,8 @@ def monitor_dtr(employee_code: str, month: str, user: dict = Depends(current_use
                      "travel_remark": "OFFICIAL TRAVEL" if any(a["category"]=="Travel Order" for a in support) else "",
                      "undertime_review": "TO coverage for HR verification" if any(a["category"]=="Travel Order" for a in support) else "Not calculated"})
     decorate_days(employee_code, rows)
+    for day in rows:
+        day["activity_mappings"] = activity_pairs(day["scans"])
     return {"employee_code": employee_code, "display_name": employee[0] if employee else "",
             "department": employee["department"] if employee else "",
             "employment_type": employee["employment_type"] if employee else None,
@@ -734,7 +754,7 @@ def monitor_official_activities(
     with closing(connect()) as con:
         signals = [dict(r) for r in con.execute(
             """SELECT p.id,p.employee_code,COALESCE(e.display_name,'') AS display_name,
-                      w.activity_type AS category,p.happened_at,p.device_id,p.work_code,w.label
+                      w.activity_type AS category,p.happened_at,p.device_id,p.work_code,w.label,w.direction
                FROM punches p
                JOIN work_codes w ON w.device_id=p.device_id AND w.work_code=p.work_code
                LEFT JOIN employees e ON e.employee_code=p.employee_code
@@ -755,6 +775,7 @@ def monitor_official_activities(
         "device_id": r["device_id"],
         "work_code": r["work_code"],
         "label": r["label"],
+        "direction": r["direction"],
         "verified_by_hr": False,
         "note": "Device event only; classification does not prove approval, departure/return, or TO coverage.",
     } for r in signals]
