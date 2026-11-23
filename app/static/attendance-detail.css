@@ -93,3 +93,12 @@
 .evidence-raw{font-size:9px;line-height:1.4;color:#63748c;margin-top:3px;overflow-wrap:anywhere}
 #code-direction-field{margin-top:6px}
 #code-direction-help{margin:7px 0 0}
+
+/* Source previews never impersonate reviewed DTR entries. */
+.attendance-month-status{margin:0 0 8px;color:#405979;font-size:11px;font-weight:650;line-height:1.5}
+.dtr-grid .time-slot.slot-provisional{background:#edf3ff;color:#294f90}
+.dtr-grid .slot-provisional .time-value{color:#345d99}
+.dtr-grid .slot-provisional .time-code{color:#53719f;font-weight:650;font-size:9px}
+.raw-punch-evidence{display:block;margin-top:4px;padding:4px 5px;border-left:2px solid #91a7cf;background:#f5f8ff;border-radius:2px;font-size:9px;line-height:1.55;color:#496287}
+.raw-punch-evidence b{display:block;margin-bottom:2px}
+.raw-punch-time{display:inline-flex;margin:1px 3px 1px 0;background:#fff;border:1px solid #d9e2f2;border-radius:3px;padding:1px 3px;font-variant-numeric:tabular-nums;color:#294e81}
