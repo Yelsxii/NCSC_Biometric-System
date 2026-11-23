@@ -332,7 +332,7 @@ with connect() as con:
 
     // Complete an existing identity without replacing its attendance or ID.
     await page.locator('[data-page="profiles"]').click();
-    await page.locator('[data-edit-profile="1"]').click();
+    await page.locator('#profile-rows [data-edit-profile="1"]').click();
     await page.locator('#profile-dialog[open]').waitFor();
     assert.equal(await page.locator('#profile-id').getAttribute('readonly'),'');
     await page.locator('#profile-first').fill('Sample');
