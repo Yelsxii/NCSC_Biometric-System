@@ -335,14 +335,38 @@ function regularReviewCandidates(day){
   return day.scans.filter(event=>
     !['AJA','Travel Order','Fieldwork','Official Business'].includes(event.activity_type));
 }
+function provisionalOrdinarySlots(day){
+  // Show evidence-only previews when exactly four unambiguous non-activity
+  // source scans exist; never alter a review or calculate attendance credit.
+  const candidates=regularReviewCandidates(day);
+  if(candidates.length!==4 || day.is_future)return null;
+  const stamps=candidates.map(event=>event.happened_at);
+  if(new Set(stamps).size!==4)return null;
+  const ordered=[...candidates].sort((a,b)=>a.happened_at.localeCompare(b.happened_at));
+  // Provisional only; the administrator is still responsible for confirming slots.
+  return Object.fromEntries(['am_in','am_out','pm_in','pm_out'].map((key,i)=>[key,ordered[i]]));
+}
+function unassignedPunches(day){
+  const assigned=new Set(Object.values(day.slots).filter(Boolean).map(event=>event.id));
+  const other=day.scans.filter(event=>!assigned.has(event.id) &&
+    !['AJA','Travel Order'].includes(event.activity_type));
+  if(!other.length)return '';
+  return '<span class="raw-punch-evidence" title="Original biometric timestamps, not automatically approved for AM/PM">' +
+    '<b>Biometric scans ('+other.length+')</b> '+other.map(event=>
+    '<span class="raw-punch-time">'+esc(event.happened_at.slice(11,16))+'</span>').join('')+
+    '</span>';
+}
 function slotCell(day,key){
-  const event=day.slots[key];
-  const tone=event?'entry':day.is_future||day.is_weekend?'neutral':'missing';
-  const hint=event?event.happened_at.slice(11)+' · Work code: '+(event.work_code||'not supplied')+' · Status: '+event.status_code:
+  const reviewed=day.slots[key];
+  const event=reviewed || provisionalOrdinarySlots(day)?.[key];
+  const provisional=Boolean(!reviewed && event);
+  const tone=reviewed?'entry':provisional?'provisional':day.is_future||day.is_weekend?'neutral':'missing';
+  const hint=event?event.happened_at.slice(11)+(provisional?' · Provisional device scan; not approved':' · Reviewed AM/PM slot')+
+    ' · Work code: '+(event.work_code||'not supplied')+' · Status: '+event.status_code:
     (day.is_future?'Upcoming':day.is_weekend?'No entry':'No entry / not assigned');
   return '<td class="time-slot slot-'+tone+'" title="'+esc(hint)+'">'+
     (event?'<span class="time-value">'+esc(event.happened_at.slice(11,16))+'</span>'+
-      (event.work_code!==''?'<span class="time-code">WC '+esc(event.work_code)+'</span>':''):'<span class="no-time">—</span>')+'</td>';
+      (provisional?'<span class="time-code">Preview</span>':event.work_code!==''?'<span class="time-code">WC '+esc(event.work_code)+'</span>':''):'<span class="no-time">—</span>')+'</td>';
 }
 async function loadDetail({quiet=false}={}){
   if (!selectedEmployee) return;
@@ -357,6 +381,13 @@ async function loadDetail({quiet=false}={}){
     $('detail-name').textContent=selectedName;
     $('detail-department').textContent=data.department||'—';
     $('detail-category').innerHTML=categoryBadge(data.employment_type);
+    const monthText=new Date(data.month+'-01T12:00:00').toLocaleDateString('en-PH',{month:'long',year:'numeric'});
+    const scanCount=data.summary.scans||0;
+    $('attendance-month-status').textContent=scanCount?
+      scanCount+' original biometric scan'+(scanCount===1?'':'s')+' for '+monthText+
+      ' · Green = reviewed, blue preview = source evidence only.':
+      'No biometric scans found for this employee in '+monthText+
+      '. Select a month containing device records or check the synchronized employee ID.';
     const gip=data.employment_type==='GIP';
     document.querySelectorAll('.gip-total').forEach(node=>node.classList.toggle('hidden',!gip));
     const scroll=$('daily-table-wrap').scrollTop;
@@ -370,7 +401,7 @@ async function loadDetail({quiet=false}={}){
         '<td class="undertime-value" title="'+(ut===null?'For review':'Reviewed undertime')+'">'+(ut===null?'—':Math.floor(ut/60))+'</td>'+
         '<td class="undertime-value">'+(ut===null?'—':String(ut%60).padStart(2,'0'))+'</td>'+
         '<td class="gip-total '+(gip?'':'hidden')+'" title="'+(total===null?'Four verified entries required':total+' elapsed seconds')+'">'+esc(totalText)+'</td>'+
-        activityScanCell(day)+'<td class="day-activities">'+dayActivities(day)+'</td><td class="day-action"><button type="button" class="button outline edit-day" data-edit-day="'+esc(day.date)+'" aria-label="'+(session.role==='admin'?'Edit':'View')+' attendance for '+esc(day.date)+'">'+editIcon()+(session.role==='admin'?'Edit':'View')+'</button>'+
+        activityScanCell(day)+'<td class="day-activities">'+dayActivities(day)+unassignedPunches(day)+'</td><td class="day-action"><button type="button" class="button outline edit-day" data-edit-day="'+esc(day.date)+'" aria-label="'+(session.role==='admin'?'Edit':'View')+' attendance for '+esc(day.date)+'">'+editIcon()+(session.role==='admin'?'Edit':'View')+'</button>'+
         (day.unassigned_count?'<span class="unassigned-count">'+day.unassigned_count+' to place</span>':'')+'</td></tr>';
     }).join('');
     $('daily-table-wrap').scrollTop=scroll;
@@ -401,7 +432,7 @@ function openDayReview(date){
   for(const id of ['review-ut-hours','review-ut-minutes','review-activity','review-reference','review-remark'])$(id).disabled=!editable;
   $('save-day-review').classList.toggle('hidden',!editable);$('save-day-review').disabled=false;
   $('place-four-entries').classList.toggle('hidden',!editable||regularReviewCandidates(day).length!==4);
-  $('review-entry-hint').textContent=day.scans.length?day.scans.length+' original device entries. AJA / Travel Order scans are separate evidence; assign regular AM/PM slots only after verification.':'No device entries for this date.';
+  $('review-entry-hint').textContent=day.scans.length?day.scans.length+' original device entries. Previewed slots are not saved: verify each selection before saving. AJA / Travel Order scans remain separate.':'No device entries for this date.';
   $('review-existing-activities').innerHTML=day.display_activities.map(x=>'<span class="day-badge">'+esc(x.category)+(x.reference?' · '+esc(x.reference):'')+'</span>').join('');
   $('day-review-dialog').showModal();
 }
