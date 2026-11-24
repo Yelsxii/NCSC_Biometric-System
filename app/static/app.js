@@ -143,7 +143,8 @@ function categoryBadge(value){
 function employeeCell(row){
   const name=row.display_name||'Name not synchronized';
   const source=row.name_source==='device' && !row.employment_type?
-    '<small class="device-name-hint">Registered on K14</small>':'';
+    '<small class="device-name-hint">Registered on K14</small>':
+    row.name_source==='bionet'?'<small class="device-name-hint">Synced from ZKBio Time.Net</small>':'';
   return '<div class="employee-cell"><span class="name-avatar" aria-hidden="true">'+esc(name.slice(0,1).toUpperCase())+
     '</span><span><strong>'+esc(name)+'</strong>'+source+(row.position?'<small>'+esc(row.position)+'</small>':'')+'</span></div>';
 }
@@ -375,7 +376,9 @@ async function loadDetail({quiet=false}={}){
         (source.exact_tabs?' · Full-name matching only':'')+
         (source.unmatched_tabs?' · '+source.unmatched_tabs+' awaiting a matching employee name':'')+
         (source.conflict_days?' · '+source.conflict_days+' conflicting source days held':'')+
-        (source.invalid_rows?' · '+source.invalid_rows+' invalid source rows held':'')):
+        (source.invalid_rows?' · '+source.invalid_rows+' invalid source rows held':'')+
+        (source.bionet_roster?' · '+source.bionet_roster.approved+' ZKBio roster IDs matched':'')+
+        (source.bionet_roster?.conflicts?' · '+source.bionet_roster.conflicts+' roster conflicts held':'')):
         (source?.message||'Manual DTR source not configured on this host.');
       monthStatus.textContent=recordText+' · '+sourceText;
     }

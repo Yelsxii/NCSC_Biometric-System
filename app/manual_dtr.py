@@ -220,7 +220,7 @@ def automatic_mapping(packet, diagnostics=None):
         rows = con.execute('SELECT employee_code,display_name,name_source FROM employees').fetchall()
     by_name = {}
     for row in rows:
-        if row['name_source'] not in ('profile','manual','roster','device') or not row['display_name']:
+        if row['name_source'] not in ('profile','manual','roster','device','bionet') or not row['display_name']:
             continue
         name = identity(row['display_name'])
         if len(name.split()) < 2:
@@ -250,7 +250,16 @@ def automatic_status():
 def sync_local_source():
     """Reconcile a protected, locally refreshed snapshot. Never read Google credentials."""
     global _STATE
+    roster_status = {}
     try:
+        from app.bionet_roster import configured, sync_roster
+        if configured():
+            try:
+                result = sync_roster()
+                roster_status = {'bionet_roster': result}
+            except (OSError,ValueError,sqlite3.Error):
+                roster_status = {'bionet_roster_error': 'ZKBio roster sync failed; check the read-only database configuration.'}
+                raise ValueError(roster_status['bionet_roster_error'])
         path = local_source_path()
         if path.stat().st_size > MAX_MANUAL_BYTES:
             raise ValueError('Manual DTR source exceeds 10 MB.')
@@ -270,16 +279,17 @@ def sync_local_source():
             counts = planned
         state = {'available':True,'message':'Local manual DTR source checked.',
                  'matched_tabs':len(mapping),'unmatched_tabs':len(packet['groups'])-len(mapping),
-                 **match_details,
+                 **match_details, **roster_status,
                  'new_days':counts['new'],'filled_days':counts['filled'],
                   'conflict_days':counts['conflict'],'invalid_rows':counts['invalid'],'last_checked':dt.datetime.now().isoformat(timespec='seconds')}
     except (OSError,ValueError,UnicodeError,RecursionError,sqlite3.Error) as exc:
         known = {'No local manual DTR source configured.','Set an absolute local manual DTR path.',
                  'Keep the manual DTR source outside cloud-synced folders.',
                  'Manual DTR source file was not found.','Manual DTR source exceeds 10 MB.',
-                 'An administrator account is required for source attribution.'}
+                 'An administrator account is required for source attribution.',
+                 'ZKBio roster sync failed; check the read-only database configuration.'}
         state = {'available':False,'message':str(exc) if str(exc) in known else 'Could not read the local manual DTR source.',
-                 'matched_tabs':0,'unmatched_tabs':0,'new_days':0,'last_checked':dt.datetime.now().isoformat(timespec='seconds')}
+                 'matched_tabs':0,'unmatched_tabs':0,'new_days':0,**roster_status,'last_checked':dt.datetime.now().isoformat(timespec='seconds')}
     with _WORKER_LOCK:
         _STATE = state
     return state
@@ -296,7 +306,7 @@ def _poll_source():
 
 def start_local_source_sync():
     global _THREAD
-    if (not os.getenv('MANUAL_DTR_SOURCE_PATH') and not os.getenv('LOCALAPPDATA')) or 'pytest' in sys.modules or os.getenv('PYTEST_CURRENT_TEST') or os.getenv('QA_PORT'):
+    if (not os.getenv('MANUAL_DTR_SOURCE_PATH') and not os.getenv('LOCALAPPDATA') and not os.getenv('BIONET_ROSTER_DB')) or 'pytest' in sys.modules or os.getenv('PYTEST_CURRENT_TEST') or os.getenv('QA_PORT'):
         return
     with _WORKER_LOCK:
         if _THREAD is not None and _THREAD.is_alive():

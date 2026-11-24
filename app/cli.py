@@ -29,6 +29,23 @@ def sync_k14() -> None:
 def main() -> None:
     load_dotenv()
     command = sys.argv[1:]
+    if len(command)==2 and command[0]=="inspect-bionet":
+        import sqlite3
+        from app.bionet_roster import inspect_schema
+        try:
+            print(json.dumps(inspect_schema(command[1]), indent=2))
+        except (OSError,ValueError,sqlite3.Error):
+            raise SystemExit("Could not read SQLite schema. Verify the source path and authorized access; no data was changed.")
+        return
+    if command == ["sync-bionet"]:
+        import sqlite3
+        from app.bionet_roster import sync_roster
+        initialize()
+        try:
+            print(json.dumps(sync_roster(), indent=2))
+        except (OSError,ValueError,sqlite3.Error):
+            raise SystemExit("ZKBio roster sync failed; check the configured source and column names.")
+        return
     if command == ["poll-k14"]:
         from app.k14_sync import connector_path, sync_interval
         from app.db import database_path
@@ -65,7 +82,7 @@ def main() -> None:
         print(json.dumps(info, indent=2, ensure_ascii=False))
         return
     if command != ["create-admin"]:
-        raise SystemExit("Usage: python -m app.cli create-admin | sync-k14 | k14-status | poll-k14")
+        raise SystemExit("Usage: python -m app.cli create-admin | sync-k14 | k14-status | poll-k14 | inspect-bionet <path> | sync-bionet")
     initialize()
     username = input("Admin username: ").strip().lower()
     if not re.fullmatch(r"[a-z0-9._-]{3,40}", username):
