@@ -133,7 +133,7 @@ def resolve_day(day, manual):
                 undertime_seconds=None, overtime_seconds=None, complete=False)
         if not conflicts and not future_entry:
             day['monitoring']['remarks'] = 'Travel Order'
-    if remarks in ('No entry','Weekend') and source and source['notes']:
+    if not travel and remarks in ('No entry','Weekend') and source and source['notes']:
         kinds = {x['category'] for x in day['display_activities']}
         day['monitoring']['remarks'] = 'Travel Order' if 'Travel Order' in kinds else 'AJA' if 'AJA' in kinds else 'Manual DTR note'
     if day['calendar']['holiday_name']:

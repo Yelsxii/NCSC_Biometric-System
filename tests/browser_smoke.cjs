@@ -284,7 +284,7 @@ with connect() as con:
     await page.locator('[data-employee="1"]').last().click();
     await page.locator('#employee-detail:not(.hidden)').waitFor();
     await page.locator('#detail-name').filter({hasText:'Sample One'}).waitFor();
-    await page.locator('#daily-rows .travel-badge').first().waitFor();
+    await page.locator('#daily-rows .travel-column .travel-badge').first().waitFor();
     assert.ok((await page.locator('#daily-rows').textContent()).includes('Travel Order'));
     assert.equal(await page.locator('#daily-rows tr').count(),30);
     assert.equal(await page.locator('#print-dtr').count(),0);

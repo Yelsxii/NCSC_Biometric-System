@@ -177,3 +177,10 @@
 .app-dialog.day-review-dialog .field-hint{font-size:10px;margin:5px 0;overflow-wrap:anywhere}
 .review-evidence{margin:7px 0;font-size:10px;color:#52688a}
 .review-evidence summary{cursor:pointer;font-weight:650}
+
+.workspace .attendance-sheet .dtr-grid{min-width:1110px}
+.workspace .attendance-sheet .dtr-grid th.aja-column{width:115px}
+.workspace .attendance-sheet .dtr-grid th.travel-column{width:108px}
+.workspace .attendance-sheet .dtr-grid .activity-evidence{min-width:0;max-width:none}
+.workspace .attendance-sheet .dtr-grid .travel-column{text-align:center}
+.workspace .attendance-sheet .travel-status.travel-badge{background:#e8ddfa;color:#5b368d}
