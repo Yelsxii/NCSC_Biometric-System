@@ -416,6 +416,20 @@ with connect() as con:
     const fit=await page.locator('#daily-table-wrap').evaluate(el=>({width:el.clientWidth,scroll:el.scrollWidth}));
     if(fit.width>=960)assert.ok(fit.scroll<=fit.width+2,'Attendance columns should fit when space permits');
     await page.setViewportSize(previousViewport);
+    await page.setViewportSize({width:500,height:800});
+    const compactHeader=await page.evaluate(()=>{
+      const identity=document.querySelector('.sheet-identity').getBoundingClientRect();
+      const personnel=document.querySelector('.sheet-personnel').getBoundingClientRect();
+      const filters=document.querySelector('.sheet-filters').getBoundingClientRect();
+      const panel=document.querySelector('.attendance-sheet').getBoundingClientRect();
+      return {identityTop:identity.top,personnelTop:personnel.top,identityRight:identity.right,
+        personnelLeft:personnel.left,identityBottom:identity.bottom,personnelBottom:personnel.bottom,
+        filtersTop:filters.top,panelRight:panel.right,viewport:innerWidth};
+    });
+    assert.ok(Math.abs(compactHeader.identityTop-compactHeader.personnelTop)<=2,'Department must not consume a separate header row at split width');
+    assert.ok(compactHeader.identityRight<=compactHeader.personnelLeft+2,'Name and department cannot overlap');
+    assert.ok(compactHeader.filtersTop-Math.max(compactHeader.identityBottom,compactHeader.personnelBottom)<=12,'Compact controls should follow the header without empty space');
+    assert.ok(compactHeader.panelRight<=compactHeader.viewport+1,'Panel must remain inside the window');
     await page.setViewportSize({width:390,height:800});
     const rail = await page.locator('#daily-table-wrap').evaluate(el=>{
       el.scrollLeft=el.scrollWidth;

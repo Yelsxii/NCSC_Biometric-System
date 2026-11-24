@@ -345,10 +345,49 @@
   width:150px;min-width:150px;height:var(--detail-back-size);
   min-height:var(--detail-back-size);
 }
+/* Compact split-window / phone header. Do not allocate a full row to department
+   while there is room alongside the employee identity. */
 @media(max-width:740px){
-  .workspace .attendance-sheet .sheet-header{flex-wrap:wrap;gap:8px 14px}
-  .workspace .attendance-sheet .sheet-identity{flex:1 1 100%}
-  .workspace .attendance-sheet .sheet-personnel{
-    margin-left:auto;max-width:100%;gap:5px 14px;
+  .workspace .attendance-sheet .sheet-header{
+    display:grid;grid-template-columns:minmax(0,1fr) minmax(76px,28%);
+    align-items:start;gap:6px 12px;
   }
+  .workspace .attendance-sheet .sheet-identity{min-width:0}
+  .workspace .attendance-sheet .sheet-name-line{gap:5px 8px}
+  .workspace .attendance-sheet .sheet-personnel{
+    margin:0;max-width:none;min-width:0;gap:0;
+  }
+  .workspace .attendance-sheet .sheet-personnel .sheet-meta{
+    min-width:0;max-width:100%;overflow-wrap:anywhere;
+  }
+  .workspace .attendance-sheet .metadata-label{margin-bottom:4px}
+  .workspace .attendance-sheet .sheet-filters{padding:8px 0;gap:8px}
+  .workspace .attendance-sheet .sheet-toolbar{padding:8px 0}
+  .workspace .attendance-sheet .attendance-legend{gap:6px 12px}
+}
+@media(max-width:360px){
+  .workspace .attendance-sheet .sheet-header{grid-template-columns:minmax(0,1fr)}
+  .workspace .attendance-sheet .sheet-personnel{justify-content:flex-start;text-align:left}
+  .workspace .attendance-sheet .sheet-personnel .sheet-meta{display:flex;align-items:baseline;gap:7px}
+  .workspace .attendance-sheet .sheet-personnel .metadata-label{margin:0}
+  .workspace .attendance-sheet .sheet-filters #detail-month{width:150px;min-width:150px}
+}
+/* Only the table can scroll sideways; the surrounding panel stays in view.
+   A thin local scroll track makes the remaining columns discoverable. */
+.workspace .attendance-sheet #daily-table-wrap{
+  min-width:0;max-width:100%;scrollbar-width:thin;
+  scrollbar-color:#b8c6dd transparent;
+}
+.workspace .attendance-sheet #daily-table-wrap::-webkit-scrollbar{
+  display:block;width:6px;height:6px;
+}
+.workspace .attendance-sheet #daily-table-wrap::-webkit-scrollbar-thumb{
+  background:#b8c6dd;border-radius:999px;
+}
+@media(min-width:741px) and (max-width:1100px){
+  .workspace .attendance-sheet .sheet-header{gap:12px}
+  .workspace .attendance-sheet .sheet-personnel{min-width:0;max-width:30%}
+  .workspace .attendance-sheet .sheet-personnel .sheet-meta{min-width:0;overflow-wrap:anywhere}
+  .workspace .attendance-sheet .sheet-filters{padding:9px 0}
+  .workspace .attendance-sheet .sheet-toolbar{padding:9px 0}
 }
