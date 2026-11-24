@@ -189,3 +189,130 @@
 .app-dialog .day-slots select{font-variant-numeric:tabular-nums;font-size:10px}
 @media(max-width:1100px){.workspace .sheet-header{gap:13px}.workspace .sheet-meta{min-width:65px;max-width:120px}.workspace .sheet-identity h2{font-size:13px}}
 @media(max-width:740px){.workspace .topbar-title{display:block!important;font-size:12px;max-width:57%;white-space:normal}.workspace .topbar-user{gap:7px;margin-left:0}.workspace .topbar-user .admin-dot{display:none}.workspace .topbar-user strong{max-width:68px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.workspace #main-content{padding-top:12px}.workspace .sheet-header{flex-wrap:wrap;gap:12px;align-items:center;padding-bottom:12px}.workspace .sheet-identity{flex:1;min-width:190px}.workspace .sheet-identity h2{font-size:13px}.workspace .sheet-meta{min-width:70px;max-width:120px;flex:1}.workspace .sheet-header .month-inline{min-width:125px;flex:1}.workspace .sheet-meta strong{font-size:10px}.workspace .attendance-sheet{padding:12px 10px 10px}.workspace .attendance-legend{gap:6px 11px;font-size:8px}.workspace .attendance-legend>span{gap:4px}.workspace .sheet-toolbar{align-items:flex-start;padding:10px 0}.workspace .attendance-directory .actions-column{width:174px}.workspace .attendance-directory td{height:38px;padding:6px 10px}.workspace .dtr-grid td{height:33px;padding:4px 6px}.app-dialog.day-review-dialog{width:calc(100vw - 24px)}.app-dialog .day-slots select{font-size:9px;padding-left:5px;padding-right:4px}}
+
+
+/* Shared workspace chrome: dark institutional navy, restrained red accents,
+   a responsive icon rail, and a single Manila clock. Login is unaffected. */
+.workspace .sidebar{
+  --rail-bg:#14284e;--rail-hover:#203963;--rail-active:#2c4978;
+  width:206px;min-width:206px;height:100%;flex:0 0 206px;
+  display:flex;flex-direction:column;position:relative;z-index:15;
+  background:var(--rail-bg);border:0;padding:0 12px;overflow:visible;
+  box-shadow:3px 0 15px #11274912;color:#fff;
+}
+.workspace .sidebar .brand{
+  display:flex;align-items:center;justify-content:flex-start;
+  gap:10px;padding:24px 7px 21px;border-bottom:1px solid #ffffff17;
+}
+.workspace .sidebar .brand::after{display:none}
+.workspace .sidebar .brand img{width:38px;height:38px;border-radius:50%;flex:none}
+.workspace .sidebar .brand strong{color:#fff;font-size:20px}
+.workspace .sidebar .brand span{color:#adbbd6;font-size:8px;letter-spacing:.085em}
+.workspace .sidebar .nav-title{display:block;padding:24px 10px 11px;color:#a4b4d2;font-size:9px}
+.workspace .sidebar .nav{display:flex;flex-direction:column;gap:6px;overflow:visible;padding:0}
+.workspace .sidebar .nav-item{
+  position:relative;display:flex;align-items:center;justify-content:flex-start;
+  width:100%;min-width:0;height:42px;padding:0 10px;gap:9px;
+  color:#c7d4ea;background:transparent;border:1px solid transparent;
+  border-radius:9px;font-size:11.5px;font-weight:550;box-shadow:none;
+  transition:background .16s,color .16s,border-color .16s;
+}
+.workspace .sidebar .nav-icon{width:19px;height:19px;flex:0 0 19px}
+.workspace .sidebar .nav-item:hover,.workspace .sidebar .nav-item:focus-visible{
+  color:#fff;background:var(--rail-hover);border-color:#ffffff12;
+}
+.workspace .sidebar .nav-item.active{
+  color:#fff;background:var(--rail-active);border-color:#ffffff15;
+  box-shadow:0 3px 8px #06152d24;font-weight:650;
+}
+.workspace .sidebar .nav-item.active::before{
+  content:"";position:absolute;left:0;top:9px;bottom:9px;width:3px;
+  background:#f05a6c;border-radius:0 3px 3px 0;
+}
+.workspace .sidebar-bottom{margin-top:auto;display:flex;flex-direction:column;gap:12px;padding:0 0 18px}
+.workspace .sidebar-signout{
+  display:flex;align-items:center;gap:10px;min-height:40px;
+  padding:0 10px;border:1px solid #ffffff18;border-radius:9px;
+  color:#e5edf9;background:#ffffff07;font-size:11.5px;font-weight:600;
+}
+.workspace .sidebar-signout svg,.workspace .compact-signout svg{width:18px;height:18px;flex:none}
+.workspace .sidebar-signout:hover,.workspace .sidebar-signout:focus-visible{
+  color:#fff;background:#a33247;border-color:#cf5368;
+}
+.workspace .sidebar .sidebar-footer{
+  display:block;margin:0 4px;padding:12px 4px 0;border-color:#ffffff17;
+  color:#c5d1e4;line-height:1.6;
+}
+.workspace .sidebar .sidebar-footer>span:last-child{color:#a3b1ca}
+.workspace .topbar{gap:12px;min-height:62px;height:62px;flex:0 0 62px}
+.workspace .topbar-title{flex:1;min-width:0;max-width:none;color:#20375f}
+.workspace .topbar-user{flex:0 0 auto;gap:10px;margin-left:auto}
+.workspace .workspace-clock{
+  display:flex;align-items:center;gap:9px;padding:6px 10px;
+  background:#f4f7fc;border:1px solid #e7edf6;border-radius:10px;color:#203b67;
+  white-space:nowrap;line-height:1.2;
+}
+.workspace .clock-icon{width:19px;height:19px;flex:none;color:#536e9e}
+.workspace .clock-values{display:flex;align-items:baseline;gap:10px}
+.workspace .clock-date{font-size:11px;font-weight:550;color:#657997}
+.workspace .clock-time{font-size:14px;font-weight:700;letter-spacing:.01em;font-variant-numeric:tabular-nums}
+.workspace .clock-zone{color:#7b8da7;font-size:9px;font-weight:650;letter-spacing:.04em}
+.workspace .compact-signout{display:none}
+.workspace .sidebar .nav-item:focus-visible,.workspace .sidebar-signout:focus-visible,
+.workspace .compact-signout:focus-visible{outline:2px solid #9dbbff;outline-offset:2px}
+@media(max-width:1100px){
+  .workspace{display:flex;flex-direction:row}
+  .workspace .sidebar{width:64px;min-width:64px;flex:0 0 64px;height:100%;padding:0 8px}
+  .workspace .sidebar .brand{justify-content:center;padding:18px 0 15px}
+  .workspace .sidebar .brand>div,.workspace .sidebar .nav-title,
+  .workspace .sidebar .nav-item>span,.workspace .sidebar-bottom{display:none}
+  .workspace .sidebar .brand img{width:35px;height:35px}
+  .workspace .sidebar .nav{padding:17px 0;gap:8px}
+  .workspace .sidebar .nav-item{height:44px;justify-content:center;padding:0;gap:0}
+  .workspace .sidebar .nav-icon{width:21px;height:21px;flex-basis:21px}
+  .workspace .sidebar .nav-item::after{
+    content:attr(data-tooltip);position:absolute;left:calc(100% + 11px);top:50%;
+    transform:translate(4px,-50%);opacity:0;visibility:hidden;pointer-events:none;
+    padding:9px 12px;border-radius:8px;background:#14284e;color:#fff;
+    font-size:11px;font-weight:600;line-height:1.25;white-space:nowrap;
+    box-shadow:0 5px 18px #10234733;z-index:20;
+    transition:opacity .15s,transform .15s,visibility .15s;
+  }
+  .workspace .sidebar .nav-item:hover::after,.workspace .sidebar .nav-item:focus-visible::after{
+    opacity:1;visibility:visible;transform:translate(0,-50%);
+  }
+  .workspace .compact-signout{
+    display:inline-flex;align-items:center;justify-content:center;gap:6px;
+    min-height:34px;padding:6px 9px;background:#fff;color:#31496f;border-color:#e0e7f1;
+  }
+  .workspace .compact-signout:hover{background:#fff2f4;color:#a33247;border-color:#f1c4cd}
+  .workspace .topbar{padding:0 17px}
+}
+@media(max-width:740px){
+  .workspace .sidebar{width:54px;min-width:54px;flex-basis:54px;padding:0 6px}
+  .workspace .sidebar .brand{padding:14px 0}
+  .workspace .sidebar .brand img{width:32px;height:32px}
+  .workspace .sidebar .nav-item{height:42px}
+  .workspace .topbar{height:58px;min-height:58px;flex-basis:58px;padding:0 10px;gap:6px}
+  .workspace .topbar-title{font-size:13px;max-width:none;overflow-wrap:anywhere}
+  .workspace .topbar-user{gap:6px;margin-left:auto}
+  .workspace .workspace-clock{padding:5px 7px;gap:5px}
+  .workspace .clock-values{flex-direction:column;gap:2px;align-items:flex-start}
+  .workspace .clock-date{font-size:9px}
+  .workspace .clock-time{font-size:12px}
+  .workspace .clock-icon{width:15px;height:15px}
+  .workspace .clock-zone{display:none}
+  .workspace .compact-signout{width:32px;height:32px;min-height:32px;padding:6px}
+  .workspace .compact-signout span{display:none}
+  .workspace #main-content{padding:10px 8px}
+}
+@media(max-width:400px){
+  .workspace .clock-icon{display:none}
+  .workspace .topbar-title{font-size:11px}
+  .workspace .workspace-clock{padding:4px 5px}
+  .workspace .clock-date{font-size:8.5px}
+  .workspace .clock-time{font-size:11px}
+}
+@media(prefers-reduced-motion:reduce){
+  .workspace .sidebar .nav-item,.workspace .sidebar .nav-item::after{transition:none}
+}

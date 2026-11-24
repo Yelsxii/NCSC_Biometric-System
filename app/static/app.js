@@ -83,7 +83,6 @@ function showLogin(){
 function showApp(){
   $('login-view').classList.add('hidden');
   $('workspace').classList.remove('hidden');
-  $('account').textContent=session.username;
   const canWrite=session.role==='admin';
   document.querySelectorAll('#usb-form button,#roster-form button')
     .forEach(el=>el.disabled=!canWrite);
@@ -822,9 +821,21 @@ async function initialize(){
       }
     }
   });
-  $('today').textContent=new Intl.DateTimeFormat('en-PH',{
-    day:'numeric',month:'short',year:'numeric',timeZone:'Asia/Manila'
-  }).format(new Date());
+  const clockDate = new Intl.DateTimeFormat('en-PH',{
+    weekday:'short',day:'numeric',month:'short',year:'numeric',timeZone:'Asia/Manila'
+  });
+  const clockTime = new Intl.DateTimeFormat('en-PH',{
+    hour:'2-digit',minute:'2-digit',second:'2-digit',hour12:true,timeZone:'Asia/Manila'
+  });
+  function updateWorkspaceClock(){
+    const now=new Date();
+    $('today').textContent=clockDate.format(now);
+    $('live-time').textContent=clockTime.format(now);
+    $('live-time').dateTime=now.toISOString();
+  }
+  updateWorkspaceClock();
+  window.setInterval(updateWorkspaceClock,1000);
+  document.addEventListener('visibilitychange',()=>{if(!document.hidden)updateWorkspaceClock();});
   $('login-form').addEventListener('submit',async event=>{
     event.preventDefault();
     $('login-error').classList.add('hidden');
@@ -838,10 +849,12 @@ async function initialize(){
       $('login-error').textContent=error.message;$('login-error').classList.remove('hidden');
     }finally{$('login-submit').disabled=false;}
   });
-  $('logout').addEventListener('click',async()=>{
+  const signOut=async()=>{
     try{await api('/api/logout',{method:'POST'});session=null;showLogin();}
     catch(error){toast(error.message,true);}
-  });
+  };
+  $('logout').addEventListener('click',signOut);
+  $('logout-sidebar').addEventListener('click',signOut);
   document.querySelectorAll('[data-page],[data-go]').forEach(node=>
     node.addEventListener('click',()=>navigate(node.dataset.page||node.dataset.go)));
   $('employee-filter').addEventListener('submit',e=>{

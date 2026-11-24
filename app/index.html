@@ -6,9 +6,9 @@
   <meta name="theme-color" content="#142650">
   <title>NCSC | Attendance Records</title>
   <link rel="stylesheet" href="/static/app.css">
-  <link rel="stylesheet" href="/static/workspace.css?v=attendance-2">
+  <link rel="stylesheet" href="/static/workspace.css?v=attendance-3">
   <link rel="stylesheet" href="/static/attendance-detail.css?v=auto-dtr-9">
-  <script src="/static/app.js?v=auto-dtr-5" defer></script>
+  <script src="/static/app.js?v=auto-dtr-6" defer></script>
 </head>
 <body>
   <main id="login-view" class="auth-shell" aria-labelledby="login-heading">
@@ -57,18 +57,18 @@
       </div>
       <div class="nav-title">OPERATIONS</div>
       <nav class="nav" aria-label="Main navigation">
-        <button class="nav-item active" type="button" data-page="employees"><svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" aria-hidden="true"><rect x="4" y="4" width="16" height="17" rx="3"/><path d="M8 2v4m8-4v4M4 10h16m-11 4h2m3 0h2m-7 3h2"/></svg><span>Employee Attendance</span></button>
-        <button class="nav-item" type="button" data-page="profiles"><svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" aria-hidden="true"><circle cx="10" cy="8" r="3.5"/><path d="M3 21v-2a7 7 0 0 1 14 0v2m2-14a3 3 0 0 1 0 6m1 3a5 5 0 0 1 2 4"/></svg><span>Employee profiles</span></button>
-        <button class="nav-item" type="button" data-page="activities"><svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg><span>AJA / Travel Orders</span></button>
-        <button class="nav-item" type="button" data-page="staff"><svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" aria-hidden="true"><rect x="6" y="2" width="12" height="20" rx="3"/><path d="M9 6h6m-6 4h6m-6 4h2m3 0h1m-6 3h6"/></svg><span>Users & Work Codes</span></button>
+        <button class="nav-item active" type="button" data-page="employees" aria-label="Employee Attendance" data-tooltip="Employee Attendance"><svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" aria-hidden="true"><rect x="4" y="4" width="16" height="17" rx="3"/><path d="M8 2v4m8-4v4M4 10h16m-11 4h2m3 0h2m-7 3h2"/></svg><span>Employee Attendance</span></button>
+        <button class="nav-item" type="button" data-page="profiles" aria-label="Employee profiles" data-tooltip="Employee profiles"><svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" aria-hidden="true"><circle cx="10" cy="8" r="3.5"/><path d="M3 21v-2a7 7 0 0 1 14 0v2m2-14a3 3 0 0 1 0 6m1 3a5 5 0 0 1 2 4"/></svg><span>Employee profiles</span></button>
+        <button class="nav-item" type="button" data-page="activities" aria-label="AJA / Travel Orders" data-tooltip="AJA / Travel Orders"><svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg><span>AJA / Travel Orders</span></button>
+        <button class="nav-item" type="button" data-page="staff" aria-label="Users &amp; Work Codes" data-tooltip="Users &amp; Work Codes"><svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" aria-hidden="true"><rect x="6" y="2" width="12" height="20" rx="3"/><path d="M9 6h6m-6 4h6m-6 4h2m3 0h1m-6 3h6"/></svg><span>Users & Work Codes</span></button>
       </nav>
-      <div class="sidebar-footer"><span class="workspace-mark"></span>Local system<span>Attendance &amp; DTR monitoring</span></div>
+      <div class="sidebar-bottom"><button id="logout-sidebar" class="sidebar-signout" type="button" aria-label="Sign out"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M10 17l5-5-5-5m5 5H3m9-9h6a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-6"/></svg><span>Sign out</span></button><div class="sidebar-footer"><span class="workspace-mark"></span>Local system<span>Attendance &amp; DTR monitoring</span></div></div>
     </aside>
 
     <div class="content-shell">
       <header class="topbar">
         <h1 class="topbar-title" id="section-name">Employee Attendance</h1>
-        <div class="topbar-user"><span class="today" id="today"></span><span class="admin-dot" aria-hidden="true">●</span><strong id="account">Administrator</strong><button id="logout" class="signout" type="button">Sign out</button></div>
+        <div class="topbar-user"><div class="workspace-clock" aria-label="Philippine local time"><svg class="clock-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="5" width="18" height="16" rx="3"/><path d="M7 3v4m10-4v4M3 10h18m-13 5h3m2 0h3"/></svg><div class="clock-values"><span class="clock-date" id="today"></span><time class="clock-time" id="live-time"></time></div><span class="clock-zone">PHT</span></div><button id="logout" class="signout compact-signout" type="button" aria-label="Sign out" title="Sign out"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M10 17l5-5-5-5m5 5H3m9-9h6a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-6"/></svg><span>Sign out</span></button></div>
       </header>
 
       <main id="main-content">

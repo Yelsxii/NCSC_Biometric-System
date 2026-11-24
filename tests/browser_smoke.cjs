@@ -106,6 +106,25 @@ uvicorn.run('app.main:app',host='127.0.0.1',port=int(os.environ['QA_PORT']),log_
     await page.locator('#login-password').fill(password);
     await page.locator('#login-submit').click();
     await page.locator('#workspace:not(.hidden)').waitFor();
+    assert.equal(await page.locator('#account').count(),0);
+    assert.ok(await page.locator('#logout-sidebar').isVisible());
+    assert.ok(!(await page.locator('#logout').isVisible()));
+    assert.match(await page.locator('#live-time').textContent(),/\d{1,2}:\d{2}:\d{2}/);
+    const initialClock=await page.locator('#live-time').textContent();
+    await page.waitForFunction(previous=>document.querySelector('#live-time').textContent!==previous,initialClock);
+    await page.setViewportSize({width:620,height:820});
+    assert.ok(await page.locator('#logout').isVisible());
+    assert.ok(!(await page.locator('#logout-sidebar').isVisible()));
+    const railLayout=await page.locator('.sidebar').evaluate(el=>({
+      width:el.getBoundingClientRect().width,height:el.getBoundingClientRect().height,
+      viewportHeight:innerHeight,labelDisplay:getComputedStyle(el.querySelector('.nav-item>span')).display
+    }));
+    assert.ok(railLayout.width<=64 && railLayout.height>=railLayout.viewportHeight-1);
+    assert.equal(railLayout.labelDisplay,'none');
+    await page.locator('[data-page="employees"]').hover();
+    await page.waitForFunction(()=>getComputedStyle(document.querySelector('[data-page="employees"]'),'::after').visibility==='visible');
+    await page.setViewportSize({width:1440,height:900});
+    await page.locator('#workspace:not(.hidden)').waitFor();
     await page.locator('[data-page="employees"].active').waitFor();
     assert.equal(await page.locator('[data-page]').count(),4);
     assert.equal(await page.locator('[data-page="overview"]').count(),0);
