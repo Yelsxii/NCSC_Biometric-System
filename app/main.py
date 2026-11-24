@@ -35,6 +35,7 @@ from app.lan import status as lan_status, tcp_probe
 from app.profiles import RegistrationInput, ProfileUpdateInput, get_profile, list_profiles, save_profile
 from app.attendance import DayReviewInput, CalendarInput, decorate_days, save_day_review, save_calendar
 from app.activity_mapping import activity_pairs, dtr_aja_periods
+from app.dtr_sources import present_day
 from app.manual_dtr import (MAX_MANUAL_BYTES, parse_package, preview_package, import_package,
                             mapping_hash, automatic_status, start_local_source_sync, stop_local_source_sync)
 
@@ -627,6 +628,7 @@ def monitor_dtr(employee_code: str, month: str, user: dict = Depends(current_use
                 day["tone"] = "aja" if (any(p["out"] or p["in"] for p in day["aja_periods"]) or any(s["activity_type"]=="AJA" for s in day["scans"])) else "entry" if any(day["display_slots"].values()) else "future" if day["is_future"] else "weekend" if day["is_weekend"] else "missing"
             if any(p["review"] for p in day["aja_periods"]):
                 day["monitoring"]["aja_review"] = True
+        present_day(day)
     return {"employee_code": employee_code, "display_name": employee[0] if employee else "",
             "name_source": employee["name_source"] if employee else "scan",
             "department": employee["department"] if employee else "",

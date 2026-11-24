@@ -494,3 +494,35 @@ def test_aja_note_without_times_is_visible_for_review(admin):
     day=monitor(client)
     assert day['aja_periods']==[{'out':None,'in':None,'review':True}]
     assert day['monitoring']['aja_review'] is True
+
+
+def test_travel_reference_edit_preserves_source_and_updates_display(admin):
+    client,headers=admin
+    seed_employee()
+    import_one(client,headers,packet([row(times=['Travel Order No.: RO 1 2026-11-2',None,None,None])]))
+    day=monitor(client)
+    assert day['travel_reference']=='RO 1 2026-11-2'
+    assert day['display_remark']==''
+    result=client.put('/api/attendance/001/2026-11-06',headers=headers,json={
+        'version':0,'activity_type':'Travel Order','activity_reference':'RO 1 2026-11-3'})
+    assert result.status_code==200,result.text
+    day=monitor(client)
+    assert day['travel_reference']=='RO 1 2026-11-3'
+    assert day['manual_source']['notes']==['Travel Order No.: RO 1 2026-11-2']
+    assert day['travel_source_references']==['RO 1 2026-11-2']
+    assert day['travel_order'] and day['monitoring']['total_seconds'] is None
+    with closing(connect()) as con:
+        assert con.execute("SELECT COUNT(*) FROM audit_events WHERE entity='attendance_day'").fetchone()[0]==1
+
+
+def test_worked_holiday_and_weekend_use_attendance_result_in_remarks(admin):
+    client,headers=admin
+    seed_employee()
+    import_one(client,headers,packet([row('2026-11-02',number=5),
+        row('2026-11-07',times=['08:00','12:00','13:00','18:00'],total=9/24,ot=1/24,number=6)]))
+    days=client.get('/api/dtr/monitor?employee_code=001&month=2026-11').json()['days']
+    assert days[1]['calendar']['holiday_name']=="All Souls' Day"
+    assert days[1]['display_remark']=='Complete'
+    assert days[6]['is_weekend'] and days[6]['display_remark']=='Overtime'
+    assert days[0]['display_remark']=="All Saints' Day"
+    assert days[7]['display_remark']=='Sunday'

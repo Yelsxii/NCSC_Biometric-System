@@ -127,3 +127,51 @@ def resolve_day(day, manual):
         day['tone']='aja'
     elif any(display.values()):
         day['tone']='entry'
+
+
+
+def _travel_number(value):
+    """Keep an actual reference, without duplicating its display label."""
+    return re.sub(r"^TRAVEL\s+ORDER\b\s*(?:(?:NO\.?|NUMBER|REF(?:ERENCE)?\.?)\s*)?[:#]?\s*",
+                  "", str(value or "").strip(), flags=re.I).strip()
+
+
+def present_day(day):
+    """Single monitoring remark and a date-specific travel reference.
+
+    Presentation only: never change attendance calculations or source records.
+    """
+    metrics = day["monitoring"]
+    status = metrics["remarks"]
+    has_entries = bool(day["scans"] or any(day["display_slots"].values()) or
+                       any(p["out"] or p["in"] for p in day.get("aja_periods", [])))
+    day["has_attendance_entries"] = has_entries
+    source = day.get("manual_source") or {}
+    references = [_travel_number(x["reference"]) for x in day["activities"] if x["category"]=="Travel Order"]
+    references += [_travel_number(note) for note in source.get("notes", []) if re.search(r"\bTRAVEL\s+ORDER\b", note, re.I)]
+    references = list(dict.fromkeys(x for x in references if x))
+    reviewed_reference = _travel_number(day["review"]["activity_reference"]) if day["review"]["activity_type"]=="Travel Order" else ""
+    day["travel_reference"] = reviewed_reference or (references[0] if len(references)==1 else "")
+    day["travel_source_references"] = references
+    if day["travel_order"]:
+        text = "Review" if (status in ("Source difference","Future entry") or (len(references)>1 and not reviewed_reference)) else ""
+    elif status == "Future entry":
+        text = status
+    elif status == "Source difference" or metrics.get("aja_review"):
+        text = "Review"
+    elif has_entries:
+        text = {"Needs hour review":"Review","Needs time review":"Review","Manual DTR note":"Review",
+                "Incomplete entries":"Incomplete"}.get(status,status)
+        if text in ("Holiday","Weekend","No entry","Upcoming"):
+            text = "Review"
+    elif day["calendar"]["holiday_name"]:
+        text = day["calendar"]["holiday_name"]
+    elif day["is_weekend"]:
+        text = "Saturday" if day["day"]=="Sat" else "Sunday"
+    elif day["is_future"]:
+        text = "Upcoming"
+    else:
+        notes = source.get("notes", [])
+        leave = next((n for n in notes if re.search(r"\b(?:LEAVE|CTO|WORK SUSPENSION)\b",n,re.I)), "")
+        text = leave or ("Review" if status in ("Manual DTR note","AJA","Needs time review") else status)
+    day["display_remark"] = text

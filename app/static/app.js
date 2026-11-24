@@ -275,18 +275,6 @@ async function saveProfile(event){
 function editIcon(){
   return '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" aria-hidden="true"><path d="m15 5 4 4M4 20l4-1 12-12a2.8 2.8 0 0 0-4-4L4 15z"/></svg>';
 }
-function dayActivities(day){
-  const labels=[];
-  if(day.calendar.holiday_name)labels.push('<span class="day-badge holiday-badge">'+esc(day.calendar.holiday_name)+'</span>');
-  for(const item of day.display_activities){
-    if(['Travel Order','AJA'].includes(item.category))continue;
-    const kind='official';
-    labels.push('<span class="day-badge '+kind+'-badge" title="'+esc(item.reference)+'">'+esc(item.category)+'</span>');
-  }
-  if(day.review.remark)labels.push('<span class="day-remark" title="'+esc(day.review.remark)+'">'+esc(day.review.remark)+'</span>');
-  if(!labels.length && day.is_weekend)labels.push('<span class="weekend-label">'+esc(day.day==='Sat'?'Saturday':'Sunday')+'</span>');
-  return labels.join(' ');
-}
 function activityScanCell(day){
   const periods=day.aja_periods||[];
   return ['out','in'].map(key=>'<td class="activity-evidence aja-'+key+'">'+(periods.length?periods.map(period=>{
@@ -294,9 +282,8 @@ function activityScanCell(day){
     return '<div class="aja-time '+(entry?'has-aja':'aja-missing')+'" title="'+esc((entry?.origin||'Missing entry')+(period.review?' · Needs review':''))+'">'+(entry?'<span class="time-value">'+esc(entry.time)+'</span>':period.review?'<span class="no-time">—</span>':'—')+'</div>';
   }).join(''):'<span class="empty-cell">—</span>')+'</td>').join('');
 }
-function travelCell(day){
-  const refs=day.display_activities.filter(x=>x.category==='Travel Order').map(x=>x.reference).filter(Boolean);
-  return '<td class="travel-column">'+(day.travel_order?'<span class="travel-status travel-badge" title="'+esc(refs.join(' · ')||'Official travel recorded')+'">Travel Order</span>':'<span class="empty-cell">—</span>')+'</td>';
+function travelLabel(day){
+  return day.travel_reference?'Travel Order No.: '+day.travel_reference:'Travel Order';
 }
 function regularReviewCandidates(day){
   // Keep the existing admin-initiated four-punch review for raw/unclassified
@@ -330,7 +317,7 @@ function durationText(seconds){
 }
 function attendanceTimeCells(day){
   if(day.travel_order){
-    return '<td colspan="4" class="time-slot slot-travel"><span class="travel-status">Travel Order</span></td>';
+    return '<td colspan="4" class="time-slot slot-travel"><span class="travel-status" title="'+esc((day.travel_source_references||[]).join(' · ')||travelLabel(day))+'">'+esc(travelLabel(day))+'</span></td>';
   }
   return ['am_in','am_out','pm_in','pm_out'].map(key=>slotCell(day,key)).join('');
 }
@@ -351,7 +338,7 @@ function slotCell(day,key){
 async function loadDetail({quiet=false}={}){
   if (!selectedEmployee) return;
   const serial=++detailRequest,month=$('detail-month').value||currentMonth(),code=selectedEmployee;
-  if(!quiet)$('daily-rows').innerHTML='<tr><td colspan="14" class="table-empty">Loading attendance…</td></tr>';
+  if(!quiet)$('daily-rows').innerHTML='<tr><td colspan="13" class="table-empty">Loading attendance…</td></tr>';
   try{
     const data=await api('/api/dtr/monitor?'+new URLSearchParams({employee_code:code,month}));
     if(serial!==detailRequest || code!==selectedEmployee || month!==$('detail-month').value || currentPage!=='employees' || !session)return;
@@ -362,32 +349,14 @@ async function loadDetail({quiet=false}={}){
     $('detail-name').title=data.name_source==='device'?'Name synchronized from K14 device; HR profile is separate':'Employee attendance';
     $('detail-department').textContent=data.department||'—';
     $('detail-category').innerHTML=categoryBadge(data.employment_type);
-    const monthStatus=$('attendance-month-status');
-    const scanCount=data.summary?.scans??data.days.reduce((sum,day)=>sum+(day.scans?.length||0),0);
-    const sheetDays=data.days.filter(day=>day.manual_source).length;
-    if(monthStatus){
-      const source=data.manual_source_status;
-      const sheetSlots=data.days.reduce((sum,day)=>sum+(day.travel_order?0:Object.values(day.display_slots||{}).filter(slot=>slot?.origin==='manual_sheet').length),0);
-      const missing=data.days.filter(day=>!day.is_future&&!day.is_weekend&&!day.calendar.holiday_name).reduce((sum,day)=>sum+['am_in','am_out','pm_in','pm_out'].filter(k=>!(day.travel_periods||[]).includes(k.slice(0,2))&&!day.display_slots?.[k]).length,0);
-      const recordText=scanCount+' biometric entries · '+sheetDays+' sheet days · '+sheetSlots+' slots filled from DTR · '+missing+' weekday slots without a resolved time';
-      const sourceText=source?.available?(source.matched_tabs+' matched sheet tabs'+
-        (source.exact_tabs?' · Full-name matching only':'')+
-        (source.unmatched_tabs?' · '+source.unmatched_tabs+' awaiting a matching employee name':'')+
-        (source.conflict_days?' · '+source.conflict_days+' conflicting source days held':'')+
-        (source.invalid_rows?' · '+source.invalid_rows+' invalid source rows held':'')+
-        (source.bionet_roster?' · '+source.bionet_roster.approved+' employee IDs matched':'')+
-        (source.bionet_roster?.conflicts?' · '+source.bionet_roster.conflicts+' roster conflicts held':'')):
-        (source?.message||'Manual DTR source not configured on this host.');
-      monthStatus.textContent=recordText+' · '+sourceText;
-    }
     const scroll=$('daily-table-wrap').scrollTop;
     $('daily-rows').innerHTML=data.days.map(day=>{
       const metrics=day.monitoring||{total_seconds:day.daily_total_seconds,undertime_seconds:day.review.undertime_minutes===null?null:day.review.undertime_minutes*60,overtime_seconds:null,remarks:'For review'};
       const ut=metrics.undertime_seconds;
       const status=metrics.remarks;
-      const visibleStatus=status==='Source difference'?'Review':status==='Travel Order'?'':status;
-      const detail=status==='Source difference'?'Biometric and sheet entries differ, or a raw scan could not be placed. Open Edit for evidence.':status;
-      const kind=status==='Complete'?'complete':status==='Undertime'?'undertime':status==='Overtime'?'overtime':status==='Source difference'?'conflict':'pending';
+      const visibleStatus=day.display_remark??(status==='Source difference'?'Review':status==='Travel Order'?'':status);
+      const detail=[status,day.calendar.holiday_name,day.is_weekend?(day.day==='Sat'?'Saturday':'Sunday'):'',metrics.aja_review?'AJA evidence incomplete':'',day.review.remark].filter(Boolean).join(' · ');
+      const kind=visibleStatus==='Complete'?'complete':visibleStatus==='Undertime'?'undertime':visibleStatus==='Overtime'?'overtime':visibleStatus==='Review'||visibleStatus==='Incomplete'?'conflict':!day.has_attendance_entries&&day.calendar.holiday_name?'holiday':'pending';
       const unassigned=day.display_unassigned_count??day.unassigned_count;
       return '<tr class="day-row day-'+esc(day.tone)+'" data-date="'+esc(day.date)+'">'+
         '<td class="dtr-date"><strong>'+esc(day.date.slice(8))+'</strong><span>'+esc(day.day)+'</span></td>'+
@@ -396,14 +365,14 @@ async function loadDetail({quiet=false}={}){
         '<td class="undertime-value" title="'+(ut==null?'For review':'Available DTR undertime')+'">'+(ut==null?'—':Math.floor(ut/3600))+'</td>'+
         '<td class="undertime-value">'+(ut==null?'—':String(Math.floor(ut%3600/60)).padStart(2,'0'))+'</td>'+
         '<td class="overtime-value" title="Manual DTR overtime result">'+durationText(metrics.overtime_seconds)+'</td>'+
-        activityScanCell(day)+travelCell(day)+'<td class="day-activities">'+(visibleStatus?'<span title="'+esc(detail)+'" class="monitor-remark remark-'+kind+'">'+esc(visibleStatus)+'</span>':'')+(metrics.aja_review?'<span class="monitor-remark remark-conflict" title="AJA evidence is incomplete; check the original source">AJA review</span>':'')+dayActivities(day)+'</td>'+
+        activityScanCell(day)+'<td class="day-activities">'+(visibleStatus?'<span title="'+esc(detail)+'" class="monitor-remark remark-'+kind+'">'+esc(visibleStatus)+'</span>':'<span class="empty-cell">—</span>')+'</td>'+
         '<td class="day-action"><button type="button" class="button outline edit-day" data-edit-day="'+esc(day.date)+'" aria-label="'+(session.role==='admin'?'Edit':'View')+' attendance for '+esc(day.date)+'">'+editIcon()+(session.role==='admin'?'Edit':'View')+'</button>'+
         (unassigned?'<span class="unassigned-count" title="Additional source entries to review">+'+unassigned+'</span>':'')+'</td></tr>';
     }).join('');
     $('daily-table-wrap').scrollTop=scroll;
   }catch(error){
     if(serial!==detailRequest || code!==selectedEmployee || currentPage!=='employees' || !session)return;
-    if(!quiet){$('daily-rows').innerHTML='<tr><td colspan="14" class="table-empty">Unable to load attendance.</td></tr>';toast(error.message,true);}
+    if(!quiet){$('daily-rows').innerHTML='<tr><td colspan="13" class="table-empty">Unable to load attendance.</td></tr>';toast(error.message,true);}
   }
 }
 const REVIEW_CLOCKS=['am_in','am_out','pm_in','pm_out','aja_out','aja_in'];
@@ -489,10 +458,13 @@ function openDayReview(date){
   $('review-ut-hours').value=minutes===null?'':Math.floor(minutes/60);
   $('review-ut-minutes').value=minutes===null?'':minutes%60;
   const fullTravel=day.travel_order===true;
-  const editRef=fullTravel&&day.review.activity_type==='Travel Order';
-  $('review-reference').value=day.review.activity_reference;
+  const editRef=fullTravel;
+  $('review-reference').value=fullTravel?(day.travel_reference||''):'';
+  dayReviewContext.initialTravelReference=$('review-reference').value;
   $('review-travel-reference').classList.toggle('hidden',!editRef);
   $('review-reference').disabled=!editable||!editRef;
+  $('review-reference').required=editable&&editRef;
+  $('review-reference').title=fullTravel?(day.travel_source_references||[]).join(' · '):'';
   $('review-remark').value='';$('review-remark').disabled=!editable;
   $('review-reason-field').classList.add('hidden');$('review-remark').required=false;
   for(const id of ['review-ut-hours','review-ut-minutes'])$(id).disabled=!editable;
@@ -522,7 +494,11 @@ async function saveDayReview(event){
   const h=$('review-ut-hours').value,m=$('review-ut-minutes').value;
   payload.undertime_minutes=h===''&&m===''?null:Number(h||0)*60+Number(m||0);
   payload.activity_type=context.day.review.activity_type;
-  payload.activity_reference=$('review-reference').disabled?context.day.review.activity_reference:$('review-reference').value.trim();
+  payload.activity_reference=context.day.review.activity_reference;
+  if(context.day.travel_order && $('review-reference').value.trim()!==context.initialTravelReference){
+    payload.activity_type='Travel Order';
+    payload.activity_reference=$('review-reference').value.trim();
+  }
   payload.remark=changed?$('review-remark').value.trim():context.day.review.remark;
   $('save-day-review').disabled=true;$('day-review-error').classList.add('hidden');
   try{
@@ -546,8 +522,8 @@ function openDtrFormPreview(){
     const periods=day.travel_order?[]:(day.aja_periods||[]);
     const span=periods.length+1,ut=day.monitoring?.undertime_seconds;
     const sourceNote=day.manual_source?.notes?.find(x=>/leave/i.test(x));
-    const special=day.travel_order?day.display_activities.find(x=>x.category==='Travel Order')?.reference||'Travel Order':
-      day.calendar.holiday_name||(!Object.values(day.display_slots||{}).some(Boolean)&&!periods.length?(sourceNote||(day.is_weekend?(day.day==='Sat'?'SATURDAY':'SUNDAY'):'')):'');
+    const special=day.travel_order?travelLabel(day):
+      (!day.has_attendance_entries&&!periods.length?(day.calendar.holiday_name||sourceNote||(day.is_weekend?(day.day==='Sat'?'SATURDAY':'SUNDAY'):'')):'');
     return '<tr><td rowspan="'+span+'">'+(i+1)+'</td>'+
       (special?'<td colspan="4">'+esc(special)+'</td>':['am_in','am_out','pm_in','pm_out'].map(k=>'<td>'+clock(day.display_slots?.[k])+'</td>').join(''))+
       '<td rowspan="'+span+'">'+(ut==null?'':Math.floor(ut/3600))+'</td><td rowspan="'+span+'">'+(ut==null?'':Math.floor(ut%3600/60))+'</td></tr>'+

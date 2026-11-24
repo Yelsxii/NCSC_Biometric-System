@@ -263,3 +263,22 @@
 .clock-picker-actions button{height:27px;min-height:27px;padding:0 12px;font-size:10px;border-radius:5px}
 #clock-picker-clear{background:#f3f5fa;color:#61718e}
 #review-reason-field{margin-top:8px}
+
+/* Single readable remark, with the travel reference in its merged time cell. */
+.workspace .attendance-sheet .dtr-grid{min-width:960px}
+.workspace .attendance-sheet .dtr-col-clock{width:8%}
+.workspace .attendance-sheet .dtr-col-total{width:8%}
+.workspace .attendance-sheet .dtr-col-remarks{width:16%}
+.workspace .attendance-sheet .dtr-col-action{width:8%}
+.workspace .attendance-sheet .dtr-grid .day-activities{padding:5px 10px;vertical-align:middle}
+.workspace .attendance-sheet .monitor-remark{font-size:11px;line-height:1.25;font-weight:600;padding:3px 7px;margin:0;white-space:normal;overflow-wrap:anywhere}
+.workspace .attendance-sheet .remark-complete{color:#26734e}
+.workspace .attendance-sheet .remark-undertime{color:#a33655}
+.workspace .attendance-sheet .remark-overtime{color:#2d5d9e}
+.workspace .attendance-sheet .remark-conflict{color:#896018}
+.workspace .attendance-sheet .remark-holiday{color:#3468a5;background:#eaf3ff}
+.workspace .attendance-sheet .remark-pending{color:#64748b}
+.workspace .attendance-sheet .dtr-grid .travel-status{overflow-wrap:anywhere}
+.workspace .attendance-sheet .sheet-toolbar{padding:12px 0 13px}
+.app-dialog.day-review-dialog #review-travel-info{background:none;border-radius:0;padding:0;color:#654297;justify-content:flex-start;font-size:11px}
+.app-dialog.day-review-dialog #review-travel-reference{display:grid;gap:6px;font-size:11px;font-weight:650;color:#52688a;margin:12px 0 4px}

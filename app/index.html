@@ -103,10 +103,9 @@
               <div class="sheet-toolbar">
                 <div class="attendance-legend" aria-label="Attendance colors"><span class="legend-missing">No entry / incomplete</span><span class="legend-entry">Entry</span><span class="legend-holiday">Holiday</span><span class="legend-aja">AJA</span><span class="legend-travel">Travel Order</span></div>
               </div>
-              <p class="attendance-month-status" id="attendance-month-status" role="status" aria-live="polite"></p>
               <div class="table-wrap" id="daily-table-wrap"><table class="records-table dtr-grid" aria-label="Monthly employee attendance">
-                <colgroup><col class="dtr-col-date"><col span="4" class="dtr-col-clock"><col class="dtr-col-total"><col span="2" class="dtr-col-ut"><col class="dtr-col-ot"><col span="2" class="dtr-col-aja"><col class="dtr-col-travel"><col class="dtr-col-remarks"><col class="dtr-col-action"></colgroup><thead><tr><th rowspan="2" scope="col">Date</th><th colspan="2" scope="colgroup">A.M.</th><th colspan="2" scope="colgroup">P.M.</th><th rowspan="2" scope="col" class="daily-total">Total hours</th><th colspan="2" scope="colgroup">Undertime</th><th rowspan="2" scope="col" class="overtime-total">Overtime earned</th><th colspan="2" scope="colgroup" class="aja-column">AJA</th><th rowspan="2" scope="col" class="travel-column">Travel Order</th><th rowspan="2" scope="col">Remarks</th><th rowspan="2" scope="col" class="actions-column">Action</th></tr><tr><th scope="col">Time in</th><th scope="col">Time out</th><th scope="col">Time in</th><th scope="col">Time out</th><th scope="col">Hours</th><th scope="col">Minutes</th><th scope="col">Out</th><th scope="col">In / End</th></tr></thead>
-                <tbody id="daily-rows"><tr><td colspan="14">Choose an employee.</td></tr></tbody>
+                <colgroup><col class="dtr-col-date"><col span="4" class="dtr-col-clock"><col class="dtr-col-total"><col span="2" class="dtr-col-ut"><col class="dtr-col-ot"><col span="2" class="dtr-col-aja"><col class="dtr-col-remarks"><col class="dtr-col-action"></colgroup><thead><tr><th rowspan="2" scope="col">Date</th><th colspan="2" scope="colgroup">A.M.</th><th colspan="2" scope="colgroup">P.M.</th><th rowspan="2" scope="col" class="daily-total">Total hours</th><th colspan="2" scope="colgroup">Undertime</th><th rowspan="2" scope="col" class="overtime-total">Overtime earned</th><th colspan="2" scope="colgroup" class="aja-column">AJA</th><th rowspan="2" scope="col">Remarks</th><th rowspan="2" scope="col" class="actions-column">Action</th></tr><tr><th scope="col">Time in</th><th scope="col">Time out</th><th scope="col">Time in</th><th scope="col">Time out</th><th scope="col">Hours</th><th scope="col">Minutes</th><th scope="col">Out</th><th scope="col">In / End</th></tr></thead>
+                <tbody id="daily-rows"><tr><td colspan="13">Choose an employee.</td></tr></tbody>
               </table></div>
             </div>
           </section>
@@ -214,7 +213,7 @@
         <h3 class="form-section-title">Undertime</h3>
         <div class="profile-form-grid"><label>Hours<input id="review-ut-hours" type="number" min="0" max="24" step="1" placeholder="—"></label><label>Minutes<input id="review-ut-minutes" type="number" min="0" max="59" step="1" placeholder="—"></label></div>
         </div>
-        <label id="review-travel-reference" class="hidden">Travel Order reference<input id="review-reference" maxlength="140"></label>
+        <label id="review-travel-reference" class="hidden">Travel Order number / reference<input id="review-reference" maxlength="140" placeholder="e.g. RO 1 2026-11-2"></label>
         <label id="review-reason-field" class="review-remark-label hidden">Approval reason<input id="review-remark" maxlength="300" placeholder="Reason for adjustment"></label>
         <p id="day-review-error" class="form-error hidden" role="alert"></p>
       </div>

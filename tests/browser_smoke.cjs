@@ -284,9 +284,11 @@ with connect() as con:
     await page.locator('[data-employee="1"]').last().click();
     await page.locator('#employee-detail:not(.hidden)').waitFor();
     await page.locator('#detail-name').filter({hasText:'Sample One'}).waitFor();
-    await page.locator('#daily-rows .travel-column .travel-badge').first().waitFor();
+    await page.locator('#daily-rows .slot-travel .travel-status').first().waitFor();
     assert.ok((await page.locator('#daily-rows').textContent()).includes('Travel Order'));
-    assert.equal(await page.locator('#daily-table-wrap colgroup col').count(),9);
+    assert.equal(await page.locator('#daily-table-wrap colgroup col').count(),8);
+    assert.equal(await page.locator('#daily-table-wrap th.travel-column').count(),0);
+    assert.equal(await page.locator('#attendance-month-status').count(),0);
     const travelDay=page.locator('#daily-rows [data-date="2026-11-23"]');
     assert.equal(await travelDay.locator('td.slot-travel[colspan="4"]').count(),1);
     assert.equal(await travelDay.locator('td.slot-travel[colspan="2"]').count(),0);
@@ -294,7 +296,11 @@ with connect() as con:
     await travelDay.locator('[data-edit-day]').click();
     await page.locator('#day-review-dialog[open]').waitFor();
     assert.equal(await page.locator('#review-time-section').isVisible(),false);
-    await page.locator('#cancel-day-review').click();
+    assert.equal(await page.locator('#review-reference').inputValue(),'DEMO-TO-001');
+    await page.locator('#review-reference').fill('DEMO-TO-002');
+    await page.locator('#save-day-review').click();
+    await page.locator('#day-review-dialog').waitFor({state:'hidden'});
+    await travelDay.getByText('Travel Order No.: DEMO-TO-002',{exact:true}).waitFor();
     assert.equal(await page.locator('#daily-rows tr').count(),30);
     assert.equal(await page.locator('#print-dtr').count(),0);
     assert.equal(await page.locator('#export-dtr').count(),0);
