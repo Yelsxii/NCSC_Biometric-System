@@ -286,6 +286,7 @@ with connect() as con:
     await page.locator('#detail-name').filter({hasText:'Sample One'}).waitFor();
     await page.locator('#daily-rows .travel-column .travel-badge').first().waitFor();
     assert.ok((await page.locator('#daily-rows').textContent()).includes('Travel Order'));
+    assert.equal(await page.locator('#daily-table-wrap colgroup col').count(),9);
     const travelDay=page.locator('#daily-rows [data-date="2026-11-23"]');
     assert.equal(await travelDay.locator('td.slot-travel[colspan="4"]').count(),1);
     assert.equal(await travelDay.locator('td.slot-travel[colspan="2"]').count(),0);

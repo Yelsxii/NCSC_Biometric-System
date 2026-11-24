@@ -2,6 +2,7 @@
 from __future__ import annotations
 import datetime as dt
 import re
+from app.activity_mapping import sheet_aja_evidence, is_aja_note
 
 KEYS = ('am_in','am_out','pm_in','pm_out')
 OFFICIAL = ('AJA','Travel Order','Fieldwork','Official Business')
@@ -93,14 +94,15 @@ def resolve_day(day, manual):
     day['monitoring'] = {'total_seconds':total,'elapsed_seconds':elapsed,'undertime_seconds':undertime,'overtime_seconds':overtime,
         'remarks':remarks,'metrics_origin':'manual_sheet' if comparable else 'reviewed' if reviewed_ut is not None else 'elapsed_only',
         'complete':bool(complete),'conflicts':len(conflicts)}
+    aja_evidence = sheet_aja_evidence(source)
     day['manual_source'] = {'name':manual['name'],'sheet':manual['sheet'],'row':manual['row'],'times':sheet_times,
-        'notes':source['notes'],'aja':source.get('aja')} if manual else None
+        'notes':source['notes'],'aja':aja_evidence} if manual else None
     day['display_unassigned_count'] = unplaced
-    if source and source.get('aja'):
-        day['display_activities'].append({'category':'AJA','reference':source['aja']['purpose']})
+    if aja_evidence:
+        day['display_activities'].append({'category':'AJA','reference':aja_evidence['purpose']})
     if source:
         for note in source['notes']:
-            kind = 'Travel Order' if re.search(r'TRAVEL\s+ORDER',note,re.I) else 'AJA' if re.search(r'\bAJA\b',note,re.I) else 'Manual DTR'
+            kind = 'Travel Order' if re.search(r'TRAVEL\s+ORDER',note,re.I) else 'AJA' if is_aja_note(note) else 'Manual DTR'
             day['display_activities'].append({'category':kind,'reference':note})
     travel = any(item['category']=='Travel Order' for item in day['display_activities'])
     day['travel_order'] = travel
@@ -119,9 +121,9 @@ def resolve_day(day, manual):
         day['monitoring']['remarks'] = 'Travel Order' if 'Travel Order' in kinds else 'AJA' if 'AJA' in kinds else 'Manual DTR note'
     if day['calendar']['holiday_name']:
         day['tone']='holiday'
-    elif any('TRAVEL' in x['category'].upper() or 'TRAVEL' in x['reference'].upper() for x in day['display_activities']):
+    elif travel:
         day['tone']='travel'
-    elif any('AJA' in x['category'].upper() or 'AJA' in x['reference'].upper() for x in day['display_activities']):
+    elif any(x['category']=='AJA' for x in day['display_activities']):
         day['tone']='aja'
     elif any(display.values()):
         day['tone']='entry'

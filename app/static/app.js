@@ -292,7 +292,7 @@ function activityScanCell(day){
   return ['out','in'].map(key=>'<td class="activity-evidence aja-'+key+'">'+(periods.length?periods.map(period=>{
     const entry=period[key];
     const source=entry?.origin==='biometric'?'Bio':entry?.origin==='hr_approved'?'HR':entry?.origin==='manual_sheet'?'Sheet':entry?'Ref':'';
-    return '<div class="aja-time" title="'+esc((entry?.origin||'Missing entry')+(period.review?' · Needs review':''))+'">'+(entry?esc(entry.time)+' <small>'+source+'</small>':'—')+'</div>';
+    return '<div class="aja-time '+(entry?'has-aja':'aja-missing')+'" title="'+esc((entry?.origin||'Missing entry')+(period.review?' · Needs review':''))+'">'+(entry?esc(entry.time)+' <small>'+source+'</small>':period.review?'<small>Missing</small>':'—')+'</div>';
   }).join(''):'<span class="empty-cell">—</span>')+'</td>').join('');
 }
 function travelCell(day){
@@ -335,11 +335,12 @@ function attendanceTimeCells(day){
   }
   return ['am_in','am_out','pm_in','pm_out'].map(key=>slotCell(day,key)).join('');
 }
+function manilaClock(){return new Intl.DateTimeFormat('sv-SE',{timeZone:'Asia/Manila',year:'numeric',month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit',second:'2-digit',hourCycle:'h23'}).format(new Date());}
 function slotCell(day,key){
   const event=day.display_slots?day.display_slots[key]:(day.slots[key]||provisionalOrdinarySlots(day)?.[key]);
   const origin=event?.origin||(day.slots[key]?'reviewed':'biometric');
-  const tone=['holiday','aja','travel'].includes(day.tone)?day.tone:
-    event?(origin==='manual_sheet'?'sheet':(origin==='reviewed'||origin==='hr_approved')?'entry':'provisional'):
+  const tone=day.tone==='holiday'?'holiday':
+    event?(day.monitoring?.remarks==='Future entry'&&event.happened_at>manilaClock()?'neutral':origin==='manual_sheet'?'sheet':(origin==='reviewed'||origin==='hr_approved')?'entry':'provisional'):
       (day.is_future||day.is_weekend?'neutral':'missing');
   const label=origin==='manual_sheet'?'Sheet':origin==='reviewed'?'HR':'Bio';
   const hint=event?event.happened_at.slice(11)+' · '+(origin==='manual_sheet'?'Manual DTR source':origin==='reviewed'?'Reviewed selection':origin==='hr_approved'?'HR-approved adjustment':'Original biometric time; observed AM/PM placement')+
@@ -396,7 +397,7 @@ async function loadDetail({quiet=false}={}){
         '<td class="undertime-value" title="'+(ut==null?'For review':'Available DTR undertime')+'">'+(ut==null?'—':Math.floor(ut/3600))+'</td>'+
         '<td class="undertime-value">'+(ut==null?'—':String(Math.floor(ut%3600/60)).padStart(2,'0'))+'</td>'+
         '<td class="overtime-value" title="Manual DTR overtime result">'+durationText(metrics.overtime_seconds)+'</td>'+
-        activityScanCell(day)+travelCell(day)+'<td class="day-activities">'+(visibleStatus?'<span title="'+esc(detail)+'" class="monitor-remark remark-'+kind+'">'+esc(visibleStatus)+'</span>':'')+dayActivities(day)+'</td>'+
+        activityScanCell(day)+travelCell(day)+'<td class="day-activities">'+(visibleStatus?'<span title="'+esc(detail)+'" class="monitor-remark remark-'+kind+'">'+esc(visibleStatus)+'</span>':'')+(metrics.aja_review?'<span class="monitor-remark remark-conflict" title="AJA evidence is incomplete; check the original source">AJA review</span>':'')+dayActivities(day)+'</td>'+
         '<td class="day-action"><button type="button" class="button outline edit-day" data-edit-day="'+esc(day.date)+'" aria-label="'+(session.role==='admin'?'Edit':'View')+' attendance for '+esc(day.date)+'">'+editIcon()+(session.role==='admin'?'Edit':'View')+'</button>'+
         (unassigned?'<span class="unassigned-count" title="Additional source entries to review">+'+unassigned+'</span>':'')+'</td></tr>';
     }).join('');

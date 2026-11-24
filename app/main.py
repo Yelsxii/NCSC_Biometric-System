@@ -621,6 +621,12 @@ def monitor_dtr(employee_code: str, month: str, user: dict = Depends(current_use
     for day in rows:
         day["activity_mappings"] = activity_pairs(day["scans"])
         day["aja_periods"] = dtr_aja_periods(day)
+        # AJA-only notes or missing endpoints are review evidence, not complete intervals.
+        if not day["travel_order"] and day["aja_periods"]:
+            if day["tone"] != "holiday":
+                day["tone"] = "aja" if any(p["out"] or p["in"] for p in day["aja_periods"]) else "entry" if any(day["display_slots"].values()) else "missing"
+            if any(p["review"] for p in day["aja_periods"]):
+                day["monitoring"]["aja_review"] = True
     return {"employee_code": employee_code, "display_name": employee[0] if employee else "",
             "name_source": employee["name_source"] if employee else "scan",
             "department": employee["department"] if employee else "",

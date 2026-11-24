@@ -195,3 +195,33 @@
 .workspace .attendance-sheet #dtr-form-preview{margin-left:auto;background:#244b9a;color:white}
 .approved-clock-grid label{font-size:11px}
 .approved-clock-grid input{background:#f4f7fc;border:1px solid #dce5f2}
+
+/* Separate attendance provenance from activity status and fit all fourteen columns. */
+.workspace .attendance-sheet .dtr-grid{width:100%;min-width:1040px;table-layout:fixed}
+.workspace .attendance-sheet .dtr-grid thead th{width:auto!important}
+.workspace .attendance-sheet .dtr-col-date{width:6%}
+.workspace .attendance-sheet .dtr-col-clock{width:7%}
+.workspace .attendance-sheet .dtr-col-total{width:7%}
+.workspace .attendance-sheet .dtr-col-ut{width:4%}
+.workspace .attendance-sheet .dtr-col-ot{width:8%}
+.workspace .attendance-sheet .dtr-col-aja{width:7%}
+.workspace .attendance-sheet .dtr-col-travel{width:9%}
+.workspace .attendance-sheet .dtr-col-remarks{width:13%}
+.workspace .attendance-sheet .dtr-col-action{width:7%}
+.workspace .attendance-sheet .dtr-grid .time-slot.slot-sheet,
+.workspace .attendance-sheet .dtr-grid .time-slot.slot-entry,
+.workspace .attendance-sheet .dtr-grid .time-slot.slot-provisional{background:#e9f6f0!important}
+.workspace .attendance-sheet .aja-out .aja-time.has-aja,
+.workspace .attendance-sheet .aja-in .aja-time.has-aja{background:#fff4d7;color:#896018}
+.workspace .attendance-sheet .aja-out .aja-time.aja-missing,
+.workspace .attendance-sheet .aja-in .aja-time.aja-missing{background:#f1f4f9;color:#8290a4}
+.workspace .attendance-sheet .dtr-grid .day-action{position:sticky;right:0;background:#fff;z-index:2;text-align:center!important;box-shadow:-3px 0 6px #263b6010}
+.workspace .attendance-sheet .dtr-grid th.actions-column{right:0;z-index:5}
+.workspace .attendance-sheet .dtr-grid .travel-status{white-space:normal;padding:3px 6px}
+.workspace .attendance-sheet .edit-day{background:#244b9a;color:white}
+@media(max-width:740px){
+  .workspace .attendance-sheet .sheet-filters{flex-wrap:wrap}
+  .workspace .attendance-sheet .month-inline{flex:1 1 205px}
+  .workspace .attendance-sheet .month-inline input{min-width:150px;width:150px;flex:none}
+  .workspace .attendance-sheet #dtr-form-preview{margin-left:auto}
+}

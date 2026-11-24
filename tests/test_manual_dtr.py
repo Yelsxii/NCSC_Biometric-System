@@ -462,3 +462,35 @@ def test_full_day_travel_order_preserves_mixed_regular_evidence(admin):
     assert day['display_slots']['am_in']['happened_at'].endswith('08:00:00')
     assert day['display_slots']['pm_in'] is None
     assert day['monitoring']['total_seconds'] is None
+
+def test_legacy_aja_note_recovers_times_without_regular_slot_reassignment(admin):
+    client,headers=admin
+    seed_employee()
+    import_one(client,headers,packet([row(times=['7:18','8:07','AJA\n8:07-18:00',None])]))
+    day=monitor(client)
+    assert day['tone']=='aja'
+    assert day['display_slots']['pm_in'] is None
+    assert day['aja_periods'][0]['out']=={'time':'08:07:00','origin':'manual_sheet'}
+    assert day['aja_periods'][0]['in']=={'time':'18:00:00','origin':'manual_sheet'}
+    assert not day['aja_periods'][0]['review']
+
+
+def test_empty_aja_placeholder_does_not_color_regular_day(admin):
+    client,headers=admin
+    seed_employee()
+    data=row()
+    data['values'] += ['-', 'N/A', '-']
+    import_one(client,headers,packet([data]))
+    day=monitor(client)
+    assert day['tone']=='entry'
+    assert day['aja_periods']==[]
+    assert day['monitoring']['remarks']=='Complete'
+
+
+def test_aja_note_without_times_is_visible_for_review(admin):
+    client,headers=admin
+    seed_employee()
+    import_one(client,headers,packet([row(times=['7:18','8:07','AJA',None])]))
+    day=monitor(client)
+    assert day['aja_periods']==[{'out':None,'in':None,'review':True}]
+    assert day['monitoring']['aja_review'] is True

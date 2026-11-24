@@ -8,6 +8,8 @@ records that actually have imported codes (e.g. a verified USB attlog).
 """
 from __future__ import annotations
 
+import re
+
 ACTIVITY_KINDS = ("AJA", "Travel Order")
 DIRECTIONS = ("Unspecified", "IN", "OUT")
 
@@ -64,6 +66,49 @@ def activity_pairs(scans: list[dict]) -> list[dict]:
 
 
 
+def _sheet_clock(value):
+    """Accept real clock values only, never placeholders or arbitrary notes."""
+    match = re.fullmatch(r"(\d{1,2}):([0-5]\d)(?::([0-5]\d))?\s*(AM|PM)?",
+                         str(value or "").strip(), re.I)
+    if not match:
+        return None
+    hour = int(match[1])
+    if match[4]:
+        if not 1 <= hour <= 12:
+            return None
+        hour = hour % 12 + (12 if match[4].upper()=="PM" else 0)
+    if hour > 23:
+        return None
+    return f"{hour:02}:{match[2]}:{match[3] or '00'}"
+
+
+def is_aja_note(value):
+    text = str(value or "").strip()
+    return bool(re.search(r"\bAJA\b", text, re.I) and
+                not re.search(r"\b(?:NO|NOT|WITHOUT)\s+AJA\b|\bAJA\s*[:\-]?\s*(?:NONE|N/?A|NOT APPLICABLE)\b", text, re.I))
+
+
+def sheet_aja_evidence(source):
+    """Recover explicit AJA ranges from existing imported DTR notes at read time."""
+    if not source:
+        return None
+    structured = source.get("aja") or {}
+    start, end = _sheet_clock(structured.get("start")), _sheet_clock(structured.get("end"))
+    purpose = str(structured.get("purpose") or "").strip()
+    notes = [note for note in source.get("notes", []) if is_aja_note(note)]
+    for note in notes:
+        match = re.search(r"\bAJA\b.*?(\d{1,2}:[0-5]\d(?::[0-5]\d)?\s*(?:AM|PM)?)\s*[-–—−]\s*(\d{1,2}:[0-5]\d(?::[0-5]\d)?\s*(?:AM|PM)?)", note, re.I)
+        if match:
+            a,b = _sheet_clock(match[1]),_sheet_clock(match[2])
+            if a and b and a<b:
+                start,end = start or a,end or b
+                break
+    placeholder = purpose.upper() in ("", "-", "—", "0", "N/A", "NA", "NONE", "FALSE", "NOT APPLICABLE")
+    if not (start or end or notes or not placeholder):
+        return None
+    return {"start":start,"end":end,"purpose":purpose if not placeholder else (notes[0] if notes else "")}
+
+
 def dtr_aja_periods(day: dict) -> list[dict]:
     """Departure/return evidence for the DTR, separate from regular slots."""
     periods = []
@@ -89,11 +134,11 @@ def dtr_aja_periods(day: dict) -> list[dict]:
             periods.append({"out": None, "in": None, "review": True})
     if pending:
         periods.append({"out": pending, "in": None, "review": True})
-    sheet = (day.get("manual_source") or {}).get("aja")
+    sheet = sheet_aja_evidence(day.get("manual_source"))
     if sheet:
         pair = {"out": {"time": sheet["start"], "origin": "manual_sheet"} if sheet.get("start") else None,
                 "in": {"time": sheet["end"], "origin": "manual_sheet"} if sheet.get("end") else None,
-                "review": not bool(sheet.get("start") and sheet.get("end"))}
+                "review": not bool(sheet.get("start") and sheet.get("end") and sheet["start"]<sheet["end"])}
         def minute(x):
             return x["time"][:5] if x else None
         if not any(minute(x["out"]) == minute(pair["out"]) and minute(x["in"]) == minute(pair["in"]) for x in periods):
@@ -101,7 +146,7 @@ def dtr_aja_periods(day: dict) -> list[dict]:
             matches = [x for x in periods if x["out"] and minute(x["out"]) == minute(pair["out"]) and not x["in"]]
             if len(matches)==1 and pair["in"]:
                 matches[0]["in"] = pair["in"]
-                matches[0]["review"] = False
+                matches[0]["review"] = matches[0]["out"]["time"] >= pair["in"]["time"]
             else:
                 periods.append(pair)
     if not periods:
@@ -123,4 +168,6 @@ def dtr_aja_periods(day: dict) -> list[dict]:
             # Do not guess which of multiple periods an adjustment belongs to.
             for period in periods:
                 period["review"]=True
+    if not periods and any(x["category"]=="AJA" for x in day.get("display_activities", [])):
+        periods.append({"out":None,"in":None,"review":True})
     return periods
