@@ -341,6 +341,13 @@ function unassignedPunches(day){
 function durationText(seconds){
   return Number.isFinite(seconds)?Math.floor(seconds/3600)+':'+String(Math.floor(seconds%3600/60)).padStart(2,'0'):'—';
 }
+function attendanceTimeCells(day){
+  const periods=day.travel_periods||[];
+  if(periods.includes('am')&&periods.includes('pm')){
+    return '<td colspan="4" class="time-slot slot-travel"><span class="travel-status">Travel Order</span></td>';
+  }
+  return periodCells(day,'am')+periodCells(day,'pm');
+}
 function periodCells(day,half){
   if((day.travel_periods||[]).includes(half))return '<td colspan="2" class="time-slot slot-travel"><span class="travel-status">Travel Order</span></td>';
   return slotCell(day,half+'_in')+slotCell(day,half+'_out');
@@ -401,7 +408,7 @@ async function loadDetail({quiet=false}={}){
       const unassigned=day.display_unassigned_count??day.unassigned_count;
       return '<tr class="day-row day-'+esc(day.tone)+'" data-date="'+esc(day.date)+'">'+
         '<td class="dtr-date"><strong>'+esc(day.date.slice(8))+'</strong><span>'+esc(day.day)+'</span></td>'+
-        periodCells(day,'am')+periodCells(day,'pm')+
+        attendanceTimeCells(day)+
         '<td class="daily-total-value" title="'+esc(metrics.metrics_origin==='manual_sheet'?'Manual DTR calculated result':'Elapsed AM + PM time; '+(metrics.total_seconds??'unknown')+' seconds')+'">'+durationText(metrics.total_seconds)+'</td>'+
         '<td class="undertime-value" title="'+(ut==null?'For review':'Available DTR undertime')+'">'+(ut==null?'—':Math.floor(ut/3600))+'</td>'+
         '<td class="undertime-value">'+(ut==null?'—':String(Math.floor(ut%3600/60)).padStart(2,'0'))+'</td>'+

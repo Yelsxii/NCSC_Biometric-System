@@ -15,7 +15,7 @@ def travel_coverage(day, manual, display):
     raw = (manual or {}).get('original', {}).get('values', [])
     marked = set()
     for i, key in enumerate(KEYS):
-        if len(raw)>i+2 and isinstance(raw[i+2], str) and re.search(r'\\bTRAVEL\\s+ORDER\\b', raw[i+2], re.I):
+        if len(raw)>i+2 and isinstance(raw[i+2], str) and re.search(r'\bTRAVEL\s+ORDER\b', raw[i+2], re.I):
             marked.add(key[:2])
     empty = [half for half in ('am','pm') if not any(display[half+'_'+part] for part in ('in','out'))]
     # A travel day with no office punches or named times needs no clock pair.

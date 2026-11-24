@@ -308,7 +308,9 @@ with connect() as con:
     await page.locator('#day-review-dialog').waitFor({state:'hidden'});
     await day.locator('.time-value').filter({hasText:'07:30'}).waitFor();
     assert.equal(await day.locator('.time-value').count(),4);
-    assert.equal(await day.locator('.time-code').first().textContent(),'WC 0');
+    assert.equal(await day.locator('.time-code').count(),0);
+    assert.match(await day.locator('.time-slot').first().getAttribute('title'),/Work code 0/);
+    assert.match(await day.locator('.time-value').first().textContent(),/^\d{2}:\d{2}:\d{2}$/);
     assert.equal(await day.locator('.undertime-value').first().textContent(),'0');
     const compact=await day.boundingBox();
     assert.ok(compact.height<=43,'Daily rows should stay compact: '+compact.height);
