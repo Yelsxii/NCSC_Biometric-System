@@ -416,3 +416,26 @@ def test_synthetic_pilot_volume_is_idempotent_and_keeps_source_unchanged(admin, 
     assert sync["total_imported"] == 4986
     assert sync["latest_result"] == "Success — No new records"
     assert path.read_bytes() == source_before
+
+
+def test_current_office_pm_in_uses_verified_state_not_scan_order(admin, monkeypatch, tmp_path):
+    client, headers = admin
+    path = tmp_path / "attendance.sqlite3"
+    _connector(path, [
+        (HOST, "7", "2026-11-24 11:29:51", "2", "0", "2026-11-24 06:00:00"),
+        (HOST, "7", "2026-11-24 13:07:26", "1", "5", "2026-11-24 06:00:00"),
+        (HOST, "18", "2026-11-24 13:09:31", "1", "5", "2026-11-24 06:00:00"),
+    ])
+    _enable(monkeypatch, path)
+    result = client.post("/api/device/sync", headers=headers)
+    assert result.status_code == 200, result.text
+    for employee, expected in (("7","13:07:26"),("18","13:09:31")):
+        day = client.get("/api/dtr/monitor?employee_code="+employee+"&month=2026-11").json()["days"][23]
+        assert day["display_slots"]["pm_in"]["happened_at"].endswith(expected)
+        assert day["display_slots"]["pm_out"] is None
+        assert day["display_slots"]["am_in"] is None
+        assert day["monitoring"]["total_seconds"] is None
+        assert day["scans"][-1]["work_code"] == ""
+        assert day["scans"][-1]["k14_punch_type"] == "5"
+    with closing(connect()) as con:
+        assert con.execute("SELECT COUNT(*) FROM punches").fetchone()[0] == 3

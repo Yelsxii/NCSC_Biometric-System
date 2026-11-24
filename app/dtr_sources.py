@@ -13,25 +13,37 @@ def resolve_day(day, manual):
     sheet_times = source['times'] if source else {}
     ordinary = sorted((x for x in day['scans'] if x.get('activity_type') not in OFFICIAL),key=lambda x:(x['happened_at'],x['id']))
     observed = {}
-    # Named manual slots can identify a unique observed punch in the same minute.
+    # Explicit reviewed selections are reserved for their assigned slots.
+    reserved = {x['id'] for x in day['slots'].values() if x}
     for key in KEYS:
+        matches = [x for x in ordinary if x.get('verified_slot')==key and x['id'] not in reserved]
+        if len(matches)==1:
+            observed[key] = matches[0]
+    # Named sheet slots may identify an unknown raw state, but never override
+    # a verified state or assign the same punch to another slot.
+    for key in KEYS:
+        if key in observed or day['slots'][key]:
+            continue
         clock = sheet_times.get(key)
-        matches = [x for x in ordinary if clock and x['happened_at'][11:16]==clock[:5]]
+        matches = [x for x in ordinary if clock and x['happened_at'][11:16]==clock[:5]
+                   and x['id'] not in reserved and not x.get('verified_slot')]
         same_slots = [slot for slot,value in sheet_times.items() if clock and value and value[:5]==clock[:5]]
         if len(matches)==1 and len(same_slots)==1:
             observed[key] = matches[0]
     distinct = len({x['happened_at'][11:16] for x in ordinary})==len(ordinary)
     candidates = {}
-    if not day['is_future'] and distinct:
+    # Legacy imports retain their existing placement behavior. Current office
+    # K14 punches without verified states must not be guessed from scan order.
+    if not day['is_future'] and distinct and not any(x.get('k14_state_pending') for x in ordinary):
         if len(ordinary)==4:
             clocks = [x['happened_at'][11:19] for x in ordinary]
             if clocks[0]<'12:00:00' and clocks[1]<='13:00:00' and clocks[2]>='12:00:00':
                 candidates = dict(zip(KEYS,ordinary))
         elif len(ordinary)==2 and ordinary[0]['happened_at'][11:19]<'12:00:00' <=ordinary[1]['happened_at'][11:19]:
             candidates = {'am_in':ordinary[0],'pm_out':ordinary[1]}
-    used = {x['id'] for x in observed.values()}
+    used = reserved | {x['id'] for x in observed.values()}
     for key,event in candidates.items():
-        if key not in observed and event['id'] not in used:
+        if key not in observed and not day['slots'][key] and event['id'] not in used:
             observed[key]=event
             used.add(event['id'])
     display, conflicts = {}, []
@@ -55,7 +67,7 @@ def resolve_day(day, manual):
     day['source_conflicts'] = conflicts
     display_ids = {x['id'] for x in display.values() if x and x.get('id')}
     unplaced = len([x for x in ordinary if x['id'] not in display_ids])
-    if source and unplaced:
+    if unplaced and (source or any(x.get('k14_state_pending') for x in ordinary if x['id'] not in display_ids)):
         conflicts.append('unplaced_biometric')
     if source and not day['calendar']['holiday_name'] and not day['calendar']['version']:
         holiday = next((note for note in source['notes'] if 'HOLIDAY' in note.upper()), '')
