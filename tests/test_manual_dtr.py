@@ -409,3 +409,44 @@ def test_automatic_default_local_snapshot_and_full_name_order(admin,tmp_path,mon
     with closing(connect()) as con,con:
         con.execute("INSERT INTO employees(employee_code,display_name,name_source) VALUES('002','Example Employee','device')")
     assert sync_local_source()['matched_tabs']==0
+
+
+def test_device_surname_alias_matches_archives_with_corroborating_punches(admin,tmp_path,monkeypatch):
+    client,headers=admin
+    seed_employee(name='EXAMPLE')
+    with closing(connect()) as con,con:
+        con.execute("UPDATE employees SET name_source='device' WHERE employee_code='001'")
+    data=packet([row(times=['07:47','12:01','13:02','18:06']),
+                 row('2026-11-05',['08:01','12:03','13:04','17:53'],number=8)])
+    data['people'].append({'key':'archive','name':'Example Employee','sheet':'ARCHIVE',
+                          'rows':[row('2026-10-06',number=9)]})
+    # Use a surname-only K14 label matching the final whole name token.
+    with closing(connect()) as con,con:
+        con.execute("UPDATE employees SET display_name='EMPLOYEE' WHERE employee_code='001'")
+    source=tmp_path/'manual.json'
+    source.write_bytes(file_bytes(data))
+    monkeypatch.setenv('MANUAL_DTR_SOURCE_PATH',str(source))
+    assert sync_local_source()['matched_tabs']==0
+    biometric=b'001\t2026-11-06 07:47:07\t1\t9\t1\t0\n001\t2026-11-06 18:06:11\t1\t9\t1\t0\n001\t2026-11-05 08:01:09\t1\t9\t1\t0\n001\t2026-11-05 17:53:10\t1\t9\t1\t0\n'
+    assert client.post('/api/imports',headers=headers,files={'file':('fictional.dat',biometric)}).status_code==200
+    result=sync_local_source()
+    assert result['matched_tabs']==2 and result['alias_tabs']==2 and result['new_days']==3
+    assert [v['origin'] for v in monitor(client)['display_slots'].values()]==['biometric','manual_sheet','manual_sheet','biometric']
+    assert sync_local_source()['new_days']==0
+    with closing(connect()) as con,con:
+        con.execute("INSERT INTO employees(employee_code,display_name,name_source) VALUES('002','Another Employee','device')")
+    assert automatic_mapping(parse_package(source.read_bytes()))=={}
+
+
+def test_surname_alias_never_selects_between_two_source_people(admin):
+    client,headers=admin
+    seed_employee(name='EMPLOYEE')
+    with closing(connect()) as con,con:
+        con.execute("UPDATE employees SET name_source='device' WHERE employee_code='001'")
+    data=packet([row(times=['07:47','12:01','13:02','18:06']),
+                 row('2026-11-05',['08:01','12:03','13:04','17:53'],number=8)])
+    data['people'].append({'key':'other','name':'Another Employee','sheet':'OTHER',
+                          'rows':[row('2026-10-06',number=9)]})
+    biometric=b'001\t2026-11-06 07:47:07\t1\t9\t1\t0\n001\t2026-11-05 08:01:09\t1\t9\t1\t0\n'
+    assert client.post('/api/imports',headers=headers,files={'file':('fictional.dat',biometric)}).status_code==200
+    assert automatic_mapping(parse_package(file_bytes(data)))=={}

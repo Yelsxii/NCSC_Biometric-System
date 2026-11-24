@@ -372,6 +372,7 @@ async function loadDetail({quiet=false}={}){
       const sheetSlots=data.days.reduce((sum,day)=>sum+Object.values(day.display_slots||{}).filter(slot=>slot?.origin==='manual_sheet').length,0);
       const recordText=scanCount+' biometric entries · '+sheetDays+' sheet days · '+sheetSlots+' slots filled from DTR';
       const sourceText=source?.available?(source.matched_tabs+' matched sheet tabs'+
+        (source.alias_tabs?' · '+source.alias_tabs+' matched by K14 surname and time evidence':'')+
         (source.unmatched_tabs?' · '+source.unmatched_tabs+' awaiting a matching employee name':'')+
         (source.conflict_days?' · '+source.conflict_days+' conflicting source days held':'')+
         (source.invalid_rows?' · '+source.invalid_rows+' invalid source rows held':'')):
