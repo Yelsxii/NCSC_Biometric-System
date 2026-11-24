@@ -108,6 +108,9 @@ uvicorn.run('app.main:app',host='127.0.0.1',port=int(os.environ['QA_PORT']),log_
     await page.locator('#workspace:not(.hidden)').waitFor();
     assert.equal(await page.locator('#account').count(),0);
     assert.ok(await page.locator('#logout-sidebar').isVisible());
+    assert.equal(await page.locator('#logout-sidebar span').textContent(),'Sign out');
+    assert.equal(await page.locator('#logout-sidebar').evaluate(el=>getComputedStyle(el).textTransform),'none');
+    assert.equal(await page.locator('.sidebar .brand img').evaluate(el=>el.getBoundingClientRect().width),48);
     assert.equal(await page.locator('.topbar #logout').count(),0);
     assert.equal(await page.locator('.sidebar-footer').count(),0);
     assert.match(await page.locator('#live-time').textContent(),/\d{1,2}:\d{2}:\d{2}/);
