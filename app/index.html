@@ -7,7 +7,7 @@
   <title>NCSC | Attendance Records</title>
   <link rel="stylesheet" href="/static/app.css">
   <link rel="stylesheet" href="/static/workspace.css?v=attendance-2">
-  <link rel="stylesheet" href="/static/attendance-detail.css?v=auto-dtr-7">
+  <link rel="stylesheet" href="/static/attendance-detail.css?v=auto-dtr-8">
   <script src="/static/app.js?v=auto-dtr-5" defer></script>
 </head>
 <body>
@@ -93,8 +93,8 @@
           <section id="employee-detail" class="detail-section hidden">
             <div class="panel attendance-sheet">
               <div class="sheet-header">
-                <div class="sheet-identity"><span class="metadata-label">Employee name</span><h2 id="detail-name">—</h2></div>
-                <div class="sheet-personnel"><div class="sheet-meta"><span class="metadata-label">Category</span><span id="detail-category">—</span></div><div class="sheet-meta"><span class="metadata-label">Department</span><strong id="detail-department">—</strong></div></div>
+                <div class="sheet-identity"><span class="metadata-label">Employee name</span><div class="sheet-name-line"><h2 id="detail-name">—</h2><span id="detail-category" class="sheet-category" role="group" aria-label="Employment category">—</span></div></div>
+                <div class="sheet-personnel"><div class="sheet-meta"><span class="metadata-label">Department</span><strong id="detail-department">—</strong></div></div>
               </div>
               <div class="sheet-filters">
                 <button id="back-to-register" class="icon-button back-button" type="button" aria-label="Back to employees" title="Back to employees"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="m14 6-6 6 6 6M8 12h12"/></svg></button>

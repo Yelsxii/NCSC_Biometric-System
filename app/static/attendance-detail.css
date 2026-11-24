@@ -308,15 +308,26 @@
 }
 
 
-/* Align the employee identity with the month control, not the back arrow. */
+/* Keep the employee identity flush left, with a compact category pill. */
 .workspace .attendance-sheet{
   --detail-back-size:33px;
   --detail-control-gap:10px;
 }
 .workspace .attendance-sheet .sheet-identity{
-  padding-left:calc(var(--detail-back-size) + var(--detail-control-gap));
+  padding-left:0;
   text-align:left;
   overflow-wrap:anywhere;
+}
+.workspace .attendance-sheet .sheet-name-line{
+  display:flex;align-items:center;gap:10px;flex-wrap:wrap;min-width:0;
+}
+.workspace .attendance-sheet .sheet-name-line h2{min-width:0;max-width:100%}
+.workspace .attendance-sheet .sheet-category{
+  display:inline-flex;align-items:center;flex:0 0 auto;white-space:nowrap;
+}
+.workspace .attendance-sheet .sheet-category .tag{
+  display:inline-flex;align-items:center;border-radius:999px;
+  padding:4px 10px;font-size:10px;line-height:1.2;font-weight:650;
 }
 .workspace .attendance-sheet .sheet-filters{
   gap:var(--detail-control-gap);align-items:center;

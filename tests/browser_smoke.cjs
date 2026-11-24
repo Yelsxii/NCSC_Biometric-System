@@ -380,11 +380,17 @@ with connect() as con:
       const name=document.querySelector('#detail-name').getBoundingClientRect();
       const month=document.querySelector('#detail-month').getBoundingClientRect();
       const back=document.querySelector('#back-to-register').getBoundingClientRect();
-      return {nameLeft:name.left,monthLeft:month.left,backRight:back.right,
+      const category=document.querySelector('#detail-category').getBoundingClientRect();
+      return {nameLeft:name.left,monthLeft:month.left,backLeft:back.left,backRight:back.right,
+        categoryLeft:category.left,nameRight:name.right,categoryTop:category.top,nameTop:name.top,
+        categoryRadius:getComputedStyle(document.querySelector('#detail-category .tag')).borderTopLeftRadius,
         monthHeight:month.height,backHeight:back.height,
         labelHidden:document.querySelector('.month-inline .sr-only')!==null};
     });
-    assert.ok(Math.abs(headerAlignment.nameLeft-headerAlignment.monthLeft)<=2,'Employee name and month must share the left edge');
+    assert.ok(Math.abs(headerAlignment.nameLeft-headerAlignment.backLeft)<=2,'Employee name must return to the left edge');
+    assert.ok(headerAlignment.categoryLeft>=headerAlignment.nameRight,'Category must sit next to employee name');
+    assert.ok(Math.abs(headerAlignment.categoryTop-headerAlignment.nameTop)<=12,'Category and name should share a row');
+    assert.equal(headerAlignment.categoryRadius,'999px');
     assert.ok(headerAlignment.backRight<headerAlignment.monthLeft,'Back arrow precedes month');
     assert.ok(Math.abs(headerAlignment.monthHeight-headerAlignment.backHeight)<=2,'Navigation controls align vertically');
     assert.ok(headerAlignment.labelHidden,'Month label is available to assistive technology only');
