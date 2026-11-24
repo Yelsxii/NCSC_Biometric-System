@@ -853,7 +853,6 @@ async function initialize(){
     try{await api('/api/logout',{method:'POST'});session=null;showLogin();}
     catch(error){toast(error.message,true);}
   };
-  $('logout').addEventListener('click',signOut);
   $('logout-sidebar').addEventListener('click',signOut);
   document.querySelectorAll('[data-page],[data-go]').forEach(node=>
     node.addEventListener('click',()=>navigate(node.dataset.page||node.dataset.go)));

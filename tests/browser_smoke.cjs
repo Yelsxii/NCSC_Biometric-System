@@ -108,13 +108,31 @@ uvicorn.run('app.main:app',host='127.0.0.1',port=int(os.environ['QA_PORT']),log_
     await page.locator('#workspace:not(.hidden)').waitFor();
     assert.equal(await page.locator('#account').count(),0);
     assert.ok(await page.locator('#logout-sidebar').isVisible());
-    assert.ok(!(await page.locator('#logout').isVisible()));
+    assert.equal(await page.locator('.topbar #logout').count(),0);
+    assert.equal(await page.locator('.sidebar-footer').count(),0);
     assert.match(await page.locator('#live-time').textContent(),/\d{1,2}:\d{2}:\d{2}/);
     const initialClock=await page.locator('#live-time').textContent();
     await page.waitForFunction(previous=>document.querySelector('#live-time').textContent!==previous,initialClock);
     await page.setViewportSize({width:620,height:820});
-    assert.ok(await page.locator('#logout').isVisible());
-    assert.ok(!(await page.locator('#logout-sidebar').isVisible()));
+    assert.ok(await page.locator('#logout-sidebar').isVisible());
+    assert.equal(await page.locator('.topbar #logout').count(),0);
+    const compactChrome=await page.evaluate(()=>{
+      const nav=document.querySelector('.nav-item.active');
+      const icon=nav.querySelector('.nav-icon');
+      const clock=document.querySelector('.workspace-clock');
+      const date=document.querySelector('.clock-date-row');
+      const time=document.querySelector('#live-time');
+      return {accentLeft:parseFloat(getComputedStyle(nav,'::before').left),
+        glow:getComputedStyle(icon).filter, iconColor:getComputedStyle(icon).color,
+        timeLeft:time.getBoundingClientRect().left,dateLeft:date.getBoundingClientRect().left,
+        clockLeft:clock.getBoundingClientRect().left,
+        signoutLabel:getComputedStyle(document.querySelector('#logout-sidebar span')).display};
+    });
+    assert.ok(compactChrome.accentLeft<=-6,'Accent must sit outside the selected card');
+    assert.notEqual(compactChrome.glow,'none');
+    assert.equal(compactChrome.iconColor,'rgb(168, 216, 255)');
+    assert.ok(Math.abs(compactChrome.timeLeft-compactChrome.dateLeft)<=1,'Time aligns with left edge of calendar row');
+    assert.equal(compactChrome.signoutLabel,'none');
     const railLayout=await page.locator('.sidebar').evaluate(el=>({
       width:el.getBoundingClientRect().width,height:el.getBoundingClientRect().height,
       viewportHeight:innerHeight,labelDisplay:getComputedStyle(el.querySelector('.nav-item>span')).display
