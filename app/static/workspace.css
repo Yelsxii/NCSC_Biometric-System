@@ -215,11 +215,12 @@
   width:100%;min-width:0;height:42px;padding:0 10px;gap:9px;
   color:#c7d4ea;background:transparent;border:1px solid transparent;
   border-radius:9px;font-size:11px;font-weight:600;letter-spacing:.015em;box-shadow:none;
-  transition:background .16s,color .16s,border-color .16s;
+  transition:background .2s ease,color .2s ease,border-color .2s ease,box-shadow .2s ease;
 }
 .workspace .sidebar .nav-icon{width:19px;height:19px;flex:0 0 19px}
 .workspace .sidebar .nav-item:hover,.workspace .sidebar .nav-item:focus-visible{
-  color:#fff;background:var(--rail-hover);border-color:#ffffff12;
+  color:#fff;background:var(--rail-hover);border-color:#7499d044;
+  box-shadow:0 3px 10px #06152d28,inset 0 1px 0 #ffffff0d;
 }
 .workspace .sidebar .nav-item.active{
   color:#fff;background:var(--rail-active);border-color:#6689bd45;
@@ -230,11 +231,34 @@
   top:10px;bottom:10px;width:3px;
   background:#f05a6c;border-radius:0 3px 3px 0;
 }
-.workspace .sidebar .nav-item>span{text-transform:uppercase;letter-spacing:.035em;font-size:10px}
-.workspace .sidebar .nav-icon{color:#b6c7e3;transition:color .16s,filter .16s}
-.workspace .sidebar .nav-item:hover .nav-icon{color:#edf6ff}
+.workspace .sidebar .nav-item>span{
+  text-transform:uppercase;letter-spacing:.035em;font-size:10px;
+  transition:transform .22s cubic-bezier(.2,.7,.25,1);
+}
+.workspace .sidebar .nav-icon{
+  color:#b6c7e3;transform-origin:center;overflow:visible;
+  transition:color .2s ease,filter .2s ease,transform .22s cubic-bezier(.2,.7,.25,1);
+}
+.workspace .sidebar .nav-item:is(:hover,:focus-visible) .nav-icon{
+  color:#f5fbff;filter:drop-shadow(0 0 3px #78baff70);
+  transform:translateY(-1px) scale(1.10);
+}
+.workspace .sidebar .nav-item:is(:hover,:focus-visible)>span{transform:translateX(2px)}
+.workspace .sidebar .nav-item[data-page="employees"]:is(:hover,:focus-visible) .nav-icon{
+  transform:translateY(-1px) rotate(-7deg) scale(1.10);
+}
+.workspace .sidebar .nav-item[data-page="activities"]:is(:hover,:focus-visible) .nav-icon{
+  transform:translateY(-1px) rotate(7deg) scale(1.10);
+}
 .workspace .sidebar .nav-item.active .nav-icon{
   color:#f5fbff;stroke-width:2;filter:drop-shadow(0 0 3px #64b3ff80);
+}
+.workspace .sidebar .nav-item.active:is(:hover,:focus-visible){
+  background:var(--rail-active);border-color:#80afff75;
+  box-shadow:0 4px 12px #06152d50,inset 0 0 12px #6baaff0c;
+}
+.workspace .sidebar .nav-item:is(:hover,:focus-visible):active .nav-icon{
+  transform:scale(.95);
 }
 .workspace .sidebar-bottom{margin-top:auto;display:flex;flex-direction:column;padding:12px 0 18px;border-top:1px solid #ffffff16}
 .workspace .sidebar-signout{
@@ -332,8 +356,13 @@
 }
 @media(prefers-reduced-motion:reduce){
   .workspace .sidebar .nav-item,.workspace .sidebar .nav-item::after,
-  .workspace .sidebar .nav-icon,.workspace .sidebar-signout,.workspace .sidebar-signout::after,
+  .workspace .sidebar .nav-icon,.workspace .sidebar .nav-item>span,.workspace .sidebar-signout,.workspace .sidebar-signout::after,
   .workspace .sidebar-signout .signout-door,.workspace .sidebar-signout .signout-arrow{transition:none}
   .workspace .sidebar-signout:is(:hover,:focus-visible) .signout-door,
   .workspace .sidebar-signout:is(:hover,:focus-visible) .signout-arrow{transform:none}
+  .workspace .sidebar .nav-item:is(:hover,:focus-visible) .nav-icon,
+  .workspace .sidebar .nav-item:is(:hover,:focus-visible)>span,
+  .workspace .sidebar .nav-item[data-page="employees"]:is(:hover,:focus-visible) .nav-icon,
+  .workspace .sidebar .nav-item[data-page="activities"]:is(:hover,:focus-visible) .nav-icon,
+  .workspace .sidebar .nav-item:is(:hover,:focus-visible):active .nav-icon{transform:none}
 }
