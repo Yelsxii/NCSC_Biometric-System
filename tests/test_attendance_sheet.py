@@ -174,3 +174,22 @@ def test_attendance_upgrade_backs_up_populated_database_once(admin):
     with closing(connect()) as con:
         assert [tuple(r) for r in con.execute('SELECT * FROM punches ORDER BY id')] == before
         assert con.execute('SELECT COUNT(*) FROM attendance_day_reviews').fetchone()[0] == 0
+
+
+
+def test_hr_clock_adjustment_preserves_punches_and_requires_reason(admin):
+    client, headers = admin
+    seed(client, headers)
+    payload = {"version":0,"approved_times":{"am_in":"07:45","aja_out":"08:07","aja_in":"18:00"}}
+    assert client.put(endpoint(), json=payload, headers=headers).status_code == 400
+    payload["remark"]="Approved fictional field assignment"
+    assert client.put(endpoint(), json=payload, headers=headers).status_code == 200
+    day = monitor(client)["days"][1]
+    assert day["display_slots"]["am_in"]["origin"] == "hr_approved"
+    assert day["display_slots"]["am_in"]["happened_at"].endswith("07:45:00")
+    assert day["scans"][0]["happened_at"].endswith("07:30:07")
+    assert day["aja_periods"][0]["in"]["origin"] == "hr_approved"
+    assert day["aja_periods"][0]["in"]["time"] == "18:00:00"
+    payload.update(version=1,approved_times={})
+    assert client.put(endpoint(), json=payload, headers=headers).status_code == 200
+    assert monitor(client)["days"][1]["review"]["approved_times"] == {}

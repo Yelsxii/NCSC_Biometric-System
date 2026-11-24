@@ -98,15 +98,15 @@
               </div>
               <div class="sheet-filters">
                 <button id="back-to-register" class="icon-button back-button" type="button" aria-label="Back to employees" title="Back to employees"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="m14 6-6 6 6 6M8 12h12"/></svg></button>
-                <label class="month-inline">Month<input id="detail-month" type="month"></label>
+                <label class="month-inline">Month<input id="detail-month" type="month"></label><button id="dtr-form-preview" class="button primary" type="button">DTR preview</button>
               </div>
               <div class="sheet-toolbar">
                 <div class="attendance-legend" aria-label="Attendance colors"><span class="legend-missing">No entry / incomplete</span><span class="legend-entry">Entry</span><span class="legend-holiday">Holiday</span><span class="legend-aja">AJA</span><span class="legend-travel">Travel Order</span></div>
               </div>
               <p class="attendance-month-status" id="attendance-month-status" role="status" aria-live="polite"></p>
               <div class="table-wrap" id="daily-table-wrap"><table class="records-table dtr-grid" aria-label="Monthly employee attendance">
-                <thead><tr><th rowspan="2" scope="col">Date</th><th colspan="2" scope="colgroup">A.M.</th><th colspan="2" scope="colgroup">P.M.</th><th rowspan="2" scope="col" class="daily-total">Total hours</th><th colspan="2" scope="colgroup">Undertime</th><th rowspan="2" scope="col" class="overtime-total">Overtime earned</th><th rowspan="2" scope="col" class="aja-column">AJA</th><th rowspan="2" scope="col" class="travel-column">Travel Order</th><th rowspan="2" scope="col">Remarks</th><th rowspan="2" scope="col" class="actions-column">Action</th></tr><tr><th scope="col">Time in</th><th scope="col">Time out</th><th scope="col">Time in</th><th scope="col">Time out</th><th scope="col">Hours</th><th scope="col">Minutes</th></tr></thead>
-                <tbody id="daily-rows"><tr><td colspan="13">Choose an employee.</td></tr></tbody>
+                <thead><tr><th rowspan="2" scope="col">Date</th><th colspan="2" scope="colgroup">A.M.</th><th colspan="2" scope="colgroup">P.M.</th><th rowspan="2" scope="col" class="daily-total">Total hours</th><th colspan="2" scope="colgroup">Undertime</th><th rowspan="2" scope="col" class="overtime-total">Overtime earned</th><th colspan="2" scope="colgroup" class="aja-column">AJA</th><th rowspan="2" scope="col" class="travel-column">Travel Order</th><th rowspan="2" scope="col">Remarks</th><th rowspan="2" scope="col" class="actions-column">Action</th></tr><tr><th scope="col">Time in</th><th scope="col">Time out</th><th scope="col">Time in</th><th scope="col">Time out</th><th scope="col">Hours</th><th scope="col">Minutes</th><th scope="col">Out</th><th scope="col">In / End</th></tr></thead>
+                <tbody id="daily-rows"><tr><td colspan="14">Choose an employee.</td></tr></tbody>
               </table></div>
             </div>
           </section>
@@ -193,25 +193,37 @@
       <div class="app-dialog-body">
         <p id="review-travel-info" class="travel-status hidden"></p>
         <div id="review-time-section">
-        <div class="form-section-heading"><h3 class="form-section-title">Time entries</h3><button type="button" class="button outline" id="place-four-entries">Place four entries</button></div>
+        <h3 class="form-section-title">Regular attendance</h3>
+        <div class="profile-form-grid approved-clock-grid">
+          <label>AM IN<input id="clock-am-in" type="time" step="1"></label><label>AM OUT<input id="clock-am-out" type="time" step="1"></label>
+          <label>PM IN<input id="clock-pm-in" type="time" step="1"></label><label>PM OUT<input id="clock-pm-out" type="time" step="1"></label>
+        </div>
+        <h3 class="form-section-title">AJA</h3>
+        <div class="profile-form-grid approved-clock-grid">
+          <label>AJA OUT<input id="clock-aja-out" type="time" step="1"></label><label>AJA IN / approved end<input id="clock-aja-in" type="time" step="1"></label>
+        </div>
+        <p id="review-aja-hint" class="field-hint"></p>
+        <p class="field-hint">Edit only HR-approved times. A cleared adjustment restores the automatic source; original scans are retained.</p>
+        <details class="review-evidence"><summary>Choose original scans (optional)</summary>
+        <div class="form-section-heading"><h3 class="form-section-title">Original entries</h3><button type="button" class="button outline" id="place-four-entries">Place four entries</button></div>
         <div class="profile-form-grid day-slots">
           <label>A.M. · Time in<select id="review-am-in"></select></label><label>A.M. · Time out<select id="review-am-out"></select></label>
           <label>P.M. · Time in<select id="review-pm-in"></select></label><label>P.M. · Time out<select id="review-pm-out"></select></label>
         </div>
         <p class="field-hint" id="review-entry-hint"></p>
-        <div id="review-source-detail" class="source-detail"></div>
+        <div id="review-source-detail" class="source-detail"></div></details>
         <h3 class="form-section-title">Undertime</h3>
         <div class="profile-form-grid"><label>Hours<input id="review-ut-hours" type="number" min="0" max="24" step="1" placeholder="—"></label><label>Minutes<input id="review-ut-minutes" type="number" min="0" max="59" step="1" placeholder="—"></label></div>
         <p class="field-hint">Enter the verified DTR value; leave blank while under review.</p>
         </div>
         <details class="review-evidence"><summary>Original entries / review details</summary><p id="review-source-warning" class="field-hint"></p><p id="review-raw-scans" class="field-hint"></p><p id="review-sheet-evidence" class="field-hint"></p></details>
-        <h3 class="form-section-title">Activity / remarks</h3>
+        <details class="review-evidence"><summary>Activity reference (optional)</summary>
         <div id="review-existing-activities" class="review-activities"></div>
         <div class="profile-form-grid"><label>Activity<select id="review-activity"><option value="">None</option><option>AJA</option><option>Travel Order</option><option>Fieldwork</option><option>Official Business</option></select></label><label>Existing document reference<input id="review-reference" maxlength="140"></label></div>
-        <label class="review-remark-label">Remark<input id="review-remark" maxlength="300" placeholder="Optional"></label>
+        </details><label class="review-remark-label">HR approval reason / remark<input id="review-remark" maxlength="300" placeholder="Required for time adjustments"></label>
         <p id="day-review-error" class="form-error hidden" role="alert"></p>
       </div>
-      <div class="app-dialog-footer"><button id="cancel-day-review" type="button" class="button outline">Close</button><button id="save-day-review" class="button primary" type="submit">Save changes</button></div>
+      <div class="app-dialog-footer"><button id="cancel-day-review" type="button" class="button outline">Cancel</button><button id="save-day-review" class="button primary" type="submit">Save changes</button></div>
     </form>
   </dialog>
 

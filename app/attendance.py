@@ -44,11 +44,22 @@ class DayReviewInput(BaseModel):
     activity_type: Literal["", "AJA", "Fieldwork", "Official Business", "Travel Order"] = ""
     activity_reference: str = Field(default="", max_length=140)
     remark: str = Field(default="", max_length=300)
+    approved_times: dict[Literal["am_in","am_out","pm_in","pm_out","aja_out","aja_in"], str] | None = None
 
     @field_validator("activity_reference", "remark", mode="before")
     @classmethod
     def clean_text(cls, value):
         return clean(value, 300, "Daily review") if isinstance(value, str) else value
+
+    @field_validator("approved_times")
+    @classmethod
+    def valid_approved_times(cls, values):
+        if values is None:
+            return values
+        for clock in values.values():
+            if not re.fullmatch(r"(?:[01]\\d|2[0-3]):[0-5]\\d(?::[0-5]\\d)?", clock):
+                raise ValueError("Use a valid 24-hour clock time.")
+        return {key: clock if len(clock)==8 else clock+":00" for key,clock in values.items()}
 
     @model_validator(mode="after")
     def activity_needs_reference(self):
@@ -99,19 +110,36 @@ def save_day_review(employee_code: str, date: str, payload: DayReviewInput, acto
             if getattr(payload, start) and getattr(payload, end):
                 if events[getattr(payload, start)] >= events[getattr(payload, end)]:
                     raise HTTPException(400, "Time out must be later than time in.")
+        old_times = json.loads(previous["approved_times"]) if previous else {}
+        approved = old_times if payload.approved_times is None else payload.approved_times
+        if approved != old_times and not payload.remark:
+            raise HTTPException(400, "Enter the HR-approved adjustment reason.")
+        now = dt.datetime.now(dt.timezone(dt.timedelta(hours=8))).strftime("%Y-%m-%d %H:%M:%S")
+        if approved != old_times and any(date+" "+clock > now for clock in approved.values()):
+            raise HTTPException(400, "Approved times cannot be in the future.")
+        effective = [date+" "+approved[k] if k in approved else events.get(getattr(payload,k)) for k in SLOTS]
+        chosen = [x for x in effective if x]
+        if chosen != sorted(chosen):
+            raise HTTPException(400, "Approved regular slots must be in chronological order.")
+        for a,b in ((0,1),(2,3)):
+            if effective[a] and effective[b] and effective[a]>=effective[b]:
+                raise HTTPException(400, "Time out must be later than time in.")
+        if approved.get("aja_out") and approved.get("aja_in") and approved["aja_out"]>=approved["aja_in"]:
+            raise HTTPException(400, "AJA end must be later than departure.")
         data = payload.model_dump(exclude={"version"})
+        data["approved_times"] = approved
         con.execute(
             """INSERT INTO attendance_day_reviews
                (employee_code,attendance_date,am_in,am_out,pm_in,pm_out,undertime_minutes,
-                activity_type,activity_reference,remark,version,reviewed_by)
-               VALUES(?,?,?,?,?,?,?,?,?,?,?,?)
+                activity_type,activity_reference,remark,approved_times,version,reviewed_by)
+               VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?)
                ON CONFLICT(employee_code,attendance_date) DO UPDATE SET
                  am_in=excluded.am_in,am_out=excluded.am_out,pm_in=excluded.pm_in,pm_out=excluded.pm_out,
                  undertime_minutes=excluded.undertime_minutes,activity_type=excluded.activity_type,
-                 activity_reference=excluded.activity_reference,remark=excluded.remark,
+                 activity_reference=excluded.activity_reference,remark=excluded.remark,approved_times=excluded.approved_times,
                  version=excluded.version,reviewed_by=excluded.reviewed_by,reviewed_at=CURRENT_TIMESTAMP""",
             (employee_code, date, *(getattr(payload, slot) for slot in SLOTS), payload.undertime_minutes,
-             payload.activity_type, payload.activity_reference, payload.remark, version + 1, actor_id),
+             payload.activity_type, payload.activity_reference, payload.remark, json.dumps(approved), version + 1, actor_id),
         )
         con.execute(
             "INSERT INTO audit_events(actor_id,action,entity,entity_id,details) VALUES(?,?,?,0,?)",
@@ -176,6 +204,7 @@ def decorate_days(employee_code: str, days: list[dict]) -> None:
             ("version", 0), ("undertime_minutes", None), ("activity_type", ""),
             ("activity_reference", ""), ("remark", ""),
         )}
+        day["review"]["approved_times"] = json.loads(review.get("approved_times","{}"))
         day["calendar"] = {"holiday_name": calendar.get("holiday_name", ""), "version": calendar.get("version", 0)}
         activities = [{"category": x["category"], "reference": x["reference"]} for x in day["activities"]]
         for event in day["scans"]:

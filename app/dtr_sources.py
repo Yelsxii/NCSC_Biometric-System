@@ -37,7 +37,11 @@ def resolve_day(day, manual):
     for key in KEYS:
         reviewed = day['slots'][key]
         event = reviewed or observed.get(key)
-        if event:
+        approved = day['review'].get('approved_times',{}).get(key)
+        if approved:
+            display[key] = {'id':None,'happened_at':day['date']+' '+approved,'work_code':'',
+                'origin':'hr_approved','placement':'approved_adjustment'}
+        elif event:
             display[key] = {**event,'origin':'reviewed' if reviewed else 'biometric', 'placement':'reviewed' if reviewed else 'observed'}
             if not reviewed and sheet_times.get(key) and event['happened_at'][11:16]!=sheet_times[key][:5]:
                 conflicts.append(key)
@@ -71,7 +75,7 @@ def resolve_day(day, manual):
         else:
             complete = False
             conflicts.append('order')
-    comparable = bool(complete and source and not conflicts and all(sheet_times.get(k) and display[k]['happened_at'][11:16]==sheet_times[k][:5] for k in KEYS))
+    comparable = bool(complete and source and not conflicts and all(sheet_times.get(k) and display[k]['origin']!='hr_approved' and display[k]['happened_at'][11:16]==sheet_times[k][:5] for k in KEYS))
     total = source['reported_total'] if comparable and source['reported_total'] is not None else elapsed
     reviewed_ut = day['review']['undertime_minutes']
     undertime = None if future_entry else reviewed_ut*60 if reviewed_ut is not None else source['reported_ut'] if comparable else None

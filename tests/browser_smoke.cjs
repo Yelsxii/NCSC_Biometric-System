@@ -307,6 +307,7 @@ with connect() as con:
     assert.equal(await day.locator('.time-value').count(),4);
     await day.locator('[data-edit-day]').click();
     await page.locator('#day-review-dialog[open]').waitFor();
+    await page.locator('#review-time-section details summary').click();
     await page.locator('#place-four-entries').click();
     await page.locator('#review-ut-hours').fill('0');
     await page.locator('#review-ut-minutes').fill('0');

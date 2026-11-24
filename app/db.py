@@ -138,6 +138,7 @@ CREATE TABLE IF NOT EXISTS attendance_day_reviews (
  activity_type TEXT NOT NULL DEFAULT '',
  activity_reference TEXT NOT NULL DEFAULT '',
  remark TEXT NOT NULL DEFAULT '',
+ approved_times TEXT NOT NULL DEFAULT '{}',
  version INTEGER NOT NULL DEFAULT 1,
  reviewed_by INTEGER NOT NULL REFERENCES users(id),
  reviewed_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
@@ -229,7 +230,8 @@ def initialize() -> None:
                  "attendance" if "attendance_day_reviews" not in tables else
                  "activity-directions" if "work_codes" in tables and
                  "direction" not in {row[1] for row in con.execute("PRAGMA table_info(work_codes)")} else
-                 "manual-dtr" if "manual_dtr_entries" not in tables else None)
+                 "manual-dtr" if "manual_dtr_entries" not in tables else
+                 "approved-times" if "approved_times" not in {row[1] for row in con.execute("PRAGMA table_info(attendance_day_reviews)")} else None)
         if phase and "punches" in tables:
             if con.execute("SELECT COUNT(*) FROM punches").fetchone()[0]:
                 folder = database_path().parent / "backups"
@@ -251,6 +253,9 @@ def migrate(con: sqlite3.Connection) -> None:
     columns = {row[1] for row in con.execute("PRAGMA table_info(punches)")}
     if "source" not in columns:
         con.execute("ALTER TABLE punches ADD COLUMN source TEXT NOT NULL DEFAULT 'usb'")
+    review_columns = {row[1] for row in con.execute("PRAGMA table_info(attendance_day_reviews)")}
+    if "approved_times" not in review_columns:
+        con.execute("ALTER TABLE attendance_day_reviews ADD COLUMN approved_times TEXT NOT NULL DEFAULT '{}'") 
     work_columns = {row[1] for row in con.execute("PRAGMA table_info(work_codes)")}
     if "direction" not in work_columns:
         # Existing mappings remain Unspecified; no historic scan is reinterpreted.

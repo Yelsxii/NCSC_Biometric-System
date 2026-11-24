@@ -34,7 +34,7 @@ from app.registry import parse_staff, clean
 from app.lan import status as lan_status, tcp_probe
 from app.profiles import RegistrationInput, ProfileUpdateInput, get_profile, list_profiles, save_profile
 from app.attendance import DayReviewInput, CalendarInput, decorate_days, save_day_review, save_calendar
-from app.activity_mapping import activity_pairs
+from app.activity_mapping import activity_pairs, dtr_aja_periods
 from app.manual_dtr import (MAX_MANUAL_BYTES, parse_package, preview_package, import_package,
                             mapping_hash, automatic_status, start_local_source_sync, stop_local_source_sync)
 
@@ -620,6 +620,7 @@ def monitor_dtr(employee_code: str, month: str, user: dict = Depends(current_use
     decorate_days(employee_code, rows)
     for day in rows:
         day["activity_mappings"] = activity_pairs(day["scans"])
+        day["aja_periods"] = dtr_aja_periods(day)
     return {"employee_code": employee_code, "display_name": employee[0] if employee else "",
             "name_source": employee["name_source"] if employee else "scan",
             "department": employee["department"] if employee else "",

@@ -61,3 +61,66 @@ def activity_pairs(scans: list[dict]) -> list[dict]:
                            "IN/OUT matched from configured codes; not an attendance credit",
         })
     return result
+
+
+
+def dtr_aja_periods(day: dict) -> list[dict]:
+    """Departure/return evidence for the DTR, separate from regular slots."""
+    periods = []
+    pending = None
+    events = sorted((x for x in day["scans"] if x.get("activity_type") == "AJA"),
+                    key=lambda x: (x["happened_at"], x["id"]))
+    def entry(event):
+        return {"time": event["happened_at"][11:19], "origin": "biometric"}
+    for event in events:
+        direction = event.get("work_direction")
+        if direction == "OUT":
+            if pending:
+                periods.append({"out": pending, "in": None, "review": True})
+            pending = entry(event)
+        elif direction == "IN":
+            incoming = entry(event)
+            if pending and pending["time"] < incoming["time"]:
+                periods.append({"out": pending, "in": incoming, "review": False})
+                pending = None
+            else:
+                periods.append({"out": None, "in": incoming, "review": True})
+        else:
+            periods.append({"out": None, "in": None, "review": True})
+    if pending:
+        periods.append({"out": pending, "in": None, "review": True})
+    sheet = (day.get("manual_source") or {}).get("aja")
+    if sheet:
+        pair = {"out": {"time": sheet["start"], "origin": "manual_sheet"} if sheet.get("start") else None,
+                "in": {"time": sheet["end"], "origin": "manual_sheet"} if sheet.get("end") else None,
+                "review": not bool(sheet.get("start") and sheet.get("end"))}
+        def minute(x):
+            return x["time"][:5] if x else None
+        if not any(minute(x["out"]) == minute(pair["out"]) and minute(x["in"]) == minute(pair["in"]) for x in periods):
+            # A matching sheet departure may supply a documented end, not a fingerprint.
+            matches = [x for x in periods if x["out"] and minute(x["out"]) == minute(pair["out"]) and not x["in"]]
+            if len(matches)==1 and pair["in"]:
+                matches[0]["in"] = pair["in"]
+                matches[0]["review"] = False
+            else:
+                periods.append(pair)
+    if not periods:
+        for record in day.get("activities", []):
+            if record["category"]=="AJA":
+                periods.append({"out":{"time":record["start_at"][11:19],"origin":"activity_reference"},
+                                "in":{"time":record["end_at"][11:19],"origin":"activity_reference"},"review":False})
+    approved = day["review"].get("approved_times", {})
+    if "aja_out" in approved or "aja_in" in approved:
+        if len(periods)<=1:
+            if not periods:
+                periods.append({"out":None,"in":None,"review":True})
+            for key in ("out","in"):
+                if "aja_"+key in approved:
+                    periods[0][key]={"time":approved["aja_"+key],"origin":"hr_approved"}
+            a,b=periods[0]["out"],periods[0]["in"]
+            periods[0]["review"]=not (a and b and a["time"]<b["time"])
+        else:
+            # Do not guess which of multiple periods an adjustment belongs to.
+            for period in periods:
+                period["review"]=True
+    return periods

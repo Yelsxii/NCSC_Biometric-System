@@ -288,24 +288,12 @@ function dayActivities(day){
   return labels.join(' ');
 }
 function activityScanCell(day){
-  const blocks=[];
-  for(const kind of ['AJA']){
-    const pair=(day.activity_mappings||[]).find(item=>item.category===kind);
-    const refs=(day.activities||[]).filter(item=>item.category===kind);
-    if(!pair&&!refs.length)continue;
-    let line='';
-    if(pair){
-      const clock=event=>event?esc(event.happened_at.slice(11,19)):'—';
-      line='<span class="activity-clock"><b>IN</b> '+clock(pair.time_in)+' <b>OUT</b> '+clock(pair.time_out)+'</span>'+
-        '<span class="pair-state" title="'+esc(pair.review_note)+'">'+(pair.status==='code_matched'?'Matched':'Needs review')+'</span>';
-    }
-    if(!pair && refs.length)line=refs.map(ref=>'<span class="activity-clock" title="Existing activity reference">Ref '+esc(ref.start_at.slice(11,16))+'–'+esc(ref.end_at.slice(11,16))+'</span>').join('');
-    blocks.push('<div class="compact-activity"><span class="day-badge '+(kind==='AJA'?'aja':'travel')+'-badge">'+esc(kind)+'</span>'+line+'</div>');
-  }
-  const aja=day.manual_source?.aja;
-  if(aja)blocks.push('<div class="compact-activity" title="'+esc(aja.purpose)+'"><span class="day-badge aja-badge">AJA</span><span class="activity-clock">'+esc(aja.start||'—')+'–'+esc(aja.end||'—')+'</span></div>');
-  if(!aja && !blocks.length && day.display_activities.some(x=>x.category==='AJA'))blocks.push('<span class="day-badge aja-badge">AJA</span>');
-  return '<td class="activity-evidence">'+(blocks.join('')||'<span class="empty-cell">—</span>')+'</td>';
+  const periods=day.aja_periods||[];
+  return ['out','in'].map(key=>'<td class="activity-evidence aja-'+key+'">'+(periods.length?periods.map(period=>{
+    const entry=period[key];
+    const source=entry?.origin==='biometric'?'Bio':entry?.origin==='hr_approved'?'HR':entry?.origin==='manual_sheet'?'Sheet':entry?'Ref':'';
+    return '<div class="aja-time" title="'+esc((entry?.origin||'Missing entry')+(period.review?' · Needs review':''))+'">'+(entry?esc(entry.time)+' <small>'+source+'</small>':'—')+'</div>';
+  }).join(''):'<span class="empty-cell">—</span>')+'</td>').join('');
 }
 function travelCell(day){
   const refs=day.display_activities.filter(x=>x.category==='Travel Order').map(x=>x.reference).filter(Boolean);
@@ -351,10 +339,10 @@ function slotCell(day,key){
   const event=day.display_slots?day.display_slots[key]:(day.slots[key]||provisionalOrdinarySlots(day)?.[key]);
   const origin=event?.origin||(day.slots[key]?'reviewed':'biometric');
   const tone=['holiday','aja','travel'].includes(day.tone)?day.tone:
-    event?(origin==='manual_sheet'?'sheet':origin==='reviewed'?'entry':'provisional'):
+    event?(origin==='manual_sheet'?'sheet':(origin==='reviewed'||origin==='hr_approved')?'entry':'provisional'):
       (day.is_future||day.is_weekend?'neutral':'missing');
   const label=origin==='manual_sheet'?'Sheet':origin==='reviewed'?'HR':'Bio';
-  const hint=event?event.happened_at.slice(11)+' · '+(origin==='manual_sheet'?'Manual DTR source':origin==='reviewed'?'Reviewed selection':'Original biometric time; observed AM/PM placement')+
+  const hint=event?event.happened_at.slice(11)+' · '+(origin==='manual_sheet'?'Manual DTR source':origin==='reviewed'?'Reviewed selection':origin==='hr_approved'?'HR-approved adjustment':'Original biometric time; observed AM/PM placement')+
     (event.work_code!==undefined&&event.work_code!==''?' · Work code '+event.work_code:''):'No entry';
   return '<td class="time-slot slot-'+tone+'" data-origin="'+esc(event?origin:'')+'" title="'+esc(hint)+'">'+(event?
     '<span class="time-value">'+esc(event.happened_at.slice(11,19))+'</span>':
@@ -363,7 +351,7 @@ function slotCell(day,key){
 async function loadDetail({quiet=false}={}){
   if (!selectedEmployee) return;
   const serial=++detailRequest,month=$('detail-month').value||currentMonth(),code=selectedEmployee;
-  if(!quiet)$('daily-rows').innerHTML='<tr><td colspan="13" class="table-empty">Loading attendance…</td></tr>';
+  if(!quiet)$('daily-rows').innerHTML='<tr><td colspan="14" class="table-empty">Loading attendance…</td></tr>';
   try{
     const data=await api('/api/dtr/monitor?'+new URLSearchParams({employee_code:code,month}));
     if(serial!==detailRequest || code!==selectedEmployee || month!==$('detail-month').value || currentPage!=='employees' || !session)return;
@@ -415,7 +403,7 @@ async function loadDetail({quiet=false}={}){
     $('daily-table-wrap').scrollTop=scroll;
   }catch(error){
     if(serial!==detailRequest || code!==selectedEmployee || currentPage!=='employees' || !session)return;
-    if(!quiet){$('daily-rows').innerHTML='<tr><td colspan="13" class="table-empty">Unable to load attendance.</td></tr>';toast(error.message,true);}
+    if(!quiet){$('daily-rows').innerHTML='<tr><td colspan="14" class="table-empty">Unable to load attendance.</td></tr>';toast(error.message,true);}
   }
 }
 function openDayReview(date){
@@ -433,6 +421,17 @@ function openDayReview(date){
     node.innerHTML=options+(selected&&!regularReviewCandidates(day).some(x=>x.id===selected.id)?'<option value="'+selected.id+'">'+esc(selected.happened_at.slice(11,19))+' (existing review)</option>':'');
     node.value=selected?.id||'';node.disabled=!editable;
   }
+  dayReviewContext.initialClocks={};
+  const periods=day.aja_periods||[];
+  for(const key of ['am_in','am_out','pm_in','pm_out','aja_out','aja_in']){
+    const isAja=key.startsWith('aja_');
+    const current=isAja?(periods.length===1?periods[0][key.slice(4)]?.time:''):day.display_slots?.[key]?.happened_at.slice(11,19);
+    const input=$('clock-'+key.replace('_','-'));
+    input.value=current||'';
+    dayReviewContext.initialClocks[key]=input.value;
+    input.disabled=!editable||(isAja&&periods.length>1);
+  }
+  $('review-aja-hint').textContent=periods.length>1?'Multiple AJA periods retained in monitoring; single-period adjustment is disabled.':'AJA end from an approved sheet or HR entry is not a biometric return.';
   const minutes=day.review.undertime_minutes;
   $('review-ut-hours').value=minutes===null?'':Math.floor(minutes/60);
   $('review-ut-minutes').value=minutes===null?'':minutes%60;
@@ -470,6 +469,16 @@ async function saveDayReview(event){
   for(const key of ['am_in','am_out','pm_in','pm_out']){
     const value=$('review-'+key.replace('_','-')).value;payload[key]=value?Number(value):null;
   }
+  if(!context.day.travel_order){
+    const approved={...(context.day.review.approved_times||{})};
+    for(const key of ['am_in','am_out','pm_in','pm_out','aja_out','aja_in']){
+      const input=$('clock-'+key.replace('_','-'));
+      if(input.disabled||input.value===context.initialClocks[key])continue;
+      if(input.value){approved[key]=input.value;if(key in payload)payload[key]=null;}
+      else delete approved[key];
+    }
+    payload.approved_times=approved;
+  }
   const h=$('review-ut-hours').value,m=$('review-ut-minutes').value;
   payload.undertime_minutes=h===''&&m===''?null:Number(h||0)*60+Number(m||0);
   payload.activity_type=$('review-activity').value;
@@ -482,6 +491,32 @@ async function saveDayReview(event){
     if(selectedEmployee===context.code && $('detail-month').value===context.month)await loadDetail({quiet:true});
   }catch(error){if(context.account===session){$('day-review-error').textContent=error.message;$('day-review-error').classList.remove('hidden');}}
   finally{$('save-day-review').disabled=false;}
+}
+function openDtrFormPreview(){
+  const data=activeDtr;
+  if(!data || data.employee_code!==selectedEmployee || data.month!==$('detail-month').value)return;
+  const preview=window.open('','_blank');
+  if(!preview){toast('Allow pop-ups to open the DTR preview.',true);return;}
+  const clock=event=>event?esc(event.happened_at.slice(11,16))+(event.origin==='hr_approved'?'*':''):'';
+  const ajaClock=entry=>entry?esc(entry.time.slice(0,5))+(entry.origin==='hr_approved'?'*':entry.origin==='biometric'?'':'†'):'—';
+  const rows=Array.from({length:31},(_,i)=>{
+    const day=data.days[i];
+    if(!day)return '<tr><td>'+(i+1)+'</td><td></td><td></td><td></td><td></td><td></td><td></td></tr>';
+    const periods=day.travel_order?[]:(day.aja_periods||[]);
+    const span=periods.length+1,ut=day.monitoring?.undertime_seconds;
+    const sourceNote=day.manual_source?.notes?.find(x=>/leave/i.test(x));
+    const special=day.travel_order?day.display_activities.find(x=>x.category==='Travel Order')?.reference||'Travel Order':
+      day.calendar.holiday_name||(!Object.values(day.display_slots||{}).some(Boolean)&&!periods.length?(sourceNote||(day.is_weekend?(day.day==='Sat'?'SATURDAY':'SUNDAY'):'')):'');
+    return '<tr><td rowspan="'+span+'">'+(i+1)+'</td>'+
+      (special?'<td colspan="4">'+esc(special)+'</td>':['am_in','am_out','pm_in','pm_out'].map(k=>'<td>'+clock(day.display_slots?.[k])+'</td>').join(''))+
+      '<td rowspan="'+span+'">'+(ut==null?'':Math.floor(ut/3600))+'</td><td rowspan="'+span+'">'+(ut==null?'':Math.floor(ut%3600/60))+'</td></tr>'+
+      periods.map(p=>'<tr class="aja-sub"><td colspan="2">AJA OUT '+ajaClock(p.out)+'</td><td colspan="2">AJA '+(p.in?.origin==='biometric'?'IN':'END')+' '+ajaClock(p.in)+(p.review?' ?':'')+'</td></tr>').join('');
+  }).join('');
+  const copy='<section><header><b>NATIONAL COMMISSION OF SENIOR CITIZENS</b><div>29th Floor, The Upper Class Tower, Quezon City</div><h2>DAILY TIME RECORD</h2><h3>'+esc(data.display_name||'')+'</h3><div>(Name)</div></header><p>For the month of <b>'+esc(data.month)+'</b></p><p>Official hours for arrival and departure: __________________</p><table><thead><tr><th rowspan="2">Day</th><th colspan="2">A.M.</th><th colspan="2">P.M.</th><th colspan="2">UNDERTIME</th></tr><tr><th>IN</th><th>OUT</th><th>IN</th><th>OUT</th><th>Hours</th><th>Minutes</th></tr></thead><tbody>'+rows+'</tbody></table><p class="legend">* HR-approved adjustment · † documented AJA time (not a fingerprint) · ? review</p><p>Employee signature: __________________</p><p>Verified by: __________________</p></section>';
+  preview.document.open();
+  preview.document.write('<!doctype html><html><head><meta charset="utf-8"><title>DTR preview</title><style>body{font:11px Arial,sans-serif;color:#111;margin:12px}main{display:grid;grid-template-columns:1fr 1fr;gap:12px}section{min-width:0}header{text-align:center}h2{font-size:17px;margin:5px 0}h3{font-size:13px;margin:4px 0}p{margin:5px 0}table{width:100%;table-layout:fixed;border-collapse:collapse}th,td{border:1px solid #222;text-align:center;padding:2px 1px;font-size:10px;overflow-wrap:anywhere}td{height:13px}.aja-sub td{font-size:9px;background:#eef3fa;height:auto}.legend{font-size:8px}tr{break-inside:avoid}button{margin-bottom:10px}@media print{button,.preview-note{display:none}body{margin:0}main{gap:8px}th,td{font-size:8pt;padding:1px}.aja-sub td{font-size:7pt}header h2{font-size:13pt}}</style></head><body><button id="print">Print / Save PDF</button><p class="preview-note">Review layout and approved entries with HR before official use. Print scaling depends on the selected paper.</p><main>'+copy+copy+'</main></body></html>');
+  preview.document.close();
+  preview.document.getElementById('print').addEventListener('click',()=>preview.print());
 }
 function calendarDateChanged(){
   const day=activeDtr?.days.find(x=>x.date===$('calendar-date').value);
@@ -822,6 +857,7 @@ async function initialize(){
     $('employee-detail').classList.add('hidden');selectedEmployee=null;activeDtr=null;detailRequest++;
     $('attendance-register-panel').classList.remove('hidden');
   });
+  $('dtr-form-preview').addEventListener('click',openDtrFormPreview);
   $('detail-month').addEventListener('change',()=>{$('register-month').value=$('detail-month').value;loadDetail();});
   $('daily-rows').addEventListener('click',event=>{
     const button=event.target.closest('[data-edit-day]');if(button)openDayReview(button.dataset.editDay);

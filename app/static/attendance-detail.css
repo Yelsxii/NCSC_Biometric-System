@@ -184,3 +184,14 @@
 .workspace .attendance-sheet .dtr-grid .activity-evidence{min-width:0;max-width:none}
 .workspace .attendance-sheet .dtr-grid .travel-column{text-align:center}
 .workspace .attendance-sheet .travel-status.travel-badge{background:#e8ddfa;color:#5b368d}
+
+/* Compact separate AJA directions and HR-approved time inputs. */
+.workspace .attendance-sheet .dtr-grid th.aja-column{width:168px}
+.workspace .attendance-sheet .dtr-grid .activity-evidence{text-align:center;padding:4px}
+.workspace .attendance-sheet .aja-time{padding:4px 2px;border-radius:5px;margin:2px 0;font-weight:600;white-space:normal}
+.workspace .attendance-sheet .aja-out .aja-time{background:#fce8ea;color:#a32e42}
+.workspace .attendance-sheet .aja-in .aja-time{background:#e4edfc;color:#254b9a}
+.workspace .attendance-sheet .aja-time small{display:block;font-size:8px;font-weight:400}
+.workspace .attendance-sheet #dtr-form-preview{margin-left:auto;background:#244b9a;color:white}
+.approved-clock-grid label{font-size:11px}
+.approved-clock-grid input{background:#f4f7fc;border:1px solid #dce5f2}
