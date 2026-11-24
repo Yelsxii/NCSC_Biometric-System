@@ -376,6 +376,18 @@ with connect() as con:
     assert.equal(await filled.locator('.monitor-remark').textContent(),'Complete');
     assert.equal(await page.locator('[data-date="2026-11-09"] .overtime-value').textContent(),'1:00');
     assert.equal(await page.locator('[data-date="2026-11-10"] .monitor-remark').textContent(),'Undertime');
+    const headerAlignment=await page.evaluate(()=>{
+      const name=document.querySelector('#detail-name').getBoundingClientRect();
+      const month=document.querySelector('#detail-month').getBoundingClientRect();
+      const back=document.querySelector('#back-to-register').getBoundingClientRect();
+      return {nameLeft:name.left,monthLeft:month.left,backRight:back.right,
+        monthHeight:month.height,backHeight:back.height,
+        labelHidden:document.querySelector('.month-inline .sr-only')!==null};
+    });
+    assert.ok(Math.abs(headerAlignment.nameLeft-headerAlignment.monthLeft)<=2,'Employee name and month must share the left edge');
+    assert.ok(headerAlignment.backRight<headerAlignment.monthLeft,'Back arrow precedes month');
+    assert.ok(Math.abs(headerAlignment.monthHeight-headerAlignment.backHeight)<=2,'Navigation controls align vertically');
+    assert.ok(headerAlignment.labelHidden,'Month label is available to assistive technology only');
     const detailStyle=await page.evaluate(()=>({
       buttonBorder:getComputedStyle(document.querySelector('.edit-day')).borderTopWidth,
       buttonDecoration:getComputedStyle(document.querySelector('.edit-day')).textDecorationLine,

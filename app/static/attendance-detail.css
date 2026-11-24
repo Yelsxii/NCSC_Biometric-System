@@ -306,3 +306,38 @@
   .workspace .attendance-sheet #daily-table-wrap .edit-day{transition:none}
   .workspace .attendance-sheet #daily-table-wrap .edit-day:hover{transform:none}
 }
+
+
+/* Align the employee identity with the month control, not the back arrow. */
+.workspace .attendance-sheet{
+  --detail-back-size:33px;
+  --detail-control-gap:10px;
+}
+.workspace .attendance-sheet .sheet-identity{
+  padding-left:calc(var(--detail-back-size) + var(--detail-control-gap));
+  text-align:left;
+  overflow-wrap:anywhere;
+}
+.workspace .attendance-sheet .sheet-filters{
+  gap:var(--detail-control-gap);align-items:center;
+}
+.workspace .attendance-sheet .sheet-filters .back-button{
+  width:var(--detail-back-size);height:var(--detail-back-size);
+  min-width:var(--detail-back-size);min-height:var(--detail-back-size);
+  flex:0 0 var(--detail-back-size);padding:7px;
+  display:inline-flex;align-items:center;justify-content:center;
+}
+.workspace .attendance-sheet .sheet-filters .month-inline{
+  flex:0 0 auto;width:auto;min-width:0;gap:0;
+}
+.workspace .attendance-sheet .sheet-filters #detail-month{
+  width:150px;min-width:150px;height:var(--detail-back-size);
+  min-height:var(--detail-back-size);
+}
+@media(max-width:740px){
+  .workspace .attendance-sheet .sheet-header{flex-wrap:wrap;gap:8px 14px}
+  .workspace .attendance-sheet .sheet-identity{flex:1 1 100%}
+  .workspace .attendance-sheet .sheet-personnel{
+    margin-left:auto;max-width:100%;gap:5px 14px;
+  }
+}
