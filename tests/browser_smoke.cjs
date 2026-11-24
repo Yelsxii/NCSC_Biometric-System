@@ -356,6 +356,7 @@ with connect() as con:
     assert.notEqual(detailStyle.dotGlow,'none');
     await page.screenshot({path:join(root,'docs/employee-records-preview.png'),animations:'disabled'});
     await page.setViewportSize({width:390,height:800});
+    assert.ok((await page.locator('#detail-month').boundingBox()).width>=150,'Mobile reporting month must fit its full label');
     await page.screenshot({path:join(root,'docs/mobile-attendance-preview.png'),animations:'disabled'});
     await day.locator('[data-edit-day]').click();
     const dayPopup=await page.locator('#day-review-dialog').boundingBox();

@@ -111,3 +111,14 @@
 .evidence-raw{font-size:9px;line-height:1.4;color:#63748c;margin-top:3px;overflow-wrap:anywhere}
 #code-direction-field{margin-top:6px}
 #code-direction-help{margin:7px 0 0}
+@media(max-width:740px){
+  .workspace .attendance-sheet .sheet-filters{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:13px 18px}
+  .workspace .attendance-sheet .sheet-meta{min-width:0;max-width:none}
+  .workspace .attendance-sheet .month-inline{min-width:0;width:100%}
+  .workspace .attendance-sheet .month-inline input{min-width:0;width:100%}
+  .workspace .attendance-sheet #open-manual-dtr{width:100%;align-self:end;font-size:9px}
+}
+.app-dialog.manual-dtr-dialog button,.app-dialog.day-review-dialog button{border:0!important;text-decoration:none!important;transition:background .15s,color .15s,box-shadow .15s}
+.app-dialog.manual-dtr-dialog .button.outline,.app-dialog.day-review-dialog .button.outline{background:#f1f5fc;color:#7288ad}
+.app-dialog.manual-dtr-dialog .button.outline:hover,.app-dialog.day-review-dialog .button.outline:hover{background:#e6edfc;color:#4167aa}
+.app-dialog.manual-dtr-dialog input::file-selector-button{border:0;border-radius:6px;background:#e9f0ff;color:#5578b5;padding:7px 10px;margin-right:10px;cursor:pointer}

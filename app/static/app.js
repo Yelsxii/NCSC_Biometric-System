@@ -466,13 +466,13 @@ async function previewManualDtr(discover=false){
       const normalize=value=>String(value||'').normalize('NFKC').replace(/[.,]/g,'').replace(/\s+/g,' ').trim().toLowerCase();
       $('manual-dtr-matches').innerHTML=data.groups.filter(group=>group.records).map(group=>{
         const exact=data.employees.filter(employee=>employee.display_name&&normalize(employee.display_name)===normalize(group.name));
-        return '<label class="manual-match-row"><span><strong>'+esc(group.name)+'</strong><small>'+group.records+' days · '+esc(group.from)+' to '+esc(group.to)+(group.warnings?' · '+group.warnings+' need review':'')+'</small></span><select data-manual-key="'+esc(group.key)+'" aria-label="Match '+esc(group.name)+'"><option value="">Skip this sheet</option>'+data.employees.map(employee=>'<option value="'+esc(employee.employee_code)+'" '+(exact.length===1&&exact[0].employee_code===employee.employee_code?'selected':'')+'>'+esc(employee.display_name||'Name not registered')+' · ID '+esc(employee.employee_code)+'</option>').join('')+'</select></label>';
+        return '<label class="manual-match-row"><span><strong>'+esc(group.name)+'</strong><small>'+esc(group.sheet)+' · '+group.records+' days · '+esc(group.from)+' to '+esc(group.to)+(group.warnings?' · '+group.warnings+' need review':'')+'</small></span><select data-manual-key="'+esc(group.key)+'" aria-label="Match '+esc(group.name)+'"><option value="">Skip this sheet</option>'+data.employees.map(employee=>'<option value="'+esc(employee.employee_code)+'" '+(exact.length===1&&exact[0].employee_code===employee.employee_code?'selected':'')+'>'+esc(employee.display_name||'Name not registered')+' · ID '+esc(employee.employee_code)+'</option>').join('')+'</select></label>';
       }).join('');
       $('manual-dtr-result').textContent='Verify employee matches, then preview the fill.';
     }else{
       manualDtrPreview=data.preview_token;
       const n=data.counts;
-      $('manual-dtr-result').textContent=n.new+' new days · '+n.already_present+' already present · '+n.conflict+' conflicts kept · '+n.unmapped+' unmapped · '+n.invalid+' invalid rows skipped';
+      $('manual-dtr-result').textContent=n.new+' new days · '+n.already_present+' already present · '+n.conflict+' conflicts skipped · '+n.unmapped+' unmapped · '+n.invalid+' invalid rows skipped';
       $('import-manual-dtr').disabled=n.new===0;
     }
   }catch(error){if(session===account){$('manual-dtr-error').textContent=error.message;$('manual-dtr-error').classList.remove('hidden');$('manual-dtr-result').textContent='';}}

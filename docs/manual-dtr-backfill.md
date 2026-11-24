@@ -35,7 +35,7 @@ The prepared private package contains only relevant DTR columns and source ident
 
 1. In **Employee Attendance → View attendance**, open **Fill from manual DTR**.
 2. Choose the prepared `.json` package.
-3. Match each relevant source sheet to its existing website employee. Unmatched sheets remain skipped. An exact full-name match may be suggested; no fuzzy matching or new employee ID creation occurs.
+3. Match each relevant source sheet to its existing website employee. The exact source tab name is shown. Archived tabs for the same exact normalized employee name can be mapped together; differing source values on the same date are all flagged, rather than choosing the first tab. Unmatched sheets remain skipped. An exact full-name match may be suggested; no fuzzy matching or new employee ID creation occurs.
 4. Click **Preview matches**. Review new days, duplicates, conflicts and invalid rows.
 5. Click **Fill missing times**. The table refreshes without a browser reload.
 

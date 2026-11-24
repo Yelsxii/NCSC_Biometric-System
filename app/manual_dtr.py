@@ -6,6 +6,7 @@ import hashlib
 import json
 import math
 import re
+import unicodedata
 from contextlib import closing
 
 from app.db import connect
@@ -178,13 +179,15 @@ def validate_mapping(mapping, packet, con):
     if not isinstance(mapping, dict) or len(mapping) > 200:
         raise ValueError('Invalid employee mapping.')
     allowed = {person['key'] for person in packet['groups']}
-    targets = set()
+    people = {person['key']: person for person in packet['groups']}
+    targets = {}
     for key, code in mapping.items():
         if key not in allowed or not isinstance(code,str) or not re.fullmatch(r'[A-Za-z0-9._-]{1,64}', code):
             raise ValueError('Invalid employee mapping.')
-        if code in targets:
-            raise ValueError('Do not map two source sheets to the same employee.')
-        targets.add(code)
+        identity = ' '.join(re.sub(r'[.,]', '', unicodedata.normalize('NFKC',people[key]['name'])).casefold().split())
+        if code in targets and targets[code] != identity:
+            raise ValueError('Do not map different source employee names to the same employee.')
+        targets[code] = identity
         if not con.execute('SELECT 1 FROM employees WHERE employee_code=?',(code,)).fetchone():
             raise ValueError('Map source sheets to existing employees only.')
 
@@ -200,9 +203,22 @@ def row_state(con, packet, person, row, code):
     return 'conflict'
 
 
+def conflicting_packet_dates(packet, mapping):
+    variants = {}
+    for person in packet['groups']:
+        if person['key'] not in mapping:
+            continue
+        for row in person['rows']:
+            key = (mapping[person['key']],row['date'])
+            variants.setdefault(key,set()).add(json.dumps(row['data'],sort_keys=True,separators=(',',':')))
+    return {key for key,values in variants.items() if len(values)>1}
+
+
 def preview_package(packet, mapping):
     with closing(connect()) as con:
         validate_mapping(mapping,packet,con)
+        blocked = conflicting_packet_dates(packet,mapping)
+        planned = set()
         employees = [dict(row) for row in con.execute('SELECT employee_code,display_name,department FROM employees ORDER BY lower(display_name),employee_code LIMIT 1000')]
         groups, counts = [], {'new':0,'already_present':0,'conflict':0,'unmapped':0,'invalid':0,'source_invalid':0,'source_duplicates':0}
         for person in packet['groups']:
@@ -211,7 +227,13 @@ def preview_package(packet, mapping):
             counts['source_duplicates'] += person['duplicates']
             if person['key'] in mapping:
                 for row in person['rows']:
-                    counts[row_state(con,packet,person,row,mapping[person['key']])] += 1
+                    target = (mapping[person['key']],row['date'])
+                    state = 'conflict' if target in blocked else row_state(con,packet,person,row,target[0])
+                    if state == 'new' and target in planned:
+                        state = 'already_present'
+                    if state == 'new':
+                        planned.add(target)
+                    counts[state] += 1
             else:
                 counts['unmapped'] += len(person['rows'])
             groups.append({'key':person['key'],'name':person['name'],'sheet':person['sheet'],'records':len(person['rows']),
@@ -224,6 +246,7 @@ def import_package(packet, mapping, file_hash, actor_id):
     with closing(connect()) as con, con:
         con.execute('BEGIN IMMEDIATE')
         validate_mapping(mapping,packet,con)
+        blocked = conflicting_packet_dates(packet,mapping)
         con.execute('INSERT OR IGNORE INTO manual_dtr_imports(file_sha256,mapping_sha256,source_title,imported_by) VALUES(?,?,?,?)',
             (file_hash,mapping_hash(mapping),packet['title'],actor_id))
         batch = con.execute('SELECT id FROM manual_dtr_imports WHERE file_sha256=? AND mapping_sha256=?',(file_hash,mapping_hash(mapping))).fetchone()[0]
@@ -236,7 +259,7 @@ def import_package(packet, mapping, file_hash, actor_id):
                 counts['unmapped'] += len(person['rows'])
                 continue
             for row in person['rows']:
-                state = row_state(con,packet,person,row,code)
+                state = 'conflict' if (code,row['date']) in blocked else row_state(con,packet,person,row,code)
                 counts[state] += 1
                 if state!='new':
                     continue

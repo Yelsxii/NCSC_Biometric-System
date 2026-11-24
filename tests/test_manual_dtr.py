@@ -234,7 +234,7 @@ def test_permissions_malformed_packages_and_preview_csrf(admin):
 
 
 def test_verified_national_holidays_and_working_days(admin):
-    client,_=admin;seed_employee()
+    client,headers=admin;seed_employee()
     days=client.get('/api/dtr/monitor?employee_code=001&month=2026-11').json()['days']
     assert days[1]['calendar']['holiday_name']=="All Souls' Day"
     assert days[29]['calendar']['holiday_name']=='Bonifacio Day'
@@ -242,6 +242,9 @@ def test_verified_national_holidays_and_working_days(admin):
     assert feb[24]['calendar']['holiday_name']==''  # EDSA is a special WORKING day.
     future=client.get('/api/dtr/monitor?employee_code=001&month=2099-01').json()['days']
     assert future[0]['calendar_verified'] is False
+    client.put('/api/attendance-calendar/2026-11-06',headers=headers,json={'version':0,'holiday_name':''})
+    import_one(client,headers,packet([row(times=['HOLIDAY',None,None,None])]))
+    assert monitor(client)['calendar']['holiday_name']==''  # Explicit office override takes precedence.
 
 
 def test_upgrade_snapshot_and_existing_manual_rows_survive_restart(admin):
@@ -277,3 +280,31 @@ def test_todays_future_timeout_is_not_reported_as_earned_time(admin, monkeypatch
     assert day['monitoring']['total_seconds'] is None
     assert day['monitoring']['overtime_seconds'] is None
     assert day['monitoring']['undertime_seconds'] is None
+
+
+def test_same_employee_archived_months_can_be_imported_together(admin):
+    client,headers=admin;seed_employee()
+    data=packet()
+    data['people'].append({'key':'archived','name':'Example Employee','sheet':'ARCHIVED_EXAMPLE',
+        'rows':[row('2026-10-06',number=17)]})
+    mapping={'sample-one':'001','archived':'001'}
+    p=preview(client,headers,data,mapping)
+    assert p.status_code==200,p.text
+    assert p.json()['counts']['new']==2
+    assert merge(client,headers,data,p.json()['preview_token'],mapping).json()['counts']['new']==2
+    data['people'][1]['name']='Different employee'
+    assert preview(client,headers,data,mapping).status_code==400
+
+
+def test_competing_source_tabs_do_not_choose_a_first_row_silently(admin):
+    client,headers=admin;seed_employee()
+    data=packet()
+    data['people'].append({'key':'archived','name':'Example Employee','sheet':'ARCHIVED_EXAMPLE',
+        'rows':[row(times=['08:30','12:00','13:00','17:00'],number=17)]})
+    mapping={'sample-one':'001','archived':'001'}
+    p=preview(client,headers,data,mapping).json()
+    assert p['counts']['new']==0 and p['counts']['conflict']==2
+    result=merge(client,headers,data,p['preview_token'],mapping).json()['counts']
+    assert result['new']==0 and result['conflict']==2
+    with closing(connect()) as con:
+        assert con.execute('SELECT COUNT(*) FROM manual_dtr_entries').fetchone()[0]==0

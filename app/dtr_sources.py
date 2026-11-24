@@ -52,7 +52,7 @@ def resolve_day(day, manual):
     unplaced = len([x for x in ordinary if x['id'] not in display_ids])
     if source and unplaced:
         conflicts.append('unplaced_biometric')
-    if source and not day['calendar']['holiday_name']:
+    if source and not day['calendar']['holiday_name'] and not day['calendar']['version']:
         holiday = next((note for note in source['notes'] if 'HOLIDAY' in note.upper()), '')
         if holiday:
             day['calendar']['holiday_name'] = holiday
