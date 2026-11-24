@@ -210,3 +210,54 @@ def reconcile_workcodes(con, scans):
             scan.update(work_code=code, work_label=label, activity_type=activity,
                         work_direction=direction, work_code_origin="bionet",
                         work_code_pending=False)
+
+
+def attendance_source_diagnostics():
+    """Compare existing office records without importing or exposing identities.
+
+    Report raw vendor field distributions and exact K14 state comparisons.
+    Neither a terminal association nor a field mapping is inferred here.
+    """
+    if not configured():
+        raise ValueError("Configure the ZKBio roster database first.")
+    start = "2026-11-24"
+    with closing(connect()) as con:
+        allowed = authorized_ids(con)
+        raw = {}
+        for row in con.execute(
+            """SELECT employee_id,punch_time_local,device_punch_type
+               FROM k14_sync_events WHERE device_ip='192.168.254.201'
+                 AND punch_time_local>=?""", (start,)):
+            if row["employee_id"] in allowed:
+                key = (row["employee_id"], row["punch_time_local"])
+                raw.setdefault(key,set()).add(str(row["device_punch_type"]))
+    with closing(open_source(os.environ["BIONET_ROSTER_DB"])) as source:
+        summary = dict(source.execute(
+            "SELECT COUNT(*) AS total, MAX(punch_time) AS latest FROM att_punches").fetchone())
+        records = source.execute(
+            """SELECT e.emp_pin,p.punch_time,p.terminal_id,p.workstate,p.punch_type,p.workcode
+               FROM att_punches p JOIN hr_employee e ON e.id=p.employee_id
+               WHERE p.punch_time>=? ORDER BY p.punch_time DESC LIMIT 20001""", (start,)).fetchall()
+        if len(records)>20000:
+            raise ValueError("Too many recent source rows for this diagnostic.")
+        grouped = {}
+        matched = 0
+        for row in records:
+            employee = str(row["emp_pin"])
+            if employee not in allowed:
+                continue
+            states = raw.get((employee,row["punch_time"]),set())
+            known = next(iter(states)) if len(states)==1 else None
+            if known is not None:
+                matched += 1
+            key = (str(row["terminal_id"]),str(row["workstate"]),str(row["punch_type"]),
+                   str(row["workcode"]),known)
+            grouped[key] = grouped.get(key,0)+1
+        return {
+            "vendor_summary":summary,
+            "approved_recent_records":sum(grouped.values()),
+            "exact_k14_matches":matched,
+            "comparison_groups":[dict(zip(
+                ("terminal_id","workstate","punch_type","workcode","k14_punch_state","count"),
+                (*key,count))) for key,count in grouped.items()],
+        }

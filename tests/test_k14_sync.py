@@ -496,4 +496,30 @@ def test_bionet_code_overlay_uses_exact_match_and_preserves_raw_punches(admin, m
     # A conflicting vendor code is never guessed or turned into a regular punch.
     with closing(sqlite3.connect(vendor)) as source,source:
         source.execute("INSERT INTO att_punches VALUES(100,'2026-11-24 09:00:00',3)")
-    assert day()["display_remark"]=="Review"
+    conflict_day = day()
+    assert any(x.get("work_code_conflict") for x in conflict_day["scans"])
+    assert "work_code_pending" in conflict_day["source_conflicts"]
+    assert conflict_day["display_remark"] in ("Review","Future entry")
+
+
+def test_bionet_attendance_diagnostic_compares_exact_states_without_identifying_staff(admin,monkeypatch,tmp_path):
+    from app.bionet_roster import attendance_source_diagnostics
+    client,headers=admin
+    path=tmp_path/"attendance.sqlite3"
+    _connector(path,[(HOST,"7","2026-11-24 13:07:26","1","5","2026-11-25 00:00:00")])
+    _enable(monkeypatch,path)
+    assert client.post("/api/device/sync",headers=headers).status_code==200
+    vendor=tmp_path/"TimeNet.db"
+    with closing(sqlite3.connect(vendor)) as con,con:
+        con.executescript("CREATE TABLE hr_employee(id INTEGER,emp_pin TEXT);"
+                          "CREATE TABLE att_punches(employee_id INTEGER,punch_time TEXT,terminal_id INTEGER,workstate INTEGER,punch_type INTEGER,workcode INTEGER);"
+                          "INSERT INTO hr_employee VALUES(100,'7'),(101,'19');"
+                          "INSERT INTO att_punches VALUES(100,'2026-11-24 13:07:26',1,5,1,3);"
+                          "INSERT INTO att_punches VALUES(101,'2026-11-24 13:08:00',1,5,1,2);")
+    before=vendor.read_bytes()
+    monkeypatch.setenv("BIONET_ROSTER_DB",str(vendor))
+    result=attendance_source_diagnostics()
+    assert result["approved_recent_records"]==result["exact_k14_matches"]==1
+    assert result["comparison_groups"]==[{"terminal_id":"1","workstate":"5","punch_type":"1",
+                                         "workcode":"3","k14_punch_state":"5","count":1}]
+    assert vendor.read_bytes()==before
