@@ -286,7 +286,8 @@ with connect() as con:
     await page.locator('#detail-name').filter({hasText:'Sample One'}).waitFor();
     await page.locator('#daily-rows .slot-travel .travel-status').first().waitFor();
     assert.ok((await page.locator('#daily-rows').textContent()).includes('Travel Order'));
-    assert.equal(await page.locator('#daily-table-wrap colgroup col').count(),8);
+    assert.equal(await page.locator('#daily-table-wrap colgroup col').count(),13);
+    assert.equal(await page.locator('#daily-rows .unassigned-count').count(),0);
     assert.equal(await page.locator('#daily-table-wrap th.travel-column').count(),0);
     assert.equal(await page.locator('#attendance-month-status').count(),0);
     const travelDay=page.locator('#daily-rows [data-date="2026-11-23"]');
@@ -386,6 +387,11 @@ with connect() as con:
     assert.equal(detailStyle.dotRadius,'50%');
     assert.notEqual(detailStyle.dotGlow,'none');
     await page.screenshot({path:join(root,'docs/employee-records-preview.png'),animations:'disabled'});
+    const previousViewport=page.viewportSize();
+    await page.setViewportSize({width:1150,height:850});
+    const fit=await page.locator('#daily-table-wrap').evaluate(el=>({width:el.clientWidth,scroll:el.scrollWidth}));
+    if(fit.width>=880)assert.ok(fit.scroll<=fit.width+2,'Attendance columns should fit when space permits');
+    await page.setViewportSize(previousViewport);
     await page.setViewportSize({width:390,height:800});
     assert.ok((await page.locator('#detail-month').boundingBox()).width>=150,'Mobile reporting month must fit its full label');
     await page.screenshot({path:join(root,'docs/mobile-attendance-preview.png'),animations:'disabled'});
