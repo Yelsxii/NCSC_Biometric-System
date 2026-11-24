@@ -283,7 +283,26 @@
 .app-dialog.day-review-dialog #review-travel-info{background:none;border-radius:0;padding:0;color:#654297;justify-content:flex-start;font-size:11px}
 .app-dialog.day-review-dialog #review-travel-reference{display:grid;gap:6px;font-size:11px;font-weight:650;color:#52688a;margin:12px 0 4px}
 
-/* Restore the previous desktop table proportions without obscuring Remarks. */
+/* Preserve table proportions and restore the raised right-hand action rail.
+   At narrow widths Remarks remain reachable by scrolling to the right edge. */
 .workspace .attendance-sheet #daily-table-wrap .dtr-grid{width:100%;min-width:960px;table-layout:fixed}
-.workspace .attendance-sheet #daily-table-wrap .day-action{position:static;box-shadow:none;background:transparent}
-.workspace .attendance-sheet #daily-table-wrap th.actions-column{right:auto;text-align:center}
+.workspace .attendance-sheet #daily-table-wrap .day-action{
+  position:sticky;right:0;z-index:2;background:#fff;
+  box-shadow:-3px 0 8px #263b601c;text-align:center!important
+}
+.workspace .attendance-sheet #daily-table-wrap th.actions-column{
+  right:0;z-index:5;text-align:center;box-shadow:-3px 0 8px #263b6010
+}
+.workspace .attendance-sheet #daily-table-wrap tbody tr:hover .day-action{
+  background:#fff;box-shadow:-3px 0 8px #263b6024
+}
+.workspace .attendance-sheet #daily-table-wrap .edit-day{
+  box-shadow:0 2px 4px #244b9a26
+}
+.workspace .attendance-sheet #daily-table-wrap .edit-day:hover{
+  box-shadow:0 3px 9px #244b9a40
+}
+@media(prefers-reduced-motion:reduce){
+  .workspace .attendance-sheet #daily-table-wrap .edit-day{transition:none}
+  .workspace .attendance-sheet #daily-table-wrap .edit-day:hover{transform:none}
+}

@@ -380,12 +380,18 @@ with connect() as con:
       buttonBorder:getComputedStyle(document.querySelector('.edit-day')).borderTopWidth,
       buttonDecoration:getComputedStyle(document.querySelector('.edit-day')).textDecorationLine,
       dotRadius:getComputedStyle(document.querySelector('.legend-entry'),'::before').borderRadius,
-      dotGlow:getComputedStyle(document.querySelector('.legend-entry'),'::before').boxShadow
+      dotGlow:getComputedStyle(document.querySelector('.legend-entry'),'::before').boxShadow,
+      actionPosition:getComputedStyle(document.querySelector('#daily-table-wrap .day-action')).position,
+      actionShadow:getComputedStyle(document.querySelector('#daily-table-wrap .day-action')).boxShadow,
+      actionBackground:getComputedStyle(document.querySelector('#daily-table-wrap .day-action')).backgroundColor
     }));
     assert.equal(detailStyle.buttonBorder,'0px');
     assert.equal(detailStyle.buttonDecoration,'none');
     assert.equal(detailStyle.dotRadius,'50%');
     assert.notEqual(detailStyle.dotGlow,'none');
+    assert.equal(detailStyle.actionPosition,'sticky');
+    assert.notEqual(detailStyle.actionShadow,'none');
+    assert.equal(detailStyle.actionBackground,'rgb(255, 255, 255)');
     await page.screenshot({path:join(root,'docs/employee-records-preview.png'),animations:'disabled'});
     const previousViewport=page.viewportSize();
     await page.setViewportSize({width:1150,height:850});
@@ -393,6 +399,18 @@ with connect() as con:
     if(fit.width>=960)assert.ok(fit.scroll<=fit.width+2,'Attendance columns should fit when space permits');
     await page.setViewportSize(previousViewport);
     await page.setViewportSize({width:390,height:800});
+    const rail = await page.locator('#daily-table-wrap').evaluate(el=>{
+      el.scrollLeft=el.scrollWidth;
+      const row=el.querySelector('tbody tr');
+      const action=row.querySelector('.day-action').getBoundingClientRect();
+      const remark=row.querySelector('.day-activities').getBoundingClientRect();
+      const wrap=el.getBoundingClientRect();
+      const result={remarkRight:remark.right,actionLeft:action.left,actionRight:action.right,wrapRight:wrap.right};
+      el.scrollLeft=0;
+      return result;
+    });
+    assert.ok(rail.remarkRight<=rail.actionLeft+2,'Remarks must be readable when scrolled to the right');
+    assert.ok(rail.actionRight<=rail.wrapRight+2,'Action rail must remain in the table');
     assert.ok((await page.locator('#detail-month').boundingBox()).width>=150,'Mobile reporting month must fit its full label');
     await page.screenshot({path:join(root,'docs/mobile-attendance-preview.png'),animations:'disabled'});
     await day.locator('[data-edit-day]').click();
