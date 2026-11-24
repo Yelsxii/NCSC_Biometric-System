@@ -295,7 +295,7 @@ with connect() as con:
     assert.equal(await page.locator('.page-heading').count(),0);
     assert.equal(await page.locator('.breadcrumb-home').count(),0);
     const day=page.locator('#daily-rows [data-date="2026-11-02"]');
-    assert.equal(await day.locator('.slot-provisional').count(),4); // Four real scans shown before HR assigns them
+    assert.equal(await day.locator('.slot-holiday').count(),4); // Four real scans retain the national holiday cell color
     assert.equal(await day.locator('.time-value').count(),4);
     await day.locator('[data-edit-day]').click();
     await page.locator('#day-review-dialog[open]').waitFor();
