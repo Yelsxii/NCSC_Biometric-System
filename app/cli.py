@@ -19,6 +19,8 @@ def sync_k14() -> None:
         "Outcome: {outcome}; read {records_read}; new {records_inserted}; "
         "already present {records_already_present}; skipped {records_skipped}".format(**result)
     )
+    if result["outcome"] == "success":
+        print(f"Device names updated: {result.get('names_updated', 0)}")
     if result["outcome"] != "success":
         print(result["error_message"] or "Connector sync failed.")
         raise SystemExit(1)

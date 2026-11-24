@@ -20,7 +20,9 @@
 - The poller stores these in a separate, additive connector SQLite table
   `device_user_names`. The website imports only authorized IDs and never
   overwrites verified HR profiles, roster names, or manually entered names.
-  Device-provided names remain marked **unverified** until confirmed by HR.
+  Device-provided names display as **Registered on K14**. This denotes the
+  source, not HR approval; category and other HR profile fields remain separate.
+  Missing names display as **Name not synchronized**.
 - **DTR raw-time preview**: with exactly four distinct ordinary device scans
   for an employee/date, the four times appear in chronological AM/PM columns
   as **Preview** (not approved). These do not become reviewed assignments,
@@ -44,7 +46,9 @@
    `device_user_names`.
 4. Sync connector database from Users & Work Codes (or wait for the enabled
    60-second importer). A changed name can appear even if zero new attendance
-   rows are imported. Imported name strings are not validated HR profiles.
+   rows are imported. The collector logs the number of approved names read and
+   changed (no personal names printed); the CLI sync reports names updated.
+   Imported name strings are not validated HR profiles.
 5. In Employee Attendance open an employee/month that has scans. Look for
    the source count banner and blue **Preview** (four scans) or explicit
    **Biometric scans** list (other cases).

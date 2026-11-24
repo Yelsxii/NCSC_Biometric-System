@@ -22,6 +22,12 @@ def test_read_device_names_only_keeps_approved_id_and_name(monkeypatch):
                 SimpleNamespace(user_id="7",name="Sample Device Name",password="do-not-import",card=123),
                 SimpleNamespace(user_id="8",name="Other Employee"),
                 SimpleNamespace(user_id="18",name=""),
+                SimpleNamespace(user_id="11",name=None),
+                SimpleNamespace(user_id="12",name="   "),
+                SimpleNamespace(user_id="14",name="First Alias"),
+                SimpleNamespace(user_id="14",name="Conflicting Alias"),
+                SimpleNamespace(user_id="19",name="  Valid Name  "),
+                SimpleNamespace(user_id="20",name="Bad\x00Name"),
             ]
         def disconnect(self):
             calls.append("disconnect")
@@ -32,8 +38,8 @@ def test_read_device_names_only_keeps_approved_id_and_name(monkeypatch):
             calls.append("connect")
             return Connection()
     monkeypatch.setitem(sys.modules,"zk",SimpleNamespace(ZK=Device))
-    rows = k14_poller.read_device_names(HOST,4370,False,frozenset({"7","18"}))
-    assert rows == [("7","Sample Device Name")]
+    rows = k14_poller.read_device_names(HOST,4370,False,frozenset({"7","18","11","12","14","19","20"}))
+    assert rows == [("7","Sample Device Name"),("19","Valid Name")]
     assert calls == ["connect","get_users","disconnect"]
 
 

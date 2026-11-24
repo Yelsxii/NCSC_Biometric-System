@@ -47,7 +47,6 @@ def read_device_names(host: str, port: int, use_udp: bool,
     names leave the collector process. The device is never modified.
     """
     from zk import ZK
-    from app.registry import staff_row
 
     device = ZK(host, port=port, timeout=20, password=0,
                 force_udp=use_udp, ommit_ping=False)
@@ -55,17 +54,23 @@ def read_device_names(host: str, port: int, use_udp: bool,
     try:
         conn = device.connect()
         users = conn.get_users() or []
-        names = []
+        # The separate pyzk environment need not have website Excel dependencies.
+        names: dict[str, str] = {}
+        conflicts: set[str] = set()
         for user in users:
             code = str(getattr(user, "user_id", "")).strip()
             if code not in allowed:
                 continue
-            try:
-                row = staff_row(code, getattr(user, "name", ""))
-            except ValueError:
+            raw_name = getattr(user, "name", None)
+            if not isinstance(raw_name, str):
                 continue
-            names.append((row["employee_code"], row["display_name"]))
-        return names
+            name = raw_name.strip()
+            if not name or len(name) > 140 or any(ord(c) < 32 for c in name):
+                continue
+            if code in names and names[code] != name:
+                conflicts.add(code)
+            names[code] = name
+        return [(code, name) for code, name in names.items() if code not in conflicts]
     finally:
         if conn is not None:
             try:
@@ -165,9 +170,11 @@ def main(argv=None) -> int:
                             names = read_device_names(args.host, args.port, args.udp, current)
                             current_again = read_authorized_ids(registry)
                             names = [(code, name) for code, name in names if code in current_again]
-                            save_device_names(path, args.host, names)
-                        except Exception:
-                            print(f"[{stamp}] Device name sync unavailable; attendance preserved.", flush=True)
+                            changed = save_device_names(path, args.host, names)
+                            print(f"[{stamp}] K14 name sync: {len(names)} approved names read; "
+                                  f"{changed} new or changed; {len(current_again) - len(names)} approved IDs without a usable name.", flush=True)
+                        except Exception as exc:
+                            print(f"[{stamp}] Device name sync unavailable ({type(exc).__name__}); attendance preserved.", flush=True)
                     print(f"[{stamp}] Connection OK; {total} device logs; {len(rows)} approved records; added {added} new records.", flush=True)
             except Exception:
                 print(f"[{stamp}] Collection failed. Check device connectivity, registry access and local storage. Retrying next cycle.", flush=True)

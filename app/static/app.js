@@ -141,9 +141,9 @@ function categoryBadge(value){
   return '<span class="tag tag-'+(kind||'neutral')+'">'+esc(value||'Not set')+'</span>';
 }
 function employeeCell(row){
-  const name=row.display_name||'Name not verified';
+  const name=row.display_name||'Name not synchronized';
   const source=row.name_source==='device' && !row.employment_type?
-    '<small class="device-name-hint">From K14 · name needs HR verification</small>':'';
+    '<small class="device-name-hint">Registered on K14</small>':'';
   return '<div class="employee-cell"><span class="name-avatar" aria-hidden="true">'+esc(name.slice(0,1).toUpperCase())+
     '</span><span><strong>'+esc(name)+'</strong>'+source+(row.position?'<small>'+esc(row.position)+'</small>':'')+'</span></div>';
 }
@@ -169,7 +169,7 @@ async function openEmployee(code){
   if (!code) return;
   selectedEmployee=code;
   const row=lastEmployeeRows.find(x=>x.employee_code===code);
-  selectedName=row?.display_name||'Name not registered';
+  selectedName=row?.display_name||'Name not synchronized';
   selectedDepartment=row?.department||'';
   $('detail-name').textContent=selectedName;
   $('detail-department').textContent=selectedDepartment||'—';
@@ -359,9 +359,9 @@ async function loadDetail({quiet=false}={}){
     if(serial!==detailRequest || code!==selectedEmployee || month!==$('detail-month').value || currentPage!=='employees' || !session)return;
     if(quiet && document.querySelectorAll('dialog[open]').length)return;
     activeDtr=data;
-    selectedName=data.display_name||'Name not registered';
+    selectedName=data.display_name||'Name not synchronized';
     $('detail-name').textContent=selectedName;
-    $('detail-name').title=data.name_source==='device'?'Name from K14 device; verify with HR':'Employee attendance';
+    $('detail-name').title=data.name_source==='device'?'Name synchronized from K14 device; HR profile is separate':'Employee attendance';
     $('detail-department').textContent=data.department||'—';
     $('detail-category').innerHTML=categoryBadge(data.employment_type);
     const monthStatus=$('attendance-month-status');
