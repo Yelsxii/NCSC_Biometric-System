@@ -283,18 +283,7 @@
 .app-dialog.day-review-dialog #review-travel-info{background:none;border-radius:0;padding:0;color:#654297;justify-content:flex-start;font-size:11px}
 .app-dialog.day-review-dialog #review-travel-reference{display:grid;gap:6px;font-size:11px;font-weight:650;color:#52688a;margin:12px 0 4px}
 
-/* Keep all 13 columns in view at normal desktop widths. */
-.workspace .attendance-sheet #daily-table-wrap .dtr-grid{width:100%;min-width:880px;table-layout:fixed}
-.workspace .attendance-sheet #daily-table-wrap .dtr-grid th{width:auto!important;padding-inline:3px}
-.workspace .attendance-sheet #daily-table-wrap .dtr-col-date{width:6%}
-.workspace .attendance-sheet #daily-table-wrap .dtr-col-clock{width:8%}
-.workspace .attendance-sheet #daily-table-wrap .dtr-col-total{width:7%}
-.workspace .attendance-sheet #daily-table-wrap .dtr-col-ut{width:4%}
-.workspace .attendance-sheet #daily-table-wrap .dtr-col-ot{width:8%}
-.workspace .attendance-sheet #daily-table-wrap .dtr-col-aja{width:7%}
-.workspace .attendance-sheet #daily-table-wrap .dtr-col-remarks{width:17%}
-.workspace .attendance-sheet #daily-table-wrap .dtr-col-action{width:8%}
+/* Restore the previous desktop table proportions without obscuring Remarks. */
+.workspace .attendance-sheet #daily-table-wrap .dtr-grid{width:100%;min-width:960px;table-layout:fixed}
 .workspace .attendance-sheet #daily-table-wrap .day-action{position:static;box-shadow:none;background:transparent}
 .workspace .attendance-sheet #daily-table-wrap th.actions-column{right:auto;text-align:center}
-.workspace .attendance-sheet #daily-table-wrap .day-activities{padding-inline:5px}
-.workspace .attendance-sheet #daily-table-wrap .edit-day{min-width:0;padding-inline:7px}

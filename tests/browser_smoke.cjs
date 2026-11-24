@@ -390,7 +390,7 @@ with connect() as con:
     const previousViewport=page.viewportSize();
     await page.setViewportSize({width:1150,height:850});
     const fit=await page.locator('#daily-table-wrap').evaluate(el=>({width:el.clientWidth,scroll:el.scrollWidth}));
-    if(fit.width>=880)assert.ok(fit.scroll<=fit.width+2,'Attendance columns should fit when space permits');
+    if(fit.width>=960)assert.ok(fit.scroll<=fit.width+2,'Attendance columns should fit when space permits');
     await page.setViewportSize(previousViewport);
     await page.setViewportSize({width:390,height:800});
     assert.ok((await page.locator('#detail-month').boundingBox()).width>=150,'Mobile reporting month must fit its full label');
