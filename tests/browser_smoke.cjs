@@ -112,6 +112,8 @@ uvicorn.run('app.main:app',host='127.0.0.1',port=int(os.environ['QA_PORT']),log_
     const navTypography=await page.locator('.sidebar .nav-item > span').first().evaluate(el=>({size:getComputedStyle(el).fontSize,casing:getComputedStyle(el).textTransform}));
     assert.equal(navTypography.size,'12px');
     assert.equal(navTypography.casing,'none');
+    assert.equal(await page.locator('.sidebar .nav-icon').first().evaluate(el=>getComputedStyle(el).width),'22px');
+    assert.equal(await page.locator('#logout-sidebar svg').evaluate(el=>getComputedStyle(el).width),'22px');
     assert.equal(await page.locator('#logout-sidebar').evaluate(el=>getComputedStyle(el).textTransform),'none');
     assert.equal(await page.locator('.sidebar .brand img').evaluate(el=>el.getBoundingClientRect().width),48);
     assert.equal(await page.locator('.topbar #logout').count(),0);
@@ -157,6 +159,8 @@ uvicorn.run('app.main:app',host='127.0.0.1',port=int(os.environ['QA_PORT']),log_
     }));
     assert.ok(railLayout.width<=64 && railLayout.height>=railLayout.viewportHeight-1);
     assert.equal(railLayout.labelDisplay,'none');
+    assert.equal(await page.locator('.sidebar .nav-icon').first().evaluate(el=>getComputedStyle(el).width),'24px');
+    assert.equal(await page.locator('#logout-sidebar svg').evaluate(el=>getComputedStyle(el).width),'24px');
     const menuHover=page.locator('[data-page="profiles"]');
     await menuHover.hover();
     await page.waitForFunction(()=>{
