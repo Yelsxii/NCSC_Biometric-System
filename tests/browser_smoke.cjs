@@ -309,14 +309,14 @@ with connect() as con:
     await day.locator('[data-edit-day]').click();
     await page.locator('#day-review-dialog[open]').waitFor();
     assert.equal(await page.locator('#day-review-dialog details').count(),0);
-    assert.equal(await page.locator('#clock-am-in').inputValue(),'07:30:00');
+    assert.equal(await page.locator('#clock-am-in').inputValue(),'07:30:07');
     await page.locator('[data-clock-pick="am-in"]').click();
     await page.locator('#clock-picker').waitFor();
     await page.locator('#picker-minute').fill('31');
     await page.locator('#clock-picker-apply').click();
-    assert.equal(await page.locator('#clock-am-in').inputValue(),'07:31:00');
+    assert.equal(await page.locator('#clock-am-in').inputValue(),'07:31:07');
     assert.equal(await page.locator('#review-reason-field').isVisible(),true);
-    await page.locator('#clock-am-in').fill('07:30:00');
+    await page.locator('#clock-am-in').fill('07:30:07');
     assert.equal(await page.locator('#review-reason-field').isVisible(),false);
     await page.locator('#review-ut-hours').fill('0');
     await page.locator('#review-ut-minutes').fill('0');
