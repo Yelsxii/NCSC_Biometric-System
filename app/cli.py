@@ -37,6 +37,15 @@ def main() -> None:
         except (OSError,ValueError,sqlite3.Error):
             raise SystemExit("Could not read SQLite schema. Verify the source path and authorized access; no data was changed.")
         return
+    if command == ["inspect-bionet-workcodes"]:
+        import sqlite3
+        from app.bionet_roster import workcode_diagnostics
+        initialize()
+        try:
+            print(json.dumps(workcode_diagnostics(), indent=2))
+        except (OSError,ValueError,sqlite3.Error):
+            raise SystemExit("Could not inspect ZKBio work-code counts. Check the database configuration.")
+        return
     if command == ["sync-bionet"]:
         import sqlite3
         from app.bionet_roster import sync_roster
@@ -82,7 +91,7 @@ def main() -> None:
         print(json.dumps(info, indent=2, ensure_ascii=False))
         return
     if command != ["create-admin"]:
-        raise SystemExit("Usage: python -m app.cli create-admin | sync-k14 | k14-status | poll-k14 | inspect-bionet <path> | sync-bionet")
+        raise SystemExit("Usage: python -m app.cli create-admin | sync-k14 | k14-status | poll-k14 | inspect-bionet <path> | sync-bionet | inspect-bionet-workcodes")
     initialize()
     username = input("Admin username: ").strip().lower()
     if not re.fullmatch(r"[a-z0-9._-]{3,40}", username):

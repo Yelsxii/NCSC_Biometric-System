@@ -237,6 +237,8 @@ def test_travel_order_numbers_are_references_and_not_regular_punches(admin):
     client,headers=admin;seed_employee();import_one(client,headers,data)
     day=monitor(client)
     assert day['tone']=='travel'
+    assert day['travel_order'] is True and day['travel_periods']==['am','pm']
+    assert day['monitoring']['remarks']=='Travel Order'
     assert day['monitoring']['total_seconds'] is None
     assert any(x['category']=='Travel Order' for x in day['display_activities'])
 
@@ -447,3 +449,13 @@ def test_single_token_source_is_not_a_full_name(admin):
     data=packet()
     data['people'][0]['name']='Employee'
     assert automatic_mapping(parse_package(file_bytes(data)))=={}
+
+def test_partial_travel_order_keeps_regular_times(admin):
+    client,headers=admin;seed_employee()
+    data=packet([row(times=['08:00','12:00','Travel Order No. EXAMPLE',None],total=None)])
+    import_one(client,headers,data)
+    day=monitor(client)
+    assert day['travel_periods']==['pm']
+    assert day['display_slots']['am_in']['happened_at'].endswith('08:00:00')
+    assert day['display_slots']['pm_in'] is None
+    assert day['monitoring']['total_seconds'] is None

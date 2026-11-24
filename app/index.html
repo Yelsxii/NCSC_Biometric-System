@@ -191,6 +191,8 @@
     <form id="day-review-form">
       <div class="app-dialog-head"><div><h2 id="day-review-heading">Edit attendance</h2><p id="day-review-context"></p></div><button type="button" class="modal-x" id="close-day-review" aria-label="Close attendance editor">×</button></div>
       <div class="app-dialog-body">
+        <p id="review-travel-info" class="travel-status hidden"></p>
+        <div id="review-time-section">
         <div class="form-section-heading"><h3 class="form-section-title">Time entries</h3><button type="button" class="button outline" id="place-four-entries">Place four entries</button></div>
         <div class="profile-form-grid day-slots">
           <label>A.M. · Time in<select id="review-am-in"></select></label><label>A.M. · Time out<select id="review-am-out"></select></label>
@@ -201,6 +203,8 @@
         <h3 class="form-section-title">Undertime</h3>
         <div class="profile-form-grid"><label>Hours<input id="review-ut-hours" type="number" min="0" max="24" step="1" placeholder="—"></label><label>Minutes<input id="review-ut-minutes" type="number" min="0" max="59" step="1" placeholder="—"></label></div>
         <p class="field-hint">Enter the verified DTR value; leave blank while under review.</p>
+        </div>
+        <details class="review-evidence"><summary>Original entries / review details</summary><p id="review-source-warning" class="field-hint"></p><p id="review-raw-scans" class="field-hint"></p></details>
         <h3 class="form-section-title">Activity / remarks</h3>
         <div id="review-existing-activities" class="review-activities"></div>
         <div class="profile-form-grid"><label>Activity<select id="review-activity"><option value="">None</option><option>AJA</option><option>Travel Order</option><option>Fieldwork</option><option>Official Business</option></select></label><label>Existing document reference<input id="review-reference" maxlength="140"></label></div>

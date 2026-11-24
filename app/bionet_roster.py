@@ -119,3 +119,21 @@ def sync_roster():
                 "name_source='bionet',updated_at=CURRENT_TIMESTAMP", (code,name,dept))
             counts['updated'] += 1
     return counts
+
+def workcode_diagnostics():
+    """Read counts only for approved employee IDs; no raw personal timestamps."""
+    if not configured():
+        raise ValueError('Configure the ZKBio roster database first.')
+    with closing(connect()) as con:
+        allowed = authorized_ids(con)
+    with closing(open_source(os.environ['BIONET_ROSTER_DB'])) as source:
+        definitions = [dict(r) for r in source.execute(
+            'SELECT id, wc_code, wc_name FROM att_workcode LIMIT 500')]
+        counts = {}
+        for row in source.execute(
+            'SELECT e.emp_pin, p.workcode, COUNT(*) AS n FROM att_punches p '
+            'JOIN hr_employee e ON e.id=p.employee_id GROUP BY e.emp_pin,p.workcode'):
+            if str(row['emp_pin']).strip() in allowed:
+                code = str(row['workcode']) if row['workcode'] is not None else '(empty)'
+                counts[code] = counts.get(code, 0) + row['n']
+        return {'workcode_definitions':definitions,'approved_punch_counts_by_workcode':counts}

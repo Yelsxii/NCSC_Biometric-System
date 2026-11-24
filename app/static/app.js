@@ -281,7 +281,8 @@ function dayActivities(day){
   const labels=[];
   if(day.calendar.holiday_name)labels.push('<span class="day-badge holiday-badge">'+esc(day.calendar.holiday_name)+'</span>');
   for(const item of day.display_activities){
-    const kind=item.category==='Travel Order'?'travel':item.category==='AJA'?'aja':'official';
+    if(['Travel Order','AJA'].includes(item.category))continue;
+    const kind='official';
     labels.push('<span class="day-badge '+kind+'-badge" title="'+esc(item.reference)+'">'+esc(item.category)+'</span>');
   }
   if(day.review.remark)labels.push('<span class="day-remark" title="'+esc(day.review.remark)+'">'+esc(day.review.remark)+'</span>');
@@ -290,13 +291,13 @@ function dayActivities(day){
 }
 function activityScanCell(day){
   const blocks=[];
-  for(const kind of ['AJA','Travel Order']){
+  for(const kind of ['AJA']){
     const pair=(day.activity_mappings||[]).find(item=>item.category===kind);
     const refs=(day.activities||[]).filter(item=>item.category===kind);
     if(!pair&&!refs.length)continue;
     let line='';
     if(pair){
-      const clock=event=>event?esc(event.happened_at.slice(11,16)):'—';
+      const clock=event=>event?esc(event.happened_at.slice(11,19)):'—';
       line='<span class="activity-clock"><b>IN</b> '+clock(pair.time_in)+' <b>OUT</b> '+clock(pair.time_out)+'</span>'+
         '<span class="pair-state" title="'+esc(pair.review_note)+'">'+(pair.status==='code_matched'?'Matched':'Needs review')+'</span>';
     }
@@ -304,7 +305,9 @@ function activityScanCell(day){
     blocks.push('<div class="compact-activity"><span class="day-badge '+(kind==='AJA'?'aja':'travel')+'-badge">'+esc(kind)+'</span>'+line+'</div>');
   }
   const aja=day.manual_source?.aja;
-  if(aja)blocks.push('<div class="compact-activity" title="'+esc(aja.purpose)+'"><span class="day-badge aja-badge">AJA · Sheet</span><span class="activity-clock">'+esc(aja.start||'—')+'–'+esc(aja.end||'—')+'</span></div>');
+  if(day.travel_order)blocks.push('<span class="travel-status" title="Official travel recorded; no clock pair required">Travel Order</span>');
+  if(aja)blocks.push('<div class="compact-activity" title="'+esc(aja.purpose)+'"><span class="day-badge aja-badge">AJA</span><span class="activity-clock">'+esc(aja.start||'—')+'–'+esc(aja.end||'—')+'</span></div>');
+  if(!aja && !blocks.length && day.display_activities.some(x=>x.category==='AJA'))blocks.push('<span class="day-badge aja-badge">AJA</span>');
   return '<td class="activity-evidence">'+(blocks.join('')||'<span class="empty-cell">—</span>')+'</td>';
 }
 function regularReviewCandidates(day){
@@ -337,6 +340,10 @@ function unassignedPunches(day){
 function durationText(seconds){
   return Number.isFinite(seconds)?Math.floor(seconds/3600)+':'+String(Math.floor(seconds%3600/60)).padStart(2,'0'):'—';
 }
+function periodCells(day,half){
+  if((day.travel_periods||[]).includes(half))return '<td colspan="2" class="time-slot slot-travel"><span class="travel-status">Travel Order</span></td>';
+  return slotCell(day,half+'_in')+slotCell(day,half+'_out');
+}
 function slotCell(day,key){
   const event=day.display_slots?day.display_slots[key]:(day.slots[key]||provisionalOrdinarySlots(day)?.[key]);
   const origin=event?.origin||(day.slots[key]?'reviewed':'biometric');
@@ -347,8 +354,7 @@ function slotCell(day,key){
   const hint=event?event.happened_at.slice(11)+' · '+(origin==='manual_sheet'?'Manual DTR source':origin==='reviewed'?'Reviewed selection':'Original biometric time; observed AM/PM placement')+
     (event.work_code!==undefined&&event.work_code!==''?' · Work code '+event.work_code:''):'No entry';
   return '<td class="time-slot slot-'+tone+'" title="'+esc(hint)+'">'+(event?
-    '<span class="time-value">'+esc(event.happened_at.slice(11,16))+'</span><span class="origin-label origin-'+origin+'">'+label+'</span>'+
-    (event.work_code!==undefined&&event.work_code!==''?'<span class="time-code">WC '+esc(event.work_code)+'</span>':''):
+    '<span class="time-value">'+esc(event.happened_at.slice(11,19))+'</span>':
     '<span class="no-time">—</span>')+'</td>';
 }
 async function loadDetail({quiet=false}={}){
@@ -377,7 +383,7 @@ async function loadDetail({quiet=false}={}){
         (source.unmatched_tabs?' · '+source.unmatched_tabs+' awaiting a matching employee name':'')+
         (source.conflict_days?' · '+source.conflict_days+' conflicting source days held':'')+
         (source.invalid_rows?' · '+source.invalid_rows+' invalid source rows held':'')+
-        (source.bionet_roster?' · '+source.bionet_roster.approved+' ZKBio roster IDs matched':'')+
+        (source.bionet_roster?' · '+source.bionet_roster.approved+' employee IDs matched':'')+
         (source.bionet_roster?.conflicts?' · '+source.bionet_roster.conflicts+' roster conflicts held':'')):
         (source?.message||'Manual DTR source not configured on this host.');
       monthStatus.textContent=recordText+' · '+sourceText;
@@ -387,16 +393,18 @@ async function loadDetail({quiet=false}={}){
       const metrics=day.monitoring||{total_seconds:day.daily_total_seconds,undertime_seconds:day.review.undertime_minutes===null?null:day.review.undertime_minutes*60,overtime_seconds:null,remarks:'For review'};
       const ut=metrics.undertime_seconds;
       const status=metrics.remarks;
+      const visibleStatus=status==='Source difference'?'Review':status==='Travel Order'?'':status;
+      const detail=status==='Source difference'?'Biometric and sheet entries differ, or a raw scan could not be placed. Open Edit for evidence.':status;
       const kind=status==='Complete'?'complete':status==='Undertime'?'undertime':status==='Overtime'?'overtime':status==='Source difference'?'conflict':'pending';
       const unassigned=day.display_unassigned_count??day.unassigned_count;
       return '<tr class="day-row day-'+esc(day.tone)+'" data-date="'+esc(day.date)+'">'+
         '<td class="dtr-date"><strong>'+esc(day.date.slice(8))+'</strong><span>'+esc(day.day)+'</span></td>'+
-        ['am_in','am_out','pm_in','pm_out'].map(key=>slotCell(day,key)).join('')+
+        periodCells(day,'am')+periodCells(day,'pm')+
         '<td class="daily-total-value" title="'+esc(metrics.metrics_origin==='manual_sheet'?'Manual DTR calculated result':'Elapsed AM + PM time; '+(metrics.total_seconds??'unknown')+' seconds')+'">'+durationText(metrics.total_seconds)+'</td>'+
         '<td class="undertime-value" title="'+(ut==null?'For review':'Available DTR undertime')+'">'+(ut==null?'—':Math.floor(ut/3600))+'</td>'+
         '<td class="undertime-value">'+(ut==null?'—':String(Math.floor(ut%3600/60)).padStart(2,'0'))+'</td>'+
         '<td class="overtime-value" title="Manual DTR overtime result">'+durationText(metrics.overtime_seconds)+'</td>'+
-        activityScanCell(day)+'<td class="day-activities"><span class="monitor-remark remark-'+kind+'">'+esc(status)+'</span>'+dayActivities(day)+'</td>'+
+        activityScanCell(day)+'<td class="day-activities">'+(visibleStatus?'<span title="'+esc(detail)+'" class="monitor-remark remark-'+kind+'">'+esc(visibleStatus)+'</span>':'')+dayActivities(day)+'</td>'+
         '<td class="day-action"><button type="button" class="button outline edit-day" data-edit-day="'+esc(day.date)+'" aria-label="'+(session.role==='admin'?'Edit':'View')+' attendance for '+esc(day.date)+'">'+editIcon()+(session.role==='admin'?'Edit':'View')+'</button>'+
         (unassigned?'<span class="unassigned-count" title="Additional source entries to review">+'+unassigned+'</span>':'')+'</td></tr>';
     }).join('');
@@ -414,10 +422,12 @@ function openDayReview(date){
   $('day-review-form').reset();$('day-review-error').classList.add('hidden');
   $('day-review-heading').textContent=editable?'Edit attendance':'Attendance entries';
   $('day-review-context').textContent=selectedName+' · '+date+' ('+day.day+')';
-  const options='<option value="">— No entry —</option>'+day.scans.map(event=>
-    '<option value="'+event.id+'">'+esc(event.happened_at.slice(11))+' · WC '+esc(event.work_code||'—')+' · Status '+esc(event.status_code)+'</option>').join('');
+  const options='<option value="">Automatic / no override</option>'+regularReviewCandidates(day).map(event=>
+    '<option value="'+event.id+'">'+esc(event.happened_at.slice(11))+' · WC '+esc(event.work_code||'—')+'</option>').join('');
   for(const key of ['am_in','am_out','pm_in','pm_out']){
-    const node=$('review-'+key.replace('_','-'));node.innerHTML=options;node.value=day.slots[key]?.id||'';node.disabled=!editable;
+    const node=$('review-'+key.replace('_','-'));const selected=day.slots[key];
+    node.innerHTML=options+(selected&&!regularReviewCandidates(day).some(x=>x.id===selected.id)?'<option value="'+selected.id+'">'+esc(selected.happened_at.slice(11,19))+' (existing review)</option>':'');
+    node.value=selected?.id||'';node.disabled=!editable;
   }
   const minutes=day.review.undertime_minutes;
   $('review-ut-hours').value=minutes===null?'':Math.floor(minutes/60);
@@ -428,12 +438,21 @@ function openDayReview(date){
   for(const id of ['review-ut-hours','review-ut-minutes','review-activity','review-reference','review-remark'])$(id).disabled=!editable;
   $('save-day-review').classList.toggle('hidden',!editable);$('save-day-review').disabled=false;
   $('place-four-entries').classList.toggle('hidden',!editable||regularReviewCandidates(day).length!==4);
-  $('review-entry-hint').textContent=day.scans.length?day.scans.length+' original biometric entries available.':'No biometric entries for this date.';
+  $('review-entry-hint').textContent=day.scans.length?day.scans.length+' original entries · automatic values apply unless overridden.':'No original scans for this date.';
+  const fullTravel=(day.travel_periods||[]).length===2;
+  $('review-time-section').classList.toggle('hidden',fullTravel);
+  $('review-travel-info').classList.toggle('hidden',!day.travel_order);
+  $('review-travel-info').textContent=day.travel_order?'Travel Order · '+((day.travel_periods||[]).length===2?'Full day':(day.travel_periods||[]).map(x=>x.toUpperCase()).join(' / ')||'Recorded activity')+'. No clock entry required for covered periods.':'';
+  for(const key of ['am_in','am_out','pm_in','pm_out']){
+    const node=$('review-'+key.replace('_','-'));
+    node.closest('label').classList.toggle('hidden',(day.travel_periods||[]).includes(key.slice(0,2)));
+  }
+  $('review-source-warning').textContent=day.source_conflicts?.length?'Review: '+day.source_conflicts.map(k=>k==='unplaced_biometric'?'Unassigned original scans':k==='order'?'Time sequence differs':k.replace('_',' ').toUpperCase()+' differs from sheet').join('; ')+'.':'';
+  $('review-raw-scans').textContent=day.scans.map(x=>x.happened_at.slice(11,19)+(x.work_code?' · WC '+x.work_code:'')).join(' | ');
   const manual=day.manual_source;
-  $('review-source-detail').innerHTML='<strong>Current attendance (automatically combined)</strong><div>'+['am_in','am_out','pm_in','pm_out'].map(key=>{
+  $('review-source-detail').innerHTML='<strong>Current attendance</strong><div>'+['am_in','am_out','pm_in','pm_out'].map(key=>{
     const entry=day.display_slots?.[key];
-    const origin=entry?.origin==='manual_sheet'?'Sheet':entry?.origin==='reviewed'?'HR':'Bio';
-    return '<span>'+esc(key.replace('_',' ').toUpperCase())+' <b>'+esc(entry?entry.happened_at.slice(11,16)+' · '+origin:'—')+'</b></span>';
+    return '<span>'+esc(key.replace('_',' ').toUpperCase())+' <b>'+esc((day.travel_periods||[]).includes(key.slice(0,2))?'Travel Order':entry?entry.happened_at.slice(11,19):'—')+'</b></span>';
   }).join('')+'</div>'+(manual?'<small>Manual DTR · row '+manual.row+'</small>':'');
   $('review-existing-activities').innerHTML=day.display_activities.map(x=>'<span class="day-badge">'+esc(x.category)+(x.reference?' · '+esc(x.reference):'')+'</span>').join('');
   $('day-review-dialog').showModal();

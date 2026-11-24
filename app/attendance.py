@@ -158,7 +158,7 @@ def decorate_days(employee_code: str, days: list[dict]) -> None:
             (days[0]["date"], days[-1]["date"]),
         )}
         manual = {r["attendance_date"]: {"data": json.loads(r["normalized_json"]), "name": r["source_name"],
-                  "sheet": r["sheet_key"], "row": r["source_row"]} for r in con.execute(
+                  "sheet": r["sheet_key"], "row": r["source_row"], "original": json.loads(r["original_json"])} for r in con.execute(
             "SELECT * FROM manual_dtr_entries WHERE employee_code=? AND attendance_date BETWEEN ? AND ?",
             (employee_code, days[0]["date"], days[-1]["date"]),
         )}
