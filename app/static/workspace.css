@@ -223,14 +223,12 @@
   box-shadow:0 3px 10px #06152d28,inset 0 1px 0 #ffffff0d;
 }
 .workspace .sidebar .nav-item.active{
-  color:#fff;background:var(--rail-active);border-color:#6689bd45;
+  color:#fff;background-color:var(--rail-active);
+  background-image:radial-gradient(ellipse 42px 32px at 21px 50%,#f05a6c1f,transparent);
+  border-color:#6689bd45;
   box-shadow:0 3px 9px #06152d42,inset 0 1px 0 #ffffff08;font-weight:650;
 }
-.workspace .sidebar .nav-item.active::before{
-  content:"";position:absolute;left:calc(-1 * var(--rail-inset) - 1px);
-  top:10px;bottom:10px;width:3px;
-  background:#f05a6c;border-radius:0 3px 3px 0;
-}
+.workspace .sidebar .nav-item.active::before{content:none}
 .workspace .sidebar .nav-item>span{
   text-transform:none;letter-spacing:0;font-size:12px;line-height:1.35;
   min-width:0;white-space:normal;
@@ -252,11 +250,11 @@
   transform:translateY(-1px) rotate(7deg) scale(1.10);
 }
 .workspace .sidebar .nav-item.active .nav-icon{
-  color:#f5fbff;stroke-width:2;filter:drop-shadow(0 0 3px #64b3ff80);
+  color:#ff899b;stroke-width:2;filter:drop-shadow(0 0 3px #f05a6c65);
 }
 .workspace .sidebar .nav-item.active:is(:hover,:focus-visible){
-  background:var(--rail-active);border-color:#80afff75;
-  box-shadow:0 4px 12px #06152d50,inset 0 0 12px #6baaff0c;
+  background-color:var(--rail-active);border-color:#ef85945c;
+  box-shadow:0 4px 12px #06152d50,inset 0 0 12px #f05a6c0c;
 }
 .workspace .sidebar .nav-item:is(:hover,:focus-visible):active .nav-icon{
   transform:scale(.95);
@@ -318,6 +316,7 @@
   .workspace .sidebar .nav{padding:17px 0;gap:8px}
   .workspace .sidebar .nav-item{height:44px;justify-content:center;padding:0;gap:0}
   .workspace .sidebar .nav-icon{width:24px;height:24px;flex-basis:24px}
+  .workspace .sidebar .nav-item.active{background-image:radial-gradient(ellipse 32px 30px at center,#f05a6c24,transparent)}
   .workspace .sidebar .nav-item::after,.workspace .sidebar-signout::after{
     content:attr(data-tooltip);position:absolute;left:calc(100% + 11px);top:50%;
     transform:translate(4px,-50%);opacity:0;visibility:hidden;pointer-events:none;

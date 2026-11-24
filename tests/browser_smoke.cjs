@@ -130,7 +130,7 @@ uvicorn.run('app.main:app',host='127.0.0.1',port=int(os.environ['QA_PORT']),log_
       const clock=document.querySelector('.workspace-clock');
       const date=document.querySelector('.clock-date-row');
       const time=document.querySelector('#live-time');
-      return {accentLeft:parseFloat(getComputedStyle(nav,'::before').left),
+      return {accentContent:getComputedStyle(nav,'::before').content,activeHalo:getComputedStyle(nav).backgroundImage,
         glow:getComputedStyle(icon).filter, iconColor:getComputedStyle(icon).color,
         activeBackground:getComputedStyle(nav).backgroundColor,
         iconStroke:getComputedStyle(icon).strokeWidth,
@@ -138,9 +138,10 @@ uvicorn.run('app.main:app',host='127.0.0.1',port=int(os.environ['QA_PORT']),log_
         clockLeft:clock.getBoundingClientRect().left,
         signoutLabel:getComputedStyle(document.querySelector('#logout-sidebar span')).display};
     });
-    assert.ok(compactChrome.accentLeft<=-6,'Accent must sit outside the selected card');
+    assert.equal(compactChrome.accentContent,'none','No vertical accent bar');
+    assert.ok(compactChrome.activeHalo.includes('radial-gradient'),'Selected icon has a localized red halo');
     assert.notEqual(compactChrome.glow,'none');
-    assert.equal(compactChrome.iconColor,'rgb(245, 251, 255)');
+    assert.equal(compactChrome.iconColor,'rgb(255, 137, 155)');
     assert.equal(compactChrome.activeBackground,'rgb(11, 29, 57)');
     assert.equal(compactChrome.iconStroke,'2px');
     assert.ok(Math.abs(compactChrome.timeLeft-compactChrome.dateLeft)<=1,'Time aligns with left edge of calendar row');
