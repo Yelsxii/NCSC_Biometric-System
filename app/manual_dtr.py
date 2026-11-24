@@ -5,15 +5,26 @@ import datetime as dt
 import hashlib
 import json
 import math
+import os
 import re
+import logging
+import sqlite3
+import sys
+import threading
 import unicodedata
 from contextlib import closing
+from pathlib import Path
 
 from app.db import connect
 
 MAX_MANUAL_BYTES = 10 * 1024 * 1024
 SLOT_KEYS = ('am_in', 'am_out', 'pm_in', 'pm_out')
 BASE = dt.date(1899, 12, 30)
+_STOP = threading.Event()
+_WORKER_LOCK = threading.Lock()
+_THREAD: threading.Thread | None = None
+_STATE = {'available': False, 'message': 'No local manual DTR source configured.',
+          'matched_tabs': 0, 'unmatched_tabs': 0, 'new_days': 0, 'last_checked': None}
 
 
 def text(value, limit=300):
@@ -173,6 +184,116 @@ def parse_package(raw: bytes):
 
 def mapping_hash(mapping):
     return hashlib.sha256(json.dumps(mapping,sort_keys=True,separators=(',',':')).encode()).hexdigest()
+
+
+def identity(value):
+    return ' '.join(re.sub(r'[.,]', '', unicodedata.normalize('NFKC', value)).casefold().split())
+
+
+def local_source_path():
+    raw = os.getenv('MANUAL_DTR_SOURCE_PATH', '').strip()
+    if not raw:
+        raise ValueError('No local manual DTR source configured.')
+    raw = re.sub(r'%([A-Za-z_][A-Za-z0-9_]*)%', lambda m: os.getenv(m[1], m[0]), raw)
+    path = Path(os.path.expandvars(raw)).expanduser()
+    if not path.is_absolute() or '%' in str(path) or '$' in str(path) or str(path).startswith(('\\\\','//')):
+        raise ValueError('Set an absolute local manual DTR path.')
+    resolved = path.resolve()
+    if any(part.lower() in ('onedrive','dropbox','google drive','icloud') for part in resolved.parts):
+        raise ValueError('Keep the manual DTR source outside cloud-synced folders.')
+    if not resolved.is_file():
+        raise ValueError('Manual DTR source file was not found.')
+    return resolved
+
+
+def automatic_mapping(packet):
+    """Only unique exact full names may connect source tabs to existing IDs."""
+    with closing(connect()) as con:
+        rows = con.execute('SELECT employee_code,display_name,name_source FROM employees').fetchall()
+    by_name = {}
+    for row in rows:
+        if row['name_source'] not in ('profile','manual','roster','device') or not row['display_name']:
+            continue
+        by_name.setdefault(identity(row['display_name']), set()).add(row['employee_code'])
+    source_names = {}
+    for group in packet['groups']:
+        source_names.setdefault(identity(group['name']),set()).add(group['name'])
+    mapping = {}
+    for group in packet['groups']:
+        name = identity(group['name'])
+        candidates = by_name.get(name,set())
+        if len(candidates)==1 and len(source_names[name])==1:
+            mapping[group['key']] = next(iter(candidates))
+    return mapping
+
+
+def automatic_status():
+    with _WORKER_LOCK:
+        return dict(_STATE)
+
+
+def sync_local_source():
+    """Reconcile a protected, locally refreshed snapshot. Never read Google credentials."""
+    global _STATE
+    try:
+        path = local_source_path()
+        if path.stat().st_size > MAX_MANUAL_BYTES:
+            raise ValueError('Manual DTR source exceeds 10 MB.')
+        raw = path.read_bytes()
+        packet = parse_package(raw)
+        mapping = automatic_mapping(packet)
+        actor = None
+        planned = preview_package(packet,mapping)['counts'] if mapping else {'new':0}
+        if planned['new']:
+            with closing(connect()) as con:
+                actor = con.execute("SELECT id FROM users WHERE role='admin' ORDER BY id LIMIT 1").fetchone()
+            if actor is None:
+                raise ValueError('An administrator account is required for source attribution.')
+            counts = import_package(packet,mapping,hashlib.sha256(raw).hexdigest(),actor['id'])
+        else:
+            counts = {'new':0}
+        state = {'available':True,'message':'Local manual DTR source checked.',
+                 'matched_tabs':len(mapping),'unmatched_tabs':len(packet['groups'])-len(mapping),
+                 'new_days':counts['new'],'last_checked':dt.datetime.now().isoformat(timespec='seconds')}
+    except (OSError,ValueError,UnicodeError,RecursionError,sqlite3.Error) as exc:
+        known = {'No local manual DTR source configured.','Set an absolute local manual DTR path.',
+                 'Keep the manual DTR source outside cloud-synced folders.',
+                 'Manual DTR source file was not found.','Manual DTR source exceeds 10 MB.',
+                 'An administrator account is required for source attribution.'}
+        state = {'available':False,'message':str(exc) if str(exc) in known else 'Could not read the local manual DTR source.',
+                 'matched_tabs':0,'unmatched_tabs':0,'new_days':0,'last_checked':dt.datetime.now().isoformat(timespec='seconds')}
+    with _WORKER_LOCK:
+        _STATE = state
+    return state
+
+
+def _poll_source():
+    while not _STOP.is_set():
+        try:
+            sync_local_source()
+        except Exception:
+            logging.getLogger(__name__).error('Manual DTR reconciliation failed; retrying next cycle.')
+        _STOP.wait(60)
+
+
+def start_local_source_sync():
+    global _THREAD
+    if not os.getenv('MANUAL_DTR_SOURCE_PATH') or 'pytest' in sys.modules or os.getenv('PYTEST_CURRENT_TEST') or os.getenv('QA_PORT'):
+        return
+    with _WORKER_LOCK:
+        if _THREAD is not None and _THREAD.is_alive():
+            return
+        _STOP.clear()
+        _THREAD = threading.Thread(target=_poll_source,name='manual-dtr-local-sync',daemon=True)
+        _THREAD.start()
+
+
+def stop_local_source_sync():
+    with _WORKER_LOCK:
+        _STOP.set()
+        worker = _THREAD
+    if worker is not None:
+        worker.join(timeout=5)
 
 
 def validate_mapping(mapping, packet, con):

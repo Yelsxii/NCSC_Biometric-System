@@ -122,3 +122,37 @@
 .app-dialog.manual-dtr-dialog .button.outline,.app-dialog.day-review-dialog .button.outline{background:#f1f5fc;color:#7288ad}
 .app-dialog.manual-dtr-dialog .button.outline:hover,.app-dialog.day-review-dialog .button.outline:hover{background:#e6edfc;color:#4167aa}
 .app-dialog.manual-dtr-dialog input::file-selector-button{border:0;border-radius:6px;background:#e9f0ff;color:#5578b5;padding:7px 10px;margin-right:10px;cursor:pointer}
+
+/* Attendance detail: source colors live in each time cell, with strong navigation. */
+.workspace .attendance-sheet .sheet-header{justify-content:space-between;gap:18px}
+.workspace .attendance-sheet .sheet-identity{flex:1}
+.workspace .attendance-sheet .sheet-personnel{display:flex;justify-content:flex-end;gap:28px;align-items:start;text-align:right;flex-wrap:wrap}
+.workspace .attendance-sheet .sheet-filters{padding:12px 0;gap:10px;align-items:center}
+.workspace .attendance-sheet .back-button{background:#243e75;color:#fff;flex:none;width:33px;height:33px;box-shadow:0 3px 9px #233d7426}
+.workspace .attendance-sheet .back-button:hover{background:#375fba;color:#fff;box-shadow:0 5px 13px #233d7433}
+.workspace .attendance-sheet .month-inline{flex-direction:row;gap:10px;align-items:center;font-size:11px;color:#4c638a}
+.workspace .attendance-sheet .month-inline input{background:#e9effd;color:#18386f;font-size:11px;font-weight:650;padding:6px 12px}
+.workspace .attendance-sheet .month-inline input:hover{background:#dbe6fc}
+.workspace .attendance-sheet .attendance-month-status{color:#52688a;font-size:10px}
+.workspace .attendance-sheet .dtr-grid th{background:#eaf0fa;color:#36517a}
+.workspace .attendance-sheet .dtr-grid thead tr:last-child th{background:#f3f6fd;color:#586e91}
+.workspace .attendance-sheet .dtr-grid .time-slot{box-shadow:inset 0 0 0 2px #fff}
+.workspace .attendance-sheet .dtr-grid .time-slot.slot-provisional{background:#e9f6f0!important}
+.workspace .attendance-sheet .dtr-grid .time-slot.slot-sheet{background:#eeeafd!important}
+.workspace .attendance-sheet .dtr-grid .time-slot.slot-entry{background:#e8effd!important}
+.workspace .attendance-sheet .dtr-grid .time-slot.slot-missing{background:#fcecf1!important}
+.workspace .attendance-sheet .dtr-grid .time-slot.slot-neutral{background:#f1f4f9!important}
+.workspace .attendance-sheet .time-value{color:#223a66;font-weight:700}
+.workspace .attendance-sheet .origin-label{font-size:8px;font-weight:650}
+.workspace .attendance-sheet .edit-day{background:#e8effd;color:#1d4388;font-weight:650}
+.workspace .attendance-sheet .edit-day:hover{background:#284f9e;color:#fff;box-shadow:0 4px 10px #253f782d}
+.app-dialog.day-review-dialog .button.primary{background:#244b9a;color:#fff}
+.app-dialog.day-review-dialog .button.primary:hover{background:#193a7e}
+@media(max-width:740px){
+  .workspace .attendance-sheet .sheet-header{align-items:flex-start}
+  .workspace .attendance-sheet .sheet-personnel{gap:5px 14px;max-width:52%}
+  .workspace .attendance-sheet .sheet-personnel .sheet-meta{font-size:10px}
+  .workspace .attendance-sheet .sheet-filters{display:flex;gap:10px}
+  .workspace .attendance-sheet .month-inline{min-width:0;width:auto;flex:1}
+  .workspace .attendance-sheet .month-inline input{width:auto;min-width:140px}
+}

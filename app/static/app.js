@@ -25,7 +25,6 @@ let profileFormToken = 0;
 let profileEditing = null;
 let profileVersion = null;
 let profileReturn = null;
-let manualDtrPreview = null;
 let detailRequest = 0;
 let dayReviewContext = null;
 let attendanceRefreshTimer = null;
@@ -92,7 +91,6 @@ function showApp(){
   $('open-user-import').disabled=!canWrite;
   $('open-profile').disabled=!canWrite;
   $('register-from-attendance').disabled=!canWrite;
-  $('open-manual-dtr').disabled=!canWrite;
   $('register-month').value=currentMonth();
   $('detail-month').value=currentMonth();
   $('activity-month').value=currentMonth();
@@ -367,8 +365,14 @@ async function loadDetail({quiet=false}={}){
     const monthStatus=$('attendance-month-status');
     const scanCount=data.summary?.scans??data.days.reduce((sum,day)=>sum+(day.scans?.length||0),0);
     const sheetDays=data.days.filter(day=>day.manual_source).length;
-    if(monthStatus)monthStatus.textContent=scanCount||sheetDays?
-      scanCount+' biometric entries · '+sheetDays+' manual DTR days':'No entries for this month';
+    if(monthStatus){
+      const source=data.manual_source_status;
+      const recordText=scanCount+' biometric entries · '+sheetDays+' sheet days';
+      const sourceText=source?.available?(source.matched_tabs+' matched sheet tabs'+
+        (source.unmatched_tabs?' · '+source.unmatched_tabs+' awaiting a matching employee name':'')):
+        (source?.message||'Manual DTR source not configured on this host.');
+      monthStatus.textContent=recordText+' · '+sourceText;
+    }
     const scroll=$('daily-table-wrap').scrollTop;
     $('daily-rows').innerHTML=data.days.map(day=>{
       const metrics=day.monitoring||{total_seconds:day.daily_total_seconds,undertime_seconds:day.review.undertime_minutes===null?null:day.review.undertime_minutes*60,overtime_seconds:null,remarks:'For review'};
@@ -441,56 +445,6 @@ async function saveDayReview(event){
     if(selectedEmployee===context.code && $('detail-month').value===context.month)await loadDetail({quiet:true});
   }catch(error){if(context.account===session){$('day-review-error').textContent=error.message;$('day-review-error').classList.remove('hidden');}}
   finally{$('save-day-review').disabled=false;}
-}
-function manualMapping(){
-  const mapping=Object.create(null);
-  document.querySelectorAll('[data-manual-key]').forEach(node=>{if(node.value)mapping[node.dataset.manualKey]=node.value;});
-  return mapping;
-}
-function openManualDtr(){
-  if(session?.role!=='admin')return;
-  manualDtrPreview=null;$('manual-dtr-form').reset();$('manual-dtr-matches').innerHTML='';
-  $('manual-dtr-result').textContent='';$('manual-dtr-error').classList.add('hidden');$('import-manual-dtr').disabled=true;
-  $('manual-dtr-dialog').showModal();
-}
-async function previewManualDtr(discover=false){
-  const file=$('manual-dtr-file').files[0],account=session;
-  if(!file||session?.role!=='admin')return;
-  const body=new FormData();body.append('file',file);body.append('mapping',JSON.stringify(discover?{}:manualMapping()));
-  manualDtrPreview=null;$('import-manual-dtr').disabled=true;$('preview-manual-dtr').disabled=true;
-  $('manual-dtr-error').classList.add('hidden');$('manual-dtr-result').textContent='Reading manual DTR…';
-  try{
-    const data=await api('/api/manual-dtr/preview',{method:'POST',body});
-    if(session!==account||$('manual-dtr-file').files[0]!==file)return;
-    if(discover){
-      const normalize=value=>String(value||'').normalize('NFKC').replace(/[.,]/g,'').replace(/\s+/g,' ').trim().toLowerCase();
-      $('manual-dtr-matches').innerHTML=data.groups.filter(group=>group.records).map(group=>{
-        const exact=data.employees.filter(employee=>employee.display_name&&normalize(employee.display_name)===normalize(group.name));
-        return '<label class="manual-match-row"><span><strong>'+esc(group.name)+'</strong><small>'+esc(group.sheet)+' · '+group.records+' days · '+esc(group.from)+' to '+esc(group.to)+(group.warnings?' · '+group.warnings+' need review':'')+'</small></span><select data-manual-key="'+esc(group.key)+'" aria-label="Match '+esc(group.name)+'"><option value="">Skip this sheet</option>'+data.employees.map(employee=>'<option value="'+esc(employee.employee_code)+'" '+(exact.length===1&&exact[0].employee_code===employee.employee_code?'selected':'')+'>'+esc(employee.display_name||'Name not registered')+' · ID '+esc(employee.employee_code)+'</option>').join('')+'</select></label>';
-      }).join('');
-      $('manual-dtr-result').textContent='Verify employee matches, then preview the fill.';
-    }else{
-      manualDtrPreview=data.preview_token;
-      const n=data.counts;
-      $('manual-dtr-result').textContent=n.new+' new days · '+n.already_present+' already present · '+n.conflict+' conflicts skipped · '+n.unmapped+' unmapped · '+n.invalid+' invalid rows skipped';
-      $('import-manual-dtr').disabled=n.new===0;
-    }
-  }catch(error){if(session===account){$('manual-dtr-error').textContent=error.message;$('manual-dtr-error').classList.remove('hidden');$('manual-dtr-result').textContent='';}}
-  finally{$('preview-manual-dtr').disabled=false;}
-}
-async function importManualDtr(event){
-  event.preventDefault();
-  const file=$('manual-dtr-file').files[0],account=session;
-  if(!file||!manualDtrPreview||session?.role!=='admin')return;
-  const body=new FormData();body.append('file',file);body.append('mapping',JSON.stringify(manualMapping()));body.append('preview_token',manualDtrPreview);
-  $('import-manual-dtr').disabled=true;$('preview-manual-dtr').disabled=true;$('manual-dtr-file').disabled=true;
-  try{
-    const data=await api('/api/manual-dtr/import',{method:'POST',body});
-    if(session!==account)return;
-    manualDtrPreview=null;$('manual-dtr-dialog').close();toast(data.counts.new+' manual DTR days added.');
-    if(currentPage==='employees'){if(selectedEmployee)await loadDetail({quiet:true});else await loadRegister({quiet:true});}
-  }catch(error){if(session===account){$('manual-dtr-error').textContent=error.message;$('manual-dtr-error').classList.remove('hidden');}}
-  finally{$('preview-manual-dtr').disabled=false;$('manual-dtr-file').disabled=false;}
 }
 function calendarDateChanged(){
   const day=activeDtr?.days.find(x=>x.date===$('calendar-date').value);
@@ -832,12 +786,6 @@ async function initialize(){
     $('attendance-register-panel').classList.remove('hidden');
   });
   $('detail-month').addEventListener('change',()=>{$('register-month').value=$('detail-month').value;loadDetail();});
-  $('open-manual-dtr').addEventListener('click',openManualDtr);
-  $('close-manual-dtr').addEventListener('click',()=>$('manual-dtr-dialog').close());
-  $('manual-dtr-file').addEventListener('change',()=>{manualDtrPreview=null;$('manual-dtr-matches').innerHTML='';previewManualDtr(true);});
-  $('manual-dtr-matches').addEventListener('change',()=>{manualDtrPreview=null;$('import-manual-dtr').disabled=true;$('manual-dtr-result').textContent='Preview the updated employee matches.';});
-  $('preview-manual-dtr').addEventListener('click',()=>previewManualDtr());
-  $('manual-dtr-form').addEventListener('submit',importManualDtr);
   $('daily-rows').addEventListener('click',event=>{
     const button=event.target.closest('[data-edit-day]');if(button)openDayReview(button.dataset.editDay);
   });

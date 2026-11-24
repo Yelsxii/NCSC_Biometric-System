@@ -6,7 +6,7 @@ from contextlib import closing
 import pytest
 
 from app.db import connect, initialize
-from app.manual_dtr import parse_package, clock_value
+from app.manual_dtr import parse_package, clock_value, sync_local_source, automatic_mapping
 
 
 def row(date='2026-11-06', times=None, total=8/24, ut=0, ot=0, number=7):
@@ -50,6 +50,64 @@ def import_one(client, headers, data):
 
 def monitor(client, index=5):
     return client.get('/api/dtr/monitor?employee_code=001&month=2026-11').json()['days'][index]
+
+
+def test_local_source_reconciles_exact_names_without_a_button(admin, tmp_path, monkeypatch):
+    client, _ = admin
+    seed_employee(name='Example Employee')
+    with closing(connect()) as con, con:
+        con.execute("UPDATE employees SET name_source='device' WHERE employee_code='001'")
+        con.execute("INSERT INTO employees(employee_code,display_name,name_source) VALUES('002','Different Employee','device')")
+    source=tmp_path/'protected-manual.json'
+    source.write_bytes(file_bytes(packet()))
+    monkeypatch.setenv('MANUAL_DTR_SOURCE_PATH',str(source))
+    first=sync_local_source()
+    assert first['available'] and first['matched_tabs']==1 and first['new_days']==1
+    assert monitor(client)['display_slots']['am_in']['origin']=='manual_sheet'
+    assert sync_local_source()['new_days']==0
+    assert client.get('/api/manual-dtr/status').json()['matched_tabs']==1
+    with closing(connect()) as con:
+        assert con.execute("SELECT COUNT(*) FROM manual_dtr_entries").fetchone()[0]==1
+        assert con.execute("SELECT COUNT(*) FROM audit_events WHERE entity='manual_dtr'").fetchone()[0]==1
+
+
+def test_local_source_skips_unknown_or_ambiguous_identity(admin,tmp_path,monkeypatch):
+    client,_=admin
+    seed_employee(name='Unrelated Person')
+    with closing(connect()) as con,con:
+        con.execute("UPDATE employees SET name_source='device' WHERE employee_code='001'")
+    source=tmp_path/'manual.json'
+    source.write_bytes(file_bytes(packet()))
+    monkeypatch.setenv('MANUAL_DTR_SOURCE_PATH',str(source))
+    result=sync_local_source()
+    assert result['available'] and result['matched_tabs']==0 and result['unmatched_tabs']==1
+    assert monitor(client)['display_slots']['am_in'] is None
+    with closing(connect()) as con,con:
+        con.execute("UPDATE employees SET display_name='Example Employee' WHERE employee_code='001'")
+        con.execute("INSERT INTO employees(employee_code,display_name,name_source) VALUES('002','Example Employee','device')")
+    assert automatic_mapping(parse_package(source.read_bytes()))=={}
+    assert sync_local_source()['matched_tabs']==0
+
+
+def test_local_source_rejects_cloud_folder_and_does_not_modify_existing_days(admin,tmp_path,monkeypatch):
+    client,headers=admin
+    seed_employee(name='Example Employee')
+    with closing(connect()) as con,con:
+        con.execute("UPDATE employees SET name_source='device' WHERE employee_code='001'")
+    first=packet()
+    import_one(client,headers,first)
+    changed=packet([row(times=['09:00','12:00','13:00','17:00'])])
+    source=tmp_path/'manual.json'
+    source.write_bytes(file_bytes(changed))
+    monkeypatch.setenv('MANUAL_DTR_SOURCE_PATH',str(source))
+    assert sync_local_source()['new_days']==0
+    assert monitor(client)['display_slots']['am_in']['happened_at'].endswith('08:00:00')
+    cloud=tmp_path/'OneDrive'
+    cloud.mkdir()
+    other=cloud/'manual.json'
+    other.write_bytes(file_bytes(changed))
+    monkeypatch.setenv('MANUAL_DTR_SOURCE_PATH',str(other))
+    assert sync_local_source()['available'] is False
 
 
 def test_biometric_boundaries_take_priority_and_sheet_fills_middle(admin):

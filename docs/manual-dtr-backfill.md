@@ -4,7 +4,7 @@ This update continues from the latest `feat/ncsc-dtr-workflow`, including its ac
 
 ## What the attendance table shows
 
-One compact month table shows Date, AM In/Out, PM In/Out, Total hours, Undertime Hours/Minutes, Overtime earned, AJA/Travel Order times, Remarks and Edit. Employee name stays in the first header row; category, department and month are below it. The manual Calendar button and repeated explanatory banners are removed. Legends use small glowing circles and actions use borderless hover states.
+One compact month table shows Date, AM In/Out, PM In/Out, Total hours, Undertime Hours/Minutes, Overtime earned, AJA/Travel Order times, Remarks and Edit. The employee name is top left; category and department are top right. The back button sits next to the month control. Time cells carry distinct source and missing colors, while holidays, AJA and travel retain their row cues. The manual Calendar and manual DTR upload buttons are removed. Legends use small glowing circles and actions use dark blue borderless hover states.
 
 Every displayed time has a source label: **Bio**, **Sheet** or **HR**. Original seconds and work codes are retained in source data and tooltips; cells display hours/minutes. Biometric entries do not become reviewed HR selections merely by being displayed.
 
@@ -29,15 +29,42 @@ A biometric/source conflict, unplaced extra ordinary punch, incomplete pair or f
 
 The sheet's existing 07:00 AM formula versus the reported 08:00 office start is not silently resolved here. No new office-hours, rounding, AJA deduction, travel-credit or overtime-approval rule is enabled. The interface distinguishes **Complete**, **Undertime**, **Overtime**, **Incomplete entries**, **Needs hour review** and **Source difference** based on available evidence.
 
-## Administrator import
+## Automatic local source reconciliation
+
+The website checks a protected local DTR source package at startup and every **60 seconds**, independently of K14 polling. View attendance refreshes automatically. The administrator no longer uploads the same package for each employee or month.
+
+Place the prepared `NCSC_manual_DTR_all_available.json` snapshot outside Git in an approved local, access-controlled directory such as `%LOCALAPPDATA%\NCSC-K14-Pilot\manual-dtr.json`. Set `MANUAL_DTR_SOURCE_PATH=%LOCALAPPDATA%\NCSC-K14-Pilot\manual-dtr.json` in the private `.env` file and restart the website process. Changing this file later is reconciled on the next cycle without a second web import action. Keep the package out of cloud-synced folders. Its source tab dates include all available months through the date of the prepared snapshot.
+
+The local app cannot reach the user's signed-in Google Sheets account just because this development environment can. Updating the original Sheet requires refreshing this protected snapshot through an office-approved data process; live Google authentication is **not configured**. The K14 polling loop only brings new biometric punches to the website, not manual Sheet rows. The UI reports source availability and matched/unmatched tab counts separately.
+
+Exact normalized full employee names must uniquely match an existing website employee with an approved profile, roster name, or device name. Multiple archival tabs with that same name may match one employee; two employees with the same name or different names for the same source person do not match automatically. No employee ID is inferred from a sheet tab. Register or correct a verified employee name in the website registry for unmatched tabs, then the next 60-second pass retries. A sheet row for an already recorded employee/day is never overwritten. Existing manual import APIs remain available for controlled recovery, but the attendance page does not expose a manual fill button.
+
+The website saves a successful local import with the existing audit trail. If nothing new is available, no repeat audit/import batch is written. The manual source path and parse errors are sanitized in the status response. The first deployment of the additive schema still creates a consistent backup before migration.
+
+### Cursor setup on the approved Windows host
+
+After pulling the commit and **stopping the old Uvicorn process**, copy the downloaded private snapshot once. These commands do not replace an existing source file:
+
+```powershell
+$source = Get-ChildItem -LiteralPath "$env:USERPROFILE\Downloads" -Filter 'NCSC_manual_DTR_all_available*.json' | Sort-Object LastWriteTime -Descending | Select-Object -First 1
+if (-not $source) { throw 'Download the prepared private DTR package to Downloads first.' }
+$folder = Join-Path $env:LOCALAPPDATA 'NCSC-K14-Pilot'
+New-Item -ItemType Directory -Path $folder -Force | Out-Null
+$target = Join-Path $folder 'manual-dtr.json'
+if (Test-Path -LiteralPath $target) { throw 'A local DTR source already exists. Review it before replacing anything.' }
+Copy-Item -LiteralPath $source.FullName -Destination $target
+if (-not (Select-String -LiteralPath .env -Pattern '^\s*MANUAL_DTR_SOURCE_PATH\s*=' -Quiet)) {
+    Add-Content -LiteralPath .env -Value 'MANUAL_DTR_SOURCE_PATH=%LOCALAPPDATA%\NCSC-K14-Pilot\manual-dtr.json'
+}
+```
+
+Check `.env` first if that setting was already added. Then start the website with one worker, sign in, and open **Employee Attendance → View attendance**. The month status shows matched source tabs or a sanitized configuration error. It can take up to 60 seconds after registering a matching employee name to fill those source days. The page refreshes while open.
+
+## Legacy administrator import API (recovery only)
 
 The prepared private package contains only relevant DTR columns and source identities; it excludes account numbers, credentials and biometric templates. Keep attendance packages outside the repository and Git.
 
-1. In **Employee Attendance → View attendance**, open **Fill from manual DTR**.
-2. Choose the prepared `.json` package.
-3. Match each relevant source sheet to its existing website employee. The exact source tab name is shown. Archived tabs for the same exact normalized employee name can be mapped together; differing source values on the same date are all flagged, rather than choosing the first tab. Unmatched sheets remain skipped. An exact full-name match may be suggested; no fuzzy matching or new employee ID creation occurs.
-4. Click **Preview matches**. Review new days, duplicates, conflicts and invalid rows.
-5. Click **Fill missing times**. The table refreshes without a browser reload.
+The authenticated `/api/manual-dtr/preview` and `/api/manual-dtr/import` endpoints remain for controlled troubleshooting when exact names cannot match. The visible daily page uses automatic local reconciliation instead. Archived tabs for the same exact normalized employee name can be mapped together; differing source values on the same date are all flagged, rather than choosing the first tab.
 
 The preview token is signed, expires after 15 minutes and is bound to the file, mapping and administrator. Altering the file/mapping requires a new preview. Reviewers cannot upload or import. A repeat import adds zero duplicates. A different manual source for an already stored employee/date is reported as a conflict and does not replace the old source. A source row already assigned to another employee cannot be silently reassigned.
 

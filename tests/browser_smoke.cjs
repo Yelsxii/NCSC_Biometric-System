@@ -327,15 +327,21 @@ with connect() as con:
         {row:8,values:['2026-11-09','Monday','08:00','12:00','13:00','18:00',null,null,9/24,0,1/24,'Complete']},
         {row:9,values:['2026-11-10','Tuesday','08:30','12:00','13:00','17:00',null,null,7.5/24,.5/24,0,'Undertime']}
       ]}]};
-    await page.locator('#open-manual-dtr').click();
-    await page.locator('#manual-dtr-file').setInputFiles({name:'fictional-manual.json',mimeType:'application/json',buffer:Buffer.from(JSON.stringify(manualPackage))});
-    await page.locator('[data-manual-key="sample-one"]').waitFor();
-    await page.locator('[data-manual-key="sample-one"]').selectOption('1');
-    await page.locator('#preview-manual-dtr:enabled').click();
-    await page.locator('#manual-dtr-result').filter({hasText:'3 new days'}).waitFor();
+    assert.equal(await page.locator('#open-manual-dtr').count(),0);
+    const importResult=await page.evaluate(async packet=>{
+      const form=new FormData();form.append('file',new File([JSON.stringify(packet)],'fictional-manual.json',{type:'application/json'}));
+      form.append('mapping',JSON.stringify({'sample-one':'1'}));
+      const headers={'X-CSRF-Token':session.csrf};
+      const preview=await fetch('/api/manual-dtr/preview',{method:'POST',headers,body:form});
+      if(!preview.ok)return {status:preview.status};
+      form.append('preview_token',(await preview.json()).preview_token);
+      const imported=await fetch('/api/manual-dtr/import',{method:'POST',headers,body:form});
+      return {status:imported.status};
+    },manualPackage);
+    assert.equal(importResult.status,200);
+    // The attendance screen reflects source reconciliation on its normal live refresh.
+    await page.locator('[data-date="2026-11-06"] .origin-manual_sheet').first().waitFor({timeout:15000});
     await page.screenshot({path:join(root,'docs/manual-dtr-preview.png'),animations:'disabled'});
-    await page.locator('#import-manual-dtr:enabled').click();
-    await page.locator('#manual-dtr-dialog').waitFor({state:'hidden'});
     const filled=page.locator('[data-date="2026-11-06"]');
     await filled.locator('.origin-manual_sheet').first().waitFor();
     assert.equal(await filled.locator('.origin-biometric').count(),2);

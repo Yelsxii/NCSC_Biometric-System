@@ -35,7 +35,8 @@ from app.lan import status as lan_status, tcp_probe
 from app.profiles import RegistrationInput, ProfileUpdateInput, get_profile, list_profiles, save_profile
 from app.attendance import DayReviewInput, CalendarInput, decorate_days, save_day_review, save_calendar
 from app.activity_mapping import activity_pairs
-from app.manual_dtr import MAX_MANUAL_BYTES, parse_package, preview_package, import_package, mapping_hash
+from app.manual_dtr import (MAX_MANUAL_BYTES, parse_package, preview_package, import_package,
+                            mapping_hash, automatic_status, start_local_source_sync, stop_local_source_sync)
 
 load_dotenv()
 secret = os.environ.get("SECRET_KEY", "")
@@ -57,11 +58,13 @@ CODE_RE = re.compile(r"^[A-Za-z0-9._-]{1,64}$")
 def on_startup() -> None:
     initialize()
     start_background_sync()
+    start_local_source_sync()
 
 
 @app.on_event("shutdown")
 def on_shutdown() -> None:
     stop_background_sync()
+    stop_local_source_sync()
 
 
 @app.middleware("http")
@@ -624,7 +627,7 @@ def monitor_dtr(employee_code: str, month: str, user: dict = Depends(current_use
             "position": employee["position"] if employee else "", "month": month, "days": rows,
             "summary": {"scans": len(scans), "days_with_scans": sum(bool(r["scans"]) for r in rows),
                         "activity_records": len(activities)},
-            "calculation_status": "not_calculated"}
+            "calculation_status": "not_calculated", "manual_source_status": automatic_status()}
 
 
 @app.put("/api/attendance/{employee_code}/{date}")
@@ -644,6 +647,10 @@ def update_attendance_calendar(date: str, payload: CalendarInput, request: Reque
 
 
 # ── Streamlined employee records ─────────────────────────────────────────────
+
+@app.get('/api/manual-dtr/status')
+def manual_dtr_status(user: dict = Depends(current_user)):
+    return automatic_status()
 
 async def manual_dtr_request(file: UploadFile, mapping: str):
     raw = await file.read(MAX_MANUAL_BYTES + 1)
