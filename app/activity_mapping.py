@@ -115,7 +115,7 @@ def dtr_aja_periods(day: dict) -> list[dict]:
     """Departure/return evidence for the DTR, separate from regular slots."""
     periods = []
     pending = None
-    events = sorted((x for x in day["scans"] if x.get("activity_type") == "AJA"),
+    events = sorted((x for x in day["scans"] if x.get("activity_type") == "AJA" and not x.get("work_code_conflict")),
                     key=lambda x: (x["happened_at"], x["id"]))
     def entry(event):
         return {"time": event["happened_at"][11:19], "origin": "biometric"}

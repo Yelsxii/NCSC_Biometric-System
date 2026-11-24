@@ -459,3 +459,41 @@ def test_all_four_confirmed_office_states_and_unknown_state(admin, monkeypatch, 
     assert not any(unknown["display_slots"].values())
     assert unknown["display_unassigned_count"] == 1
     assert unknown["display_remark"] == "Review"
+
+
+def test_bionet_code_overlay_uses_exact_match_and_preserves_raw_punches(admin, monkeypatch, tmp_path):
+    client, headers = admin
+    path = tmp_path / "attendance.sqlite3"
+    punches = [("08:00:00","0",3),("09:00:00","1",1),("10:00:00","0",2),
+               ("12:00:00","1",3),("13:00:00","5",3),("17:00:00","4",3)]
+    _connector(path, [(HOST,"7","2026-11-24 "+clock,"1",state,"2026-11-25 00:00:00")
+                      for clock,state,_ in punches])
+    _enable(monkeypatch,path)
+    assert client.post("/api/device/sync",headers=headers).status_code==200
+    vendor=tmp_path/"TimeNet.db"
+    with closing(sqlite3.connect(vendor)) as source,source:
+        source.executescript("CREATE TABLE hr_employee(id INTEGER,emp_pin TEXT);"
+                             "CREATE TABLE att_punches(employee_id INTEGER,punch_time TEXT,workcode INTEGER);"
+                             "CREATE TABLE att_workcode(wc_code INTEGER,wc_name TEXT);"
+                             "INSERT INTO hr_employee VALUES(100,'7'),(101,'19');"
+                             "INSERT INTO att_workcode VALUES(1,'AJA OUT'),(2,'AJA IN'),(3,'REGULAR');")
+        source.executemany("INSERT INTO att_punches VALUES(100,?,?)",
+                           [("2026-11-24 "+clock,code) for clock,_,code in punches])
+        source.execute("INSERT INTO att_punches VALUES(101,'2026-11-24 08:00:00',1)")
+    before=vendor.read_bytes()
+    monkeypatch.setenv("BIONET_ROSTER_DB",str(vendor))
+    def day():
+        return client.get("/api/dtr/monitor?employee_code=7&month=2026-11").json()["days"][23]
+    d=day()
+    assert d["display_slots"]["am_in"]["work_code"]=="3"
+    assert d["display_slots"]["am_out"]["happened_at"].endswith("12:00:00")
+    assert d["aja_periods"]==[{"out":{"time":"09:00:00","origin":"biometric"},"in":{"time":"10:00:00","origin":"biometric"},"review":False}]
+    items=client.get("/api/activities/monitor?month=2026-11&category=AJA").json()["items"]
+    assert [(x["work_code"],x["direction"]) for x in items]==[("2","IN"),("1","OUT")]
+    assert vendor.read_bytes()==before
+    with closing(connect()) as con:
+        assert con.execute("SELECT COUNT(*) FROM punches WHERE work_code=''").fetchone()[0]==6
+    # A conflicting vendor code is never guessed or turned into a regular punch.
+    with closing(sqlite3.connect(vendor)) as source,source:
+        source.execute("INSERT INTO att_punches VALUES(100,'2026-11-24 09:00:00',3)")
+    assert day()["display_remark"]=="Review"

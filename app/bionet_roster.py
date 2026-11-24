@@ -137,3 +137,76 @@ def workcode_diagnostics():
                 code = str(row['workcode']) if row['workcode'] is not None else '(empty)'
                 counts[code] = counts.get(code, 0) + row['n']
         return {'workcode_definitions':definitions,'approved_punch_counts_by_workcode':counts}
+
+
+# Office configuration verified in the device and ZKBio definitions on 2026-11-24.
+OFFICE_CODE_ROLES = {
+    "0": ("Default regular", "Regular", "Unspecified"),
+    "1": ("AJA OUT", "AJA", "OUT"),
+    "2": ("AJA IN", "AJA", "IN"),
+    "3": ("REGULAR", "Regular", "Unspecified"),
+}
+
+
+def reconcile_workcodes(con, scans):
+    """Read only, exact employee/timestamp match to already-linked K14 punches.
+
+    No source writes, imports, duplicate creation, or guessed codes. A missing
+    vendor row does not mean work code zero. Conflicting evidence is held.
+    """
+    if not configured():
+        return
+    allowed = authorized_ids(con)
+    targets = {}
+    for scan in scans:
+        if scan.get("k14_state_pending") and scan["employee_code"] in allowed:
+            targets.setdefault((scan["employee_code"], scan["happened_at"]), []).append(scan)
+    if not targets:
+        return
+    for group in targets.values():
+        for scan in group:
+            if not scan.get("work_code"):
+                scan["work_code_pending"] = True
+    ids = sorted({key[0] for key in targets})
+    stamps = sorted({key[1] for key in targets})
+    rows = {}
+    try:
+        with closing(open_source(os.environ["BIONET_ROSTER_DB"])) as source:
+            definitions = {}
+            for row in source.execute("SELECT wc_code,wc_name FROM att_workcode"):
+                definitions.setdefault(str(row["wc_code"]), set()).add(
+                    re.sub(r"[^A-Z0-9]", "", str(row["wc_name"]).upper()))
+            valid = {"0"}
+            for code in ("1","2","3"):
+                if definitions.get(code) == {re.sub(r"[^A-Z0-9]", "", OFFICE_CODE_ROLES[code][0].upper())}:
+                    valid.add(code)
+            sql = ("SELECT e.emp_pin,p.punch_time,p.workcode FROM att_punches p "
+                   "JOIN hr_employee e ON e.id=p.employee_id "
+                   "WHERE CAST(e.emp_pin AS TEXT) IN (" + ",".join("?" for _ in ids) + ") "
+                   "AND p.punch_time>=? AND p.punch_time<=? LIMIT 100001")
+            records = source.execute(sql, (*ids, stamps[0], stamps[-1])).fetchall()
+            if len(records)>100000:
+                return
+            for row in records:
+                key = (str(row["emp_pin"]), row["punch_time"])
+                if key in targets:
+                    rows.setdefault(key, set()).add(str(row["workcode"]))
+    except (sqlite3.Error, OSError, ValueError):
+        # Keep the website available during a vendor lock or unavailable source.
+        return
+    for key, group in targets.items():
+        codes = rows.get(key, set())
+        if not codes:
+            continue
+        for scan in group:
+            if len(group)!=1 or len(codes)!=1 or not codes.issubset(valid):
+                scan["work_code_conflict"] = True
+                continue
+            code = next(iter(codes))
+            if scan.get("work_code") not in (None, "", code):
+                scan["work_code_conflict"] = True
+                continue
+            label, activity, direction = OFFICE_CODE_ROLES[code]
+            scan.update(work_code=code, work_label=label, activity_type=activity,
+                        work_direction=direction, work_code_origin="bionet",
+                        work_code_pending=False)

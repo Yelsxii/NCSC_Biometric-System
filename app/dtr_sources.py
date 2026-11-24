@@ -11,7 +11,7 @@ OFFICIAL = ('AJA','Travel Order','Fieldwork','Official Business')
 def resolve_day(day, manual):
     source = manual['data'] if manual else None
     sheet_times = source['times'] if source else {}
-    ordinary = sorted((x for x in day['scans'] if x.get('activity_type') not in OFFICIAL),key=lambda x:(x['happened_at'],x['id']))
+    ordinary = sorted((x for x in day['scans'] if x.get('activity_type') not in OFFICIAL and not x.get('work_code_conflict')),key=lambda x:(x['happened_at'],x['id']))
     observed = {}
     # Explicit reviewed selections are reserved for their assigned slots.
     reserved = {x['id'] for x in day['slots'].values() if x}
@@ -49,6 +49,9 @@ def resolve_day(day, manual):
     display, conflicts = {}, []
     for key in KEYS:
         reviewed = day['slots'][key]
+        if reviewed and (reviewed.get('activity_type') in OFFICIAL or reviewed.get('work_code_conflict')):
+            conflicts.append('reviewed_activity_slot')
+            reviewed = None
         event = reviewed or observed.get(key)
         approved = day['review'].get('approved_times',{}).get(key)
         if approved:
@@ -73,11 +76,14 @@ def resolve_day(day, manual):
         holiday = next((note for note in source['notes'] if 'HOLIDAY' in note.upper()), '')
         if holiday:
             day['calendar']['holiday_name'] = holiday
+    code_pending = any(x.get('work_code_pending') or x.get('work_code_conflict') for x in day['scans'])
+    if code_pending:
+        conflicts.append('work_code_pending')
     chosen = [x['happened_at'] for x in display.values() if x]
     now = dt.datetime.now(dt.timezone(dt.timedelta(hours=8))).strftime('%Y-%m-%d %H:%M:%S')
     future_entry = any(value > now for value in chosen)
     chronological = chosen == sorted(chosen)
-    complete = all(display.values()) and chronological and not future_entry
+    complete = all(display.values()) and chronological and not future_entry and not code_pending
     if not chronological:
         conflicts.append('order')
     elapsed = None

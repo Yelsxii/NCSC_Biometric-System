@@ -36,6 +36,7 @@ from app.profiles import RegistrationInput, ProfileUpdateInput, get_profile, lis
 from app.attendance import DayReviewInput, CalendarInput, decorate_days, save_day_review, save_calendar
 from app.activity_mapping import activity_pairs, dtr_aja_periods
 from app.dtr_sources import present_day
+from app.bionet_roster import reconcile_workcodes
 from app.manual_dtr import (MAX_MANUAL_BYTES, parse_package, preview_package, import_package,
                             mapping_hash, automatic_status, start_local_source_sync, stop_local_source_sync)
 
@@ -588,7 +589,7 @@ def monitor_dtr(employee_code: str, month: str, user: dict = Depends(current_use
     end = start + dt.timedelta(days=day_count)
     with closing(connect()) as con:
         scans = [dict(x) for x in con.execute(
-            "SELECT p.id,p.happened_at,p.device_id,p.status_code,p.verification_code,p.work_code,w.label AS work_label,w.activity_type,w.direction AS work_direction "
+            "SELECT p.id,p.employee_code,p.happened_at,p.device_id,p.status_code,p.verification_code,p.work_code,w.label AS work_label,w.activity_type,w.direction AS work_direction "
             "FROM punches p LEFT JOIN work_codes w ON w.device_id=p.device_id AND w.work_code=p.work_code "
             "WHERE p.employee_code=? AND p.happened_at>=? AND p.happened_at<? ORDER BY p.happened_at,p.id LIMIT 10001",
             (employee_code,start.isoformat(),end.isoformat()),
@@ -610,6 +611,7 @@ def monitor_dtr(employee_code: str, month: str, user: dict = Depends(current_use
                 scan["k14_state_pending"] = True
                 scan["k14_punch_type"] = link["state_min"] if link["state_min"]==link["state_max"] else None
                 scan["verified_slot"] = {"0":"am_in", "1":"am_out", "4":"pm_out", "5":"pm_in"}.get(scan["k14_punch_type"])
+        reconcile_workcodes(con, scans)
         employee = con.execute(
             "SELECT e.display_name,e.name_source,e.department,ep.employment_type,ep.position FROM employees e "
             "LEFT JOIN employee_profiles ep ON ep.employee_code=e.employee_code WHERE e.employee_code=?",
@@ -842,6 +844,32 @@ def monitor_official_activities(
                ORDER BY p.happened_at DESC,p.id DESC LIMIT 500""",
             (start.isoformat(), end.isoformat(), category, category, search, search, search),
         ).fetchall()]
+        # Enrich existing linked K14 punches without inserting more attendance rows.
+        candidates = [dict(r) for r in con.execute(
+            """SELECT p.id,p.employee_code,COALESCE(e.display_name,'') AS display_name,
+                      p.happened_at,p.device_id,p.work_code,w.label AS work_label,
+                      w.activity_type,w.direction AS work_direction,1 AS k14_state_pending
+               FROM punches p LEFT JOIN employees e ON e.employee_code=p.employee_code
+               LEFT JOIN work_codes w ON w.device_id=p.device_id AND w.work_code=p.work_code
+               WHERE p.happened_at>=? AND p.happened_at<? AND p.happened_at>='2026-11-24'
+                 AND EXISTS(SELECT 1 FROM k14_sync_events k WHERE k.punch_id=p.id
+                     AND k.device_ip='192.168.254.201')
+                 AND (?='' OR instr(lower(p.employee_code),lower(?))>0
+                            OR instr(lower(COALESCE(e.display_name,'')),lower(?))>0)
+               ORDER BY p.happened_at DESC,p.id DESC LIMIT 10001""",
+            (start.isoformat(),end.isoformat(),search,search,search))]
+        if len(candidates)<=10000:
+            reconcile_workcodes(con,candidates)
+            by_id = {r["id"]:r for r in signals}
+            for scan in candidates:
+                if scan.get("work_code_conflict"):
+                    by_id.pop(scan["id"],None)
+                elif scan.get("work_code_origin")=="bionet":
+                    by_id.pop(scan["id"],None)
+                    if scan["activity_type"] in ("AJA","Travel Order") and category in ("All",scan["activity_type"]):
+                        by_id[scan["id"]] = {**scan,"category":scan["activity_type"],
+                            "label":scan["work_label"],"direction":scan["work_direction"]}
+            signals = sorted(by_id.values(), key=lambda x:(x["happened_at"],x["id"]), reverse=True)[:500]
     items = [{
         "id": r["id"],
         "employee_code": r["employee_code"],
