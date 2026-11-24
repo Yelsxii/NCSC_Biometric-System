@@ -369,9 +369,12 @@ async function loadDetail({quiet=false}={}){
     const sheetDays=data.days.filter(day=>day.manual_source).length;
     if(monthStatus){
       const source=data.manual_source_status;
-      const recordText=scanCount+' biometric entries · '+sheetDays+' sheet days';
+      const sheetSlots=data.days.reduce((sum,day)=>sum+Object.values(day.display_slots||{}).filter(slot=>slot?.origin==='manual_sheet').length,0);
+      const recordText=scanCount+' biometric entries · '+sheetDays+' sheet days · '+sheetSlots+' slots filled from DTR';
       const sourceText=source?.available?(source.matched_tabs+' matched sheet tabs'+
-        (source.unmatched_tabs?' · '+source.unmatched_tabs+' awaiting a matching employee name':'')):
+        (source.unmatched_tabs?' · '+source.unmatched_tabs+' awaiting a matching employee name':'')+
+        (source.conflict_days?' · '+source.conflict_days+' conflicting source days held':'')+
+        (source.invalid_rows?' · '+source.invalid_rows+' invalid source rows held':'')):
         (source?.message||'Manual DTR source not configured on this host.');
       monthStatus.textContent=recordText+' · '+sourceText;
     }
@@ -423,7 +426,11 @@ function openDayReview(date){
   $('place-four-entries').classList.toggle('hidden',!editable||regularReviewCandidates(day).length!==4);
   $('review-entry-hint').textContent=day.scans.length?day.scans.length+' original biometric entries available.':'No biometric entries for this date.';
   const manual=day.manual_source;
-  $('review-source-detail').innerHTML=manual?'<strong>Manual DTR · row '+manual.row+'</strong><div>'+['am_in','am_out','pm_in','pm_out'].map(key=>'<span>'+esc(key.replace('_',' ').toUpperCase())+' <b>'+esc(manual.times[key]||'—')+'</b></span>').join('')+'</div>':'';
+  $('review-source-detail').innerHTML='<strong>Current attendance (automatically combined)</strong><div>'+['am_in','am_out','pm_in','pm_out'].map(key=>{
+    const entry=day.display_slots?.[key];
+    const origin=entry?.origin==='manual_sheet'?'Sheet':entry?.origin==='reviewed'?'HR':'Bio';
+    return '<span>'+esc(key.replace('_',' ').toUpperCase())+' <b>'+esc(entry?entry.happened_at.slice(11,16)+' · '+origin:'—')+'</b></span>';
+  }).join('')+'</div>'+(manual?'<small>Manual DTR · row '+manual.row+'</small>':'');
   $('review-existing-activities').innerHTML=day.display_activities.map(x=>'<span class="day-badge">'+esc(x.category)+(x.reference?' · '+esc(x.reference):'')+'</span>').join('');
   $('day-review-dialog').showModal();
 }

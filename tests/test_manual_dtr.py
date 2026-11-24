@@ -366,3 +366,46 @@ def test_competing_source_tabs_do_not_choose_a_first_row_silently(admin):
     assert result['new']==0 and result['conflict']==2
     with closing(connect()) as con:
         assert con.execute('SELECT COUNT(*) FROM manual_dtr_entries').fetchone()[0]==0
+
+
+def test_automatic_snapshot_fills_only_newly_available_slots(admin,tmp_path,monkeypatch):
+    client,headers=admin
+    seed_employee(name='Example Employee')
+    with closing(connect()) as con,con:
+        con.execute("UPDATE employees SET name_source='device' WHERE employee_code='001'")
+    source=tmp_path/'manual.json'
+    monkeypatch.setenv('MANUAL_DTR_SOURCE_PATH',str(source))
+    source.write_bytes(file_bytes(packet([row(times=['08:00',None,None,'17:00'])])))
+    assert sync_local_source()['new_days']==1
+    assert monitor(client)['display_slots']['am_out'] is None
+    biometric=b'001\t2026-11-06 08:00:07\t1\t9\t1\t0\n001\t2026-11-06 17:00:11\t1\t9\t1\t0\n'
+    assert client.post('/api/imports',headers=headers,files={'file':('fictional.dat',biometric)}).status_code==200
+    source.write_bytes(file_bytes(packet()))
+    result=sync_local_source()
+    assert result['filled_days']==1 and result['new_days']==0
+    assert [x['origin'] for x in monitor(client)['display_slots'].values()]==['biometric','manual_sheet','manual_sheet','biometric']
+    assert sync_local_source()['filled_days']==0
+    source.write_bytes(file_bytes(packet([row(times=['09:00','12:00','13:00','17:00'])])))
+    assert sync_local_source()['conflict_days']==1
+    assert monitor(client)['display_slots']['am_in']['happened_at'].endswith('08:00:07')
+    with closing(connect()) as con:
+        assert con.execute('SELECT COUNT(*) FROM punches').fetchone()[0]==2
+        assert con.execute("SELECT COUNT(*) FROM audit_events WHERE action='filled_missing_slots'").fetchone()[0]==1
+
+
+def test_automatic_default_local_snapshot_and_full_name_order(admin,tmp_path,monkeypatch):
+    client,_=admin
+    seed_employee(name='Employee, Example')
+    with closing(connect()) as con,con:
+        con.execute("UPDATE employees SET name_source='device' WHERE employee_code='001'")
+    folder=tmp_path/'NCSC-K14-Pilot'
+    folder.mkdir()
+    source=folder/'manual-dtr.json'
+    source.write_bytes(file_bytes(packet()))
+    monkeypatch.delenv('MANUAL_DTR_SOURCE_PATH',raising=False)
+    monkeypatch.setenv('LOCALAPPDATA',str(tmp_path))
+    assert sync_local_source()['matched_tabs']==1
+    assert monitor(client)['display_slots']['am_in']['origin']=='manual_sheet'
+    with closing(connect()) as con,con:
+        con.execute("INSERT INTO employees(employee_code,display_name,name_source) VALUES('002','Example Employee','device')")
+    assert sync_local_source()['matched_tabs']==0

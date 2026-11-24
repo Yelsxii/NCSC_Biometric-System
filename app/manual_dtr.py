@@ -187,13 +187,21 @@ def mapping_hash(mapping):
 
 
 def identity(value):
-    return ' '.join(re.sub(r'[.,]', '', unicodedata.normalize('NFKC', value)).casefold().split())
+    value = unicodedata.normalize('NFKC', value).casefold().strip()
+    if value.count(',') == 1:
+        surname, given = (part.strip() for part in value.split(','))
+        if surname and given and given not in ('jr.', 'jr', 'sr.', 'sr', 'ii', 'iii', 'iv'):
+            value = given + ' ' + surname
+    return ' '.join(re.sub(r'[.,]', '', value).split())
 
 
 def local_source_path():
     raw = os.getenv('MANUAL_DTR_SOURCE_PATH', '').strip()
     if not raw:
-        raise ValueError('No local manual DTR source configured.')
+        local = os.getenv('LOCALAPPDATA', '').strip()
+        if not local:
+            raise ValueError('No local manual DTR source configured.')
+        raw = str(Path(local) / 'NCSC-K14-Pilot' / 'manual-dtr.json')
     raw = re.sub(r'%([A-Za-z_][A-Za-z0-9_]*)%', lambda m: os.getenv(m[1], m[0]), raw)
     path = Path(os.path.expandvars(raw)).expanduser()
     if not path.is_absolute() or '%' in str(path) or '$' in str(path) or str(path).startswith(('\\\\','//')):
@@ -243,18 +251,19 @@ def sync_local_source():
         packet = parse_package(raw)
         mapping = automatic_mapping(packet)
         actor = None
-        planned = preview_package(packet,mapping)['counts'] if mapping else {'new':0}
-        if planned['new']:
+        planned = preview_package(packet,mapping,fill_missing=True)['counts'] if mapping else {'new':0,'filled':0,'conflict':0,'invalid':0}
+        if planned['new'] or planned['filled']:
             with closing(connect()) as con:
                 actor = con.execute("SELECT id FROM users WHERE role='admin' ORDER BY id LIMIT 1").fetchone()
             if actor is None:
                 raise ValueError('An administrator account is required for source attribution.')
-            counts = import_package(packet,mapping,hashlib.sha256(raw).hexdigest(),actor['id'])
+            counts = import_package(packet,mapping,hashlib.sha256(raw).hexdigest(),actor['id'],fill_missing=True)
         else:
-            counts = {'new':0}
+            counts = planned
         state = {'available':True,'message':'Local manual DTR source checked.',
                  'matched_tabs':len(mapping),'unmatched_tabs':len(packet['groups'])-len(mapping),
-                 'new_days':counts['new'],'last_checked':dt.datetime.now().isoformat(timespec='seconds')}
+                 'new_days':counts['new'],'filled_days':counts['filled'],
+                  'conflict_days':counts['conflict'],'invalid_rows':counts['invalid'],'last_checked':dt.datetime.now().isoformat(timespec='seconds')}
     except (OSError,ValueError,UnicodeError,RecursionError,sqlite3.Error) as exc:
         known = {'No local manual DTR source configured.','Set an absolute local manual DTR path.',
                  'Keep the manual DTR source outside cloud-synced folders.',
@@ -278,7 +287,7 @@ def _poll_source():
 
 def start_local_source_sync():
     global _THREAD
-    if not os.getenv('MANUAL_DTR_SOURCE_PATH') or 'pytest' in sys.modules or os.getenv('PYTEST_CURRENT_TEST') or os.getenv('QA_PORT'):
+    if (not os.getenv('MANUAL_DTR_SOURCE_PATH') and not os.getenv('LOCALAPPDATA')) or 'pytest' in sys.modules or os.getenv('PYTEST_CURRENT_TEST') or os.getenv('QA_PORT'):
         return
     with _WORKER_LOCK:
         if _THREAD is not None and _THREAD.is_alive():
@@ -305,15 +314,15 @@ def validate_mapping(mapping, packet, con):
     for key, code in mapping.items():
         if key not in allowed or not isinstance(code,str) or not re.fullmatch(r'[A-Za-z0-9._-]{1,64}', code):
             raise ValueError('Invalid employee mapping.')
-        identity = ' '.join(re.sub(r'[.,]', '', unicodedata.normalize('NFKC',people[key]['name'])).casefold().split())
-        if code in targets and targets[code] != identity:
+        normalized_name = identity(people[key]['name'])
+        if code in targets and targets[code] != normalized_name:
             raise ValueError('Do not map different source employee names to the same employee.')
-        targets[code] = identity
+        targets[code] = normalized_name
         if not con.execute('SELECT 1 FROM employees WHERE employee_code=?',(code,)).fetchone():
             raise ValueError('Map source sheets to existing employees only.')
 
 
-def row_state(con, packet, person, row, code):
+def row_state(con, packet, person, row, code, fill_missing=False):
     old = con.execute('SELECT * FROM manual_dtr_entries WHERE employee_code=? AND attendance_date=? OR source_id=? AND sheet_key=? AND source_row=?',
         (code,row['date'],packet['id'],person['key'],row['source_row'])).fetchall()
     if not old:
@@ -321,6 +330,21 @@ def row_state(con, packet, person, row, code):
     desired = json.dumps(row['data'],sort_keys=True,separators=(',',':'))
     if len(old)==1 and old[0]['employee_code']==code and old[0]['attendance_date']==row['date'] and old[0]['normalized_json']==desired:
         return 'already_present'
+    if fill_missing and len(old)==1:
+        previous = old[0]
+        if (previous['employee_code']==code and previous['attendance_date']==row['date']
+            and previous['source_id']==packet['id'] and previous['sheet_key']==person['key']
+            and previous['source_row']==row['source_row']):
+            before = json.loads(previous['normalized_json'])
+            after = row['data']
+            old_times, new_times = before['times'], after['times']
+            adds_time = any(not old_times.get(k) and new_times.get(k) for k in SLOT_KEYS)
+            preserves_times = all(not old_times.get(k) or old_times[k]==new_times.get(k) for k in SLOT_KEYS)
+            preserves_other = (set(before['notes']).issubset(after['notes']) and
+                all(before.get(k) in (None, '') or before[k]==after.get(k)
+                    for k in ('aja','reported_total','reported_ut','reported_ot','reported_status')))
+            if adds_time and preserves_times and preserves_other:
+                return 'filled'
     return 'conflict'
 
 
@@ -335,13 +359,15 @@ def conflicting_packet_dates(packet, mapping):
     return {key for key,values in variants.items() if len(values)>1}
 
 
-def preview_package(packet, mapping):
+def preview_package(packet, mapping, fill_missing=False):
     with closing(connect()) as con:
         validate_mapping(mapping,packet,con)
         blocked = conflicting_packet_dates(packet,mapping)
         planned = set()
         employees = [dict(row) for row in con.execute('SELECT employee_code,display_name,department FROM employees ORDER BY lower(display_name),employee_code LIMIT 1000')]
         groups, counts = [], {'new':0,'already_present':0,'conflict':0,'unmapped':0,'invalid':0,'source_invalid':0,'source_duplicates':0}
+        if fill_missing:
+            counts['filled'] = 0
         for person in packet['groups']:
             counts['source_invalid'] += person['warnings']
             counts['invalid'] += person['warnings'] if person['key'] in mapping else 0
@@ -349,10 +375,10 @@ def preview_package(packet, mapping):
             if person['key'] in mapping:
                 for row in person['rows']:
                     target = (mapping[person['key']],row['date'])
-                    state = 'conflict' if target in blocked else row_state(con,packet,person,row,target[0])
-                    if state == 'new' and target in planned:
+                    state = 'conflict' if target in blocked else row_state(con,packet,person,row,target[0],fill_missing)
+                    if state in ('new','filled') and target in planned:
                         state = 'already_present'
-                    if state == 'new':
+                    if state in ('new','filled'):
                         planned.add(target)
                     counts[state] += 1
             else:
@@ -362,8 +388,10 @@ def preview_package(packet, mapping):
     return {'groups':groups,'employees':employees,'counts':counts,'source_title':packet['title']}
 
 
-def import_package(packet, mapping, file_hash, actor_id):
+def import_package(packet, mapping, file_hash, actor_id, fill_missing=False):
     counts = {'new':0,'already_present':0,'conflict':0,'unmapped':0,'invalid':0,'source_invalid':0,'source_duplicates':0,'names_filled':0}
+    if fill_missing:
+        counts['filled'] = 0
     with closing(connect()) as con, con:
         con.execute('BEGIN IMMEDIATE')
         validate_mapping(mapping,packet,con)
@@ -380,8 +408,17 @@ def import_package(packet, mapping, file_hash, actor_id):
                 counts['unmapped'] += len(person['rows'])
                 continue
             for row in person['rows']:
-                state = 'conflict' if (code,row['date']) in blocked else row_state(con,packet,person,row,code)
+                state = 'conflict' if (code,row['date']) in blocked else row_state(con,packet,person,row,code,fill_missing)
                 counts[state] += 1
+                if state=='filled':
+                    previous = con.execute('SELECT * FROM manual_dtr_entries WHERE employee_code=? AND attendance_date=?',
+                        (code,row['date'])).fetchone()
+                    con.execute('INSERT INTO audit_events(actor_id,action,entity,entity_id,details) VALUES(?,?,?,?,?)',
+                        (actor_id,'filled_missing_slots','manual_dtr',previous['id'],
+                         json.dumps({'before':dict(previous),'new_batch':batch})))
+                    con.execute('UPDATE manual_dtr_entries SET normalized_json=?,original_json=?,imported_batch_id=? WHERE id=?',
+                        (json.dumps(row['data'],sort_keys=True,separators=(',',':')),
+                         json.dumps(row['original'],ensure_ascii=False),batch,previous['id']))
                 if state!='new':
                     continue
                 filled = con.execute("UPDATE employees SET display_name=?,name_source='manual_dtr',updated_at=CURRENT_TIMESTAMP "
