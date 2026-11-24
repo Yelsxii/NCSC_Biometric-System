@@ -214,80 +214,32 @@ def local_source_path():
     return resolved
 
 
-def surname_alias(alias, full_name):
-    """Match a whole surname token/phrase, never a substring or initial."""
-    short, full = alias.split(), full_name.split()
-    if not short or len(short) >= len(full) or any(len(part) < 2 for part in short):
-        return False
-    return full[:len(short)] == short or full[-len(short):] == short
-
-
-def corroborates_alias(con, code, groups):
-    """Require independent date/time agreement before assigning an abbreviated name."""
-    source_minutes = set()
-    for group in groups:
-        for row in group['rows']:
-            for clock in row['data']['times'].values():
-                if clock and clock[3:5] not in ('00','15','30','45'):
-                    source_minutes.add((row['date'],clock[:5]))
-    if not source_minutes:
-        return False
-    punches = con.execute(
-        'SELECT happened_at FROM punches WHERE employee_code=?', (code,)).fetchall()
-    matching = {(row['happened_at'][:10],row['happened_at'][11:16])
-                for row in punches} & source_minutes
-    # Require two dates and two different non-default clock minutes.
-    return len({date for date,_ in matching}) >= 2 and len({clock for _,clock in matching}) >= 2
-
-
 def automatic_mapping(packet, diagnostics=None):
-    """Match full names, or a unique K14 alias corroborated by original punches."""
+    """Use unique normalized full names only; never match a surname or timestamps."""
     with closing(connect()) as con:
         rows = con.execute('SELECT employee_code,display_name,name_source FROM employees').fetchall()
-        employees = [row for row in rows if row['name_source'] in ('profile','manual','roster','device')
-                     and row['display_name'] and identity(row['display_name'])]
-        by_name = {}
-        for row in employees:
-            by_name.setdefault(identity(row['display_name']), set()).add(row['employee_code'])
-        source_names = {}
-        for group in packet['groups']:
-            source_names.setdefault(identity(group['name']), []).append(group)
-        matched = {}
-        for name, groups in source_names.items():
-            candidates = by_name.get(name,set())
-            if len(candidates)==1 and len({g['name'] for g in groups})==1:
-                matched[name] = next(iter(candidates))
-        exact_tabs = sum(len(source_names[name]) for name in matched)
-        alias_tabs = 0
-        used = set(matched.values())
-        for employee in employees:
-            code = employee['employee_code']
-            if employee['name_source'] != 'device' or code in used:
-                continue
-            alias = identity(employee['display_name'])
-            if len(by_name[alias]) != 1:
-                continue
-            candidates = [name for name in source_names if surname_alias(alias,name)]
-            if len(candidates) != 1:
-                continue
-            name = candidates[0]
-            if name in matched or len({g['name'] for g in source_names[name]}) != 1:
-                continue
-            # A surname may belong to more than one enrolled employee, even
-            # when one is represented by a full name. Never guess in that case.
-            competitors = [row for row in employees if row['employee_code'] != code and
-                (identity(row['display_name']) == name or
-                 surname_alias(alias,identity(row['display_name'])) or
-                 surname_alias(identity(row['display_name']),name))]
-            if competitors or not corroborates_alias(con,code,source_names[name]):
-                continue
-            matched[name] = code
-            used.add(code)
-            alias_tabs += len(source_names[name])
-        if diagnostics is not None:
-            diagnostics.update(exact_tabs=exact_tabs,alias_tabs=alias_tabs)
-        return {group['key']:matched[name] for name,groups in source_names.items()
-                if name in matched for group in groups}
+    by_name = {}
+    for row in rows:
+        if row['name_source'] not in ('profile','manual','roster','device') or not row['display_name']:
+            continue
+        name = identity(row['display_name'])
+        if len(name.split()) < 2:
+            continue
+        by_name.setdefault(name, set()).add(row['employee_code'])
+    source_names = {}
+    for group in packet['groups']:
+        source_names.setdefault(identity(group['name']), []).append(group)
+    mapping = {}
+    for name, groups in source_names.items():
+        candidates = by_name.get(name, set())
+        if len(name.split()) < 2 or len(candidates) != 1 or len({g['name'] for g in groups}) != 1:
+            continue
+        code = next(iter(candidates))
+        for group in groups:
+            mapping[group['key']] = code
+    if diagnostics is not None:
+        diagnostics.update(exact_tabs=len(mapping))
+    return mapping
 
 
 def automatic_status():

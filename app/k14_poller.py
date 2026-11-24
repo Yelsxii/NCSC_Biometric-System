@@ -163,9 +163,9 @@ def main(argv=None) -> int:
                     current = read_authorized_ids(registry)
                     rows = [row for row in rows if row[0] in current]
                     added = save_new(path, args.host, rows)
-                    # Refresh approved employee names about every 10 minutes.
+                    # Refresh approved employee names on startup and every 2 polling cycles.
                     # A name-reader failure never blocks attendance collection.
-                    if cycle % 10 == 0:
+                    if cycle % 2 == 0:
                         try:
                             names = read_device_names(args.host, args.port, args.udp, current)
                             current_again = read_authorized_ids(registry)

@@ -411,42 +411,39 @@ def test_automatic_default_local_snapshot_and_full_name_order(admin,tmp_path,mon
     assert sync_local_source()['matched_tabs']==0
 
 
-def test_device_surname_alias_matches_archives_with_corroborating_punches(admin,tmp_path,monkeypatch):
-    client,headers=admin
-    seed_employee(name='EXAMPLE')
-    with closing(connect()) as con,con:
-        con.execute("UPDATE employees SET name_source='device' WHERE employee_code='001'")
-    data=packet([row(times=['07:47','12:01','13:02','18:06']),
-                 row('2026-11-05',['08:01','12:03','13:04','17:53'],number=8)])
-    data['people'].append({'key':'archive','name':'Example Employee','sheet':'ARCHIVE',
-                          'rows':[row('2026-10-06',number=9)]})
-    # Use a surname-only K14 label matching the final whole name token.
-    with closing(connect()) as con,con:
-        con.execute("UPDATE employees SET display_name='EMPLOYEE' WHERE employee_code='001'")
-    source=tmp_path/'manual.json'
-    source.write_bytes(file_bytes(data))
-    monkeypatch.setenv('MANUAL_DTR_SOURCE_PATH',str(source))
-    assert sync_local_source()['matched_tabs']==0
-    biometric=b'001\t2026-11-06 07:47:07\t1\t9\t1\t0\n001\t2026-11-06 18:06:11\t1\t9\t1\t0\n001\t2026-11-05 08:01:09\t1\t9\t1\t0\n001\t2026-11-05 17:53:10\t1\t9\t1\t0\n'
-    assert client.post('/api/imports',headers=headers,files={'file':('fictional.dat',biometric)}).status_code==200
-    result=sync_local_source()
-    assert result['matched_tabs']==2 and result['alias_tabs']==2 and result['new_days']==3
-    assert [v['origin'] for v in monitor(client)['display_slots'].values()]==['biometric','manual_sheet','manual_sheet','biometric']
-    assert sync_local_source()['new_days']==0
-    with closing(connect()) as con,con:
-        con.execute("INSERT INTO employees(employee_code,display_name,name_source) VALUES('002','Another Employee','device')")
-    assert automatic_mapping(parse_package(source.read_bytes()))=={}
-
-
-def test_surname_alias_never_selects_between_two_source_people(admin):
+def test_surname_only_never_matches_even_when_punches_agree(admin,tmp_path,monkeypatch):
     client,headers=admin
     seed_employee(name='EMPLOYEE')
     with closing(connect()) as con,con:
         con.execute("UPDATE employees SET name_source='device' WHERE employee_code='001'")
     data=packet([row(times=['07:47','12:01','13:02','18:06']),
                  row('2026-11-05',['08:01','12:03','13:04','17:53'],number=8)])
-    data['people'].append({'key':'other','name':'Another Employee','sheet':'OTHER',
+    data['people'].append({'key':'archive','name':'Example Employee','sheet':'ARCHIVE',
                           'rows':[row('2026-10-06',number=9)]})
+    source=tmp_path/'manual.json'
+    source.write_bytes(file_bytes(data))
+    monkeypatch.setenv('MANUAL_DTR_SOURCE_PATH',str(source))
     biometric=b'001\t2026-11-06 07:47:07\t1\t9\t1\t0\n001\t2026-11-05 08:01:09\t1\t9\t1\t0\n'
     assert client.post('/api/imports',headers=headers,files={'file':('fictional.dat',biometric)}).status_code==200
+    assert sync_local_source()['matched_tabs']==0
+    # Updated full names match only the intended employee, even with shared surnames.
+    with closing(connect()) as con,con:
+        con.execute("UPDATE employees SET display_name='Example Employee' WHERE employee_code='001'")
+        con.execute("INSERT INTO employees(employee_code,display_name,name_source) VALUES('002','Another Employee','device')")
+    result=sync_local_source()
+    assert result['matched_tabs']==2 and result['exact_tabs']==2 and result['new_days']==3
+    assert monitor(client)['display_slots']['am_out']['origin']=='manual_sheet'
+    assert sync_local_source()['new_days']==0
+    with closing(connect()) as con,con:
+        assert con.execute("SELECT COUNT(*) FROM manual_dtr_entries WHERE employee_code='002'").fetchone()[0]==0
+        con.execute("INSERT INTO employees(employee_code,display_name,name_source) VALUES('003','Example Employee','device')")
+    assert automatic_mapping(parse_package(source.read_bytes()))=={}
+
+
+def test_single_token_source_is_not_a_full_name(admin):
+    seed_employee(name='EMPLOYEE')
+    with closing(connect()) as con,con:
+        con.execute("UPDATE employees SET name_source='device' WHERE employee_code='001'")
+    data=packet()
+    data['people'][0]['name']='Employee'
     assert automatic_mapping(parse_package(file_bytes(data)))=={}
