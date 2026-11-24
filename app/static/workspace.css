@@ -194,7 +194,7 @@
 /* Shared workspace chrome: dark institutional navy, restrained red accents,
    a responsive icon rail, and a single Manila clock. Login is unaffected. */
 .workspace .sidebar{
-  --rail-bg:#14284e;--rail-hover:#203963;--rail-active:#29446f;--rail-inset:12px;
+  --rail-bg:#14284e;--rail-hover:#203963;--rail-active:#0b1d39;--rail-inset:12px;
   width:206px;min-width:206px;height:100%;flex:0 0 206px;
   display:flex;flex-direction:column;position:relative;z-index:15;
   background:var(--rail-bg);border:0;padding:0 12px;overflow:visible;
@@ -222,8 +222,8 @@
   color:#fff;background:var(--rail-hover);border-color:#ffffff12;
 }
 .workspace .sidebar .nav-item.active{
-  color:#fff;background:var(--rail-active);border-color:#ffffff15;
-  box-shadow:0 3px 8px #06152d24;font-weight:650;
+  color:#fff;background:var(--rail-active);border-color:#6689bd45;
+  box-shadow:0 3px 9px #06152d42,inset 0 1px 0 #ffffff08;font-weight:650;
 }
 .workspace .sidebar .nav-item.active::before{
   content:"";position:absolute;left:calc(-1 * var(--rail-inset) - 1px);
@@ -234,7 +234,7 @@
 .workspace .sidebar .nav-icon{color:#b6c7e3;transition:color .16s,filter .16s}
 .workspace .sidebar .nav-item:hover .nav-icon{color:#edf6ff}
 .workspace .sidebar .nav-item.active .nav-icon{
-  color:#a8d8ff;filter:drop-shadow(0 0 4px #73baff99);
+  color:#f5fbff;stroke-width:2;filter:drop-shadow(0 0 3px #64b3ff80);
 }
 .workspace .sidebar-bottom{margin-top:auto;display:flex;flex-direction:column;padding:12px 0 18px;border-top:1px solid #ffffff16}
 .workspace .sidebar-signout{
@@ -243,7 +243,18 @@
   color:#c7d4ea;background:transparent;font-size:11px;font-weight:600;
   text-transform:uppercase;letter-spacing:.04em;transition:background .16s,color .16s;
 }
-.workspace .sidebar-signout svg{width:18px;height:18px;flex:none}
+.workspace .sidebar-signout svg{width:18px;height:18px;flex:none;overflow:visible}
+.workspace .sidebar-signout .signout-door,
+.workspace .sidebar-signout .signout-arrow{
+  transform-box:fill-box;transform-origin:left center;
+  transition:transform .22s cubic-bezier(.2,.7,.25,1);
+}
+.workspace .sidebar-signout:is(:hover,:focus-visible) .signout-door{
+  transform:perspective(30px) rotateY(-32deg);
+}
+.workspace .sidebar-signout:is(:hover,:focus-visible) .signout-arrow{
+  transform:translateX(3px);
+}
 .workspace .sidebar-signout:hover,.workspace .sidebar-signout:focus-visible{
   color:#ffb7c0;background:#ffffff09;border-color:#ffffff10;
 }
@@ -319,5 +330,8 @@
 }
 @media(prefers-reduced-motion:reduce){
   .workspace .sidebar .nav-item,.workspace .sidebar .nav-item::after,
-  .workspace .sidebar .nav-icon,.workspace .sidebar-signout,.workspace .sidebar-signout::after{transition:none}
+  .workspace .sidebar .nav-icon,.workspace .sidebar-signout,.workspace .sidebar-signout::after,
+  .workspace .sidebar-signout .signout-door,.workspace .sidebar-signout .signout-arrow{transition:none}
+  .workspace .sidebar-signout:is(:hover,:focus-visible) .signout-door,
+  .workspace .sidebar-signout:is(:hover,:focus-visible) .signout-arrow{transform:none}
 }

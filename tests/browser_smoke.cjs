@@ -124,15 +124,26 @@ uvicorn.run('app.main:app',host='127.0.0.1',port=int(os.environ['QA_PORT']),log_
       const time=document.querySelector('#live-time');
       return {accentLeft:parseFloat(getComputedStyle(nav,'::before').left),
         glow:getComputedStyle(icon).filter, iconColor:getComputedStyle(icon).color,
+        activeBackground:getComputedStyle(nav).backgroundColor,
+        iconStroke:getComputedStyle(icon).strokeWidth,
         timeLeft:time.getBoundingClientRect().left,dateLeft:date.getBoundingClientRect().left,
         clockLeft:clock.getBoundingClientRect().left,
         signoutLabel:getComputedStyle(document.querySelector('#logout-sidebar span')).display};
     });
     assert.ok(compactChrome.accentLeft<=-6,'Accent must sit outside the selected card');
     assert.notEqual(compactChrome.glow,'none');
-    assert.equal(compactChrome.iconColor,'rgb(168, 216, 255)');
+    assert.equal(compactChrome.iconColor,'rgb(245, 251, 255)');
+    assert.equal(compactChrome.activeBackground,'rgb(11, 29, 57)');
+    assert.equal(compactChrome.iconStroke,'2px');
     assert.ok(Math.abs(compactChrome.timeLeft-compactChrome.dateLeft)<=1,'Time aligns with left edge of calendar row');
     assert.equal(compactChrome.signoutLabel,'none');
+    await page.locator('#logout-sidebar').hover();
+    await page.waitForFunction(()=>getComputedStyle(document.querySelector('.signout-arrow')).transform!=='none');
+    await page.waitForFunction(()=>getComputedStyle(document.querySelector('.signout-door')).transform!=='none');
+    await page.emulateMedia({reducedMotion:'reduce'});
+    assert.equal(await page.locator('.signout-arrow').evaluate(el=>getComputedStyle(el).transform),'none');
+    assert.equal(await page.locator('.signout-door').evaluate(el=>getComputedStyle(el).transform),'none');
+    await page.emulateMedia({reducedMotion:'no-preference'});
     const railLayout=await page.locator('.sidebar').evaluate(el=>({
       width:el.getBoundingClientRect().width,height:el.getBoundingClientRect().height,
       viewportHeight:innerHeight,labelDisplay:getComputedStyle(el.querySelector('.nav-item>span')).display
