@@ -7,31 +7,6 @@ KEYS = ('am_in','am_out','pm_in','pm_out')
 OFFICIAL = ('AJA','Travel Order','Fieldwork','Official Business')
 
 
-def travel_coverage(day, manual, display):
-    """Only merge blank half-days; never obscure actual time evidence."""
-    refs = [item for item in day['display_activities'] if item['category'] == 'Travel Order']
-    if not refs:
-        return []
-    raw = (manual or {}).get('original', {}).get('values', [])
-    marked = set()
-    for i, key in enumerate(KEYS):
-        if len(raw)>i+2 and isinstance(raw[i+2], str) and re.search(r'\bTRAVEL\s+ORDER\b', raw[i+2], re.I):
-            marked.add(key[:2])
-    empty = [half for half in ('am','pm') if not any(display[half+'_'+part] for part in ('in','out'))]
-    # A travel day with no office punches or named times needs no clock pair.
-    # On mixed days use explicit sheet half or recorded document time range.
-    if len(empty)==2:
-        return empty
-    for item in day.get('activities', []):
-        if item['category'] != 'Travel Order':
-            continue
-        date=day['date']
-        for half,start,end in (('am','00:00:00','12:00:00'),('pm','12:00:00','23:59:59')):
-            if item['start_at'] < date+' '+end and item['end_at'] > date+' '+start:
-                marked.add(half)
-    return [half for half in empty if half in marked]
-
-
 def resolve_day(day, manual):
     source = manual['data'] if manual else None
     sheet_times = source['times'] if source else {}
@@ -125,14 +100,16 @@ def resolve_day(day, manual):
             day['display_activities'].append({'category':kind,'reference':note})
     travel = any(item['category']=='Travel Order' for item in day['display_activities'])
     day['travel_order'] = travel
-    day['travel_periods'] = travel_coverage(day, manual, display)
+    # Office monitoring policy: a recorded Travel Order is a full-day status.
+    # Preserve ordinary punches and source slots for audit, not clock credit.
+    day['travel_periods'] = ['am','pm'] if travel else []
     if travel:
-        # No fabricated hours or deficit on a travel-only day; evidence stays available.
-        if day['travel_periods']:
-            day['monitoring'].update(total_seconds=None, elapsed_seconds=None,
-                undertime_seconds=None, overtime_seconds=None, complete=False)
-        if not conflicts and not future_entry:
-            day['monitoring']['remarks'] = 'Travel Order'
+        if ordinary or any(display.values()):
+            conflicts.append('travel_with_regular_entries')
+        day['monitoring'].update(total_seconds=None, elapsed_seconds=None,
+            undertime_seconds=None, overtime_seconds=None, complete=False,
+            metrics_origin='travel_order', conflicts=len(conflicts),
+            remarks='Future entry' if future_entry else 'Source difference' if conflicts else 'Travel Order')
     if not travel and remarks in ('No entry','Weekend') and source and source['notes']:
         kinds = {x['category'] for x in day['display_activities']}
         day['monitoring']['remarks'] = 'Travel Order' if 'Travel Order' in kinds else 'AJA' if 'AJA' in kinds else 'Manual DTR note'

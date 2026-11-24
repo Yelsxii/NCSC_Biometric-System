@@ -342,15 +342,10 @@ function durationText(seconds){
   return Number.isFinite(seconds)?Math.floor(seconds/3600)+':'+String(Math.floor(seconds%3600/60)).padStart(2,'0'):'—';
 }
 function attendanceTimeCells(day){
-  const periods=day.travel_periods||[];
-  if(periods.includes('am')&&periods.includes('pm')){
+  if(day.travel_order){
     return '<td colspan="4" class="time-slot slot-travel"><span class="travel-status">Travel Order</span></td>';
   }
-  return periodCells(day,'am')+periodCells(day,'pm');
-}
-function periodCells(day,half){
-  if((day.travel_periods||[]).includes(half))return '<td colspan="2" class="time-slot slot-travel"><span class="travel-status">Travel Order</span></td>';
-  return slotCell(day,half+'_in')+slotCell(day,half+'_out');
+  return ['am_in','am_out','pm_in','pm_out'].map(key=>slotCell(day,key)).join('');
 }
 function slotCell(day,key){
   const event=day.display_slots?day.display_slots[key]:(day.slots[key]||provisionalOrdinarySlots(day)?.[key]);
@@ -361,7 +356,7 @@ function slotCell(day,key){
   const label=origin==='manual_sheet'?'Sheet':origin==='reviewed'?'HR':'Bio';
   const hint=event?event.happened_at.slice(11)+' · '+(origin==='manual_sheet'?'Manual DTR source':origin==='reviewed'?'Reviewed selection':'Original biometric time; observed AM/PM placement')+
     (event.work_code!==undefined&&event.work_code!==''?' · Work code '+event.work_code:''):'No entry';
-  return '<td class="time-slot slot-'+tone+'" title="'+esc(hint)+'">'+(event?
+  return '<td class="time-slot slot-'+tone+'" data-origin="'+esc(event?origin:'')+'" title="'+esc(hint)+'">'+(event?
     '<span class="time-value">'+esc(event.happened_at.slice(11,19))+'</span>':
     '<span class="no-time">—</span>')+'</td>';
 }
@@ -384,7 +379,7 @@ async function loadDetail({quiet=false}={}){
     const sheetDays=data.days.filter(day=>day.manual_source).length;
     if(monthStatus){
       const source=data.manual_source_status;
-      const sheetSlots=data.days.reduce((sum,day)=>sum+Object.values(day.display_slots||{}).filter(slot=>slot?.origin==='manual_sheet').length,0);
+      const sheetSlots=data.days.reduce((sum,day)=>sum+(day.travel_order?0:Object.values(day.display_slots||{}).filter(slot=>slot?.origin==='manual_sheet').length),0);
       const missing=data.days.filter(day=>!day.is_future&&!day.is_weekend&&!day.calendar.holiday_name).reduce((sum,day)=>sum+['am_in','am_out','pm_in','pm_out'].filter(k=>!(day.travel_periods||[]).includes(k.slice(0,2))&&!day.display_slots?.[k]).length,0);
       const recordText=scanCount+' biometric entries · '+sheetDays+' sheet days · '+sheetSlots+' slots filled from DTR · '+missing+' weekday slots without a resolved time';
       const sourceText=source?.available?(source.matched_tabs+' matched sheet tabs'+
@@ -429,7 +424,7 @@ function openDayReview(date){
   dayReviewContext={code:selectedEmployee,month:activeDtr.month,day,account:session};
   const editable=session.role==='admin';
   $('day-review-form').reset();$('day-review-error').classList.add('hidden');
-  $('day-review-heading').textContent=editable?'Edit attendance':'Attendance entries';
+  $('day-review-heading').textContent=editable?(day.travel_order?'Edit Travel Order':'Edit attendance'):'Attendance entries';
   $('day-review-context').textContent=selectedName+' · '+date+' ('+day.day+')';
   const options='<option value="">Automatic / no override</option>'+regularReviewCandidates(day).map(event=>
     '<option value="'+event.id+'">'+esc(event.happened_at.slice(11))+' · WC '+esc(event.work_code||'—')+'</option>').join('');
@@ -448,17 +443,18 @@ function openDayReview(date){
   $('save-day-review').classList.toggle('hidden',!editable);$('save-day-review').disabled=false;
   $('place-four-entries').classList.toggle('hidden',!editable||regularReviewCandidates(day).length!==4);
   $('review-entry-hint').textContent=day.scans.length?day.scans.length+' original entries · automatic values apply unless overridden.':'No original scans for this date.';
-  const fullTravel=(day.travel_periods||[]).length===2;
+  const fullTravel=day.travel_order===true;
   $('review-time-section').classList.toggle('hidden',fullTravel);
   $('review-travel-info').classList.toggle('hidden',!day.travel_order);
-  $('review-travel-info').textContent=day.travel_order?'Travel Order · '+((day.travel_periods||[]).length===2?'Full day':(day.travel_periods||[]).map(x=>x.toUpperCase()).join(' / ')||'Recorded activity')+'. No clock entry required for covered periods.':'';
+  $('review-travel-info').textContent=fullTravel?'Travel Order · Full day. No clock entry required.':'';
   for(const key of ['am_in','am_out','pm_in','pm_out']){
     const node=$('review-'+key.replace('_','-'));
-    node.closest('label').classList.toggle('hidden',(day.travel_periods||[]).includes(key.slice(0,2)));
+    node.closest('label').classList.toggle('hidden',fullTravel);
   }
-  $('review-source-warning').textContent=day.source_conflicts?.length?'Review: '+day.source_conflicts.map(k=>k==='unplaced_biometric'?'Unassigned original scans':k==='order'?'Time sequence differs':k.replace('_',' ').toUpperCase()+' differs from sheet').join('; ')+'.':'';
+  $('review-source-warning').textContent=day.source_conflicts?.length?'Review: '+day.source_conflicts.map(k=>k==='unplaced_biometric'?'Unassigned original scans':k==='order'?'Time sequence differs':k==='travel_with_regular_entries'?'Regular entries also exist on this travel date; retained as evidence':k.replace('_',' ').toUpperCase()+' differs from sheet').join('; ')+'.':'';
   $('review-raw-scans').textContent=day.scans.map(x=>x.happened_at.slice(11,19)+(x.work_code?' · WC '+x.work_code:'')).join(' | ');
   const manual=day.manual_source;
+  $('review-sheet-evidence').textContent=manual?'DTR sheet: '+Object.entries(manual.times||{}).filter(([,value])=>value).map(([key,value])=>key.replace('_',' ').toUpperCase()+' '+value).join(' · '):'';
   $('review-source-detail').innerHTML='<strong>Current attendance</strong><div>'+['am_in','am_out','pm_in','pm_out'].map(key=>{
     const entry=day.display_slots?.[key];
     return '<span>'+esc(key.replace('_',' ').toUpperCase())+' <b>'+esc((day.travel_periods||[]).includes(key.slice(0,2))?'Travel Order':entry?entry.happened_at.slice(11,19):'—')+'</b></span>';

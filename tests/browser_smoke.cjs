@@ -286,6 +286,14 @@ with connect() as con:
     await page.locator('#detail-name').filter({hasText:'Sample One'}).waitFor();
     await page.locator('#daily-rows .travel-column .travel-badge').first().waitFor();
     assert.ok((await page.locator('#daily-rows').textContent()).includes('Travel Order'));
+    const travelDay=page.locator('#daily-rows [data-date="2026-11-23"]');
+    assert.equal(await travelDay.locator('td.slot-travel[colspan="4"]').count(),1);
+    assert.equal(await travelDay.locator('td.slot-travel[colspan="2"]').count(),0);
+    assert.equal(await travelDay.locator('.time-value').count(),0);
+    await travelDay.locator('[data-edit-day]').click();
+    await page.locator('#day-review-dialog[open]').waitFor();
+    assert.equal(await page.locator('#review-time-section').isVisible(),false);
+    await page.locator('#cancel-day-review').click();
     assert.equal(await page.locator('#daily-rows tr').count(),30);
     assert.equal(await page.locator('#print-dtr').count(),0);
     assert.equal(await page.locator('#export-dtr').count(),0);
@@ -342,12 +350,12 @@ with connect() as con:
     },manualPackage);
     assert.equal(importResult.status,200);
     // The attendance screen reflects source reconciliation on its normal live refresh.
-    await page.locator('[data-date="2026-11-06"] .origin-manual_sheet').first().waitFor({timeout:15000});
+    await page.locator('[data-date="2026-11-06"] [data-origin="manual_sheet"]').first().waitFor({timeout:15000});
     await page.screenshot({path:join(root,'docs/manual-dtr-preview.png'),animations:'disabled'});
     const filled=page.locator('[data-date="2026-11-06"]');
-    await filled.locator('.origin-manual_sheet').first().waitFor();
-    assert.equal(await filled.locator('.origin-biometric').count(),2);
-    assert.equal(await filled.locator('.origin-manual_sheet').count(),2);
+    await filled.locator('[data-origin="manual_sheet"]').first().waitFor();
+    assert.equal(await filled.locator('[data-origin="biometric"]').count(),2);
+    assert.equal(await filled.locator('[data-origin="manual_sheet"]').count(),2);
     assert.equal(await filled.locator('.daily-total-value').textContent(),'8:00');
     assert.equal(await filled.locator('.monitor-remark').textContent(),'Complete');
     assert.equal(await page.locator('[data-date="2026-11-09"] .overtime-value').textContent(),'1:00');

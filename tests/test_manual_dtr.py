@@ -450,12 +450,15 @@ def test_single_token_source_is_not_a_full_name(admin):
     data['people'][0]['name']='Employee'
     assert automatic_mapping(parse_package(file_bytes(data)))=={}
 
-def test_partial_travel_order_keeps_regular_times(admin):
+def test_full_day_travel_order_preserves_mixed_regular_evidence(admin):
     client,headers=admin;seed_employee()
     data=packet([row(times=['08:00','12:00','Travel Order No. EXAMPLE',None],total=None)])
     import_one(client,headers,data)
     day=monitor(client)
-    assert day['travel_periods']==['pm']
+    assert day['travel_periods']==['am','pm']
+    assert 'travel_with_regular_entries' in day['source_conflicts']
+    assert day['monitoring']['undertime_seconds'] is None
+    assert day['monitoring']['overtime_seconds'] is None
     assert day['display_slots']['am_in']['happened_at'].endswith('08:00:00')
     assert day['display_slots']['pm_in'] is None
     assert day['monitoring']['total_seconds'] is None
