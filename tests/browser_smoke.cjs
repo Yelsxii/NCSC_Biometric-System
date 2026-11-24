@@ -140,6 +140,7 @@ uvicorn.run('app.main:app',host='127.0.0.1',port=int(os.environ['QA_PORT']),log_
     await page.locator('#logout-sidebar').hover();
     await page.waitForFunction(()=>getComputedStyle(document.querySelector('.signout-arrow')).transform!=='none');
     await page.waitForFunction(()=>getComputedStyle(document.querySelector('.signout-door')).transform!=='none');
+    assert.equal(await page.locator('.signout-frame').evaluate(el=>getComputedStyle(el).transform),'none','The door frame must remain stationary');
     await page.emulateMedia({reducedMotion:'reduce'});
     assert.equal(await page.locator('.signout-arrow').evaluate(el=>getComputedStyle(el).transform),'none');
     assert.equal(await page.locator('.signout-door').evaluate(el=>getComputedStyle(el).transform),'none');

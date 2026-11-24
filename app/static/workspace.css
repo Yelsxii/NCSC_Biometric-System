@@ -247,13 +247,15 @@
 .workspace .sidebar-signout .signout-door,
 .workspace .sidebar-signout .signout-arrow{
   transform-box:fill-box;transform-origin:left center;
-  transition:transform .22s cubic-bezier(.2,.7,.25,1);
+  transition:transform .32s cubic-bezier(.22,.8,.25,1);
 }
+/* The jamb stays fixed; only the hinged door leaf swings toward the left.
+   Skew and horizontal compression provide an opening-door silhouette in 2D. */
 .workspace .sidebar-signout:is(:hover,:focus-visible) .signout-door{
-  transform:perspective(30px) rotateY(-32deg);
+  transform:skewY(-15deg) scaleX(.48);
 }
 .workspace .sidebar-signout:is(:hover,:focus-visible) .signout-arrow{
-  transform:translateX(3px);
+  transform:translateX(2px);
 }
 .workspace .sidebar-signout:hover,.workspace .sidebar-signout:focus-visible{
   color:#ffb7c0;background:#ffffff09;border-color:#ffffff10;
