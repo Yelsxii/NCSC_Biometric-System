@@ -339,7 +339,9 @@ function durationText(seconds){
 function slotCell(day,key){
   const event=day.display_slots?day.display_slots[key]:(day.slots[key]||provisionalOrdinarySlots(day)?.[key]);
   const origin=event?.origin||(day.slots[key]?'reviewed':'biometric');
-  const tone=event?(origin==='manual_sheet'?'sheet':origin==='reviewed'?'entry':'provisional'):(day.is_future||day.is_weekend?'neutral':'missing');
+  const tone=['holiday','aja','travel'].includes(day.tone)?day.tone:
+    event?(origin==='manual_sheet'?'sheet':origin==='reviewed'?'entry':'provisional'):
+      (day.is_future||day.is_weekend?'neutral':'missing');
   const label=origin==='manual_sheet'?'Sheet':origin==='reviewed'?'HR':'Bio';
   const hint=event?event.happened_at.slice(11)+' · '+(origin==='manual_sheet'?'Manual DTR source':origin==='reviewed'?'Reviewed selection':'Original biometric time; observed AM/PM placement')+
     (event.work_code!==undefined&&event.work_code!==''?' · Work code '+event.work_code:''):'No entry';

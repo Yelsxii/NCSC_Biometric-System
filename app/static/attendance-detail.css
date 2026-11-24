@@ -142,6 +142,9 @@
 .workspace .attendance-sheet .dtr-grid .time-slot.slot-entry{background:#e8effd!important}
 .workspace .attendance-sheet .dtr-grid .time-slot.slot-missing{background:#fcecf1!important}
 .workspace .attendance-sheet .dtr-grid .time-slot.slot-neutral{background:#f1f4f9!important}
+.workspace .attendance-sheet .dtr-grid .time-slot.slot-holiday{background:#eaf3ff!important}
+.workspace .attendance-sheet .dtr-grid .time-slot.slot-aja{background:#fff4d7!important}
+.workspace .attendance-sheet .dtr-grid .time-slot.slot-travel{background:#f3edfc!important}
 .workspace .attendance-sheet .time-value{color:#223a66;font-weight:700}
 .workspace .attendance-sheet .origin-label{font-size:8px;font-weight:650}
 .workspace .attendance-sheet .edit-day{background:#e8effd;color:#1d4388;font-weight:650}
