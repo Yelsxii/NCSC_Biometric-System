@@ -1,0 +1,79 @@
+# Biometric times and manual DTR backfill
+
+This update continues from the latest `feat/ncsc-dtr-workflow`, including its activity pairing, live device names and internal design. It does not switch branches, change the approved login, modify device settings or alter original punches.
+
+## What the attendance table shows
+
+One compact month table shows Date, AM In/Out, PM In/Out, Total hours, Undertime Hours/Minutes, Overtime earned, AJA/Travel Order times, Remarks and Edit. Employee name stays in the first header row; category, department and month are below it. The manual Calendar button and repeated explanatory banners are removed. Legends use small glowing circles and actions use borderless hover states.
+
+Every displayed time has a source label: **Bio**, **Sheet** or **HR**. Original seconds and work codes are retained in source data and tooltips; cells display hours/minutes. Biometric entries do not become reviewed HR selections merely by being displayed.
+
+### Source priority
+
+1. An existing explicit HR punch selection stays first.
+2. A uniquely identifiable biometric entry is displayed ahead of the corresponding sheet slot.
+3. The named AM/PM columns in an imported manual DTR fill remaining gaps.
+4. Ambiguous slots stay empty and extra biometric entries remain available in Edit.
+
+The resolver matches unique source punches to named sheet slots in the same minute. It also displays four distinct, chronologically coherent ordinary scans across AM and PM; two distinct scans spanning morning/afternoon may supply observed AM In and PM Out. These are observed placements, not inferred numeric K14 status meanings or certified attendance. Four morning scans, duplicate-minute scans, ambiguous extras and source disagreements require review. Configured AJA/TO/Fieldwork/Official Business scans are excluded from ordinary inference. No 08:00, noon, 13:00 or 17:00 punch is generated merely to complete a row.
+
+Source differences remain visible. Saving a reviewed biometric selection can explicitly confirm that choice. The separate manual source row is retained and original punches are never overwritten.
+
+## Hours, undertime and overtime
+
+For complete, chronologically valid entries, the table can show elapsed AM + PM duration. This does not grant payroll credit or earned overtime.
+
+The supplied manual DTR calculates Total hours, Hours left to render and Overtime earned. When the displayed four slots agree with the imported manual source at its minute precision, those source results are retained as **manual DTR results**. Explicit HR undertime entries retain precedence. The original source row and its precision remain available for audit.
+
+A biometric/source conflict, unplaced extra ordinary punch, incomplete pair or future time withholds automatic source-based undertime and overtime. A blank template row whose formula says eight hours left does not create absence or a full-day deficit. Travel/leave/reference text is retained as a note, not parsed as a time. Today's source entry later than the local clock is flagged **Future entry**, with earned totals withheld.
+
+The sheet's existing 07:00 AM formula versus the reported 08:00 office start is not silently resolved here. No new office-hours, rounding, AJA deduction, travel-credit or overtime-approval rule is enabled. The interface distinguishes **Complete**, **Undertime**, **Overtime**, **Incomplete entries**, **Needs hour review** and **Source difference** based on available evidence.
+
+## Administrator import
+
+The prepared private package contains only relevant DTR columns and source identities; it excludes account numbers, credentials and biometric templates. Keep attendance packages outside the repository and Git.
+
+1. In **Employee Attendance → View attendance**, open **Fill from manual DTR**.
+2. Choose the prepared `.json` package.
+3. Match each relevant source sheet to its existing website employee. Unmatched sheets remain skipped. An exact full-name match may be suggested; no fuzzy matching or new employee ID creation occurs.
+4. Click **Preview matches**. Review new days, duplicates, conflicts and invalid rows.
+5. Click **Fill missing times**. The table refreshes without a browser reload.
+
+The preview token is signed, expires after 15 minutes and is bound to the file, mapping and administrator. Altering the file/mapping requires a new preview. Reviewers cannot upload or import. A repeat import adds zero duplicates. A different manual source for an already stored employee/date is reported as a conflict and does not replace the old source. A source row already assigned to another employee cannot be silently reassigned.
+
+Empty unverified website names can be filled from the explicitly mapped sheet; existing names and verified profiles are protected. No employee ID, device authorization, login account or original punch changes. Source imports and mappings are audited. New source data is stored in additive `manual_dtr_imports` and `manual_dtr_entries` tables; a populated pre-upgrade database receives a consistent `backups/before-manual-dtr-*.sqlite3` snapshot before this migration.
+
+The import is a source snapshot, not unattended live access to Google Sheets. It does not store Google credentials or publish the sheet. Later source revisions require another preview. Official editable Google Sheets/PDF export remains a separate phase.
+
+## Package format
+
+Use `ncsc-manual-dtr-v1` with `source.id`, `source.title` and `people`. Each person supplies a stable `key`, `name`, `sheet`, and `rows`; each row contains its original `row` number and `values` from source columns A:O:
+
+Date, Day, AM In, AM Out, PM In, PM Out, AM total, PM total, Daily total, Hours left, Overtime, Status, AJA start, AJA purpose, AJA end.
+
+Google Sheets serial dates/time fractions, ISO dates and unambiguous clock text are supported. PM context resolves a bare `1:00` in a named PM column to 13:00; original raw values are preserved. Duplicate identical rows are skipped. Conflicting duplicate dates, invalid times or chronology require review. Future template dates are excluded. File size is limited to 10 MB; no spreadsheet formulas are executed by this importer.
+
+## Automatic holiday labels
+
+Verified Philippine national non-working dates for **2025 and 2026** are bundled locally. They include the annual proclamations and separately proclaimed Eid dates and the 2025 national election holiday. Special **working** days, such as EDSA on February 25 in these years, are not treated as non-working holidays. Existing office overrides take precedence; explicit manual-sheet holiday notes are preserved. Regional holidays and work suspensions are not guessed, and unverified years are marked internally as unverified.
+
+Sources, verified November 24, 2026:
+
+- [2025 annual calendar, Proclamation 727](https://pco.gov.ph/news_releases/pbbm-issues-proclamation-declaring-regular-holidays-special-non-working-days-for-2025/)
+- [2026 annual calendar, Proclamation 1006](https://pco.gov.ph/wp-content/uploads/2025/09/20250903-PROC-1006-FRM.pdf.pdf)
+- [2025 Eid'l Fitr](https://pco.gov.ph/news_releases/pbbm-declares-april-1-a-regular-holiday-to-mark-eidl-fitr/) and [Eid'l Adha](https://pco.gov.ph/news_releases/pbbm-declares-june-6-regular-holiday-for-eidl-adha-observance/)
+- [2025 election holiday](https://pco.gov.ph/news_releases/proclamation-no-878-declaring-monday-12-may-2025-a-special-non-working-holiday-throughout-the-country/)
+- [2026 Eid'l Fitr](https://pco.gov.ph/news_releases/palace-declares-march-20-regular-holiday-nationwide-for-eidl-fitr/) and [Eid'l Adha](https://pco.gov.ph/news_releases/palace-declares-may-27-as-a-regular-holiday-for-eidl-adha-observance/)
+
+## Cursor / Windows update
+
+Stop only the website terminal with Ctrl+C, then:
+
+```powershell
+git status --short --branch
+git branch --show-current
+git pull --ff-only origin feat/ncsc-dtr-workflow
+.\.venv\Scripts\python.exe -m uvicorn app.main:app --host 127.0.0.1 --port 8000 --workers 1
+```
+
+Keep the existing `.env` and databases. Refresh the browser once for new assets. The separate approved `python -m app.cli poll-k14` collector and existing 60-second automatic import continue unchanged. No scheduled task, public deployment or Google Sheet write is performed.

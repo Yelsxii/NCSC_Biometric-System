@@ -34,7 +34,7 @@ def test_no_automatic_numeric_code_or_clock_time_classification(admin):
     assert day['unassigned_count'] == 4
     assert day['review']['undertime_minutes'] is None
     assert day['daily_total_seconds'] is None
-    assert day['tone'] == 'entry'
+    assert day['tone'] == 'holiday'  # Automatically verified All Souls' Day.
     assert [x['happened_at'][11:] for x in day['scans']] == ['07:30:07', '12:00:11', '13:00:13', '17:00:17']
 
 
@@ -110,6 +110,7 @@ def test_holiday_is_shared_versioned_audited_and_does_not_create_punches(admin):
 def test_activity_sources_remain_visible_without_crediting_hours(admin):
     client, headers = admin
     seed(client, headers)
+    client.put('/api/attendance-calendar/2026-11-02', json={'version': 0, 'holiday_name': ''}, headers=headers)
     assert client.put('/api/work-codes/1/101', json={'label': 'Fictional AJA', 'activity_type': 'AJA'}, headers=headers).status_code == 200
     assert monitor(client)['days'][1]['tone'] == 'aja'
     payload = {'version': 0, 'activity_type': 'Travel Order', 'activity_reference': 'EXAMPLE-TO-001'}

@@ -17,7 +17,8 @@ from pathlib import Path
 from typing import Literal
 
 from dotenv import load_dotenv
-from fastapi import Depends, FastAPI, File, HTTPException, Request, UploadFile
+from fastapi import Depends, FastAPI, File, Form, HTTPException, Request, UploadFile
+from itsdangerous import URLSafeTimedSerializer, BadSignature, SignatureExpired
 from fastapi.responses import FileResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, Field, field_validator, model_validator
@@ -34,6 +35,7 @@ from app.lan import status as lan_status, tcp_probe
 from app.profiles import RegistrationInput, ProfileUpdateInput, get_profile, list_profiles, save_profile
 from app.attendance import DayReviewInput, CalendarInput, decorate_days, save_day_review, save_calendar
 from app.activity_mapping import activity_pairs
+from app.manual_dtr import MAX_MANUAL_BYTES, parse_package, preview_package, import_package, mapping_hash
 
 load_dotenv()
 secret = os.environ.get("SECRET_KEY", "")
@@ -642,6 +644,46 @@ def update_attendance_calendar(date: str, payload: CalendarInput, request: Reque
 
 
 # ── Streamlined employee records ─────────────────────────────────────────────
+
+async def manual_dtr_request(file: UploadFile, mapping: str):
+    raw = await file.read(MAX_MANUAL_BYTES + 1)
+    try:
+        packet = parse_package(raw)
+        mapped = json.loads(mapping)
+        if not isinstance(mapped, dict):
+            raise ValueError("Invalid employee mapping.")
+        return raw, packet, mapped
+    except (ValueError, TypeError, RecursionError) as exc:
+        raise HTTPException(400, "Invalid manual DTR package or employee mapping. Check the file and try again.") from exc
+
+
+@app.post("/api/manual-dtr/preview")
+async def preview_manual_dtr(request: Request, file: UploadFile = File(...), mapping: str = Form("{}"),
+                             user: dict = Depends(require_admin)):
+    require_csrf(request)
+    raw, packet, mapped = await manual_dtr_request(file, mapping)
+    try:
+        result = preview_package(packet, mapped)
+    except ValueError as exc:
+        raise HTTPException(400, str(exc)) from exc
+    result["preview_token"] = URLSafeTimedSerializer(secret, salt="manual-dtr-preview").dumps(
+        {"file": digest(raw), "mapping": mapping_hash(mapped), "actor": user["id"]})
+    return result
+
+
+@app.post("/api/manual-dtr/import")
+async def import_manual_dtr(request: Request, file: UploadFile = File(...), mapping: str = Form(...),
+                            preview_token: str = Form(...), user: dict = Depends(require_admin)):
+    require_csrf(request)
+    raw, packet, mapped = await manual_dtr_request(file, mapping)
+    try:
+        expected = {"file": digest(raw), "mapping": mapping_hash(mapped), "actor": user["id"]}
+        observed = URLSafeTimedSerializer(secret, salt="manual-dtr-preview").loads(preview_token, max_age=900)
+        if observed != expected or not mapped:
+            raise ValueError("Preview the chosen employee matches before importing.")
+        return {"counts": import_package(packet, mapped, digest(raw), user["id"])}
+    except (BadSignature, SignatureExpired, ValueError) as exc:
+        raise HTTPException(400, "Preview the current file and employee matches before importing.") from exc
 
 @app.get("/api/employee-register")
 def employee_register(month: str, q: str = "", user: dict = Depends(current_user)):

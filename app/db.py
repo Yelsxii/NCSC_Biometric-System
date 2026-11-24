@@ -150,6 +150,29 @@ CREATE TABLE IF NOT EXISTS attendance_calendar (
  updated_by INTEGER NOT NULL REFERENCES users(id),
  updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
+CREATE TABLE IF NOT EXISTS manual_dtr_imports (
+ id INTEGER PRIMARY KEY AUTOINCREMENT,
+ file_sha256 TEXT NOT NULL,
+ mapping_sha256 TEXT NOT NULL,
+ source_title TEXT NOT NULL,
+ imported_by INTEGER NOT NULL REFERENCES users(id),
+ imported_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+ UNIQUE(file_sha256,mapping_sha256)
+);
+CREATE TABLE IF NOT EXISTS manual_dtr_entries (
+ id INTEGER PRIMARY KEY AUTOINCREMENT,
+ employee_code TEXT NOT NULL REFERENCES employees(employee_code),
+ attendance_date TEXT NOT NULL,
+ source_id TEXT NOT NULL,
+ sheet_key TEXT NOT NULL,
+ source_row INTEGER NOT NULL,
+ source_name TEXT NOT NULL,
+ normalized_json TEXT NOT NULL,
+ original_json TEXT NOT NULL,
+ imported_batch_id INTEGER NOT NULL REFERENCES manual_dtr_imports(id),
+ UNIQUE(employee_code,attendance_date),
+ UNIQUE(source_id,sheet_key,source_row)
+);
 CREATE TABLE IF NOT EXISTS fieldwork (
  id INTEGER PRIMARY KEY AUTOINCREMENT,
  employee_code TEXT NOT NULL,
@@ -205,7 +228,8 @@ def initialize() -> None:
         phase = ("profiles" if "employee_profiles" not in tables else
                  "attendance" if "attendance_day_reviews" not in tables else
                  "activity-directions" if "work_codes" in tables and
-                 "direction" not in {row[1] for row in con.execute("PRAGMA table_info(work_codes)")} else None)
+                 "direction" not in {row[1] for row in con.execute("PRAGMA table_info(work_codes)")} else
+                 "manual-dtr" if "manual_dtr_entries" not in tables else None)
         if phase and "punches" in tables:
             if con.execute("SELECT COUNT(*) FROM punches").fetchone()[0]:
                 folder = database_path().parent / "backups"

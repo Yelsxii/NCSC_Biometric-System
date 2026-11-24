@@ -312,12 +312,48 @@ with connect() as con:
     assert.equal(await day.locator('.undertime-value').first().textContent(),'0');
     const compact=await day.boundingBox();
     assert.ok(compact.height<=43,'Daily rows should stay compact: '+compact.height);
-    await page.locator('#open-calendar').click();
-    await page.locator('#calendar-date').selectOption('2026-11-11');
-    await page.locator('#calendar-name').fill('Sample office holiday');
-    await page.locator('#save-calendar').click();
-    await page.locator('#calendar-dialog').waitFor({state:'hidden'});
-    await page.locator('[data-date="2026-11-11"].day-holiday').waitFor();
+    assert.equal(await page.locator('#open-calendar').count(),0);
+    await page.locator('[data-date="2026-11-30"].day-holiday').waitFor();
+    // Manual source slots fill gaps; original biometric boundaries stay exact.
+    const boundaries=await page.evaluate(async()=>{
+      const body=new FormData();
+      body.append('file',new File(['1\t2026-11-06 08:00:07\t1\t9\t1\t0\n1\t2026-11-06 17:00:11\t1\t9\t1\t0\n'],'fictional-boundaries.dat'));
+      return (await fetch('/api/imports',{method:'POST',headers:{'X-CSRF-Token':session.csrf},body})).status;
+    });
+    assert.equal(boundaries,200);
+    const manualPackage={format:'ncsc-manual-dtr-v1',source:{id:'fictional-workbook',title:'Fictional manual DTR'},people:[{
+      key:'sample-one',name:'Sample One',sheet:'SAMPLE_ONE',rows:[
+        {row:7,values:['2026-11-06','Friday','08:00','12:00','13:00','17:00',null,null,8/24,0,0,'Complete']},
+        {row:8,values:['2026-11-09','Monday','08:00','12:00','13:00','18:00',null,null,9/24,0,1/24,'Complete']},
+        {row:9,values:['2026-11-10','Tuesday','08:30','12:00','13:00','17:00',null,null,7.5/24,.5/24,0,'Undertime']}
+      ]}]};
+    await page.locator('#open-manual-dtr').click();
+    await page.locator('#manual-dtr-file').setInputFiles({name:'fictional-manual.json',mimeType:'application/json',buffer:Buffer.from(JSON.stringify(manualPackage))});
+    await page.locator('[data-manual-key="sample-one"]').waitFor();
+    await page.locator('[data-manual-key="sample-one"]').selectOption('1');
+    await page.locator('#preview-manual-dtr:enabled').click();
+    await page.locator('#manual-dtr-result').filter({hasText:'3 new days'}).waitFor();
+    await page.screenshot({path:join(root,'docs/manual-dtr-preview.png'),animations:'disabled'});
+    await page.locator('#import-manual-dtr:enabled').click();
+    await page.locator('#manual-dtr-dialog').waitFor({state:'hidden'});
+    const filled=page.locator('[data-date="2026-11-06"]');
+    await filled.locator('.origin-manual_sheet').first().waitFor();
+    assert.equal(await filled.locator('.origin-biometric').count(),2);
+    assert.equal(await filled.locator('.origin-manual_sheet').count(),2);
+    assert.equal(await filled.locator('.daily-total-value').textContent(),'8:00');
+    assert.equal(await filled.locator('.monitor-remark').textContent(),'Complete');
+    assert.equal(await page.locator('[data-date="2026-11-09"] .overtime-value').textContent(),'1:00');
+    assert.equal(await page.locator('[data-date="2026-11-10"] .monitor-remark').textContent(),'Undertime');
+    const detailStyle=await page.evaluate(()=>({
+      buttonBorder:getComputedStyle(document.querySelector('.edit-day')).borderTopWidth,
+      buttonDecoration:getComputedStyle(document.querySelector('.edit-day')).textDecorationLine,
+      dotRadius:getComputedStyle(document.querySelector('.legend-entry'),'::before').borderRadius,
+      dotGlow:getComputedStyle(document.querySelector('.legend-entry'),'::before').boxShadow
+    }));
+    assert.equal(detailStyle.buttonBorder,'0px');
+    assert.equal(detailStyle.buttonDecoration,'none');
+    assert.equal(detailStyle.dotRadius,'50%');
+    assert.notEqual(detailStyle.dotGlow,'none');
     await page.screenshot({path:join(root,'docs/employee-records-preview.png'),animations:'disabled'});
     await page.setViewportSize({width:390,height:800});
     await page.screenshot({path:join(root,'docs/mobile-attendance-preview.png'),animations:'disabled'});

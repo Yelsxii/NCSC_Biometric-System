@@ -1,5 +1,7 @@
 # Employee Attendance: monthly DTR view
 
+The current source-resolution, manual backfill, totals and automatic holiday behavior is documented in [Biometric times and manual DTR backfill](manual-dtr-backfill.md). The notes below describe the initial reviewed-slot phase.
+
 This update focuses on Employee Attendance. The approved login and original attendance source remain unchanged. Internal pages use the direct page title in the top bar, without repeated page banners or a Workspace breadcrumb.
 
 ## Directory and monthly table

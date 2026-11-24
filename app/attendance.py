@@ -16,6 +16,8 @@ from pydantic import BaseModel, ConfigDict, Field, field_validator, model_valida
 
 from app.db import connect
 from app.registry import clean
+from app.dtr_sources import resolve_day
+from app.holidays import national_holiday, VERIFIED_YEARS
 
 SLOTS = ("am_in", "am_out", "pm_in", "pm_out")
 ACTIVITIES = ("", "AJA", "Fieldwork", "Official Business", "Travel Order")
@@ -155,11 +157,17 @@ def decorate_days(employee_code: str, days: list[dict]) -> None:
             "SELECT * FROM attendance_calendar WHERE attendance_date BETWEEN ? AND ?",
             (days[0]["date"], days[-1]["date"]),
         )}
+        manual = {r["attendance_date"]: {"data": json.loads(r["normalized_json"]), "name": r["source_name"],
+                  "sheet": r["sheet_key"], "row": r["source_row"]} for r in con.execute(
+            "SELECT * FROM manual_dtr_entries WHERE employee_code=? AND attendance_date BETWEEN ? AND ?",
+            (employee_code, days[0]["date"], days[-1]["date"]),
+        )}
     # Manila uses UTC+08:00; do not depend on an optional Windows tzdata package.
     today = dt.datetime.now(dt.timezone(dt.timedelta(hours=8))).date().isoformat()
     for day in days:
         review = reviews.get(day["date"], {})
-        calendar = dates.get(day["date"], {})
+        calendar = dates.get(day["date"], {"holiday_name": national_holiday(day["date"]), "version": 0})
+        day["calendar_verified"] = int(day["date"][:4]) in VERIFIED_YEARS
         events = {event["id"]: event for event in day["scans"]}
         day["slots"] = {slot: events.get(review.get(slot)) for slot in SLOTS}
         chosen = {event["id"] for event in day["slots"].values() if event}
@@ -196,3 +204,4 @@ def decorate_days(employee_code: str, days: list[dict]) -> None:
             seconds = int(((stamp["am_out"] - stamp["am_in"]) +
                            (stamp["pm_out"] - stamp["pm_in"])).total_seconds())
         day["daily_total_seconds"] = seconds
+        resolve_day(day, manual.get(day["date"]))
