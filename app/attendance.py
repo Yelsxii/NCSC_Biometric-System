@@ -57,7 +57,7 @@ class DayReviewInput(BaseModel):
         if values is None:
             return values
         for clock in values.values():
-            if not re.fullmatch(r"(?:[01]\\d|2[0-3]):[0-5]\\d(?::[0-5]\\d)?", clock):
+            if not re.fullmatch(r"(?:[01]\d|2[0-3]):[0-5]\d(?::[0-5]\d)?", clock):
                 raise ValueError("Use a valid 24-hour clock time.")
         return {key: clock if len(clock)==8 else clock+":00" for key,clock in values.items()}
 
