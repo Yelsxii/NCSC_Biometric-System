@@ -109,6 +109,9 @@ uvicorn.run('app.main:app',host='127.0.0.1',port=int(os.environ['QA_PORT']),log_
     assert.equal(await page.locator('#account').count(),0);
     assert.ok(await page.locator('#logout-sidebar').isVisible());
     assert.equal(await page.locator('#logout-sidebar span').textContent(),'Sign out');
+    const navTypography=await page.locator('.sidebar .nav-item > span').first().evaluate(el=>({size:getComputedStyle(el).fontSize,casing:getComputedStyle(el).textTransform}));
+    assert.equal(navTypography.size,'12px');
+    assert.equal(navTypography.casing,'none');
     assert.equal(await page.locator('#logout-sidebar').evaluate(el=>getComputedStyle(el).textTransform),'none');
     assert.equal(await page.locator('.sidebar .brand img').evaluate(el=>el.getBoundingClientRect().width),48);
     assert.equal(await page.locator('.topbar #logout').count(),0);
