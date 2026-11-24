@@ -330,7 +330,8 @@ function slotCell(day,key){
       (day.is_future||day.is_weekend?'neutral':'missing');
   const label=origin==='manual_sheet'?'Sheet':origin==='reviewed'?'HR':'Bio';
   const hint=event?event.happened_at.slice(11)+' · '+(origin==='manual_sheet'?'Manual DTR source':origin==='reviewed'?'Reviewed selection':origin==='hr_approved'?'HR-approved adjustment':'Original biometric time; observed AM/PM placement')+
-    (event.work_code!==undefined&&event.work_code!==''?' · Work code '+event.work_code:''):'No entry';
+    (event.verified_slot?' · Device state: '+event.verified_slot.replace('_',' ').toUpperCase():'')+
+    (event.work_code!==undefined&&event.work_code!==''?' · Work code '+event.work_code:event.k14_state_pending?' · Work code not yet available':''):'No entry';
   return '<td class="time-slot slot-'+tone+'" data-origin="'+esc(event?origin:'')+'" title="'+esc(hint)+'">'+(event?
     '<span class="time-value">'+esc(event.happened_at.slice(11,19))+'</span>':
     '<span class="no-time">—</span>')+'</td>';

@@ -609,7 +609,7 @@ def monitor_dtr(employee_code: str, month: str, user: dict = Depends(current_use
             if link:
                 scan["k14_state_pending"] = True
                 scan["k14_punch_type"] = link["state_min"] if link["state_min"]==link["state_max"] else None
-                scan["verified_slot"] = {"5":"pm_in"}.get(scan["k14_punch_type"])
+                scan["verified_slot"] = {"0":"am_in", "1":"am_out", "4":"pm_out", "5":"pm_in"}.get(scan["k14_punch_type"])
         employee = con.execute(
             "SELECT e.display_name,e.name_source,e.department,ep.employment_type,ep.position FROM employees e "
             "LEFT JOIN employee_profiles ep ON ep.employee_code=e.employee_code WHERE e.employee_code=?",

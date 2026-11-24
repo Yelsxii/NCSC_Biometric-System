@@ -433,9 +433,29 @@ def test_current_office_pm_in_uses_verified_state_not_scan_order(admin, monkeypa
         day = client.get("/api/dtr/monitor?employee_code="+employee+"&month=2026-11").json()["days"][23]
         assert day["display_slots"]["pm_in"]["happened_at"].endswith(expected)
         assert day["display_slots"]["pm_out"] is None
-        assert day["display_slots"]["am_in"] is None
+        if employee == "7":
+            assert day["display_slots"]["am_in"]["happened_at"].endswith("11:29:51")
+        else:
+            assert day["display_slots"]["am_in"] is None
         assert day["monitoring"]["total_seconds"] is None
         assert day["scans"][-1]["work_code"] == ""
         assert day["scans"][-1]["k14_punch_type"] == "5"
     with closing(connect()) as con:
         assert con.execute("SELECT COUNT(*) FROM punches").fetchone()[0] == 3
+
+
+def test_all_four_confirmed_office_states_and_unknown_state(admin, monkeypatch, tmp_path):
+    client, headers = admin
+    path = tmp_path / "attendance.sqlite3"
+    punches = [("07:10:05","0"),("12:01:05","1"),("13:01:05","5"),("17:15:05","4")]
+    _connector(path, [(HOST,"7","2026-11-24 "+clock,"1",state,"2026-11-25 00:00:00")
+                      for clock,state in punches] +
+                     [(HOST,"18","2026-11-24 12:05:01","1","2","2026-11-25 00:00:00")])
+    _enable(monkeypatch, path)
+    assert client.post("/api/device/sync", headers=headers).status_code == 200
+    day = client.get("/api/dtr/monitor?employee_code=7&month=2026-11").json()["days"][23]
+    assert [day["display_slots"][key]["happened_at"][11:] for key in ("am_in","am_out","pm_in","pm_out")] == [clock for clock,_ in punches]
+    unknown = client.get("/api/dtr/monitor?employee_code=18&month=2026-11").json()["days"][23]
+    assert not any(unknown["display_slots"].values())
+    assert unknown["display_unassigned_count"] == 1
+    assert unknown["display_remark"] == "Review"
