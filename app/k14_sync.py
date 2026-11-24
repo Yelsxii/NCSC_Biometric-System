@@ -213,6 +213,9 @@ def import_device_names(con: sqlite3.Connection, rows: list[sqlite3.Row],
 
 def connector_availability() -> dict:
     """Check local readability/schema only. This cannot prove the K14 is online."""
+    from app.bionet_attendance import active, availability
+    if active():
+        return availability()
     try:
         with _open_connector(connector_path()):
             pass
@@ -418,6 +421,9 @@ def run_sync(actor_id: int | None = None, *, manual: bool = False) -> dict:
             initialize()
             if not manual and not enabled():
                 raise ValueError("Automatic connector imports are turned off.")
+            from app.bionet_attendance import active, import_records
+            if active():
+                return import_records(actor_id, started)
             path = connector_path()
             rows = read_connector(path)
             names = read_connector_names(path)
@@ -461,11 +467,13 @@ def status_view(include_errors: bool) -> dict:
         else:
             count = latest["records_inserted"]
             result_label = f"Success — {count} new record{'s' if count != 1 else ''}"
+    from app.bionet_attendance import active
     availability = connector_availability()
     if not include_errors and not availability["connector_available"]:
         availability["connector_message"] = "An administrator can review the connector configuration."
     return {
         "enabled": enabled(),
+        "source_mode": "bionet" if active() else "connector",
         "interval_seconds": sync_interval(),
         "in_progress": _LOCK.locked(),
         **availability,

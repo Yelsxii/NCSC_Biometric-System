@@ -647,7 +647,7 @@ function renderDeviceStatus(data){
     const sync=data.attendance_sync||{};
     $('lan-sync').textContent=sync.in_progress?'Import in progress':
       (sync.enabled?'On · every '+sync.interval_seconds+' seconds':'Off · Manual reads available');
-    $('lan-connector').textContent=sync.connector_available?'Available (local file)':'Unavailable';
+    $('lan-connector').textContent=sync.connector_available?(sync.source_mode==='bionet'?'ZKBio Time.Net':'Available (local file)'):'Unavailable';
     $('lan-connector').title=sync.connector_message||'';
     $('lan-total-records').textContent=Number(sync.total_imported||0).toLocaleString();
     $('lan-probe-status').textContent=data.probe_enabled?'Enabled':'Disabled';

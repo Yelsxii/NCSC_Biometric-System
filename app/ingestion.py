@@ -29,6 +29,11 @@ def insert_punches(con: sqlite3.Connection, records: Iterable[Punch], batch_id: 
         )
         if identical:
             continue
+        if len(existing) == 1 and existing[0]["source"] == "bionet":
+            # Preserve the vendor original and do not duplicate a matching USB event.
+            if existing[0]["work_code"] != punch.work_code:
+                con.execute("UPDATE bionet_attendance_evidence SET conflict=1 WHERE punch_id=?",(existing[0]["id"],))
+            continue
         if len(existing) == 1 and existing[0]["source"] == "k14":
             try:
                 con.execute(

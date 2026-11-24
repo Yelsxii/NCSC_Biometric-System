@@ -159,7 +159,7 @@ def reconcile_workcodes(con, scans):
     allowed = authorized_ids(con)
     targets = {}
     for scan in scans:
-        if scan.get("k14_state_pending") and scan["employee_code"] in allowed:
+        if scan.get("k14_state_pending") and not scan.get("bionet_evidence") and scan["employee_code"] in allowed:
             targets.setdefault((scan["employee_code"], scan["happened_at"]), []).append(scan)
     if not targets:
         return

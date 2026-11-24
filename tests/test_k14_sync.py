@@ -523,3 +523,48 @@ def test_bionet_attendance_diagnostic_compares_exact_states_without_identifying_
     assert result["comparison_groups"]==[{"terminal_id":"1","workstate":"5","punch_type":"1",
                                          "workcode":"3","k14_punch_state":"5","count":1}]
     assert vendor.read_bytes()==before
+
+
+def test_direct_bionet_import_is_idempotent_and_persists_evidence(admin,monkeypatch,tmp_path):
+    client,headers=admin
+    path=tmp_path/"attendance.sqlite3"
+    _connector(path,[(HOST,"7","2026-11-24 08:00:00","1","0","2026-11-24 00:00:00")])
+    _enable(monkeypatch,path)
+    assert client.post("/api/device/sync",headers=headers).status_code==200
+    vendor=tmp_path/"TimeNet.db"
+    with closing(sqlite3.connect(vendor)) as con,con:
+        con.executescript("CREATE TABLE hr_employee(id INTEGER,emp_pin TEXT);"
+                          "CREATE TABLE att_punches(employee_id INTEGER,punch_time TEXT,terminal_id INTEGER,workstate INTEGER,punch_type INTEGER,workcode INTEGER);"
+                          "CREATE TABLE att_workcode(wc_code INTEGER,wc_name TEXT);"
+                          "INSERT INTO hr_employee VALUES(100,'7'),(101,'19');"
+                          "INSERT INTO att_workcode VALUES(1,'AJA OUT'),(2,'AJA IN'),(3,'REGULAR');")
+        con.executemany("INSERT INTO att_punches VALUES(?,?,?,?,?,?)",[
+            (100,"2026-11-24 08:00:00",1,0,0,3),
+            (100,"2026-11-24 09:00:00",1,1,0,1),
+            (100,"2026-11-24 10:00:00",1,0,0,2),
+            (100,"2026-11-24 13:07:26",1,5,0,3),
+            (101,"2026-11-24 09:00:00",1,1,0,1),
+            (100,"2026-11-24 09:05:00",2,1,0,1),
+            (100,"2026-11-23 08:00:00",1,0,0,0)])
+    before=vendor.read_bytes()
+    monkeypatch.setenv("BIONET_ROSTER_DB",str(vendor))
+    monkeypatch.setenv("NCSC_ATTENDANCE_SOURCE","bionet")
+    first=client.post("/api/device/sync",headers=headers)
+    assert first.status_code==200,first.text
+    assert first.json()["records_inserted"]==3
+    second=client.post("/api/device/sync",headers=headers)
+    assert second.json()["records_inserted"]==0
+    assert second.json()["records_already_present"]==4
+    assert vendor.read_bytes()==before
+    with closing(connect()) as con:
+        assert con.execute("SELECT COUNT(*) FROM punches").fetchone()[0]==4
+        assert con.execute("SELECT COUNT(*) FROM bionet_attendance_evidence").fetchone()[0]==4
+        assert con.execute("SELECT COUNT(*) FROM k14_sync_events").fetchone()[0]==1
+    monkeypatch.setenv("BIONET_ROSTER_DB",str(tmp_path/"unavailable.db"))
+    d=client.get("/api/dtr/monitor?employee_code=7&month=2026-11").json()["days"][23]
+    assert d["display_slots"]["am_in"]["happened_at"].endswith("08:00:00")
+    assert d["display_slots"]["pm_in"]["happened_at"].endswith("13:07:26")
+    assert d["display_slots"]["pm_out"] is None
+    assert d["aja_periods"]==[{"out":{"time":"09:00:00","origin":"biometric"},"in":{"time":"10:00:00","origin":"biometric"},"review":False}]
+    items=client.get("/api/activities/monitor?month=2026-11&category=AJA").json()["items"]
+    assert [(x["work_code"],x["direction"]) for x in items]==[("2","IN"),("1","OUT")]

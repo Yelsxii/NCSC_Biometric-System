@@ -79,6 +79,15 @@ CREATE TABLE IF NOT EXISTS k14_sync_events (
  UNIQUE(device_ip, employee_id, punch_time_local, device_status, device_punch_type)
 );
 CREATE INDEX IF NOT EXISTS idx_k14_sync_employee ON k14_sync_events(employee_id, punch_time_local);
+CREATE TABLE IF NOT EXISTS bionet_attendance_evidence (
+ punch_id INTEGER PRIMARY KEY REFERENCES punches(id),
+ terminal_id TEXT NOT NULL,
+ workstate TEXT NOT NULL,
+ punch_type TEXT NOT NULL,
+ workcode TEXT NOT NULL,
+ conflict INTEGER NOT NULL DEFAULT 0 CHECK(conflict IN (0,1)),
+ synced_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
 CREATE TABLE IF NOT EXISTS k14_sync_runs (
  id INTEGER PRIMARY KEY AUTOINCREMENT,
  started_at TEXT NOT NULL,
@@ -231,7 +240,8 @@ def initialize() -> None:
                  "activity-directions" if "work_codes" in tables and
                  "direction" not in {row[1] for row in con.execute("PRAGMA table_info(work_codes)")} else
                  "manual-dtr" if "manual_dtr_entries" not in tables else
-                 "approved-times" if "approved_times" not in {row[1] for row in con.execute("PRAGMA table_info(attendance_day_reviews)")} else None)
+                 "approved-times" if "approved_times" not in {row[1] for row in con.execute("PRAGMA table_info(attendance_day_reviews)")} else
+                 "bionet-evidence" if "bionet_attendance_evidence" not in tables else None)
         if phase and "punches" in tables:
             if con.execute("SELECT COUNT(*) FROM punches").fetchone()[0]:
                 folder = database_path().parent / "backups"

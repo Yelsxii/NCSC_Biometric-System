@@ -37,6 +37,7 @@ from app.attendance import DayReviewInput, CalendarInput, decorate_days, save_da
 from app.activity_mapping import activity_pairs, dtr_aja_periods
 from app.dtr_sources import present_day
 from app.bionet_roster import reconcile_workcodes
+from app.bionet_attendance import apply_evidence, active as bionet_active
 from app.manual_dtr import (MAX_MANUAL_BYTES, parse_package, preview_package, import_package,
                             mapping_hash, automatic_status, start_local_source_sync, stop_local_source_sync)
 
@@ -611,6 +612,7 @@ def monitor_dtr(employee_code: str, month: str, user: dict = Depends(current_use
                 scan["k14_state_pending"] = True
                 scan["k14_punch_type"] = link["state_min"] if link["state_min"]==link["state_max"] else None
                 scan["verified_slot"] = {"0":"am_in", "1":"am_out", "4":"pm_out", "5":"pm_in"}.get(scan["k14_punch_type"])
+        apply_evidence(con, scans)
         reconcile_workcodes(con, scans)
         employee = con.execute(
             "SELECT e.display_name,e.name_source,e.department,ep.employment_type,ep.position FROM employees e "
@@ -771,12 +773,14 @@ def _device_payload(user: dict) -> dict:
     sync = status_view(include_errors=user["role"] == "admin")
     payload["sync_enabled"] = sync["enabled"]
     payload["attendance_sync"] = sync
-    payload["mode"] = "Local connector database + USB backup"
+    payload["mode"] = "ZKBio Time.Net + USB backup" if bionet_active() else "Local connector database + USB backup"
     payload["message"] = (
         "Administrators can read the local connector file with automatic imports off. "
         "The optional TCP test does not control imports or confirm that device polling is running. "
         "Restart the website after changing local settings."
     )
+    if bionet_active():
+        payload["message"] = "Attendance imports read TimeNet.db only. Keep ZKBio collection running; the separate LAN poller is not required."
     return payload
 
 
@@ -852,13 +856,15 @@ def monitor_official_activities(
                FROM punches p LEFT JOIN employees e ON e.employee_code=p.employee_code
                LEFT JOIN work_codes w ON w.device_id=p.device_id AND w.work_code=p.work_code
                WHERE p.happened_at>=? AND p.happened_at<? AND p.happened_at>='2026-11-24'
-                 AND EXISTS(SELECT 1 FROM k14_sync_events k WHERE k.punch_id=p.id
+                 AND (EXISTS(SELECT 1 FROM k14_sync_events k WHERE k.punch_id=p.id
                      AND k.device_ip='192.168.254.201')
+                     OR EXISTS(SELECT 1 FROM bionet_attendance_evidence b WHERE b.punch_id=p.id))
                  AND (?='' OR instr(lower(p.employee_code),lower(?))>0
                             OR instr(lower(COALESCE(e.display_name,'')),lower(?))>0)
                ORDER BY p.happened_at DESC,p.id DESC LIMIT 10001""",
             (start.isoformat(),end.isoformat(),search,search,search))]
         if len(candidates)<=10000:
+            apply_evidence(con,candidates)
             reconcile_workcodes(con,candidates)
             by_id = {r["id"]:r for r in signals}
             for scan in candidates:
