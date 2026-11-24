@@ -291,8 +291,7 @@ function activityScanCell(day){
   const periods=day.aja_periods||[];
   return ['out','in'].map(key=>'<td class="activity-evidence aja-'+key+'">'+(periods.length?periods.map(period=>{
     const entry=period[key];
-    const source=entry?.origin==='biometric'?'Bio':entry?.origin==='hr_approved'?'HR':entry?.origin==='manual_sheet'?'Sheet':entry?'Ref':'';
-    return '<div class="aja-time '+(entry?'has-aja':'aja-missing')+'" title="'+esc((entry?.origin||'Missing entry')+(period.review?' · Needs review':''))+'">'+(entry?esc(entry.time)+' <small>'+source+'</small>':period.review?'<small>Missing</small>':'—')+'</div>';
+    return '<div class="aja-time '+(entry?'has-aja':'aja-missing')+'" title="'+esc((entry?.origin||'Missing entry')+(period.review?' · Needs review':''))+'">'+(entry?'<span class="time-value">'+esc(entry.time)+'</span>':period.review?'<span class="no-time">—</span>':'—')+'</div>';
   }).join(''):'<span class="empty-cell">—</span>')+'</td>').join('');
 }
 function travelCell(day){
@@ -407,59 +406,100 @@ async function loadDetail({quiet=false}={}){
     if(!quiet){$('daily-rows').innerHTML='<tr><td colspan="14" class="table-empty">Unable to load attendance.</td></tr>';toast(error.message,true);}
   }
 }
+const REVIEW_CLOCKS=['am_in','am_out','pm_in','pm_out','aja_out','aja_in'];
+let pickerTarget=null;
+function clockInput(key){return $('clock-'+key.replaceAll('_','-'));}
+function normalizedClock(value){
+  const raw=value.trim();
+  if(!raw)return '';
+  const m=/^([01]\d|2[0-3]):([0-5]\d)(?::([0-5]\d))?$/.exec(raw);
+  return m?m[1]+':'+m[2]+':'+(m[3]||'00'):null;
+}
+function clockAdjustments(context){
+  const approved={...(context.day.review.approved_times||{})};
+  for(const key of REVIEW_CLOCKS){
+    const input=clockInput(key);
+    if(input.disabled)continue;
+    const value=normalizedClock(input.value);
+    if(value===null)return null;
+    if(value===context.initialClocks[key])continue;
+    if(value)approved[key]=value;else delete approved[key];
+  }
+  return approved;
+}
+function updateApprovalReason(){
+  if(!dayReviewContext)return;
+  const changes=clockAdjustments(dayReviewContext);
+  const before=dayReviewContext.day.review.approved_times||{};
+  const changed=changes!==null&&REVIEW_CLOCKS.some(k=>changes[k]!==before[k]);
+  const show=session?.role==='admin'&&!dayReviewContext.day.travel_order&&changed;
+  $('review-reason-field').classList.toggle('hidden',!show);
+  $('review-remark').required=show;
+}
+function closeClockPicker(){
+  if(pickerTarget)document.querySelector('[data-clock-pick="'+pickerTarget+'"]')?.setAttribute('aria-expanded','false');
+  pickerTarget=null;$('clock-picker').classList.add('hidden');
+}
+function openClockPicker(id){
+  const input=$('clock-'+id);
+  if(input.disabled)return;
+  if(pickerTarget===id){closeClockPicker();return;}
+  closeClockPicker();pickerTarget=id;
+  document.querySelector('[data-clock-pick="'+id+'"]').setAttribute('aria-expanded','true');
+  const parts=(normalizedClock(input.value)||'00:00:00').split(':');
+  ['hour','minute','second'].forEach((k,i)=>{$('picker-'+k).value=parts[i];});
+  $('clock-picker-title').textContent=input.closest('.clock-field').querySelector('label').textContent;
+  $('clock-picker').classList.remove('hidden');
+  $('picker-hour').focus();$('picker-hour').select();
+}
+function applyClockPicker(clear=false){
+  if(!pickerTarget)return;
+  const values=['hour','minute','second'].map(k=>$('picker-'+k).value.trim());
+  if(!clear && values.some((v,i)=>! /^\d{1,2}$/.test(v)||Number(v)>(i===0?23:59))){
+    $('day-review-error').textContent='Choose a valid 24-hour time.';$('day-review-error').classList.remove('hidden');return;
+  }
+  const input=$('clock-'+pickerTarget);
+  input.value=clear?'':values.map(v=>v.padStart(2,'0')).join(':');
+  input.setCustomValidity('');closeClockPicker();updateApprovalReason();
+  $('day-review-error').classList.add('hidden');input.focus();
+}
 function openDayReview(date){
   const day=activeDtr?.days.find(x=>x.date===date);
   if(!day || !session)return;
-  dayReviewContext={code:selectedEmployee,month:activeDtr.month,day,account:session};
+  dayReviewContext={code:selectedEmployee,month:activeDtr.month,day,account:session,initialClocks:{}};
   const editable=session.role==='admin';
-  $('day-review-form').reset();$('day-review-error').classList.add('hidden');
+  $('day-review-form').reset();closeClockPicker();$('day-review-error').classList.add('hidden');
   $('day-review-heading').textContent=editable?(day.travel_order?'Edit Travel Order':'Edit attendance'):'Attendance entries';
   $('day-review-context').textContent=selectedName+' · '+date+' ('+day.day+')';
-  const options='<option value="">Automatic / no override</option>'+regularReviewCandidates(day).map(event=>
-    '<option value="'+event.id+'">'+esc(event.happened_at.slice(11))+' · WC '+esc(event.work_code||'—')+'</option>').join('');
-  for(const key of ['am_in','am_out','pm_in','pm_out']){
-    const node=$('review-'+key.replace('_','-'));const selected=day.slots[key];
-    node.innerHTML=options+(selected&&!regularReviewCandidates(day).some(x=>x.id===selected.id)?'<option value="'+selected.id+'">'+esc(selected.happened_at.slice(11,19))+' (existing review)</option>':'');
-    node.value=selected?.id||'';node.disabled=!editable;
-  }
-  dayReviewContext.initialClocks={};
   const periods=day.aja_periods||[];
-  for(const key of ['am_in','am_out','pm_in','pm_out','aja_out','aja_in']){
+  for(const key of REVIEW_CLOCKS){
     const isAja=key.startsWith('aja_');
-    const current=isAja?(periods.length===1?periods[0][key.slice(4)]?.time:''):day.display_slots?.[key]?.happened_at.slice(11,19);
-    const input=$('clock-'+key.replace('_','-'));
-    input.value=current||'';
+    const entry=isAja?(periods.length===1?periods[0][key.slice(4)]:null):day.display_slots?.[key];
+    const input=clockInput(key);
+    input.value=normalizedClock(isAja?entry?.time||'':entry?.happened_at.slice(11,19)||'')||'';
+    input.setCustomValidity('');
+    input.title=entry?.origin==='hr_approved'?'HR-approved adjustment':entry?.origin==='manual_sheet'?'DTR source':entry?.origin==='biometric'?'Biometric entry':'';
     dayReviewContext.initialClocks[key]=input.value;
     input.disabled=!editable||(isAja&&periods.length>1);
+    document.querySelector('[data-clock-pick="'+key.replaceAll('_','-')+'"]').disabled=input.disabled;
   }
-  $('review-aja-hint').textContent=periods.length>1?'Multiple AJA periods retained in monitoring; single-period adjustment is disabled.':'AJA end from an approved sheet or HR entry is not a biometric return.';
+  $('review-aja-hint').textContent=periods.length>1?'Multiple AJA periods — review separately.':'';
+  $('review-aja-hint').classList.toggle('hidden',periods.length<=1);
   const minutes=day.review.undertime_minutes;
   $('review-ut-hours').value=minutes===null?'':Math.floor(minutes/60);
   $('review-ut-minutes').value=minutes===null?'':minutes%60;
-  $('review-activity').value=day.review.activity_type;
-  $('review-reference').value=day.review.activity_reference;
-  $('review-remark').value=day.review.remark;
-  for(const id of ['review-ut-hours','review-ut-minutes','review-activity','review-reference','review-remark'])$(id).disabled=!editable;
-  $('save-day-review').classList.toggle('hidden',!editable);$('save-day-review').disabled=false;
-  $('place-four-entries').classList.toggle('hidden',!editable||regularReviewCandidates(day).length!==4);
-  $('review-entry-hint').textContent=day.scans.length?day.scans.length+' original entries · automatic values apply unless overridden.':'No original scans for this date.';
   const fullTravel=day.travel_order===true;
+  const editRef=fullTravel&&day.review.activity_type==='Travel Order';
+  $('review-reference').value=day.review.activity_reference;
+  $('review-travel-reference').classList.toggle('hidden',!editRef);
+  $('review-reference').disabled=!editable||!editRef;
+  $('review-remark').value='';$('review-remark').disabled=!editable;
+  $('review-reason-field').classList.add('hidden');$('review-remark').required=false;
+  for(const id of ['review-ut-hours','review-ut-minutes'])$(id).disabled=!editable;
+  $('save-day-review').classList.toggle('hidden',!editable);$('save-day-review').disabled=false;
   $('review-time-section').classList.toggle('hidden',fullTravel);
-  $('review-travel-info').classList.toggle('hidden',!day.travel_order);
-  $('review-travel-info').textContent=fullTravel?'Travel Order · Full day. No clock entry required.':'';
-  for(const key of ['am_in','am_out','pm_in','pm_out']){
-    const node=$('review-'+key.replace('_','-'));
-    node.closest('label').classList.toggle('hidden',fullTravel);
-  }
-  $('review-source-warning').textContent=day.source_conflicts?.length?'Review: '+day.source_conflicts.map(k=>k==='unplaced_biometric'?'Unassigned original scans':k==='order'?'Time sequence differs':k==='travel_with_regular_entries'?'Regular entries also exist on this travel date; retained as evidence':k.replace('_',' ').toUpperCase()+' differs from sheet').join('; ')+'.':'';
-  $('review-raw-scans').textContent=day.scans.map(x=>x.happened_at.slice(11,19)+(x.work_code?' · WC '+x.work_code:'')).join(' | ');
-  const manual=day.manual_source;
-  $('review-sheet-evidence').textContent=manual?'DTR sheet: '+Object.entries(manual.times||{}).filter(([,value])=>value).map(([key,value])=>key.replace('_',' ').toUpperCase()+' '+value).join(' · ')+(manual.notes?.length?' | Notes: '+manual.notes.join(' · '):'')+(manual.aja?' | AJA: '+(manual.aja.purpose||'')+' '+(manual.aja.start||'—')+'–'+(manual.aja.end||'—'):''):'';
-  $('review-source-detail').innerHTML='<strong>Current attendance</strong><div>'+['am_in','am_out','pm_in','pm_out'].map(key=>{
-    const entry=day.display_slots?.[key];
-    return '<span>'+esc(key.replace('_',' ').toUpperCase())+' <b>'+esc((day.travel_periods||[]).includes(key.slice(0,2))?'Travel Order':entry?entry.happened_at.slice(11,19):'—')+'</b></span>';
-  }).join('')+'</div>'+(manual?'<small>Manual DTR · row '+manual.row+'</small>':'');
-  $('review-existing-activities').innerHTML=day.display_activities.map(x=>'<span class="day-badge">'+esc(x.category)+(x.reference?' · '+esc(x.reference):'')+'</span>').join('');
+  $('review-travel-info').classList.toggle('hidden',!fullTravel);
+  $('review-travel-info').textContent=fullTravel?'Travel Order · Full day':'';
   $('day-review-dialog').showModal();
 }
 async function saveDayReview(event){
@@ -467,23 +507,23 @@ async function saveDayReview(event){
   const context=dayReviewContext;
   if(!context || context.account!==session || session.role!=='admin')return;
   const payload={version:context.day.review.version};
-  for(const key of ['am_in','am_out','pm_in','pm_out']){
-    const value=$('review-'+key.replace('_','-')).value;payload[key]=value?Number(value):null;
-  }
+  for(const key of REVIEW_CLOCKS.slice(0,4))payload[key]=context.day.slots[key]?.id||null;
+  let changed=false;
   if(!context.day.travel_order){
-    const approved={...(context.day.review.approved_times||{})};
-    for(const key of ['am_in','am_out','pm_in','pm_out','aja_out','aja_in']){
-      const input=$('clock-'+key.replace('_','-'));
-      if(input.disabled||input.value===context.initialClocks[key])continue;
-      if(input.value){approved[key]=input.value;if(key in payload)payload[key]=null;}
-      else delete approved[key];
+    const approved=clockAdjustments(context);
+    if(approved===null){
+      $('day-review-error').textContent='Use HH:MM or HH:MM:SS (24-hour time).';$('day-review-error').classList.remove('hidden');return;
     }
+    const before=context.day.review.approved_times||{};
+    changed=REVIEW_CLOCKS.some(k=>approved[k]!==before[k]);
+    for(const key of REVIEW_CLOCKS.slice(0,4))if(approved[key]&&approved[key]!==before[key])payload[key]=null;
     payload.approved_times=approved;
   }
   const h=$('review-ut-hours').value,m=$('review-ut-minutes').value;
   payload.undertime_minutes=h===''&&m===''?null:Number(h||0)*60+Number(m||0);
-  payload.activity_type=$('review-activity').value;
-  payload.activity_reference=$('review-reference').value.trim();payload.remark=$('review-remark').value.trim();
+  payload.activity_type=context.day.review.activity_type;
+  payload.activity_reference=$('review-reference').disabled?context.day.review.activity_reference:$('review-reference').value.trim();
+  payload.remark=changed?$('review-remark').value.trim():context.day.review.remark;
   $('save-day-review').disabled=true;$('day-review-error').classList.add('hidden');
   try{
     await api('/api/attendance/'+encodeURIComponent(context.code)+'/'+context.day.date,{method:'PUT',body:JSON.stringify(payload)});
@@ -866,11 +906,22 @@ async function initialize(){
   $('day-review-form').addEventListener('submit',saveDayReview);
   $('close-day-review').addEventListener('click',()=>$('day-review-dialog').close());
   $('cancel-day-review').addEventListener('click',()=>$('day-review-dialog').close());
-  $('day-review-dialog').addEventListener('close',()=>{dayReviewContext=null;});
-  $('place-four-entries').addEventListener('click',()=>{
-    const events=dayReviewContext?.day?regularReviewCandidates(dayReviewContext.day):[];if(events.length!==4)return;
-    ['am-in','am-out','pm-in','pm-out'].forEach((key,i)=>$('review-'+key).value=events[i].id);
+  $('day-review-dialog').addEventListener('close',()=>{closeClockPicker();dayReviewContext=null;});
+  document.querySelectorAll('[data-clock-pick]').forEach(button=>button.addEventListener('click',()=>openClockPicker(button.dataset.clockPick)));
+  REVIEW_CLOCKS.forEach(key=>{
+    const input=clockInput(key);
+    input.addEventListener('input',()=>{input.setCustomValidity('');updateApprovalReason();});
+    input.addEventListener('blur',()=>{const value=normalizedClock(input.value);if(value!==null)input.value=value;updateApprovalReason();});
   });
+  document.querySelectorAll('[data-clock-step]').forEach(button=>button.addEventListener('click',()=>{
+    const part=button.dataset.clockStep,node=$('picker-'+part),limit=part==='hour'?24:60;
+    const value=Number(node.value)||0;
+    node.value=String((value+Number(button.dataset.delta)+limit)%limit).padStart(2,'0');
+  }));
+  document.querySelectorAll('[data-clock-minute]').forEach(button=>button.addEventListener('click',()=>{$('picker-minute').value=button.dataset.clockMinute;}));
+  $('clock-picker-close').addEventListener('click',closeClockPicker);
+  $('clock-picker-apply').addEventListener('click',()=>applyClockPicker());
+  $('clock-picker-clear').addEventListener('click',()=>applyClockPicker(true));
   $('open-calendar')?.addEventListener('click',openCalendar);
   $('calendar-date').addEventListener('change',calendarDateChanged);
   $('calendar-form').addEventListener('submit',saveCalendar);

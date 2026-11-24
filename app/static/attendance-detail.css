@@ -225,3 +225,41 @@
   .workspace .attendance-sheet .month-inline input{min-width:150px;width:150px;flex:none}
   .workspace .attendance-sheet #dtr-form-preview{margin-left:auto}
 }
+
+/* Flat DTR cells and compact, custom 24-hour editor. */
+.workspace .attendance-sheet .dtr-grid .travel-status{background:none;color:#654297;border-radius:0;padding:0;font-size:11px;font-weight:700;box-shadow:none}
+.workspace .attendance-sheet .dtr-grid .activity-evidence{padding:2px 4px;vertical-align:middle}
+.workspace .attendance-sheet .aja-time{padding:3px 0;margin:0;border-radius:0;min-height:24px;display:flex;align-items:center;justify-content:center}
+.workspace .attendance-sheet .aja-time+.aja-time{margin-top:2px}
+.workspace .attendance-sheet .dtr-grid .activity-evidence:has(.has-aja):not(:has(.aja-time+.aja-time)){background:#fff4d7;box-shadow:inset 0 0 0 2px #fff}
+.workspace .attendance-sheet .aja-time.has-aja .time-value{color:#223a66;font-size:11px;font-weight:700}
+.workspace .attendance-sheet .dtr-grid .day-action{padding:6px 5px}
+.workspace .attendance-sheet .edit-day{height:22px;min-height:22px;padding:0 9px;border-radius:5px;transition:background .18s,box-shadow .18s,transform .18s}
+.workspace .attendance-sheet .edit-day:hover{background:#17356e;color:#fff;transform:translateY(-1px);box-shadow:0 3px 9px #244b9a40}
+.workspace .attendance-sheet .edit-day:active{transform:translateY(0)}
+.app-dialog.day-review-dialog{width:min(460px,calc(100vw - 24px))}
+.app-dialog.day-review-dialog .clock-field{min-width:0;display:grid;gap:4px}
+.app-dialog.day-review-dialog .clock-field label{font-size:10px;font-weight:650;color:#52688a}
+.app-dialog.day-review-dialog .clock-control{display:flex;align-items:center;gap:0;border:1px solid #dce5f2;border-radius:7px;background:#f6f8fc;overflow:hidden}
+.app-dialog.day-review-dialog .clock-control:focus-within{border-color:#6284ca;box-shadow:0 0 0 2px #244b9a12}
+.app-dialog.day-review-dialog .clock-control input{border:0;background:transparent;box-shadow:none;flex:1;min-width:0;width:100%;font-variant-numeric:tabular-nums;font-weight:650;font-size:12px;letter-spacing:.02em}
+.app-dialog.day-review-dialog .clock-control input:focus{box-shadow:none;outline:none}
+.app-dialog.day-review-dialog .clock-pick{flex:0 0 32px;width:32px;height:31px;display:grid;place-items:center;color:#526fa4;background:transparent;padding:0;border-radius:5px}
+.app-dialog.day-review-dialog .clock-pick:hover,.app-dialog.day-review-dialog .clock-pick[aria-expanded=true]{background:#e2eafa;color:#244b9a}
+.clock-pick svg{width:16px;height:16px}
+.clock-picker{margin:10px 0 4px;border:1px solid #dce5f2;background:#fff;border-radius:10px;padding:10px;box-shadow:0 5px 18px #244b9a12}
+.clock-picker-head{display:flex;align-items:center;gap:8px;font-size:11px;color:#244b9a}
+.clock-picker-head span{font-size:9px;color:#8290a4;margin-left:auto}
+.clock-picker-head button{width:23px;height:23px;background:#eef3fb;color:#52688a;border-radius:5px;font-size:16px}
+.clock-picker-parts{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;margin:9px 0}
+.clock-part{display:grid;gap:3px;text-align:center}
+.clock-part label{font-size:9px;color:#52688a;font-weight:600}
+.app-dialog.day-review-dialog .clock-part input{text-align:center;height:35px;font-size:17px;font-weight:700;color:#244b9a;background:#f1f5fc;border:1px solid #e0e7f3;font-variant-numeric:tabular-nums}
+.clock-part button,.clock-picker-quick button{background:#edf2fb;color:#244b9a;border-radius:5px;height:23px;font-size:12px}
+.clock-part button:hover,.clock-picker-quick button:hover{background:#dce8ff}
+.clock-picker-quick{display:flex;align-items:center;gap:5px;font-size:9px;color:#64748b}
+.clock-picker-quick button{flex:1;font-size:10px;font-weight:650}
+.clock-picker-actions{display:flex;justify-content:flex-end;gap:8px;margin-top:9px}
+.clock-picker-actions button{height:27px;min-height:27px;padding:0 12px;font-size:10px;border-radius:5px}
+#clock-picker-clear{background:#f3f5fa;color:#61718e}
+#review-reason-field{margin-top:8px}
