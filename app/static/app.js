@@ -454,7 +454,7 @@ function openDayReview(date){
   $('review-source-warning').textContent=day.source_conflicts?.length?'Review: '+day.source_conflicts.map(k=>k==='unplaced_biometric'?'Unassigned original scans':k==='order'?'Time sequence differs':k==='travel_with_regular_entries'?'Regular entries also exist on this travel date; retained as evidence':k.replace('_',' ').toUpperCase()+' differs from sheet').join('; ')+'.':'';
   $('review-raw-scans').textContent=day.scans.map(x=>x.happened_at.slice(11,19)+(x.work_code?' · WC '+x.work_code:'')).join(' | ');
   const manual=day.manual_source;
-  $('review-sheet-evidence').textContent=manual?'DTR sheet: '+Object.entries(manual.times||{}).filter(([,value])=>value).map(([key,value])=>key.replace('_',' ').toUpperCase()+' '+value).join(' · '):'';
+  $('review-sheet-evidence').textContent=manual?'DTR sheet: '+Object.entries(manual.times||{}).filter(([,value])=>value).map(([key,value])=>key.replace('_',' ').toUpperCase()+' '+value).join(' · ')+(manual.notes?.length?' | Notes: '+manual.notes.join(' · '):'')+(manual.aja?' | AJA: '+(manual.aja.purpose||'')+' '+(manual.aja.start||'—')+'–'+(manual.aja.end||'—'):''):'';
   $('review-source-detail').innerHTML='<strong>Current attendance</strong><div>'+['am_in','am_out','pm_in','pm_out'].map(key=>{
     const entry=day.display_slots?.[key];
     return '<span>'+esc(key.replace('_',' ').toUpperCase())+' <b>'+esc((day.travel_periods||[]).includes(key.slice(0,2))?'Travel Order':entry?entry.happened_at.slice(11,19):'—')+'</b></span>';

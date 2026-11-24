@@ -104,6 +104,8 @@ def sheet_aja_evidence(source):
                 start,end = start or a,end or b
                 break
     placeholder = purpose.upper() in ("", "-", "—", "0", "N/A", "NA", "NONE", "FALSE", "NOT APPLICABLE")
+    if re.search(r"\bAJA\b", purpose, re.I) and not is_aja_note(purpose):
+        placeholder = True
     if not (start or end or notes or not placeholder):
         return None
     return {"start":start,"end":end,"purpose":purpose if not placeholder else (notes[0] if notes else "")}
