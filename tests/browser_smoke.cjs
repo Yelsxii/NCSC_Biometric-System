@@ -720,6 +720,18 @@ with connect() as con:
     assert.equal(await printable.locator('.civil-copy h1').first().evaluate(el=>getComputedStyle(el).fontSize),'22.6667px');
     assert.equal(await printable.locator('.print-name').first().evaluate(el=>getComputedStyle(el).fontSize),'17.3333px');
     assert.equal(await printable.locator('.print-seal').count(),2);
+    assert.ok(await printable.locator('.print-seal').first().evaluate(async img=>{await img.decode();return img.naturalWidth>0;}));
+    assert.equal(await printable.locator('.civil-copy').first().locator('tbody tr').filter({has:printable.locator('.special-day')}).count()>0,true);
+    assert.ok((await printable.locator('.civil-copy').first().locator('.special-day').allTextContents()).includes('HOLIDAY'));
+    assert.ok(!(await printable.locator('.civil-copy').first().locator('.special-day').allTextContents()).includes("All Saints' Day"));
+    const toolbarWidth=await page.locator('.export-preview-toolbar').evaluate(el=>el.getBoundingClientRect().width);
+    const initialPaper=await page.locator('#dtr-paper-canvas').evaluate(el=>el.getBoundingClientRect().width);
+    await page.locator('#dtr-zoom-in').click();
+    assert.ok(await page.locator('#dtr-paper-canvas').evaluate(el=>el.getBoundingClientRect().width)>initialPaper);
+    assert.equal(await page.locator('.export-preview-toolbar').evaluate(el=>el.getBoundingClientRect().width),toolbarWidth);
+    await page.locator('#dtr-zoom-fit').click();
+    assert.ok(Math.abs(await page.locator('#dtr-paper-canvas').evaluate(el=>el.getBoundingClientRect().width)-initialPaper)<2);
+    assert.equal(await page.locator('#dtr-zoom-fit').getAttribute('aria-pressed'),'true');
     assert.equal(await printable.locator('.civil-copy h1').first().textContent(),'DAILY TIME RECORD');
     const printTypography=await printable.locator('.civil-copy').first().evaluate(el=>{
       const style=sel=>{const s=getComputedStyle(el.querySelector(sel));return [s.fontWeight,s.fontStyle,s.fontSize]};

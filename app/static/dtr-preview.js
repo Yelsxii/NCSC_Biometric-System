@@ -4,6 +4,9 @@
 let dtrPreviewData=null;
 let dtrPreviewVersion=0;
 let dtrDownloadBusy=false;
+let dtrZoomMode='fit';
+let dtrZoomScale=1;
+const DTR_MIN_ZOOM=.25,DTR_MAX_ZOOM=2;
 const DTR_NARROW_MM=6.35;
 const dtrPaper={a4:{width:'210mm',height:'297mm',w:210,h:297},folio:{width:'215.9mm',height:'330.2mm',w:215.9,h:330.2}};
 const dtrSignatory={
@@ -40,7 +43,7 @@ function dtrPrintRows(data,category,from=1,to=dtrLastDay(data.month)){
     const offday=day.is_weekend||Boolean(day.calendar?.holiday_name);
     const note=day.manual_source?.notes?.find(x=>/\b(?:LEAVE|CTO|WORK SUSPENSION)\b/i.test(x));
     const special=day.travel_order?travelLabel(day):
-      (!hasEntries&&!periods.length?(day.calendar?.holiday_name||note||(day.is_weekend?(day.day==='Sat'?'SATURDAY':'SUNDAY'):'')):'');
+      (!hasEntries&&!periods.length?((day.calendar?.holiday_name?'HOLIDAY':'')||note||(day.is_weekend?(day.day==='Sat'?'SATURDAY':'SUNDAY'):'')):'');
     const span=periods.length+1,ut=offday?null:day.monitoring?.undertime_seconds;
     const total=day.monitoring?.total_seconds;
     const metricCells=gip?'<td rowspan="'+span+'">'+(total==null?'':esc(durationText(total).slice(0,-3)))+'</td>':
@@ -74,7 +77,7 @@ function gipDtrForm(data,period){
 function buildDtrDocument(data,category,period,paperKey,version){
   const paper=dtrPaper[paperKey]||dtrPaper.a4;
   const body=category==='GIP'?gipDtrForm(data,period):civilDtrCopy(data,category)+civilDtrCopy(data,category);
-  return '<!doctype html><html lang="en"><head><meta charset="utf-8"><title>DTR - '+esc(data.display_name||'')+' - '+esc(data.month)+'</title><link rel="stylesheet" href="/static/dtr-preview.css?v=3"><style>@page{size:'+paper.width+' '+paper.height+';margin:'+DTR_NARROW_MM+'mm} :root{--paper-width:'+paper.width+';--paper-height:'+paper.height+';--paper-margin:'+DTR_NARROW_MM+'mm;--content-width:'+(paper.w-2*DTR_NARROW_MM)+'mm;--content-height:'+(paper.h-2*DTR_NARROW_MM)+'mm}</style></head><body class="print-document" data-preview-version="'+version+'"><main class="print-content"><div class="print-layout '+(category==='GIP'?'gip-page':'civil-page')+'">'+body+'</div></main></body></html>';
+  return '<!doctype html><html lang="en"><head><meta charset="utf-8"><title>DTR - '+esc(data.display_name||'')+' - '+esc(data.month)+'</title><link rel="stylesheet" href="/static/dtr-preview.css?v=4"><style>@page{size:'+paper.width+' '+paper.height+';margin:'+DTR_NARROW_MM+'mm} :root{--paper-width:'+paper.width+';--paper-height:'+paper.height+';--paper-margin:'+DTR_NARROW_MM+'mm;--content-width:'+(paper.w-2*DTR_NARROW_MM)+'mm;--content-height:'+(paper.h-2*DTR_NARROW_MM)+'mm}</style></head><body class="print-document" data-preview-version="'+version+'"><main class="print-content"><div class="print-layout '+(category==='GIP'?'gip-page':'civil-page')+'">'+body+'</div></main></body></html>';
 }
 function freshDtrFrame(){
   // Replacing the browsing context avoids accumulating iframe history entries
@@ -99,10 +102,31 @@ function fitDtrPaper(){
   const stage=canvas.parentElement,paper=dtrPaper[$('dtr-preview-paper').value]||dtrPaper.a4;
   const style=getComputedStyle(stage);
   const available=stage.clientWidth-parseFloat(style.paddingLeft)-parseFloat(style.paddingRight);
+  const availableHeight=stage.clientHeight-parseFloat(style.paddingTop)-parseFloat(style.paddingBottom);
   const width=Math.ceil(paper.w*96/25.4),height=Math.ceil(paper.h*96/25.4);
-  const scale=Math.min(1,Math.max(.01,available/width));
+  const scale=dtrZoomMode==='fit'?Math.min(1,Math.max(.05,Math.min(available/width,availableHeight/height))):dtrZoomScale;
+  dtrZoomScale=scale;
   canvas.style.width=(width*scale)+'px';canvas.style.height=(height*scale)+'px';
   frame.style.width=width+'px';frame.style.height=height+'px';frame.style.transform='scale('+scale+')';
+  $('dtr-zoom-value').textContent=Math.round(scale*100)+'%';
+  $('dtr-zoom-fit').setAttribute('aria-pressed',String(dtrZoomMode==='fit'));
+  $('dtr-zoom-out').disabled=scale<=DTR_MIN_ZOOM;
+  $('dtr-zoom-in').disabled=scale>=DTR_MAX_ZOOM;
+}
+function changeDtrZoom(direction){
+  if($('dtr-paper-canvas').hidden)return;
+  const stage=$('dtr-paper-canvas').parentElement;
+  if(direction===0){
+    dtrZoomMode='fit';fitDtrPaper();stage.scrollTop=0;stage.scrollLeft=0;return;
+  }
+  const old=dtrZoomScale;
+  dtrZoomMode='manual';
+  dtrZoomScale=Math.min(DTR_MAX_ZOOM,Math.max(DTR_MIN_ZOOM,Math.round((old+direction*.1)*100)/100));
+  fitDtrPaper();
+  // Keep the viewed region roughly centered while zooming.
+  const ratio=dtrZoomScale/old;
+  stage.scrollTop=Math.max(0,(stage.scrollTop+stage.clientHeight/2)*ratio-stage.clientHeight/2);
+  stage.scrollLeft=Math.max(0,(stage.scrollLeft+stage.clientWidth/2)*ratio-stage.clientWidth/2);
 }
 function renderDtrPreview(){
   const frame=freshDtrFrame(),category=$('dtr-preview-template').value,period=$('dtr-preview-period').value,paperKey=$('dtr-preview-paper').value;
@@ -111,13 +135,15 @@ function renderDtrPreview(){
   setDtrActionsReady(false);
   $('dtr-preview-period-control').hidden=category!=='GIP';
   $('dtr-paper-canvas').parentElement.scrollTop=0;
+  $('dtr-paper-canvas').parentElement.scrollLeft=0;
   setDtrPreviewNote();
+  $('dtr-zoom-controls').hidden=true;
   if(!dtrPreviewData||!Object.hasOwn(dtrSignatory,category)){
     frame.hidden=true;$('dtr-paper-canvas').hidden=true;
     setDtrPreviewNote('Select the verified employee category to choose the correct form.');
     return;
   }
-  frame.hidden=false;$('dtr-paper-canvas').hidden=false;
+  frame.hidden=false;$('dtr-paper-canvas').hidden=false;$('dtr-zoom-controls').hidden=false;
   fitDtrPaper();
   frame.srcdoc=buildDtrDocument(dtrPreviewData,category,period,paperKey,version);
 }
@@ -126,12 +152,12 @@ function openDtrFormPreview(push=true){
   if(!session||!data||data.employee_code!==selectedEmployee||data.month!==$('detail-month').value)return;
   const dialog=$('dtr-preview-dialog');
   if(dialog.open)return;
-  dtrPreviewData=data;
+  dtrPreviewData=data;dtrZoomMode='fit';dtrZoomScale=1;
   const category=Object.hasOwn(dtrSignatory,data.employment_type)?data.employment_type:'';
   $('dtr-preview-template').value=category;
   $('dtr-preview-period').value='first';
   $('dtr-preview-name').textContent=data.display_name||'Employee';
-  $('dtr-preview-context').textContent=dtrDateLabel(data.month,1).replace(/ 1,/,',');
+  $('dtr-preview-context').textContent=dtrDateLabel(data.month,1).replace(/ 1,/, '');
   dialog.showModal();
   if(push)history.pushState({ncscDtrPreview:true},'', '#employees/dtr-preview');
   renderDtrPreview();
@@ -159,6 +185,9 @@ function initDtrPreview(){
   });
   for(const id of ['dtr-preview-template','dtr-preview-period','dtr-preview-paper'])$(id).addEventListener('change',renderDtrPreview);
   new ResizeObserver(fitDtrPaper).observe($('dtr-paper-canvas').parentElement);
+  $('dtr-zoom-in').addEventListener('click',()=>changeDtrZoom(1));
+  $('dtr-zoom-out').addEventListener('click',()=>changeDtrZoom(-1));
+  $('dtr-zoom-fit').addEventListener('click',()=>changeDtrZoom(0));
   $('dtr-preview-download').addEventListener('click',downloadDtrPdf);
   $('dtr-preview-print').addEventListener('click',()=>{
     const frame=$('dtr-preview-frame');
@@ -193,6 +222,39 @@ function loadLocalDtrPdf(frame){
     doc.head.appendChild(script);
   });
 }
+// Render the document first, then paint the decoded same-origin seals into
+// their exact reserved boxes. This avoids image loading failures inside
+// html2canvas's temporary cloned iframe and keeps both copies identical.
+async function captureDtrWithSeals(html2pdf,opts,rendered,content){
+  const sources=Array.from(rendered.querySelectorAll('.print-seal'));
+  await Promise.all(sources.map(img=>img.decode()));
+  if(sources.some(img=>!img.naturalWidth||!img.naturalHeight))throw new Error('NCSC seal unavailable.');
+  const worker=html2pdf().set(opts).from(content).toContainer();
+  const container=await worker.get('container');
+  const overlay=container.parentElement;
+  try{
+    const clones=Array.from(container.querySelectorAll('.print-seal'));
+    if(clones.length!==sources.length)throw new Error('Seal layout unavailable.');
+    const bounds=container.getBoundingClientRect();
+    const boxes=clones.map((img,i)=>{
+      const r=img.getBoundingClientRect(),source=sources[i];
+      if(r.width<=0||r.height<=0)throw new Error('Seal layout unavailable.');
+      img.style.visibility='hidden'; // preserve the original reserved space
+      return {source,x:r.left-bounds.left,y:r.top-bounds.top,w:r.width,h:r.height};
+    });
+    const captured=await worker.toCanvas().get('canvas');
+    const ctx=captured.getContext('2d');
+    const sx=captured.width/bounds.width,sy=captured.height/bounds.height;
+    for(const box of boxes){
+      const factor=Math.min(box.w/box.source.naturalWidth,box.h/box.source.naturalHeight);
+      const w=box.source.naturalWidth*factor,h=box.source.naturalHeight*factor;
+      ctx.drawImage(box.source,(box.x+(box.w-w)/2)*sx,(box.y+(box.h-h)/2)*sy,w*sx,h*sy);
+    }
+    return captured;
+  }finally{
+    if(overlay?.isConnected)overlay.remove();
+  }
+}
 async function downloadDtrPdf(){
   if(dtrDownloadBusy||$('dtr-preview-download').disabled||!dtrPreviewData)return;
   const frame=$('dtr-preview-frame'),version=dtrPreviewVersion,data=dtrPreviewData;
@@ -218,7 +280,7 @@ async function downloadDtrPdf(){
     const opts={filename,margin:DTR_NARROW_MM,image:{type:'png'},enableLinks:false,pagebreak:{mode:[]},
       html2canvas:{scale:3,backgroundColor:'#fff',logging:false,windowWidth:Math.ceil(paper.w*96/25.4),windowHeight:Math.ceil(paper.h*96/25.4)},
       jsPDF:{unit:'mm',format:[paper.w,paper.h],orientation:'portrait',compress:true}};
-    const captured=await html2pdf().set(opts).from(content).toCanvas().get('canvas');
+    const captured=await captureDtrWithSeals(html2pdf,opts,rendered,content);
     if(version!==dtrPreviewVersion)return;
     const w=paper.w-2*DTR_NARROW_MM,h=paper.h-2*DTR_NARROW_MM;
     const canvas=doc.createElement('canvas');canvas.width=Math.max(1,captured.width);
