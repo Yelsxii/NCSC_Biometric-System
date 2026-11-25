@@ -392,11 +392,13 @@ with connect() as con:
     const narrowPicker=await page.locator('#attendance-month-picker').boundingBox();
     assert.ok(narrowPicker.width<=217 && narrowPicker.height<=220,'Narrow month picker should also be compact');
     assert.equal(await page.locator('#month-picker-grid').evaluate(el=>getComputedStyle(el).gridTemplateColumns.split(' ').length),4);
-    const currentAccent=await page.locator('#month-picker-grid .is-current').evaluateAll(nodes=>nodes.map(el=>{
-      const accent=getComputedStyle(el,'::after');
-      return {width:accent.width,height:accent.height};
-    }));
-    assert.ok(currentAccent.every(accent=>accent.width==='14px'&&accent.height==='2px'),'Current month uses a compact coral light strip');
+    await page.locator('#month-picker-title').hover();
+    await page.waitForFunction(()=>[...document.querySelectorAll('#month-picker-grid button[aria-pressed="false"]')].every(el=>getComputedStyle(el,'::after').opacity==='0'));
+    const hoverMonth=page.locator('#month-picker-grid button[aria-pressed="false"]').first();
+    await hoverMonth.hover();
+    await page.waitForFunction(()=>{const el=document.querySelector('#month-picker-grid button:hover:not([aria-pressed="true"])');if(!el)return false;const accent=getComputedStyle(el,'::after');return accent.width==='16px'&&accent.height==='1px'&&accent.opacity==='1';});
+    await page.locator('#month-picker-title').hover();
+    await page.waitForFunction(()=>[...document.querySelectorAll('#month-picker-grid button[aria-pressed="false"]')].every(el=>getComputedStyle(el,'::after').opacity==='0'));
     await page.setViewportSize({width:1440,height:900});
     await page.locator('#month-year-value').waitFor();
     const pickerYear=Number(await page.locator('#month-year-value').textContent());
@@ -413,6 +415,9 @@ with connect() as con:
     await page.locator('#detail-month-trigger').click();
     await page.locator('#attendance-month-picker[open]').waitFor();
     assert.equal(await page.locator('[data-month-value="2026-11"]').getAttribute('aria-pressed'),'true');
+    await page.locator('#month-picker-title').hover();
+    await page.waitForFunction(()=>{const el=document.querySelector('#month-picker-grid button[aria-pressed="true"]');if(!el)return false;const accent=getComputedStyle(el,'::after');return accent.width==='16px'&&accent.height==='1px'&&accent.opacity==='1';});
+    assert.equal(await page.locator('#month-picker-grid button.is-current:not([aria-pressed=true])').evaluateAll(nodes=>nodes.every(el=>getComputedStyle(el,'::after').opacity==='0'&&getComputedStyle(el).backgroundColor==='rgb(246, 248, 252)')),true);
     await page.keyboard.press('Escape');
     await page.locator('#attendance-month-picker').waitFor({state:'hidden'});
     await page.locator('#daily-rows .slot-travel .travel-status').first().waitFor();

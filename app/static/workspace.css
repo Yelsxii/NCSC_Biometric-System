@@ -452,19 +452,21 @@
 }
 .workspace .month-picker-grid button:hover{background:#e7effc;color:#244b9a}
 .workspace .month-picker-grid button[aria-pressed=true]{background:#244b9a;color:#fff;box-shadow:0 2px 5px #244b9a28}
-/* Current month: a small coral light strip, distinct from the selected month. */
-.workspace .month-picker-grid button.is-current:not([aria-pressed=true]){
-  border-color:#eab4bd;background:#fff4f5;color:#9b4053;
-}
-.workspace .month-picker-grid button.is-current:not([aria-pressed=true]):hover{
-  background:#ffe8ec;border-color:#e58a9a;
-}
-.workspace .month-picker-grid button.is-current::after{
+/* Coral light follows hover and selection, not the calendar's current month. */
+.workspace .month-picker-grid button::after{
   content:"";position:absolute;bottom:3px;left:50%;transform:translateX(-50%);
-  width:14px;height:2px;border-radius:999px;background:#d65b70;pointer-events:none;
+  width:0;height:1px;opacity:0;border-radius:999px;background:#f43f60;
+  pointer-events:none;transition:width .18s ease,opacity .18s ease,background .18s ease;
 }
-.workspace .month-picker-grid button.is-current[aria-pressed=true]::after{
-  background:#ff9baa;box-shadow:0 0 5px #ff819b80;
+.workspace .month-picker-grid button:is(:hover,:focus-visible)::after,
+.workspace .month-picker-grid button[aria-pressed=true]::after{
+  width:16px;opacity:1;
+}
+.workspace .month-picker-grid button[aria-pressed=true]::after{
+  background:#ff7893;box-shadow:0 0 4px #ff789388;
+}
+@media(prefers-reduced-motion:reduce){
+  .workspace .month-picker-grid button::after{transition:none}
 }
 .workspace .attendance-month-picker button:focus-visible{outline:2px solid #7499d0;outline-offset:1px}
 .workspace .month-picker-footer{border-top:1px solid #edf1f7;margin-top:6px;padding-top:6px;justify-content:flex-end}
