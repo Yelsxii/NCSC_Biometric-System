@@ -668,12 +668,12 @@ with connect() as con:
     await travelDay.getByText('Travel Order No.: DEMO-TO-002',{exact:true}).waitFor();
     assert.equal(await page.locator('#daily-rows tr').count(),30);
     const unworkedHoliday=page.locator('#daily-rows [data-date="2026-11-01"]');
-    assert.equal(await unworkedHoliday.locator('.day-activities .monitor-remark').count(),0);
-    assert.equal(await unworkedHoliday.locator('.day-activities').textContent(),'—');
+    assert.equal(await unworkedHoliday.locator('.day-activities .remark-holiday').textContent(),"All Saints' Day");
+    assert.deepEqual(await unworkedHoliday.locator('.undertime-value').allTextContents(),['—','—']);
     assert.equal(await unworkedHoliday.locator('.dtr-date').getAttribute('title'),"All Saints' Day");
     const unworkedWeekend=page.locator('#daily-rows [data-date="2026-11-08"]');
-    assert.equal(await unworkedWeekend.locator('.day-activities .monitor-remark').count(),0);
-    assert.equal(await unworkedWeekend.locator('.day-activities').textContent(),'—');
+    assert.equal(await unworkedWeekend.locator('.day-activities .remark-weekend').textContent(),'Sunday');
+    assert.deepEqual(await unworkedWeekend.locator('.undertime-value').allTextContents(),['—','—']);
     assert.equal(await unworkedWeekend.locator('.dtr-date.calendar-weekend').getAttribute('title'),'Sunday');
     assert.equal(await page.locator('#print-dtr').count(),0);
     assert.equal(await page.locator('#export-dtr').count(),0);

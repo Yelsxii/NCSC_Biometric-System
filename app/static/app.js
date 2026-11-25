@@ -428,23 +428,22 @@ async function loadDetail({quiet=false}={}){
     const scroll=$('daily-table-wrap').scrollTop;
     const changed=setHtmlIfChanged($('daily-rows'),data.days.map(day=>{
       const metrics=day.monitoring||{total_seconds:day.daily_total_seconds,undertime_seconds:day.review.undertime_minutes===null?null:day.review.undertime_minutes*60,overtime_seconds:null,remarks:'For review'};
-      const ut=metrics.undertime_seconds;
-      const status=metrics.remarks;
       const calendarLabel=day.calendar.holiday_name||(day.is_weekend?(day.day==='Sat'?'Saturday':'Sunday'):'');
-      // Empty display_remark is intentional for unworked weekends and holidays.
+      const ut=calendarLabel?null:metrics.undertime_seconds;
+      const status=metrics.remarks;
       const visibleStatus=day.travel_order
         ? (day.display_remark||(['Source difference','Future entry'].includes(status)?'Review':'Travel Order'))
-        : (day.display_remark??(!day.has_attendance_entries&&calendarLabel?'':status==='Source difference'?'Review':status));
+        : (day.display_remark||(!day.has_attendance_entries&&calendarLabel?calendarLabel:status==='Source difference'?'Review':status));
       const unassigned=day.display_unassigned_count??day.unassigned_count;
       const assignedIds=new Set(Object.values(day.display_slots||{}).filter(Boolean).map(x=>x.id));
       const rawHint=day.scans.filter(x=>!assignedIds.has(x.id)&&!['AJA','Travel Order','Fieldwork','Official Business'].includes(x.activity_type)).map(x=>x.happened_at.slice(11,19)+(x.k14_punch_type!=null?' · State '+x.k14_punch_type:'')).join(' | ');
       const detail=[status,day.calendar.holiday_name,day.is_weekend?(day.day==='Sat'?'Saturday':'Sunday'):'',metrics.aja_review?'AJA evidence incomplete':'',day.review.remark,unassigned?'Unassigned punches: '+(rawHint||unassigned):''].filter(Boolean).join(' · ');
-      const kind=visibleStatus==='Complete'?'complete':visibleStatus==='Undertime'?'undertime':visibleStatus==='Overtime'?'overtime':visibleStatus==='Travel Order'?'travel':visibleStatus==='AJA'?'aja':['Review','Incomplete','Future entry','For review'].includes(visibleStatus)?'conflict':visibleStatus==='No entry'?'missing':!day.has_attendance_entries&&day.calendar.holiday_name?'holiday':['Saturday','Sunday','Weekend'].includes(visibleStatus)?'weekend':'pending';
+      const kind=['Complete','Present'].includes(visibleStatus)?'complete':visibleStatus==='Undertime'?'undertime':visibleStatus==='Overtime'?'overtime':visibleStatus==='Travel Order'?'travel':visibleStatus==='AJA'?'aja':['Review','Incomplete','Future entry','For review'].includes(visibleStatus)?'conflict':visibleStatus==='No entry'?'missing':!day.has_attendance_entries&&day.calendar.holiday_name?'holiday':['Saturday','Sunday','Weekend'].includes(visibleStatus)?'weekend':'pending';
       return '<tr class="day-row day-'+esc(day.tone)+'" data-date="'+esc(day.date)+'">'+
         '<td class="dtr-date'+(day.is_weekend&&!day.calendar.holiday_name?' calendar-weekend':'')+'"'+(calendarLabel?' title="'+esc(calendarLabel)+'"':'')+'><strong>'+esc(day.date.slice(8))+'</strong><span>'+esc(day.day)+'</span></td>'+
         attendanceTimeCells(day)+
         '<td class="daily-total-value" title="'+esc(metrics.metrics_origin==='manual_sheet'?'Manual DTR calculated result':'Elapsed AM + PM time; '+(metrics.total_seconds??'unknown')+' seconds')+'">'+durationText(metrics.total_seconds)+'</td>'+
-        '<td class="undertime-value" title="'+(ut==null?'For review':'Available DTR undertime')+'">'+(ut==null?'—':Math.floor(ut/3600))+'</td>'+
+        '<td class="undertime-value" title="'+(calendarLabel?'Not applicable on weekends and holidays':ut==null?'For review':'Available DTR undertime')+'">'+(ut==null?'—':Math.floor(ut/3600))+'</td>'+
         '<td class="undertime-value">'+(ut==null?'—':String(Math.floor(ut%3600/60)).padStart(2,'0'))+'</td>'+
         '<td class="overtime-value" title="Manual DTR overtime result">'+durationText(metrics.overtime_seconds)+'</td>'+
         activityScanCell(day)+'<td class="day-activities">'+(visibleStatus?'<span title="'+esc(detail)+'" class="monitor-remark remark-'+kind+'">'+esc(visibleStatus)+'</span>':'<span class="empty-cell">—</span>')+'</td>'+
@@ -535,7 +534,8 @@ function openDayReview(date){
   }
   $('review-aja-hint').textContent=periods.length>1?'Multiple AJA periods — review separately.':'';
   $('review-aja-hint').classList.toggle('hidden',periods.length<=1);
-  const minutes=day.review.undertime_minutes;
+  const offday=day.is_weekend||Boolean(day.calendar.holiday_name);
+  const minutes=offday?null:day.review.undertime_minutes;
   $('review-ut-hours').value=minutes===null?'':Math.floor(minutes/60);
   $('review-ut-minutes').value=minutes===null?'':minutes%60;
   const fullTravel=day.travel_order===true;
@@ -548,7 +548,10 @@ function openDayReview(date){
   $('review-reference').title=fullTravel?(day.travel_source_references||[]).join(' · '):'';
   $('review-remark').value='';$('review-remark').disabled=!editable;
   $('review-reason-field').classList.add('hidden');$('review-remark').required=false;
-  for(const id of ['review-ut-hours','review-ut-minutes'])$(id).disabled=!editable;
+  for(const id of ['review-ut-hours','review-ut-minutes']){
+    $(id).disabled=!editable||offday;
+    $(id).title=offday?'Not applicable on weekends and holidays':'';
+  }
   $('save-day-review').classList.toggle('hidden',!editable);$('save-day-review').disabled=false;
   $('review-time-section').classList.toggle('hidden',fullTravel);
   $('review-travel-info').classList.toggle('hidden',!fullTravel);
@@ -573,7 +576,10 @@ async function saveDayReview(event){
     payload.approved_times=approved;
   }
   const h=$('review-ut-hours').value,m=$('review-ut-minutes').value;
-  payload.undertime_minutes=h===''&&m===''?null:Number(h||0)*60+Number(m||0);
+  // Preserve any historical reviewed value on off-days; it is not applied to monitoring.
+  payload.undertime_minutes=context.day.is_weekend||context.day.calendar.holiday_name
+    ?context.day.review.undertime_minutes
+    :h===''&&m===''?null:Number(h||0)*60+Number(m||0);
   payload.activity_type=context.day.review.activity_type;
   payload.activity_reference=context.day.review.activity_reference;
   if(context.day.travel_order && $('review-reference').value.trim()!==context.initialTravelReference){

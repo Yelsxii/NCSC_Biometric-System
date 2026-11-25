@@ -522,8 +522,25 @@ def test_worked_holiday_and_weekend_use_attendance_result_in_remarks(admin):
         row('2026-11-07',times=['08:00','12:00','13:00','18:00'],total=9/24,ot=1/24,number=6)]))
     days=client.get('/api/dtr/monitor?employee_code=001&month=2026-11').json()['days']
     assert days[1]['calendar']['holiday_name']=="All Souls' Day"
-    assert days[1]['display_remark']=='Complete'
+    assert days[1]['display_remark']=='Present'
     assert days[6]['is_weekend'] and days[6]['display_remark']=='Overtime'
+    assert days[1]['monitoring']['undertime_seconds'] is None
+    assert days[6]['monitoring']['undertime_seconds'] is None
     assert days[0]['calendar']['holiday_name']=="All Saints' Day"
-    assert days[0]['display_remark']==''
-    assert days[7]['is_weekend'] and days[7]['display_remark']==''
+    assert days[0]['display_remark']=="All Saints' Day"
+    assert days[7]['is_weekend'] and days[7]['display_remark']=='Sunday'
+
+
+def test_short_worked_offdays_do_not_charge_undertime(admin):
+    client,headers=admin
+    seed_employee()
+    import_one(client,headers,packet([
+        row('2026-11-02',times=['08:00','12:00','13:00','15:00'],total=6/24,ut=2/24,number=5),
+        row('2026-11-07',times=['08:00','12:00','13:00','15:00'],total=6/24,ut=2/24,number=6)]))
+    days=client.get('/api/dtr/monitor?employee_code=001&month=2026-11').json()['days']
+    for day in (days[1],days[6]):
+        assert day['monitoring']['total_seconds']==21600
+        assert day['monitoring']['undertime_seconds'] is None
+        assert day['monitoring']['overtime_seconds']==0
+        assert day['display_remark']=='Present'
+        assert all(day['display_slots'].values())

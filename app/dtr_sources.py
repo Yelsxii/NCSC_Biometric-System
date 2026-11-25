@@ -97,11 +97,15 @@ def resolve_day(day, manual):
     comparable = bool(complete and source and not conflicts and all(sheet_times.get(k) and display[k]['origin']!='hr_approved' and display[k]['happened_at'][11:16]==sheet_times[k][:5] for k in KEYS))
     total = source['reported_total'] if comparable and source['reported_total'] is not None else elapsed
     reviewed_ut = day['review']['undertime_minutes']
-    undertime = None if future_entry else reviewed_ut*60 if reviewed_ut is not None else source['reported_ut'] if comparable else None
+    # No required hours on weekends or holidays. Keep source/review evidence intact,
+    # but do not charge or display undertime for these calendar days.
+    offday = day['is_weekend'] or bool(day['calendar']['holiday_name'])
+    undertime = None if future_entry or offday else reviewed_ut*60 if reviewed_ut is not None else source['reported_ut'] if comparable else None
     overtime = source['reported_ot'] if comparable else None
     remarks = ('Future entry' if future_entry else 'Source difference' if conflicts else
         'Undertime' if undertime is not None and undertime>0 else
         'Overtime' if overtime is not None and overtime>0 else
+        'Present' if complete and offday else
         'Complete' if complete and undertime==0 else
         'Needs hour review' if complete else
         'Upcoming' if day['is_future'] else
@@ -183,9 +187,7 @@ def present_day(day):
         if text in ("Holiday","Weekend","No entry","Upcoming"):
             text = "Review"
     elif day["calendar"]["holiday_name"] or day["is_weekend"]:
-        # Off-days without attendance have no attendance result to report.
-        # Their calendar designation remains available on the date column.
-        text = ""
+        text = day["calendar"]["holiday_name"] or ("Saturday" if day["day"]=="Sat" else "Sunday")
     elif day["is_future"]:
         text = "Upcoming"
     else:
