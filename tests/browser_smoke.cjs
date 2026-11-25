@@ -141,7 +141,7 @@ uvicorn.run('app.main:app',host='127.0.0.1',port=int(os.environ['QA_PORT']),log_
     assert.equal(compactChrome.accentContent,'none','No vertical accent bar');
     assert.ok(compactChrome.activeHalo.includes('radial-gradient'),'Selected icon has a localized red halo');
     assert.notEqual(compactChrome.glow,'none');
-    assert.equal(compactChrome.iconColor,'rgb(255, 137, 155)');
+    assert.equal(compactChrome.iconColor,'rgb(255, 152, 174)');
     assert.equal(compactChrome.activeBackground,'rgb(11, 29, 57)');
     assert.equal(compactChrome.iconStroke,'2px');
     assert.ok(Math.abs(compactChrome.timeLeft-compactChrome.dateLeft)<=1,'Time aligns with left edge of calendar row');
@@ -238,7 +238,25 @@ uvicorn.run('app.main:app',host='127.0.0.1',port=int(os.environ['QA_PORT']),log_
     await page.emulateMedia({reducedMotion:'reduce'});
     assert.equal(await menuHover.locator('.nav-icon').evaluate(el=>getComputedStyle(el).transform),'none');
     await page.emulateMedia({reducedMotion:'no-preference'});
-    await page.locator('[data-page="employees"]').hover();
+    const selectedNav=page.locator('[data-page="employees"]');
+    const beforeHover=await selectedNav.boundingBox();
+    await selectedNav.hover();
+    await page.waitForFunction(()=>{
+      const el=document.querySelector('[data-page="employees"]');
+      const s=getComputedStyle(el),icon=getComputedStyle(el.querySelector('.nav-icon'));
+      return s.borderTopColor==='rgba(255, 171, 196, 0.85)' && icon.color==='rgb(255, 180, 196)';
+    });
+    const hoverEdges=await selectedNav.evaluate(el=>{
+      const s=getComputedStyle(el);
+      return {widths:[s.borderTopWidth,s.borderRightWidth,s.borderBottomWidth,s.borderLeftWidth],
+        colors:[s.borderTopColor,s.borderRightColor,s.borderBottomColor,s.borderLeftColor],
+        clip:s.backgroundClip,shadow:s.boxShadow};
+    });
+    assert.deepEqual(hoverEdges.widths,['1px','1px','1px','1px']);
+    assert.equal(new Set(hoverEdges.colors).size,1,'Hover border remains consistent on all edges');
+    assert.equal(hoverEdges.clip,'padding-box');
+    assert.ok(hoverEdges.shadow.includes('inset'));
+    assert.deepEqual(await selectedNav.boundingBox(),beforeHover,'Hover does not move or resize the selected card');
     await page.waitForFunction(()=>getComputedStyle(document.querySelector('[data-page="employees"]'),'::after').visibility==='visible');
     await page.setViewportSize({width:1440,height:900});
     await page.locator('#workspace:not(.hidden)').waitFor();
