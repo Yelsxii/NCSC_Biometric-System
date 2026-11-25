@@ -421,6 +421,9 @@ uvicorn.run('app.main:app',host='127.0.0.1',port=int(os.environ['QA_PORT']),log_
     assert.equal(await page.locator('#live-as-of').count(),0);
     assert.equal(await page.locator('[data-live-count="all"]').textContent(),'1');
     assert.equal(await page.locator('#register-rows .live-status').count(),1);
+    assert.deepEqual(await page.evaluate(()=>['No entry','Timed in','On AJA','OPERATIONS DIVISION','OFFICE OF THE REGIONAL DIRECTOR','HR and ADMINISTRATION — REGION I'].map(displayTitle)),['No Entry','Timed In','On AJA','Operations Division','Office Of The Regional Director','HR And Administration — Region I']);
+    assert.equal(await page.locator('#attendance-register-panel .directory-status').count(),1);
+    assert.ok(await page.locator('#attendance-register-panel th').allTextContents().then(labels=>labels.includes('Live Status')&&labels.includes('Last Update')));
     const kpiPositions=await page.locator('.live-kpi').evaluateAll(nodes=>nodes.map(el=>el.offsetTop));
     assert.ok(kpiPositions.every(y=>Math.abs(y-kpiPositions[0])<1),'KPI cards stay in a single row');
     await page.locator('[data-live-filter="all"]').click();
