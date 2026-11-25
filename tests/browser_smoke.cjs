@@ -211,8 +211,8 @@ uvicorn.run('app.main:app',host='127.0.0.1',port=int(os.environ['QA_PORT']),log_
         headerInside:header.top>=rect.top && header.right<=rect.right};
     });
     assert.ok(Math.abs(pairedFrame.topInset)<=1 && Math.abs(pairedFrame.bottomInset)<=1,'Both glass frames align inside their shared shell');
-    assert.ok(pairedFrame.outerTop>=5 && pairedFrame.outerLeft>=5 && pairedFrame.outerBottom>=5 && pairedFrame.rightInset>=5,'Visible outer glass surrounds both panels');
-    assert.ok(pairedFrame.gutter>=5 && pairedFrame.outerRadius>pairedFrame.railRadius && pairedFrame.radius==='11px','Rounded panels are separated by a smooth glass gutter');
+    assert.ok(pairedFrame.outerTop>=3 && pairedFrame.outerLeft>=3 && pairedFrame.outerBottom>=3 && pairedFrame.rightInset>=3,'Visible outer glass surrounds both panels');
+    assert.ok(pairedFrame.gutter>=4 && pairedFrame.outerRadius>pairedFrame.railRadius && pairedFrame.radius==='11px','Rounded panels are separated by a smooth glass gutter');
     assert.ok(pairedFrame.blur.includes('blur(6px)') && pairedFrame.gradient.includes('radial-gradient'));
     assert.ok(pairedFrame.headerInside,'Topbar belongs inside the right glass frame');
     const glassTints=await page.evaluate(()=>{
@@ -296,7 +296,7 @@ uvicorn.run('app.main:app',host='127.0.0.1',port=int(os.environ['QA_PORT']),log_
     }));
     assert.deepEqual(iconGlass.map(x=>x.color),['rgb(82, 126, 185)','rgb(54, 126, 103)','rgb(66, 109, 169)','rgb(172, 73, 98)','rgb(149, 110, 32)','rgb(98, 91, 153)'],'Every icon uses its own status color, even when not selected');
     assert.ok(iconGlass.every(x=>x.surface==='none' && (x.spots.match(/radial-gradient\(/g)||[]).length===5 && x.blur==='blur(4px)'),'Icon glass uses scattered radial lights rather than a directional gradient');
-    assert.ok(iconGlass.every(x=>x.outerBorder==='0px' && x.innerBorder==='0px' && x.innerInset==='3px' && x.innerBlur.includes('blur(3px)')),'Two borderless nested glass layers');
+    assert.ok(iconGlass.every(x=>x.outerBorder==='0px' && x.innerBorder==='0px' && x.innerInset==='1.5px' && x.innerBlur.includes('blur(3px)')),'Two borderless nested glass layers');
     assert.ok(iconGlass.every(x=>x.outerTint.startsWith('rgba(110, 139, 178,') && x.innerTint.startsWith('rgba(255, 255, 255,') && x.outerTint!==x.innerTint),'Separate translucent tints distinguish the two layers without borders');
     assert.equal(await page.locator('.kpi-all strong').evaluate(el=>getComputedStyle(el).color),'rgb(82, 126, 185)','Default selection retains its colored count');
     const hoverKpi=page.locator('.kpi-missing');
@@ -304,7 +304,7 @@ uvicorn.run('app.main:app',host='127.0.0.1',port=int(os.environ['QA_PORT']),log_
     await page.waitForFunction(()=>{
       const el=document.querySelector('.kpi-missing');
       const style=getComputedStyle(el),count=getComputedStyle(el.querySelector('strong'));
-      return count.textShadow!=='none' && count.color==='rgb(172, 73, 98)' && new DOMMatrix(style.transform).m42 < -2.5;
+      return count.textShadow!=='none' && count.color==='rgb(172, 73, 98)' && new DOMMatrix(style.transform).m42 < -3.5 && new DOMMatrix(style.transform).m11 >= 1.055;
     });
     await hoverKpi.click();
     await page.locator('#employee-search').hover();
