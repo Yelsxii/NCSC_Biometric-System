@@ -173,7 +173,7 @@ uvicorn.run('app.main:app',host='127.0.0.1',port=int(os.environ['QA_PORT']),log_
       width:el.getBoundingClientRect().width,height:el.getBoundingClientRect().height,
       viewportHeight:innerHeight,labelDisplay:getComputedStyle(el.querySelector('.nav-item>span')).display
     }));
-    assert.ok(railLayout.width>=65 && railLayout.width<=67 && railLayout.height>=railLayout.viewportHeight-1);
+    assert.ok(railLayout.width>=65 && railLayout.width<=67 && railLayout.height>=railLayout.viewportHeight-24);
     const railInsets=await page.locator('.sidebar').evaluate(el=>{
       const rail=el.getBoundingClientRect(),nav=el.querySelector('.nav-item').getBoundingClientRect();
       return {left:nav.left-rail.left,right:rail.right-nav.right};
@@ -188,15 +188,20 @@ uvicorn.run('app.main:app',host='127.0.0.1',port=int(os.environ['QA_PORT']),log_
     assert.ok(lightGlass.blur.includes('blur(12px)'));
     const pairedFrame=await page.locator('.content-shell').evaluate(el=>{
       const rect=el.getBoundingClientRect(),style=getComputedStyle(el);
-      const rail=document.querySelector('.sidebar').getBoundingClientRect();
+      const sidebar=document.querySelector('.sidebar'),rail=sidebar.getBoundingClientRect();
+      const outer=document.querySelector('#workspace'),shell=outer.getBoundingClientRect();
       const header=el.querySelector('.topbar').getBoundingClientRect();
       return {topInset:rect.top-rail.top,bottomInset:rail.bottom-rect.bottom,
-        rightInset:innerWidth-rect.right,radius:style.borderTopLeftRadius,
+        outerTop:rail.top-shell.top,outerLeft:rail.left-shell.left,outerBottom:shell.bottom-rail.bottom,
+        gutter:rect.left-rail.right,rightInset:shell.right-rect.right,
+        outerRadius:parseFloat(getComputedStyle(outer).borderTopLeftRadius),
+        railRadius:parseFloat(getComputedStyle(sidebar).borderTopLeftRadius),radius:style.borderTopLeftRadius,
         blur:style.backdropFilter,gradient:style.backgroundImage,
         headerInside:header.top>=rect.top && header.right<=rect.right};
     });
-    assert.ok(Math.abs(pairedFrame.topInset-5)<=1 && Math.abs(pairedFrame.bottomInset-5)<=1,'Both glass frames share their vertical inset');
-    assert.ok(pairedFrame.rightInset>=4 && pairedFrame.radius==='12px');
+    assert.ok(Math.abs(pairedFrame.topInset)<=1 && Math.abs(pairedFrame.bottomInset)<=1,'Both glass frames align inside their shared shell');
+    assert.ok(pairedFrame.outerTop>=5 && pairedFrame.outerLeft>=5 && pairedFrame.outerBottom>=5 && pairedFrame.rightInset>=5,'Visible outer glass surrounds both panels');
+    assert.ok(pairedFrame.gutter>=5 && pairedFrame.outerRadius>pairedFrame.railRadius && pairedFrame.radius==='11px','Rounded panels are separated by a smooth glass gutter');
     assert.ok(pairedFrame.blur.includes('blur(18px)') && pairedFrame.gradient.includes('radial-gradient'));
     assert.ok(pairedFrame.headerInside,'Topbar belongs inside the right glass frame');
     assert.equal(railLayout.labelDisplay,'none');

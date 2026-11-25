@@ -590,19 +590,28 @@
 .workspace #attendance-register-panel .register-footer{padding-top:9px;min-height:0;justify-content:flex-start;font-size:10px;color:#657997;}
 
 
-/* A paired glass shell: the right frame shares the sidebar's 5px top/bottom
-   inset and encloses both the header and the page. The luminous background
-   is visible through two light glass layers, without tinting text or controls. */
+/* Shared rounded glass shell. The navy rail and right workspace float
+   inside the same continuous outer surface, with a visible glass gutter. */
 .workspace{
+  height:calc(100dvh - 10px);margin:5px;min-height:0;
+  padding:7px;gap:7px;
+  border:1px solid #ffffffeb;border-radius:19px;
+  box-shadow:inset 0 1px 0 #fff,inset 0 0 0 1px #a7bfdc55,0 3px 14px #223e701f;
   background-color:#d4dfef;
   background-image:
     radial-gradient(ellipse at 20% 5%,#9eb9e2a8,transparent 47%),
     radial-gradient(ellipse at 95% 92%,#afc5e5b8,transparent 48%),
     linear-gradient(145deg,#c4d4e9,#e8eef7 52%,#cbd9ed);
 }
+.workspace .sidebar{
+  height:100%;border-radius:13px;
+  box-shadow:0 4px 12px #11274935,0 0 0 1px #d6e5ff50;
+}
+.workspace .sidebar::before{inset:0;border-radius:inherit}
+.workspace .sidebar::after{inset:1px;border-radius:12px}
 .workspace .content-shell{
-  min-width:0;min-height:0;height:calc(100% - 10px);
-  margin:5px 6px 5px 0;
+  min-width:0;min-height:0;height:100%;
+  margin:0;
   border:1px solid #ffffffdf;border-radius:14px;
   background-color:#e8f0fa80;
   background-image:
@@ -637,11 +646,14 @@
   border-color:#dbe5f4;box-shadow:inset 0 1px 0 #fff,0 2px 6px #244b9a08;
 }
 @media(max-width:740px){
-  .workspace .content-shell{margin-right:5px;border-radius:12px}
+  .workspace{height:calc(100dvh - 8px);margin:4px;padding:5px;gap:5px;border-radius:15px}
+  .workspace .sidebar,.workspace .content-shell{border-radius:11px}
+  .workspace .sidebar::after{border-radius:10px}
   .workspace .content-shell #main-content{padding:8px 7px 9px}
   .workspace .content-shell .page .panel{border-radius:10px}
 }
 @media(max-width:400px){
+  .workspace{height:calc(100dvh - 6px);margin:3px;padding:3px;gap:4px;border-radius:13px}
   .workspace .content-shell #main-content{padding:6px 4px 6px}
   .workspace .content-shell .topbar{padding-inline:6px}
 }
