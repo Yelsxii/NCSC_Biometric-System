@@ -255,10 +255,8 @@
 .clock-part{display:grid;gap:3px;text-align:center}
 .clock-part label{font-size:9px;color:#52688a;font-weight:600}
 .app-dialog.day-review-dialog .clock-part input{text-align:center;height:35px;font-size:17px;font-weight:700;color:#244b9a;background:#f1f5fc;border:1px solid #e0e7f3;font-variant-numeric:tabular-nums}
-.clock-part button,.clock-picker-quick button{background:#edf2fb;color:#244b9a;border-radius:5px;height:23px;font-size:12px}
-.clock-part button:hover,.clock-picker-quick button:hover{background:#dce8ff}
-.clock-picker-quick{display:flex;align-items:center;gap:5px;font-size:9px;color:#64748b}
-.clock-picker-quick button{flex:1;font-size:10px;font-weight:650}
+.clock-part button{background:#edf2fb;color:#244b9a;border-radius:5px;height:23px;font-size:12px}
+.clock-part button:hover{background:#dce8ff}
 .clock-picker-actions{display:flex;justify-content:flex-end;gap:8px;margin-top:9px}
 .clock-picker-actions button{height:27px;min-height:27px;padding:0 12px;font-size:10px;border-radius:5px}
 #clock-picker-clear{background:#f3f5fa;color:#61718e}

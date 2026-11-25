@@ -392,7 +392,7 @@ function durationText(seconds){
 }
 function attendanceTimeCells(day){
   if(day.travel_order){
-    return '<td colspan="4" class="time-slot slot-travel"><span class="travel-status" title="'+esc((day.travel_source_references||[]).join(' · ')||travelLabel(day))+'">'+esc(travelLabel(day))+'</span></td>';
+    return '<td colspan="4" class="time-slot slot-travel"><span class="travel-status" title="'+esc((day.travel_source_references||[]).join(' · ')||travelLabel(day))+'">'+esc(travelLabel(day).toUpperCase())+'</span></td>';
   }
   const holiday=day.calendar?.holiday_name;
   const calendarLabel=holiday||(day.is_weekend?(day.day==='Sat'?'Saturday':'Sunday'):'');
@@ -402,7 +402,7 @@ function attendanceTimeCells(day){
       day.display_remark===calendarLabel && !(day.remark_issues||[]).length &&
       !(day.scans||[]).length && !Object.values(day.display_slots||day.slots||{}).some(Boolean) &&
       !(day.aja_periods||[]).length){
-    return '<td colspan="4" class="time-slot slot-calendar '+(holiday?'slot-holiday':'slot-neutral')+'"><span class="calendar-status">'+esc(calendarLabel)+'</span></td>';
+    return '<td colspan="4" class="time-slot slot-calendar '+(holiday?'slot-holiday':'slot-neutral')+'"><span class="calendar-status">'+esc(calendarLabel.toUpperCase())+'</span></td>';
   }
   return ['am_in','am_out','pm_in','pm_out'].map(key=>slotCell(day,key)).join('');
 }
@@ -1085,7 +1085,6 @@ async function initialize(){
     const value=Number(node.value)||0;
     node.value=String((value+Number(button.dataset.delta)+limit)%limit).padStart(2,'0');
   }));
-  document.querySelectorAll('[data-clock-minute]').forEach(button=>button.addEventListener('click',()=>{$('picker-minute').value=button.dataset.clockMinute;}));
   $('clock-picker-close').addEventListener('click',closeClockPicker);
   $('clock-picker-apply').addEventListener('click',()=>applyClockPicker());
   $('clock-picker-clear').addEventListener('click',()=>applyClockPicker(true));
