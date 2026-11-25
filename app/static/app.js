@@ -4,6 +4,21 @@ const $ = id => document.getElementById(id);
 const esc = value => String(value ?? '').replace(/[&<>"']/g, c => ({
   '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'
 }[c]));
+// Preserve DOM nodes if a live refresh produces identical markup.
+const renderedMarkup = new WeakMap();
+function setHtmlIfChanged(el, markup){
+  const previous=renderedMarkup.get(el);
+  if(previous && previous.markup===markup && previous.first===el.firstChild)return false;
+  el.innerHTML=markup;
+  renderedMarkup.set(el,{markup,first:el.firstChild});
+  return true;
+}
+function setTextIfChanged(el,value){
+  if(el.textContent!==value)el.textContent=value;
+}
+function setAttrIfChanged(el,name,value){
+  if(el.getAttribute(name)!==value)el.setAttribute(name,value);
+}
 let session = null;
 let currentPage = 'overview';
 let selectedEmployee = null;
@@ -176,19 +191,19 @@ function liveMatches(row,key){
 function renderRegister(){
     const q=$('employee-search').value.trim().toLowerCase();
     const rows=lastEmployeeRows.filter(row=>liveMatches(row,liveFilter)&&(!q||String(row.employee_code).toLowerCase().includes(q)||String(row.display_name||'').toLowerCase().includes(q)));
-    document.querySelectorAll('[data-live-count]').forEach(el=>{el.textContent=String(lastEmployeeRows.filter(row=>liveMatches(row,el.dataset.liveCount)).length);});
-    document.querySelectorAll('[data-live-filter]').forEach(el=>el.setAttribute('aria-pressed',String(el.dataset.liveFilter===liveFilter)));
+    document.querySelectorAll('[data-live-count]').forEach(el=>{setTextIfChanged(el,String(lastEmployeeRows.filter(row=>liveMatches(row,el.dataset.liveCount)).length));});
+    document.querySelectorAll('[data-live-filter]').forEach(el=>setAttrIfChanged(el,'aria-pressed',String(el.dataset.liveFilter===liveFilter)));
     const other=$('live-other-filter');
     other.classList.toggle('hidden',!lastEmployeeRows.some(row=>liveMatches(row,'other'))&&liveFilter!=='other');
     document.querySelectorAll('.live-kpi').forEach(button=>{
       const total=lastEmployeeRows.length;
       const count=lastEmployeeRows.filter(row=>liveMatches(row,button.dataset.liveFilter)).length;
-      button.setAttribute('aria-label',button.querySelector('small').textContent+': '+count+' of '+total+' employees');
+      setAttrIfChanged(button,'aria-label',button.querySelector('small').textContent+': '+count+' of '+total+' employees');
     });
     
     const total=rows.length;
-    $('register-count').textContent=total?total+(total===1?' employee':' employees'):'No employees found';
-    $('register-rows').innerHTML=rows.length?rows.map(row=>
+    setTextIfChanged($('register-count'),total?total+(total===1?' employee':' employees'):'No employees found');
+    setHtmlIfChanged($('register-rows'),rows.length?rows.map(row=>
       '<tr>'+
       '<td class="employee-name-cell"><strong>'+esc(row.display_name||'Name not synchronized')+'</strong></td>'+
       '<td>'+categoryBadge(row.employment_type)+'</td>'+
@@ -197,7 +212,7 @@ function renderRegister(){
       '<td class="live-last-update">'+esc(liveTime(row.live?.at))+'</td>'+
       '<td class="directory-action-cell"><button type="button" class="button primary row-action" data-employee="'+esc(row.employee_code)+'" aria-label="View attendance: '+esc(row.display_name||row.employee_code)+'"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M2 12s4-7 10-7 10 7 10 7-4 7-10 7S2 12 2 12Z"/><circle cx="12" cy="12" r="3"/></svg>View attendance</button></td>'+
       '</tr>'
-    ).join(''):'<tr><td colspan="6" class="table-empty">No employees found.</td></tr>';
+    ).join(''):'<tr><td colspan="6" class="table-empty">No employees found.</td></tr>');
 }
 async function openEmployee(code){
   if (!code) return;
@@ -386,12 +401,12 @@ async function loadDetail({quiet=false}={}){
     if(quiet && document.querySelectorAll('dialog[open]').length)return;
     activeDtr=data;
     selectedName=data.display_name||'Name not synchronized';
-    $('detail-name').textContent=selectedName;
-    $('detail-name').title=data.name_source==='device'?'Name synchronized from K14 device; HR profile is separate':'Employee attendance';
-    $('detail-department').textContent=data.department||'—';
-    $('detail-category').innerHTML=categoryBadge(data.employment_type);
+    setTextIfChanged($('detail-name'),selectedName);
+    setAttrIfChanged($('detail-name'),'title',data.name_source==='device'?'Name synchronized from K14 device; HR profile is separate':'Employee attendance');
+    setTextIfChanged($('detail-department'),data.department||'—');
+    setHtmlIfChanged($('detail-category'),categoryBadge(data.employment_type));
     const scroll=$('daily-table-wrap').scrollTop;
-    $('daily-rows').innerHTML=data.days.map(day=>{
+    const changed=setHtmlIfChanged($('daily-rows'),data.days.map(day=>{
       const metrics=day.monitoring||{total_seconds:day.daily_total_seconds,undertime_seconds:day.review.undertime_minutes===null?null:day.review.undertime_minutes*60,overtime_seconds:null,remarks:'For review'};
       const ut=metrics.undertime_seconds;
       const status=metrics.remarks;
@@ -410,8 +425,8 @@ async function loadDetail({quiet=false}={}){
         '<td class="overtime-value" title="Manual DTR overtime result">'+durationText(metrics.overtime_seconds)+'</td>'+
         activityScanCell(day)+'<td class="day-activities">'+(visibleStatus?'<span title="'+esc(detail)+'" class="monitor-remark remark-'+kind+'">'+esc(visibleStatus)+'</span>':'<span class="empty-cell">—</span>')+'</td>'+
         '<td class="day-action"><button type="button" class="button outline edit-day" data-edit-day="'+esc(day.date)+'" aria-label="'+(session.role==='admin'?'Edit':'View')+' attendance for '+esc(day.date)+'">'+editIcon()+(session.role==='admin'?'Edit':'View')+'</button></td></tr>';
-    }).join('');
-    $('daily-table-wrap').scrollTop=scroll;
+    }).join(''));
+    if(changed)$('daily-table-wrap').scrollTop=scroll;
   }catch(error){
     if(serial!==detailRequest || code!==selectedEmployee || currentPage!=='employees' || !session)return;
     if(!quiet){$('daily-rows').innerHTML='<tr><td colspan="13" class="table-empty">Unable to load attendance.</td></tr>';toast(error.message,true);}
@@ -933,9 +948,9 @@ async function initialize(){
   });
   function updateWorkspaceClock(){
     const now=new Date();
-    $('today').textContent=clockDate.format(now);
-    $('live-time').textContent=clockTime.format(now);
-    $('live-time').dateTime=now.toISOString();
+    setTextIfChanged($('today'),clockDate.format(now));
+    setTextIfChanged($('live-time'),clockTime.format(now));
+    setAttrIfChanged($('live-time'),'datetime',now.toISOString());
   }
   updateWorkspaceClock();
   window.setInterval(updateWorkspaceClock,1000);

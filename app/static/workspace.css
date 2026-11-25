@@ -43,7 +43,7 @@
 .workspace .records-table th{position:sticky;top:0;z-index:1;background:#f5f6fc;color:#939db4;font-size:9px;font-weight:600;border:0;border-bottom:1px solid #eef0f8;padding:12px 13px;letter-spacing:.01em;height:37px}
 .workspace .records-table th:first-child{border-top-left-radius:7px}.workspace .records-table th:last-child{border-top-right-radius:7px}
 .workspace .records-table td{padding:12px 13px;border-bottom:1px solid #f0f2f8;line-height:1.5;vertical-align:middle;height:49px}
-.workspace .records-table tbody tr:nth-child(even){background:#fafbfe}.workspace .records-table tbody tr:hover{background:#f4f6ff}
+.workspace .records-table tbody tr:nth-child(even){background:#fafbfe}.workspace .records-table tbody tr:hover{background:#dbe7f7}
 .workspace .records-table tbody tr.click-row{cursor:pointer}.workspace .records-table .actions-column{width:135px;text-align:right}.workspace .records-table td:last-child{text-align:right}
 .workspace .records-table .table-empty{text-align:center!important;padding:45px 20px;color:#a1acc0;font-size:11px}
 .workspace .id-cell{color:#6d7ca0;font-variant-numeric:tabular-nums;font-size:11px;white-space:nowrap}
@@ -239,7 +239,7 @@
   color:#c7d4ea;background:transparent;border:1px solid transparent;
   background-clip:padding-box;
   border-radius:9px;font-size:12px;font-weight:550;letter-spacing:0;box-shadow:none;
-  transition:background .2s ease,color .2s ease,border-color .2s ease,box-shadow .2s ease;
+  transition:background-color .16s ease,color .16s ease,border-color .16s ease;
 }
 .workspace .sidebar .nav-icon{width:22px;height:22px;flex:0 0 22px}
 .workspace .sidebar .nav-item:hover,.workspace .sidebar .nav-item:focus-visible{
@@ -261,7 +261,7 @@
 }
 .workspace .sidebar .nav-icon{
   color:#b6c7e3;transform-origin:center;overflow:visible;
-  transition:color .2s ease,filter .2s ease,transform .22s cubic-bezier(.2,.7,.25,1);
+  transition:color .16s ease,transform .22s cubic-bezier(.2,.7,.25,1);
 }
 .workspace .sidebar .nav-item:is(:hover,:focus-visible) .nav-icon{
   color:#ffb4c4;filter:drop-shadow(0 0 4px #ff8baa9c) drop-shadow(0 0 8px #ff74974d);
@@ -432,12 +432,14 @@
   position:sticky;right:0;z-index:2;text-align:center;background:#fff;
   box-shadow:-3px 0 8px #263b601c;padding:6px 8px;
 }
+.workspace #attendance-register-panel .attendance-directory tbody tr:hover{background:#dbe7f7}
+.workspace #attendance-register-panel .attendance-directory tbody tr:hover .directory-action-cell{background:#dbe7f7}
 .workspace #attendance-register-panel .directory-action-cell .row-action{
   display:inline-flex;align-items:center;justify-content:center;gap:5px;
   height:30px;min-height:30px;padding:0 9px;border:0;
   background:#244b9a;color:#fff;font-size:10.5px;font-weight:650;
   text-decoration:none!important;border-radius:6px;box-shadow:0 2px 5px #244b9a26;
-  transition:transform .18s ease,background .18s ease,box-shadow .18s ease;
+  transition:transform .18s cubic-bezier(.2,.75,.25,1),background-color .16s ease;
 }
 .workspace #attendance-register-panel .directory-action-cell .row-action svg{width:13px;height:13px;flex:none}
 .workspace #attendance-register-panel .directory-action-cell .row-action:hover,
@@ -634,8 +636,8 @@
     linear-gradient(150deg,#f0f6fcc0,#d9e7f6a0 55%,#d0e0f2a0);
   box-shadow:0 5px 18px #263e691c,inset 0 1px 0 #ffffff40,
     inset 0 0 0 1px #b3cae824,inset -1px -1px 0 #ffffff30;
-  -webkit-backdrop-filter:blur(6px) saturate(120%);
-  backdrop-filter:blur(6px) saturate(120%);
+  /* Static layered glass avoids filtering the full workspace. */
+  -webkit-backdrop-filter:none;backdrop-filter:none;
 }
 .workspace .content-shell .topbar{
   /* Restore the original uniform glass tint, with no decorative wave. */
@@ -662,8 +664,7 @@
     inset 0 -2px 3px #b9c9dc12,
     0 1px 3px #526f960a,
     0 5px 16px #263e6912;
-  -webkit-backdrop-filter:blur(4px) saturate(115%);
-  backdrop-filter:blur(4px) saturate(115%);
+  -webkit-backdrop-filter:none;backdrop-filter:none;
 }
 .workspace .content-shell .workspace-clock{
   /* A raised, clear glass clock with a brighter inner lip and soft depth. */
@@ -701,7 +702,7 @@
 }
 
 /* Approved sculpted glass overview, single horizontal row. */
-.workspace .content-shell .page #attendance-register-panel{background:linear-gradient(145deg,#ffffff85 0%,#eef4fc92 50%,#e2ecfbb0 100%),#f2f6fc75;border-color:#f7faffaa;box-shadow:inset 0 1px 0 #ffffffb0,0 5px 18px #45689b15;backdrop-filter:blur(7px)}
+.workspace .content-shell .page #attendance-register-panel{background:linear-gradient(145deg,#ffffff85 0%,#eef4fc92 50%,#e2ecfbb0 100%),#f2f6fc75;border-color:#f7faffaa;box-shadow:inset 0 1px 0 #ffffffb0,0 5px 18px #45689b15;-webkit-backdrop-filter:none;backdrop-filter:none}
 .workspace #attendance-register-panel .live-overview{flex:0 0 auto;min-width:0;padding:8px 9px 3px;border:1px solid #ffffffa8;border-radius:10px;background:linear-gradient(145deg,#f3f7fd8c,#dbe7f68a);box-shadow:inset 0 1px 1px #ffffff80,0 3px 9px #456aa00e;margin-bottom:10px}
 .workspace #attendance-register-panel .live-overview-head{display:flex;align-items:center;gap:9px;margin:0 2px 5px;min-width:0;flex-wrap:wrap}
 .workspace #attendance-register-panel .live-overview-head>strong{font-size:12px;color:#20375f;font-weight:650}
@@ -718,10 +719,10 @@
   height:66px;min-height:66px;text-align:left;padding:7px 10px 7px 8px;
   border:1px solid transparent;border-radius:11px;color:#243d65;
   background:linear-gradient(145deg,#ffffff76,#f9fcff35 54%,#ffffff26);
-  -webkit-backdrop-filter:blur(7px) saturate(112%);backdrop-filter:blur(7px) saturate(112%);
+  -webkit-backdrop-filter:none;backdrop-filter:none;
   box-shadow:inset 0 1px 0 #ffffff8a,inset 0 -1px 0 #ffffff28,0 3px 9px #31578b15;
   scroll-snap-align:start;transform:translateY(0) scale(1);
-  transition:box-shadow .2s,transform .2s,background .2s
+  transition:transform .22s cubic-bezier(.2,.75,.25,1)
 }
 /* Two nested, borderless glass surfaces: clear outer glass and a softly
    frosted inner pane. Scattered light is confined to the icon tile. */
@@ -730,9 +731,9 @@
   width:36px;height:36px;border-radius:10px;border:0;
   /* Contrast comes from transmitted tint, not a white stroke or bevel. */
   background-color:rgba(110,139,178,.10);background-image:none;
-  -webkit-backdrop-filter:blur(4px) saturate(110%);backdrop-filter:blur(4px) saturate(110%);
+  -webkit-backdrop-filter:none;backdrop-filter:none;
   box-shadow:0 2px 5px #31578b14;
-  color:var(--status-color);transition:color .2s,box-shadow .2s
+  color:var(--status-color);transition:color .16s ease
 }
 .workspace #attendance-register-panel .live-kpi .kpi-icon::before{
   content:"";position:absolute;inset:2px;z-index:-2;pointer-events:none;border-radius:8px;
@@ -747,13 +748,14 @@
 .workspace #attendance-register-panel .live-kpi .kpi-icon::after{
   content:"";position:absolute;inset:1.5px;z-index:-1;pointer-events:none;border-radius:8px;
   border:0;background:#ffffff38;
-  -webkit-backdrop-filter:blur(3px) saturate(108%);backdrop-filter:blur(3px) saturate(108%);
+  /* Radial light below is already blurred; avoid another backdrop pass. */
+  -webkit-backdrop-filter:none;backdrop-filter:none;
   box-shadow:none
 }
 .workspace #attendance-register-panel .live-kpi .kpi-icon svg{
   width:24px;height:24px;stroke-width:1.9;opacity:1;
   filter:drop-shadow(0 0 2px color-mix(in srgb,var(--status-color) 26%,transparent));
-  transition:filter .2s
+  transition:none
 }
 .workspace #attendance-register-panel .live-kpi .kpi-text{display:flex;flex-direction:column;align-items:flex-start;justify-content:center;gap:4px;min-width:0}
 .workspace #attendance-register-panel .live-kpi small{font-size:10px;font-weight:600;color:#4e607d;line-height:1.15;white-space:nowrap}

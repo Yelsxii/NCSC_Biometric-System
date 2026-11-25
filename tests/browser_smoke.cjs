@@ -196,7 +196,7 @@ uvicorn.run('app.main:app',host='127.0.0.1',port=int(os.environ['QA_PORT']),log_
     });
     assert.match(lightGlass.background,/^rgba\(242, 246, 252, 0\.4[56]\d*\)$/);
     assert.ok(lightGlass.gradient.includes('linear-gradient'));
-    assert.ok(lightGlass.blur.includes('blur(7px)'));
+    assert.equal(lightGlass.blur,'none','Static glass panel avoids full-panel backdrop sampling');
     const pairedFrame=await page.locator('.content-shell').evaluate(el=>{
       const rect=el.getBoundingClientRect(),style=getComputedStyle(el);
       const sidebar=document.querySelector('.sidebar'),rail=sidebar.getBoundingClientRect();
@@ -213,7 +213,7 @@ uvicorn.run('app.main:app',host='127.0.0.1',port=int(os.environ['QA_PORT']),log_
     assert.ok(Math.abs(pairedFrame.topInset)<=1 && Math.abs(pairedFrame.bottomInset)<=1,'Both glass frames align inside their shared shell');
     assert.ok(pairedFrame.outerTop>=3 && pairedFrame.outerLeft>=3 && pairedFrame.outerBottom>=3 && pairedFrame.rightInset>=3,'Visible outer glass surrounds both panels');
     assert.ok(pairedFrame.gutter>=4 && pairedFrame.outerRadius>pairedFrame.railRadius && pairedFrame.radius==='11px','Rounded panels are separated by a smooth glass gutter');
-    assert.ok(pairedFrame.blur.includes('blur(6px)') && pairedFrame.gradient.includes('radial-gradient'));
+    assert.ok(pairedFrame.blur==='none' && pairedFrame.gradient.includes('radial-gradient'),'Static workspace glass avoids full-screen backdrop filtering');
     assert.ok(pairedFrame.headerInside,'Topbar belongs inside the right glass frame');
     const glassTints=await page.evaluate(()=>{
       const outer=getComputedStyle(document.querySelector('#workspace'));
@@ -279,6 +279,17 @@ uvicorn.run('app.main:app',host='127.0.0.1',port=int(os.environ['QA_PORT']),log_
     assert.equal(await page.locator('#register-from-attendance').count(),0);
     assert.equal(await page.locator('#attendance-register-panel .pagination').count(),0);
     assert.equal(await page.locator('#register-count').textContent(),'1 employee');
+    assert.ok(await page.evaluate(()=>{
+      const row=document.querySelector('#register-rows tr');
+      const count=document.querySelector('.kpi-all strong').firstChild;
+      renderRegister();
+      return row===document.querySelector('#register-rows tr') && count===document.querySelector('.kpi-all strong').firstChild;
+    }),'Unchanged live refresh retains existing rows and KPI text nodes');
+    const highlightedRow=page.locator('#register-rows tr').first();
+    await highlightedRow.locator('.employee-name-cell').hover();
+    assert.equal(await highlightedRow.evaluate(el=>getComputedStyle(el).backgroundColor),'rgb(219, 231, 247)');
+    assert.equal(await highlightedRow.locator('.directory-action-cell').evaluate(el=>getComputedStyle(el).backgroundColor),'rgb(219, 231, 247)');
+    await page.locator('#employee-search').hover();
     assert.equal(await page.locator('.live-kpi').count(),6);
     assert.equal(await page.locator('.live-kpi .sculpted-accent').count(),0);
     assert.equal(await page.locator('.live-kpi .status-ring').count(),0);
@@ -287,6 +298,7 @@ uvicorn.run('app.main:app',host='127.0.0.1',port=int(os.environ['QA_PORT']),log_
     assert.equal(await page.locator('.kpi-all').getAttribute('aria-pressed'),'true');
     const cardStyles=await page.locator('.live-kpi').evaluateAll(nodes=>nodes.map(el=>({height:el.offsetHeight,background:getComputedStyle(el).backgroundImage})));
     assert.ok(cardStyles.every(s=>s.height<=67),'Desktop KPI cards remain compact');
+    assert.ok(await page.locator('.live-kpi').evaluateAll(nodes=>nodes.every(el=>getComputedStyle(el).backdropFilter==='none')),'Animated cards do not sample a live backdrop');
     assert.ok(cardStyles.every(s=>s.background===cardStyles[0].background),'All KPI surfaces stay neutral, including the selected card');
     assert.equal(await page.locator('.kpi-all').evaluate(el=>getComputedStyle(el).borderTopColor),'rgba(0, 0, 0, 0)');
     const kpiLayout=await page.locator('.live-kpi').evaluateAll(nodes=>nodes.every(el=>{
@@ -301,7 +313,7 @@ uvicorn.run('app.main:app',host='127.0.0.1',port=int(os.environ['QA_PORT']),log_
     }));
     assert.deepEqual(iconGlass.map(x=>x.color),['rgb(82, 126, 185)','rgb(54, 126, 103)','rgb(66, 109, 169)','rgb(172, 73, 98)','rgb(149, 110, 32)','rgb(98, 91, 153)'],'Every icon uses its own status color, even when not selected');
     assert.ok(iconGlass.every(x=>x.surface==='none' && (x.spots.match(/radial-gradient\(/g)||[]).length===5 && x.blur==='blur(4px)'),'Icon glass uses scattered radial lights rather than a directional gradient');
-    assert.ok(iconGlass.every(x=>x.outerBorder==='0px' && x.innerBorder==='0px' && x.innerInset==='1.5px' && x.innerBlur.includes('blur(3px)')),'Two borderless nested glass layers');
+    assert.ok(iconGlass.every(x=>x.outerBorder==='0px' && x.innerBorder==='0px' && x.innerInset==='1.5px' && x.innerBlur==='none'),'Two borderless nested glass layers');
     assert.ok(iconGlass.every(x=>x.outerTint.startsWith('rgba(110, 139, 178,') && x.innerTint.startsWith('rgba(255, 255, 255,') && x.outerTint!==x.innerTint),'Separate translucent tints distinguish the two layers without borders');
     assert.equal(await page.locator('.kpi-all strong').evaluate(el=>getComputedStyle(el).color),'rgb(40, 102, 190)','Default selection retains its vivid count');
     assert.equal(await page.locator('.kpi-all strong').evaluate(el=>getComputedStyle(el).textShadow),'none');
