@@ -34,9 +34,18 @@ function dtrAjaClock(event){
 function dtrPrintRows(data,category,from=1,to=dtrLastDay(data.month)){
   const gip=category==='GIP',metricsCols=gip?1:2;
   const days=new Map(data.days.map(day=>[Number(day.date.slice(-2)),day]));
+  const spanFor=n=>{const day=n>=from&&n<=to?days.get(n):null;return 1+(day&&!day.travel_order?(day.aja_periods||[]).length:0);};
+  const reportCell=(n,span)=>{
+    if(!gip)return '';
+    if(n===16){
+      const certSpan=Array.from({length:12},(_,i)=>spanFor(i+16)).reduce((a,b)=>a+b,0);
+      return '<td class="gip-weekend-cert" rowspan="'+certSpan+'"><div class="gip-cert-title">CERTIFICATION FOR WORK RENDERED ON<br>WEEKENDS/HOLIDAYS</div><div class="gip-cert-body"><p>This is to certify that the intern is authorized and required to report to work on:</p><div class="gip-cert-dates"><span>Date/s:</span><div><i></i><i></i><i></i></div></div><div class="gip-cert-purpose">Purpose:</div></div></td>';
+    }
+    return n>16&&n<=27?'':'<td class="gip-accomplishment-line" rowspan="'+span+'"></td>';
+  };
   return Array.from({length:31},(_,i)=>{
     const n=i+1,day=n>=from&&n<=to?days.get(n):null;
-    if(!day)return '<tr><td>'+n+'</td>'+ '<td></td>'.repeat(4+metricsCols)+'</tr>';
+    if(!day)return '<tr><td>'+n+'</td>'+ '<td></td>'.repeat(4+metricsCols)+reportCell(n,1)+'</tr>';
     const periods=day.travel_order?[]:(day.aja_periods||[]);
     const slots=day.display_slots||{};
     const hasEntries=day.has_attendance_entries||Object.values(slots).some(Boolean);
@@ -47,11 +56,11 @@ function dtrPrintRows(data,category,from=1,to=dtrLastDay(data.month)){
       (!hasEntries&&!periods.length?((day.calendar?.holiday_name?'HOLIDAY':'')||note||(day.is_weekend?(day.day==='Sat'?'SATURDAY':'SUNDAY'):'')):'');
     const span=periods.length+1,ut=offday?null:day.monitoring?.undertime_seconds;
     const total=day.monitoring?.total_seconds;
-    const metricCells=gip?'<td rowspan="'+span+'">'+(total==null?'':esc(durationText(total).slice(0,-3)))+'</td>':
+    const metricCells=gip?'<td rowspan="'+span+'">'+(total==null||(!hasEntries&&!periods.length)?'':esc(durationText(total).slice(0,-3)))+'</td>':
       '<td class="print-undertime" rowspan="'+span+'">'+(offday||ut==null?'':Math.floor(ut/3600))+'</td><td class="print-undertime" rowspan="'+span+'">'+(offday||ut==null?'':Math.floor(ut%3600/60))+'</td>';
     return '<tr'+(offday?' class="print-offday"':'')+'><td rowspan="'+span+'">'+n+'</td>'+
       (special?'<td colspan="4" class="special-day">'+esc(special)+'</td>':['am_in','am_out','pm_in','pm_out'].map(k=>'<td>'+dtrClock(slots[k],!gip)+'</td>').join(''))+
-      metricCells+'</tr>'+periods.map(p=>'<tr class="print-aja"><td colspan="2">AJA OUT '+dtrAjaClock(p.out)+'</td><td colspan="2">AJA '+(p.in?.origin==='biometric'?'IN':'END')+' '+dtrAjaClock(p.in)+'</td></tr>').join('');
+      metricCells+reportCell(n,span)+'</tr>'+periods.map(p=>'<tr class="print-aja"><td colspan="2">AJA OUT '+dtrAjaClock(p.out)+'</td><td colspan="2">AJA '+(p.in?.origin==='biometric'?'IN':'END')+' '+dtrAjaClock(p.in)+'</td></tr>').join('');
   }).join('');
 }
 function civilDtrCopy(data,category){
@@ -69,16 +78,22 @@ function civilDtrCopy(data,category){
 }
 function gipDtrForm(data,period){
   const last=dtrLastDay(data.month),from=period==='second'?16:1,to=period==='first'?15:last;
-  return '<section class="gip-form"><header class="gip-header">DEPARTMENT OF LABOR AND EMPLOYMENT<br><span>Regional Office No. 1</span><div>GOVERNMENT INTERNSHIP PROGRAM</div></header>'+
-    '<div class="gip-meta"><div><p><b>NAME:</b> <strong>'+esc(String(data.display_name||'').toUpperCase())+'</strong></p><p><b>PARTNER AGENCY:</b> <strong>NATIONAL COMMISSION OF SENIOR CITIZENS - RO1</strong></p><p><b>OFFICE OF ASSIGNMENT:</b> <strong>'+esc(String(data.department||'').toUpperCase())+'</strong></p></div><div><p><b>For the Period:</b> <b>'+esc(dtrDateLabel(data.month,from))+' - '+esc(dtrDateLabel(data.month,to))+'</b></p><p><b>LBP Account Number:</b> <span class="blank-field"></span></p></div></div>'+
-    '<div class="gip-columns"><div><div class="gip-section-title">DAILY TIME RECORD (DTR)</div><table class="gip-grid"><colgroup><col style="width:11%"><col span="4" style="width:17%"><col style="width:21%"></colgroup><thead><tr><th rowspan="2">DAYS</th><th colspan="2">MORNING</th><th colspan="2">AFTERNOON</th><th>Daily</th></tr><tr><th>IN</th><th>OUT</th><th>IN</th><th>OUT</th><th>Total</th></tr></thead><tbody>'+dtrPrintRows(data,'GIP',from,to)+'</tbody></table></div><div class="gip-report"><div class="gip-section-title">GIP ACCOMPLISHMENT REPORT<br><span>(Please attach additional sheet, if necessary)</span></div><div class="gip-report-blank"></div></div></div>'+
-    '<p>I hereby certify that the above records are true &amp; correct</p><div class="gip-columns gip-signatures"><div>Prepared By:<div class="gip-signature">'+esc(String(data.display_name||'').toUpperCase())+'</div><div>PRINTED NAME AND SIGNATURE OF INTERN</div></div><div>Certified by:<div class="gip-signature">'+esc(dtrSignatory.GIP[0])+'</div><div>PRINTED NAME AND SIGNATURE OF SUPERVISOR</div></div></div>'+
-    '<div class="gip-columns gip-review"><div><b>To be filled-up by FO</b><p><b>Total No. of Working Days:</b> <span class="blank-field"></span></p><p>No. of Absences: <span class="blank-field"></span></p><p>Tardiness: <span class="blank-field"></span></p><p class="gip-undertime">Undertime: <span class="blank-field"></span></p><b>TOTAL DAYS WORKED <span class="blank-field"></span></b></div><div>Checked by:<div class="gip-signature"></div></div></div></section>';
+  const name=esc(String(data.display_name||'').toUpperCase());
+  const department=esc(String(data.department||'').toUpperCase());
+  return '<section class="gip-form"><header class="gip-header"><div class="gip-heading">DEPARTMENT OF LABOR AND EMPLOYMENT<br>Regional Office No. 1<br>GOVERNMENT INTERNSHIP PROGRAM</div><div class="gip-revision">GIP RO1 Standard DTR Form<br>Rev 2 - 28 January 2025</div></header>'+
+    '<div class="gip-meta"><div class="gip-meta-left"><div class="gip-meta-row"><b>NAME:</b><strong class="gip-name">'+name+'</strong></div><div class="gip-meta-row"><b>PARTNER AGENCY:</b><strong>NATIONAL COMMISSION OF SENIOR CITIZENS - RO1</strong></div><div class="gip-meta-row"><b>OFFICE OF ASSIGNMENT:</b><strong>'+department+'</strong></div></div>'+
+    '<div class="gip-meta-right"><div class="gip-meta-row"><b>For the Period:</b><strong class="gip-period">'+esc(dtrDateLabel(data.month,from))+' - '+esc(dtrDateLabel(data.month,to))+'</strong></div><div class="gip-meta-row"><b>LBP Account Number:</b><strong class="gip-account"></strong></div></div></div>'+
+    '<table class="gip-grid"><colgroup><col style="width:4.5%"><col span="4" style="width:9%"><col style="width:10.5%"><col style="width:49%"></colgroup><thead>'+
+    '<tr><th colspan="6" class="gip-section-title">DAILY TIME RECORD (DTR)</th><th class="gip-section-title">GIP ACCOMPLISHMENT REPORT<br>(Please attach additional sheet, if necessary)</th></tr>'+
+    '<tr><th class="gip-days-heading"></th><th colspan="2">MORNING</th><th colspan="2">AFTERNOON</th><th>Daily</th><td></td></tr>'+
+    '<tr><th class="gip-days-heading">DAYS</th><th>IN</th><th>OUT</th><th>IN</th><th>OUT</th><th>Total</th><td></td></tr></thead><tbody>'+dtrPrintRows(data,'GIP',from,to)+'</tbody></table>'+
+    '<p class="gip-declaration">I hereby certify that the above records are true &amp; correct</p><div class="gip-columns gip-signatures"><div>Prepared By:<div class="gip-signature">'+name+'</div><div>PRINTED NAME AND SIGNATURE OF INTERN</div></div><div>Certified by:<div class="gip-signature">'+esc(dtrSignatory.GIP[0])+'</div><div>PRINTED NAME AND SIGNATURE OF SUPERVISOR</div></div></div>'+
+    '<div class="gip-review"><div class="gip-review-title">To be filled-up by FO</div><div class="gip-review-grid"><div class="gip-review-fields"><div><b>Total No. of Working Days:</b><span></span></div><div>No. of Absences:<span></span></div><div>Tardiness:<span></span></div><div class="gip-undertime">Undertime:<span></span></div><div class="gip-total-worked"><b>TOTAL DAYS WORKED</b><span></span></div></div><div class="gip-checked">Checked by:<div></div></div></div></div></section>';
 }
 function buildDtrDocument(data,category,period,paperKey,version){
   const paper=dtrPaper[paperKey]||dtrPaper.a4;
   const body=category==='GIP'?gipDtrForm(data,period):civilDtrCopy(data,category)+civilDtrCopy(data,category);
-  return '<!doctype html><html lang="en"><head><meta charset="utf-8"><title>DTR - '+esc(data.display_name||'')+' - '+esc(data.month)+'</title><link rel="stylesheet" href="/static/dtr-preview.css?v=5"><style>@page{size:'+paper.width+' '+paper.height+';margin:'+DTR_NARROW_MM+'mm} :root{--paper-width:'+paper.width+';--paper-height:'+paper.height+';--paper-margin:'+DTR_NARROW_MM+'mm;--content-width:'+(paper.w-2*DTR_NARROW_MM)+'mm;--content-height:'+(paper.h-2*DTR_NARROW_MM)+'mm}</style></head><body class="print-document" data-preview-version="'+version+'"><main class="print-content"><div class="print-layout '+(category==='GIP'?'gip-page':'civil-page')+'">'+body+'</div></main></body></html>';
+  return '<!doctype html><html lang="en"><head><meta charset="utf-8"><title>DTR - '+esc(data.display_name||'')+' - '+esc(data.month)+'</title><link rel="stylesheet" href="/static/dtr-preview.css?v=6"><style>@page{size:'+paper.width+' '+paper.height+';margin:'+DTR_NARROW_MM+'mm} :root{--paper-width:'+paper.width+';--paper-height:'+paper.height+';--paper-margin:'+DTR_NARROW_MM+'mm;--content-width:'+(paper.w-2*DTR_NARROW_MM)+'mm;--content-height:'+(paper.h-2*DTR_NARROW_MM)+'mm}</style></head><body class="print-document" data-preview-version="'+version+'"><main class="print-content"><div class="print-layout '+(category==='GIP'?'gip-page':'civil-page')+'">'+body+'</div></main></body></html>';
 }
 function freshDtrFrame(){
   // Replacing the browsing context avoids accumulating iframe history entries

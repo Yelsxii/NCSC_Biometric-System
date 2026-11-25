@@ -788,7 +788,16 @@ with connect() as con:
     await printable.locator('.signatory-role').first().filter({hasText:'INTERNSHIP SUPERVISOR'}).waitFor();
     await page.locator('#dtr-preview-template').selectOption('GIP');
     await printable.locator('.gip-form').waitFor();
+    await page.locator('#dtr-preview-print:not(:disabled)').waitFor();
     assert.equal(await printable.locator('.civil-copy').count(),0);
+    assert.equal(await printable.locator('.gip-grid').count(),1);
+    assert.equal(await printable.locator('.gip-weekend-cert').count(),1);
+    assert.equal(await printable.locator('.gip-cert-dates i').count(),3);
+    assert.equal(await printable.locator('.gip-accomplishment-line').count(),19);
+    assert.ok(Number(await printable.locator('.gip-weekend-cert').getAttribute('rowspan'))>=12);
+    assert.equal(await printable.locator('.gip-account').textContent(),'');
+    assert.equal(await printable.locator('.gip-review-title').textContent(),'To be filled-up by FO');
+    assert.equal(await printable.locator('.gip-grid tbody tr:not(.print-aja)').count(),31);
     await page.locator('#dtr-preview-paper').selectOption('folio');
     await page.locator('#dtr-preview-print:not(:disabled)').waitFor();
     await page.locator('#dtr-preview-period').selectOption('second');
