@@ -394,6 +394,16 @@ function attendanceTimeCells(day){
   if(day.travel_order){
     return '<td colspan="4" class="time-slot slot-travel"><span class="travel-status" title="'+esc((day.travel_source_references||[]).join(' · ')||travelLabel(day))+'">'+esc(travelLabel(day))+'</span></td>';
   }
+  const holiday=day.calendar?.holiday_name;
+  const calendarLabel=holiday||(day.is_weekend?(day.day==='Sat'?'Saturday':'Sunday'):'');
+  // Merge only confirmed empty calendar days. Never hide recorded punches,
+  // approved time entries, AJA evidence, or unresolved review indicators.
+  if(calendarLabel && day.has_attendance_entries===false &&
+      day.display_remark===calendarLabel && !(day.remark_issues||[]).length &&
+      !(day.scans||[]).length && !Object.values(day.display_slots||day.slots||{}).some(Boolean) &&
+      !(day.aja_periods||[]).length){
+    return '<td colspan="4" class="time-slot slot-calendar '+(holiday?'slot-holiday':'slot-neutral')+'"><span class="calendar-status">'+esc(calendarLabel)+'</span></td>';
+  }
   return ['am_in','am_out','pm_in','pm_out'].map(key=>slotCell(day,key)).join('');
 }
 function manilaClock(){return new Intl.DateTimeFormat('sv-SE',{timeZone:'Asia/Manila',year:'numeric',month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit',second:'2-digit',hourCycle:'h23'}).format(new Date());}

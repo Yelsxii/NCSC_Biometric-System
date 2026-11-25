@@ -669,10 +669,14 @@ with connect() as con:
     assert.equal(await page.locator('#daily-rows tr').count(),30);
     const unworkedHoliday=page.locator('#daily-rows [data-date="2026-11-01"]');
     assert.equal(await unworkedHoliday.locator('.day-activities .remark-holiday').textContent(),"All Saints' Day");
+    assert.equal(await unworkedHoliday.locator('td.time-slot').count(),1);
+    assert.equal(await unworkedHoliday.locator('td.slot-calendar.slot-holiday[colspan="4"] .calendar-status').textContent(),"All Saints' Day");
     assert.deepEqual(await unworkedHoliday.locator('.undertime-value').allTextContents(),['—','—']);
     assert.equal(await unworkedHoliday.locator('.dtr-date').getAttribute('title'),"All Saints' Day");
     const unworkedWeekend=page.locator('#daily-rows [data-date="2026-11-08"]');
     assert.equal(await unworkedWeekend.locator('.day-activities .remark-weekend').textContent(),'Sunday');
+    assert.equal(await unworkedWeekend.locator('td.time-slot').count(),1);
+    assert.equal(await unworkedWeekend.locator('td.slot-calendar.slot-neutral[colspan="4"] .calendar-status').textContent(),'Sunday');
     assert.deepEqual(await unworkedWeekend.locator('.undertime-value').allTextContents(),['—','—']);
     assert.equal(await unworkedWeekend.locator('.dtr-date.calendar-weekend').getAttribute('title'),'Sunday');
     assert.equal(await page.locator('#print-dtr').count(),0);
@@ -684,6 +688,8 @@ with connect() as con:
     assert.equal(await page.locator('.breadcrumb-home').count(),0);
     const day=page.locator('#daily-rows [data-date="2026-11-02"]');
     assert.equal(await day.locator('.slot-holiday').count(),4); // Four real scans retain the national holiday cell color
+    assert.equal(await day.locator('td.slot-calendar').count(),0);
+    assert.equal(await day.locator('td.time-slot:not([colspan])').count(),4);
     assert.equal(await day.locator('.time-value').count(),4);
     await day.locator('[data-edit-day]').click();
     await page.locator('#day-review-dialog[open]').waitFor();
