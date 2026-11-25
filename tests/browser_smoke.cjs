@@ -140,7 +140,7 @@ uvicorn.run('app.main:app',host='127.0.0.1',port=int(os.environ['QA_PORT']),log_
         signoutLabel:getComputedStyle(document.querySelector('#logout-sidebar span')).display};
     });
     assert.ok(compactChrome.activeHalo.includes('radial-gradient') && compactChrome.activeHalo.includes('109, 167, 255'),'Selected item has a subtle blue inner halo');
-    assert.ok(compactChrome.activeShadow.includes('132, 182, 255'),'Selected item has a soft blue outer glow');
+    assert.ok(compactChrome.activeShadow.includes('76, 137, 255') && compactChrome.activeShadow.includes('52, 112, 235'),'Selected item has a defined saturated blue outer halo');
     assert.ok(compactChrome.glow.includes('drop-shadow'),'Selected icon has a subtle blue glow');
     assert.equal(compactChrome.iconColor,'rgb(56, 107, 177)');
     assert.equal(compactChrome.activeBackground,'rgb(244, 247, 252)');
