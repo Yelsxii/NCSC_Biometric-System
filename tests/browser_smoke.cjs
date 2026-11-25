@@ -173,7 +173,19 @@ uvicorn.run('app.main:app',host='127.0.0.1',port=int(os.environ['QA_PORT']),log_
       width:el.getBoundingClientRect().width,height:el.getBoundingClientRect().height,
       viewportHeight:innerHeight,labelDisplay:getComputedStyle(el.querySelector('.nav-item>span')).display
     }));
-    assert.ok(railLayout.width<=64 && railLayout.height>=railLayout.viewportHeight-1);
+    assert.ok(railLayout.width>=65 && railLayout.width<=67 && railLayout.height>=railLayout.viewportHeight-1);
+    const railInsets=await page.locator('.sidebar').evaluate(el=>{
+      const rail=el.getBoundingClientRect(),nav=el.querySelector('.nav-item').getBoundingClientRect();
+      return {left:nav.left-rail.left,right:rail.right-nav.right};
+    });
+    assert.ok(railInsets.left>=9 && railInsets.right>=9,'Collapsed buttons retain breathing room');
+    const lightGlass=await page.locator('#attendance-register-panel').evaluate(el=>{
+      const style=getComputedStyle(el);
+      return {background:style.backgroundColor,gradient:style.backgroundImage,blur:style.backdropFilter};
+    });
+    assert.equal(lightGlass.background,'rgba(255, 255, 255, 0.788)');
+    assert.ok(lightGlass.gradient.includes('linear-gradient'));
+    assert.ok(lightGlass.blur.includes('blur(12px)'));
     assert.equal(railLayout.labelDisplay,'none');
     assert.equal(await page.locator('.sidebar .nav-icon').first().evaluate(el=>getComputedStyle(el).width),'24px');
     assert.equal(await page.locator('#logout-sidebar svg').evaluate(el=>getComputedStyle(el).width),'24px');
