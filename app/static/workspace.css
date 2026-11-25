@@ -274,7 +274,7 @@
   transition:color .28s cubic-bezier(.4,0,.2,1),transform .32s cubic-bezier(.4,0,.2,1);
 }
 .workspace .sidebar .nav-item:is(:hover,:focus-visible) .nav-icon{
-  color:#ff809f;filter:drop-shadow(0 0 4px #ff8baa9c) drop-shadow(0 0 8px #ff74974d);
+  color:#ff809f;filter:drop-shadow(0 0 1.5px #ff8baa45);
   transform:translateY(-1px) scale(1.10);
 }
 .workspace .sidebar .nav-item:is(:hover,:focus-visible)>span{transform:translateX(2px)}

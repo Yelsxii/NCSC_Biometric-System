@@ -236,7 +236,7 @@ uvicorn.run('app.main:app',host='127.0.0.1',port=int(os.environ['QA_PORT']),log_
       return icon.transform!=='none' && icon.filter!=='none' &&
         getComputedStyle(el).backgroundColor==='rgba(220, 235, 255, 0.16)' &&
         getComputedStyle(el).borderTopColor==='rgba(0, 0, 0, 0)' &&
-        icon.color==='rgb(255, 128, 159)';
+        icon.color==='rgb(255, 128, 159)' && icon.filter.includes('1.5px') && !icon.filter.includes('8px');
     });
     assert.equal(await menuHover.getAttribute('aria-current'),null,'Hover must not select a page');
     assert.equal(await page.locator('[data-page="employees"]').getAttribute('aria-current'),'page');
