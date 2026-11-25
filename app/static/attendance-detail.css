@@ -332,7 +332,7 @@
 .workspace .attendance-sheet .sheet-filters{
   gap:var(--detail-control-gap);align-items:center;
 }
-/* The back action sits inline with the employee identity. */
+/* Keep the month trigger flush with the employee identity. */
 .workspace .attendance-sheet .sheet-filters .month-inline{
   flex:0 0 auto;width:auto;min-width:0;gap:0;
 }
@@ -402,7 +402,7 @@
   display:flex;align-items:center;gap:10px;min-width:0;
 }
 .workspace .attendance-sheet .sheet-identity .sheet-name-line{flex:1;min-width:0}
-.workspace .attendance-sheet .sheet-identity .back-button{
+.workspace .topbar-heading .back-button{
   display:inline-flex;align-items:center;justify-content:center;
   width:32px;min-width:32px;height:32px;min-height:32px;padding:0;
   flex:0 0 32px;border:0!important;border-radius:9px;
@@ -410,14 +410,14 @@
   color:#234778;cursor:pointer;
   transition:background .18s ease,color .18s ease;
 }
-.workspace .attendance-sheet .sheet-identity .back-button svg{
+.workspace .topbar-heading .back-button svg{
   width:21px;height:21px;flex:none;transition:transform .18s ease;
 }
-.workspace .attendance-sheet .sheet-identity .back-button:is(:hover,:focus-visible){
+.workspace .topbar-heading .back-button:is(:hover,:focus-visible){
   background:#315a96;color:#fff;box-shadow:none;
 }
-.workspace .attendance-sheet .sheet-identity .back-button:is(:hover,:focus-visible) svg{transform:translateX(-2px)}
-.workspace .attendance-sheet .sheet-identity .back-button:focus-visible{outline:2px solid #7c9bd0;outline-offset:2px}
+.workspace .topbar-heading .back-button:is(:hover,:focus-visible) svg{transform:translateX(-2px)}
+.workspace .topbar-heading .back-button:focus-visible{outline:2px solid #7c9bd0;outline-offset:2px}
 .workspace .attendance-sheet .sheet-identity h2{
   font-size:21px;line-height:1.28;font-weight:700;letter-spacing:0;color:#20375f;
 }
@@ -444,8 +444,8 @@
 .workspace .attendance-sheet .undertime-value{color:#80556b;font-weight:550}
 @media(max-width:740px){
   .workspace .attendance-sheet .sheet-identity{gap:6px}
-  .workspace .attendance-sheet .sheet-identity .back-button{width:28px;min-width:28px;height:28px;min-height:28px;flex-basis:28px}
-  .workspace .attendance-sheet .sheet-identity .back-button svg{width:19px;height:19px}
+  .workspace .topbar-heading .back-button{width:28px;min-width:28px;height:28px;min-height:28px;flex-basis:28px}
+  .workspace .topbar-heading .back-button svg{width:19px;height:19px}
   .workspace .attendance-sheet .sheet-identity h2{font-size:16px}
   .workspace .attendance-sheet .attendance-legend span{font-size:9px}
 }
@@ -453,7 +453,29 @@
   .workspace .attendance-sheet .sheet-filters #detail-month-trigger{min-width:150px}
 }
 @media(prefers-reduced-motion:reduce){
-  .workspace .attendance-sheet .sheet-identity .back-button,
-  .workspace .attendance-sheet .sheet-identity .back-button svg{transition:none}
-  .workspace .attendance-sheet .sheet-identity .back-button:is(:hover,:focus-visible) svg{transform:none}
+  .workspace .topbar-heading .back-button,
+  .workspace .topbar-heading .back-button svg{transition:none}
+  .workspace .topbar-heading .back-button:is(:hover,:focus-visible) svg{transform:none}
+}
+
+/* Back navigation belongs to the page header, not the employee identity.
+   Keep the month controls close to the name at every window width. */
+.workspace .topbar-heading{display:flex;align-items:center;gap:10px;flex:1;min-width:0}
+.workspace .topbar-heading .topbar-title{flex:1;min-width:0;max-width:none;overflow-wrap:normal}
+.workspace .attendance-sheet .sheet-header{flex-shrink:0;align-items:start;gap:8px 12px}
+.workspace .attendance-sheet .sheet-name-line{row-gap:4px}
+.workspace .attendance-sheet .sheet-filters{padding:4px 0 8px;gap:8px;justify-content:space-between}
+.workspace .attendance-sheet .sheet-personnel .metadata-label{margin-bottom:3px}
+@media(max-width:740px){
+  .workspace .topbar-heading{gap:7px}
+  .workspace .attendance-sheet .sheet-header{grid-template-columns:minmax(0,1fr) minmax(64px,24%);gap:4px 8px}
+  .workspace .attendance-sheet .sheet-name-line{gap:4px 7px}
+  .workspace .attendance-sheet .sheet-filters{padding:4px 0 7px;gap:6px}
+}
+@media(max-width:400px){
+  .workspace .topbar-heading{gap:5px}
+  .workspace .topbar-heading .topbar-title{font-size:11px;overflow-wrap:anywhere}
+}
+@media(max-width:360px){
+  .workspace .attendance-sheet .sheet-header{grid-template-columns:minmax(0,1fr)}
 }

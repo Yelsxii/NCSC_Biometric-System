@@ -100,6 +100,7 @@ function navigate(page){
   stopDeviceRefresh();
   stopAttendanceRefresh();
   currentPage=page;
+  $('back-to-register').classList.add('hidden');
   document.querySelectorAll('[data-view]').forEach(node=>node.classList.toggle('hidden',node.dataset.view!==page));
   document.querySelectorAll('[data-page]').forEach(node=>{
     node.classList.toggle('active',node.dataset.page===page);
@@ -179,6 +180,7 @@ async function openEmployee(code){
   $('detail-category').innerHTML=categoryBadge(row?.employment_type);
   setAttendanceMonth('detail-month',$('register-month').value);
   $('employee-detail').classList.remove('hidden');
+  $('back-to-register').classList.remove('hidden');
   $('attendance-register-panel').classList.add('hidden');
   await loadDetail();
   $('main-content').scrollTop=0;
@@ -950,6 +952,7 @@ async function initialize(){
   });
   $('back-to-register').addEventListener('click',()=>{
     $('employee-detail').classList.add('hidden');selectedEmployee=null;activeDtr=null;detailRequest++;
+    $('back-to-register').classList.add('hidden');
     $('attendance-register-panel').classList.remove('hidden');
     void loadRegister({quiet:true});
   });

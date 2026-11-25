@@ -7,8 +7,8 @@
   <title>NCSC | Attendance Records</title>
   <link rel="stylesheet" href="/static/app.css">
   <link rel="stylesheet" href="/static/workspace.css?v=attendance-32">
-  <link rel="stylesheet" href="/static/attendance-detail.css?v=auto-dtr-13">
-  <script src="/static/app.js?v=auto-dtr-12" defer></script>
+  <link rel="stylesheet" href="/static/attendance-detail.css?v=auto-dtr-14">
+  <script src="/static/app.js?v=auto-dtr-13" defer></script>
 </head>
 <body>
   <main id="login-view" class="auth-shell" aria-labelledby="login-heading">
@@ -67,7 +67,7 @@
 
     <div class="content-shell">
       <header class="topbar">
-        <h1 class="topbar-title" id="section-name">Employee Attendance</h1>
+        <div class="topbar-heading"><button id="back-to-register" class="back-button hidden" type="button" aria-label="Back to employees" title="Back to employees"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M19 12H5m7-7-7 7 7 7"/></svg></button><h1 class="topbar-title" id="section-name">Employee Attendance</h1></div>
         <div class="topbar-user"><div class="workspace-clock" aria-label="Philippine local time"><div class="clock-date-row"><svg class="clock-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.65" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="5" width="18" height="16" rx="3"/><path d="M8 3v4m8-4v4M3 10h18m-13 5h2m3 0h3"/></svg><span class="clock-date" id="today"></span></div><time class="clock-time" id="live-time"></time><span class="clock-zone">PHT</span></div></div>
       </header>
 
@@ -97,7 +97,7 @@
           <section id="employee-detail" class="detail-section hidden">
             <div class="panel attendance-sheet">
               <div class="sheet-header">
-                <div class="sheet-identity"><button id="back-to-register" class="back-button" type="button" aria-label="Back to employees" title="Back to employees"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M19 12H5m7-7-7 7 7 7"/></svg></button><div class="sheet-name-line"><h2 id="detail-name">—</h2><span id="detail-category" class="sheet-category" role="group" aria-label="Employment category">—</span></div></div>
+                <div class="sheet-identity"><div class="sheet-name-line"><h2 id="detail-name">—</h2><span id="detail-category" class="sheet-category" role="group" aria-label="Employment category">—</span></div></div>
                 <div class="sheet-personnel"><div class="sheet-meta"><span class="metadata-label">Department</span><strong id="detail-department">—</strong></div></div>
               </div>
               <div class="sheet-filters">
