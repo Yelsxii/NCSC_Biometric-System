@@ -575,15 +575,17 @@ with connect() as con:
       return {nameLeft:name.left,monthLeft:month.left,backLeft:back.left,backRight:back.right,
         categoryLeft:category.left,nameRight:name.right,categoryTop:category.top,nameTop:name.top,
         categoryRadius:getComputedStyle(document.querySelector('#detail-category .tag')).borderTopLeftRadius,
-        monthHeight:month.height,backHeight:back.height,
+        monthHeight:month.height,backHeight:back.height,backBottom:back.bottom,
+        nameLabelRemoved:document.querySelector('.sheet-identity .metadata-label')===null,
         labelHidden:document.querySelector('.month-inline .sr-only')!==null};
     });
     assert.ok(Math.abs(headerAlignment.nameLeft-headerAlignment.backLeft)<=2,'Employee name must return to the left edge');
     assert.ok(headerAlignment.categoryLeft>=headerAlignment.nameRight,'Category must sit next to employee name');
     assert.ok(Math.abs(headerAlignment.categoryTop-headerAlignment.nameTop)<=12,'Category and name should share a row');
     assert.equal(headerAlignment.categoryRadius,'999px');
-    assert.ok(headerAlignment.backRight<headerAlignment.monthLeft,'Back arrow precedes month');
-    assert.ok(Math.abs(headerAlignment.monthHeight-headerAlignment.backHeight)<=2,'Navigation controls align vertically');
+    assert.ok(headerAlignment.backBottom<=headerAlignment.nameTop,'Back action sits above the employee name');
+    assert.ok(Math.abs(headerAlignment.nameLeft-headerAlignment.monthLeft)<=2,'Month aligns to the employee name');
+    assert.ok(headerAlignment.nameLabelRemoved,'Redundant employee-name label removed');
     assert.ok(headerAlignment.labelHidden,'Month label is available to assistive technology only');
     const detailStyle=await page.evaluate(()=>({
       buttonBorder:getComputedStyle(document.querySelector('.edit-day')).borderTopWidth,

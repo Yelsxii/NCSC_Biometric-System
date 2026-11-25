@@ -7,7 +7,7 @@
   <title>NCSC | Attendance Records</title>
   <link rel="stylesheet" href="/static/app.css">
   <link rel="stylesheet" href="/static/workspace.css?v=attendance-32">
-  <link rel="stylesheet" href="/static/attendance-detail.css?v=auto-dtr-10">
+  <link rel="stylesheet" href="/static/attendance-detail.css?v=auto-dtr-11">
   <script src="/static/app.js?v=auto-dtr-12" defer></script>
 </head>
 <body>
@@ -96,12 +96,14 @@
 
           <section id="employee-detail" class="detail-section hidden">
             <div class="panel attendance-sheet">
+              <div class="sheet-navigation">
+                <button id="back-to-register" class="back-button" type="button" aria-label="Back to employees" title="Back to employees"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M19 12H5m7-7-7 7 7 7"/></svg><span>Back to employees</span></button>
+              </div>
               <div class="sheet-header">
-                <div class="sheet-identity"><span class="metadata-label">Employee name</span><div class="sheet-name-line"><h2 id="detail-name">—</h2><span id="detail-category" class="sheet-category" role="group" aria-label="Employment category">—</span></div></div>
+                <div class="sheet-identity"><div class="sheet-name-line"><h2 id="detail-name">—</h2><span id="detail-category" class="sheet-category" role="group" aria-label="Employment category">—</span></div></div>
                 <div class="sheet-personnel"><div class="sheet-meta"><span class="metadata-label">Department</span><strong id="detail-department">—</strong></div></div>
               </div>
               <div class="sheet-filters">
-                <button id="back-to-register" class="icon-button back-button" type="button" aria-label="Back to employees" title="Back to employees"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="m14 6-6 6 6 6M8 12h12"/></svg></button>
                 <div class="month-inline"><span class="sr-only" id="detail-month-label">Reporting month</span><input id="detail-month" type="month" hidden tabindex="-1" aria-hidden="true"><button type="button" class="month-trigger" id="detail-month-trigger" data-month-target="detail-month" aria-haspopup="dialog" aria-controls="attendance-month-picker" aria-expanded="false"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="5" width="18" height="16" rx="3"/><path d="M8 3v4m8-4v4M3 10h18"/></svg><span class="month-trigger-value">Select month</span><svg class="month-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><path d="m7 10 5 5 5-5"/></svg></button></div><button id="dtr-form-preview" class="button primary" type="button">DTR preview</button>
               </div>
               <div class="sheet-toolbar">
