@@ -270,6 +270,11 @@ uvicorn.run('app.main:app',host='127.0.0.1',port=int(os.environ['QA_PORT']),log_
     assert.equal(await page.locator('#register-rows').locator('tr').count(),1);
     assert.equal(await page.locator('thead').first().getByText('Last scan').count(),0);
     assert.equal(await page.locator('thead').first().getByText('Scans this month').count(),0);
+    const headerStyles=await page.locator('#attendance-register-panel .attendance-directory th').evaluateAll(nodes=>nodes.map(el=>{
+      const s=getComputedStyle(el);return {color:s.color,background:s.backgroundColor,gradient:s.backgroundImage,position:s.position,weight:s.fontWeight};
+    }));
+    assert.equal(headerStyles.length,6);
+    assert.ok(headerStyles.every(s=>s.color==='rgb(41, 70, 111)' && s.background==='rgb(203, 220, 240)' && s.gradient.includes('linear-gradient') && s.position==='sticky' && s.weight==='700'),'Readable, consistent blue header band including the sticky action heading');
     assert.equal(await page.locator('#add-staff').count(),0);
     assert.equal(await page.locator('#register-from-attendance').count(),0);
     assert.equal(await page.locator('#attendance-register-panel .pagination').count(),0);
