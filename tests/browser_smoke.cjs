@@ -160,7 +160,13 @@ uvicorn.run('app.main:app',host='127.0.0.1',port=int(os.environ['QA_PORT']),log_
     });
     assert.ok(glassPane.base.includes('radial-gradient'));
     assert.ok(glassPane.glass.includes('linear-gradient'));
-    assert.ok(glassPane.filter.includes('blur('));
+    assert.ok(glassPane.filter.includes('blur(18px)'));
+    const reflection=await page.locator('.sidebar').evaluate(el=>{
+      const sheen=getComputedStyle(el,'::after');
+      return {image:sheen.backgroundImage,pointerEvents:sheen.pointerEvents};
+    });
+    assert.ok(reflection.image.includes('linear-gradient'));
+    assert.equal(reflection.pointerEvents,'none');
     assert.equal(glassPane.pointerEvents,'none');
     assert.equal(glassPane.border,'1px');
     const railLayout=await page.locator('.sidebar').evaluate(el=>({
