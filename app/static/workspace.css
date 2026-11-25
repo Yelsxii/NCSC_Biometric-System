@@ -247,9 +247,10 @@
   box-shadow:0 0 9px #ff769d22,inset 0 0 0 1px #ffb4c412;
 }
 .workspace .sidebar .nav-item.active{
+  --nav-active-glow:0 0 5px #4c89ff70,0 0 10px #3470eb40,0 2px 5px #06152d20;
   color:#203b66;background-color:var(--rail-active);
   border-color:transparent;
-  box-shadow:0 0 0 1px #4d91ff70,0 0 4px 1px #4c89ff80,0 0 8px #3470eb40,0 2px 5px #06152d20;font-weight:650;
+  box-shadow:var(--nav-active-glow);font-weight:650;
 }
 .workspace .sidebar .nav-item::before{
   content:"";position:absolute;inset:0;border-radius:inherit;z-index:-1;pointer-events:none;
@@ -287,7 +288,7 @@
 }
 .workspace .sidebar .nav-item.active:is(:hover,:focus-visible){
   color:#17365e;background-color:#fff;border-color:transparent;
-  box-shadow:0 0 0 1px #4d91ff70,0 0 4px 1px #4c89ff80,0 0 8px #3470eb40,0 2px 5px #06152d20;
+  box-shadow:var(--nav-active-glow);
 }
 .workspace .sidebar .nav-item.active:is(:hover,:focus-visible) .nav-icon{
   color:#235ba9;
@@ -341,6 +342,8 @@
 .workspace .clock-zone{color:#7b8da7;font-size:9px;font-weight:650;letter-spacing:.04em}
 .workspace .sidebar .nav-item:focus-visible,.workspace .sidebar-signout:focus-visible{outline:2px solid #9dbbff;outline-offset:2px}
 @media(max-width:1100px){
+  /* The compact icon rail keeps its tighter, previously approved illumination. */
+  .workspace .sidebar .nav-item.active{--nav-active-glow:0 0 0 1px #4d91ff70,0 0 4px 1px #4c89ff80,0 0 8px #3470eb40,0 2px 5px #06152d20}
   .workspace{display:flex;flex-direction:row}
   .workspace .sidebar{--rail-inset:12px;width:76px;min-width:76px;flex:0 0 76px;height:100%;padding:0 12px}
   .workspace .sidebar .brand{justify-content:center;padding:18px 0 15px}
