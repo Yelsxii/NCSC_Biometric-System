@@ -293,7 +293,8 @@ uvicorn.run('app.main:app',host='127.0.0.1',port=int(os.environ['QA_PORT']),log_
       return getComputedStyle(row).backgroundColor==='rgb(219, 231, 247)' &&
         getComputedStyle(row.querySelector('.directory-action-cell')).backgroundColor==='rgb(219, 231, 247)' &&
         getComputedStyle(row.querySelector('.employee-name-cell strong')).color==='rgb(35, 90, 178)' &&
-        getComputedStyle(row.querySelector('.name-avatar')).backgroundColor==='rgb(192, 213, 243)' &&
+        getComputedStyle(row.querySelector('.name-avatar')).backgroundColor==='rgba(91, 133, 193, 0.13)' &&
+        getComputedStyle(row.querySelector('.name-avatar'),'::before').opacity==='1' &&
         getComputedStyle(row.querySelector('.name-avatar')).color==='rgb(35, 90, 178)';
     });
     await page.locator('#employee-search').hover();
@@ -400,6 +401,15 @@ uvicorn.run('app.main:app',host='127.0.0.1',port=int(os.environ['QA_PORT']),log_
     await page.locator('[data-live-filter="all"]').click();
     assert.equal(await page.locator('[data-live-filter="all"]').getAttribute('aria-pressed'),'true');
     assert.equal(await page.locator('#register-rows .name-avatar').count(),1);
+    const avatarGlass=await page.locator('#register-rows .name-avatar').first().evaluate(el=>{
+      const outer=getComputedStyle(el),light=getComputedStyle(el,'::before'),inner=getComputedStyle(el,'::after');
+      return {border:outer.borderTopWidth,innerBorder:inner.borderTopWidth,inset:inner.top,gradient:light.backgroundImage,blur:outer.backdropFilter};
+    });
+    assert.equal(avatarGlass.border,'0px');
+    assert.equal(avatarGlass.innerBorder,'0px');
+    assert.equal(avatarGlass.inset,'1.5px');
+    assert.equal(avatarGlass.blur,'none');
+    assert.equal((avatarGlass.gradient.match(/radial-gradient\(/g)||[]).length,4);
     assert.ok(await page.locator('#register-rows .register-identity').first().evaluate(el=>el.querySelector('.name-avatar').getBoundingClientRect().right<=el.querySelector('strong').getBoundingClientRect().left),'Avatar and name stay aligned');
     assert.equal(await page.locator('#register-rows [data-edit-profile]').count(),0);
     await page.locator('#register-rows .directory-action-cell .row-action').first().waitFor();
