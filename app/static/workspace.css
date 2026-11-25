@@ -197,8 +197,22 @@
   --rail-bg:#14284e;--rail-hover:#203963;--rail-active:#0b1d39;--rail-inset:12px;
   width:206px;min-width:206px;height:100%;flex:0 0 206px;
   display:flex;flex-direction:column;position:relative;z-index:15;
-  background:var(--rail-bg);border:0;padding:0 12px;overflow:visible;
+  background-color:var(--rail-bg);
+  background-image:
+    radial-gradient(ellipse 250px 350px at -28% 4%,#527bb442,transparent 82%),
+    radial-gradient(ellipse 220px 300px at 125% 94%,#3f63922e,transparent 80%),
+    linear-gradient(155deg,#1a3055 0%,#14284e 48%,#10213e 100%);
+  border:0;padding:0 12px;overflow:visible;isolation:isolate;
   box-shadow:3px 0 15px #11274912;color:#fff;
+}
+/* A translucent pane above the navy base, independent of navigation layout. */
+.workspace .sidebar::before{
+  content:"";position:absolute;inset:5px;z-index:-1;pointer-events:none;
+  border:1px solid #b5d2ff20;border-radius:12px;
+  background:linear-gradient(145deg,#d3e6ff13 0%,#aecbff06 38%,#0b1d3912 72%,#a7c5ff0d 100%);
+  box-shadow:inset 0 1px 0 #eef6ff17,inset 1px 0 0 #ffffff08,0 4px 18px #06152d20;
+  -webkit-backdrop-filter:blur(10px) saturate(120%);
+  backdrop-filter:blur(10px) saturate(120%);
 }
 .workspace .sidebar .brand{
   display:flex;align-items:center;justify-content:flex-start;
@@ -224,7 +238,8 @@
 }
 .workspace .sidebar .nav-item.active{
   color:#fff;background-color:var(--rail-active);
-  background-image:radial-gradient(ellipse 42px 32px at 21px 50%,#f05a6c1f,transparent);
+  background-image:radial-gradient(ellipse 42px 32px at 21px 50%,#f05a6c1f,transparent),
+    linear-gradient(135deg,#d7e8ff12,transparent 60%);
   border-color:#6689bd45;
   box-shadow:0 3px 9px #06152d42,inset 0 1px 0 #ffffff08;font-weight:650;
 }
@@ -316,7 +331,8 @@
   .workspace .sidebar .nav{padding:17px 0;gap:8px}
   .workspace .sidebar .nav-item{height:44px;justify-content:center;padding:0;gap:0}
   .workspace .sidebar .nav-icon{width:24px;height:24px;flex-basis:24px}
-  .workspace .sidebar .nav-item.active{background-image:radial-gradient(ellipse 32px 30px at center,#f05a6c24,transparent)}
+  .workspace .sidebar::before{inset:4px;border-radius:10px}
+  .workspace .sidebar .nav-item.active{background-image:radial-gradient(ellipse 32px 30px at center,#f05a6c24,transparent),linear-gradient(135deg,#d7e8ff12,transparent 65%)}
   .workspace .sidebar .nav-item::after,.workspace .sidebar-signout::after{
     content:attr(data-tooltip);position:absolute;left:calc(100% + 11px);top:50%;
     transform:translate(4px,-50%);opacity:0;visibility:hidden;pointer-events:none;

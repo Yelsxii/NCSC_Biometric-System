@@ -154,6 +154,15 @@ uvicorn.run('app.main:app',host='127.0.0.1',port=int(os.environ['QA_PORT']),log_
     assert.equal(await page.locator('.signout-arrow').evaluate(el=>getComputedStyle(el).transform),'none');
     assert.equal(await page.locator('.signout-door').evaluate(el=>getComputedStyle(el).transform),'none');
     await page.emulateMedia({reducedMotion:'no-preference'});
+    const glassPane=await page.locator('.sidebar').evaluate(el=>{
+      const pane=getComputedStyle(el,'::before');
+      return {base:getComputedStyle(el).backgroundImage,glass:pane.backgroundImage,filter:pane.backdropFilter,pointerEvents:pane.pointerEvents,border:pane.borderTopWidth};
+    });
+    assert.ok(glassPane.base.includes('radial-gradient'));
+    assert.ok(glassPane.glass.includes('linear-gradient'));
+    assert.ok(glassPane.filter.includes('blur('));
+    assert.equal(glassPane.pointerEvents,'none');
+    assert.equal(glassPane.border,'1px');
     const railLayout=await page.locator('.sidebar').evaluate(el=>({
       width:el.getBoundingClientRect().width,height:el.getBoundingClientRect().height,
       viewportHeight:innerHeight,labelDisplay:getComputedStyle(el.querySelector('.nav-item>span')).display
