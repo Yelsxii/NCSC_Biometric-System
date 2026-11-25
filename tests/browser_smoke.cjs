@@ -320,6 +320,11 @@ uvicorn.run('app.main:app',host='127.0.0.1',port=int(os.environ['QA_PORT']),log_
     assert.ok(iconGlass.every(x=>x.outerTint.startsWith('rgba(110, 139, 178,') && x.innerTint.startsWith('rgba(255, 255, 255,') && x.outerTint!==x.innerTint),'Separate translucent tints distinguish the two layers without borders');
     assert.equal(await page.locator('.kpi-all strong').evaluate(el=>getComputedStyle(el).color),'rgb(40, 102, 190)','Default selection retains its vivid count');
     assert.equal(await page.locator('.kpi-all strong').evaluate(el=>getComputedStyle(el).textShadow),'none');
+    const directions=await page.locator('.kpi-in .kpi-icon svg, .kpi-out .kpi-icon svg').evaluateAll(nodes=>nodes.map(el=>Array.from(el.querySelectorAll('path'),p=>p.getAttribute('d'))));
+    assert.equal(directions.length,2);
+    assert.equal(directions[0][0],directions[1][0],'Sign-in and sign-out share the same doorway');
+    assert.equal(directions[0][2],'m11 7 5 5-5 5','Inward arrow points toward the door');
+    assert.equal(directions[1][2],'m8 7-5 5 5 5','Outward arrow points away from the door');
     const glyphStyles=await page.locator('.live-kpi .kpi-icon svg').evaluateAll(nodes=>nodes.map(el=>{
       const s=getComputedStyle(el);return {stroke:s.strokeWidth,opacity:s.opacity,glow:s.filter};
     }));
