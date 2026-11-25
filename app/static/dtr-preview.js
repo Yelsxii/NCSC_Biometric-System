@@ -40,15 +40,16 @@ function dtrPrintRows(data,category,from=1,to=dtrLastDay(data.month)){
     const periods=day.travel_order?[]:(day.aja_periods||[]);
     const slots=day.display_slots||{};
     const hasEntries=day.has_attendance_entries||Object.values(slots).some(Boolean);
-    const offday=day.is_weekend||Boolean(day.calendar?.holiday_name);
+    const weekday=new Date(day.date+'T00:00:00Z').getUTCDay();
+    const offday=day.is_weekend||weekday===0||weekday===6||Boolean(day.calendar?.holiday_name);
     const note=day.manual_source?.notes?.find(x=>/\b(?:LEAVE|CTO|WORK SUSPENSION)\b/i.test(x));
     const special=day.travel_order?travelLabel(day):
       (!hasEntries&&!periods.length?((day.calendar?.holiday_name?'HOLIDAY':'')||note||(day.is_weekend?(day.day==='Sat'?'SATURDAY':'SUNDAY'):'')):'');
     const span=periods.length+1,ut=offday?null:day.monitoring?.undertime_seconds;
     const total=day.monitoring?.total_seconds;
     const metricCells=gip?'<td rowspan="'+span+'">'+(total==null?'':esc(durationText(total).slice(0,-3)))+'</td>':
-      '<td rowspan="'+span+'">'+(ut==null?'':Math.floor(ut/3600))+'</td><td rowspan="'+span+'">'+(ut==null?'':Math.floor(ut%3600/60))+'</td>';
-    return '<tr><td rowspan="'+span+'">'+n+'</td>'+
+      '<td class="print-undertime" rowspan="'+span+'">'+(offday||ut==null?'':Math.floor(ut/3600))+'</td><td class="print-undertime" rowspan="'+span+'">'+(offday||ut==null?'':Math.floor(ut%3600/60))+'</td>';
+    return '<tr'+(offday?' class="print-offday"':'')+'><td rowspan="'+span+'">'+n+'</td>'+
       (special?'<td colspan="4" class="special-day">'+esc(special)+'</td>':['am_in','am_out','pm_in','pm_out'].map(k=>'<td>'+dtrClock(slots[k],!gip)+'</td>').join(''))+
       metricCells+'</tr>'+periods.map(p=>'<tr class="print-aja"><td colspan="2">AJA OUT '+dtrAjaClock(p.out)+'</td><td colspan="2">AJA '+(p.in?.origin==='biometric'?'IN':'END')+' '+dtrAjaClock(p.in)+'</td></tr>').join('');
   }).join('');
@@ -77,7 +78,7 @@ function gipDtrForm(data,period){
 function buildDtrDocument(data,category,period,paperKey,version){
   const paper=dtrPaper[paperKey]||dtrPaper.a4;
   const body=category==='GIP'?gipDtrForm(data,period):civilDtrCopy(data,category)+civilDtrCopy(data,category);
-  return '<!doctype html><html lang="en"><head><meta charset="utf-8"><title>DTR - '+esc(data.display_name||'')+' - '+esc(data.month)+'</title><link rel="stylesheet" href="/static/dtr-preview.css?v=4"><style>@page{size:'+paper.width+' '+paper.height+';margin:'+DTR_NARROW_MM+'mm} :root{--paper-width:'+paper.width+';--paper-height:'+paper.height+';--paper-margin:'+DTR_NARROW_MM+'mm;--content-width:'+(paper.w-2*DTR_NARROW_MM)+'mm;--content-height:'+(paper.h-2*DTR_NARROW_MM)+'mm}</style></head><body class="print-document" data-preview-version="'+version+'"><main class="print-content"><div class="print-layout '+(category==='GIP'?'gip-page':'civil-page')+'">'+body+'</div></main></body></html>';
+  return '<!doctype html><html lang="en"><head><meta charset="utf-8"><title>DTR - '+esc(data.display_name||'')+' - '+esc(data.month)+'</title><link rel="stylesheet" href="/static/dtr-preview.css?v=5"><style>@page{size:'+paper.width+' '+paper.height+';margin:'+DTR_NARROW_MM+'mm} :root{--paper-width:'+paper.width+';--paper-height:'+paper.height+';--paper-margin:'+DTR_NARROW_MM+'mm;--content-width:'+(paper.w-2*DTR_NARROW_MM)+'mm;--content-height:'+(paper.h-2*DTR_NARROW_MM)+'mm}</style></head><body class="print-document" data-preview-version="'+version+'"><main class="print-content"><div class="print-layout '+(category==='GIP'?'gip-page':'civil-page')+'">'+body+'</div></main></body></html>';
 }
 function freshDtrFrame(){
   // Replacing the browsing context avoids accumulating iframe history entries
@@ -222,38 +223,51 @@ function loadLocalDtrPdf(frame){
     doc.head.appendChild(script);
   });
 }
-// Render the document first, then paint the decoded same-origin seals into
-// their exact reserved boxes. This avoids image loading failures inside
-// html2canvas's temporary cloned iframe and keeps both copies identical.
-async function captureDtrWithSeals(html2pdf,opts,rendered,content){
+// Use the final preview's own paper coordinates for both the captured form
+// and the decoded logos. Do not measure the temporary html2pdf overlay:
+// its layout/zoom can differ from the visible form.
+async function buildDtrDownloadCanvas(frame,html2pdf,opts,paper){
+  const doc=frame.contentDocument;
+  const rendered=doc.querySelector('.print-layout');
+  const page=doc.querySelector('.print-content');
   const sources=Array.from(rendered.querySelectorAll('.print-seal'));
   await Promise.all(sources.map(img=>img.decode()));
   if(sources.some(img=>!img.naturalWidth||!img.naturalHeight))throw new Error('NCSC seal unavailable.');
+  const pageRect=page.getBoundingClientRect(),formRect=rendered.getBoundingClientRect();
+  if(!pageRect.width||!pageRect.height||!formRect.width||!formRect.height)throw new Error('Print layout unavailable.');
+  const relativeBox=rect=>({x:(rect.left-pageRect.left)/pageRect.width,
+    y:(rect.top-pageRect.top)/pageRect.height,w:rect.width/pageRect.width,h:rect.height/pageRect.height});
+  const form=relativeBox(formRect);
+  const seals=sources.map(source=>({source,...relativeBox(source.getBoundingClientRect())}));
+  const content=rendered.cloneNode(true);
+  content.style.zoom='1';
+  // Preserve each reserved image box, but avoid the clone's unreliable
+  // image loading. Both seals are drawn onto the FINAL page, not the
+  // temporary capture, with normalized paper-relative coordinates.
+  content.querySelectorAll('.print-seal').forEach(img=>{img.style.visibility='hidden';});
   const worker=html2pdf().set(opts).from(content).toContainer();
   const container=await worker.get('container');
   const overlay=container.parentElement;
-  try{
-    const clones=Array.from(container.querySelectorAll('.print-seal'));
-    if(clones.length!==sources.length)throw new Error('Seal layout unavailable.');
-    const bounds=container.getBoundingClientRect();
-    const boxes=clones.map((img,i)=>{
-      const r=img.getBoundingClientRect(),source=sources[i];
-      if(r.width<=0||r.height<=0)throw new Error('Seal layout unavailable.');
-      img.style.visibility='hidden'; // preserve the original reserved space
-      return {source,x:r.left-bounds.left,y:r.top-bounds.top,w:r.width,h:r.height};
-    });
-    const captured=await worker.toCanvas().get('canvas');
-    const ctx=captured.getContext('2d');
-    const sx=captured.width/bounds.width,sy=captured.height/bounds.height;
-    for(const box of boxes){
-      const factor=Math.min(box.w/box.source.naturalWidth,box.h/box.source.naturalHeight);
-      const w=box.source.naturalWidth*factor,h=box.source.naturalHeight*factor;
-      ctx.drawImage(box.source,(box.x+(box.w-w)/2)*sx,(box.y+(box.h-h)/2)*sy,w*sx,h*sy);
-    }
-    return captured;
-  }finally{
-    if(overlay?.isConnected)overlay.remove();
+  let captured;
+  try{captured=await worker.toCanvas().get('canvas');}
+  finally{if(overlay?.isConnected)overlay.remove();}
+  if(!captured.width||!captured.height)throw new Error('Empty PDF capture.');
+  const w=paper.w-2*DTR_NARROW_MM,h=paper.h-2*DTR_NARROW_MM;
+  const canvas=doc.createElement('canvas');
+  canvas.width=Math.round(w*96/25.4*3);
+  // Avoid a one-pixel overflow producing a second PDF page.
+  canvas.height=Math.max(1,Math.floor(canvas.width*h/w)-2);
+  const ctx=canvas.getContext('2d');
+  ctx.fillStyle='#fff';ctx.fillRect(0,0,canvas.width,canvas.height);
+  const W=canvas.width,H=canvas.height;
+  ctx.drawImage(captured,form.x*W,form.y*H,form.w*W,form.h*H);
+  for(const box of seals){
+    const bw=box.w*W,bh=box.h*H;
+    const scale=Math.min(bw/box.source.naturalWidth,bh/box.source.naturalHeight);
+    const iw=box.source.naturalWidth*scale,ih=box.source.naturalHeight*scale;
+    ctx.drawImage(box.source,box.x*W+(bw-iw)/2,box.y*H+(bh-ih)/2,iw,ih);
   }
+  return canvas;
 }
 async function downloadDtrPdf(){
   if(dtrDownloadBusy||$('dtr-preview-download').disabled||!dtrPreviewData)return;
@@ -264,36 +278,17 @@ async function downloadDtrPdf(){
   const selectors=['dtr-preview-template','dtr-preview-period','dtr-preview-paper'];
   dtrDownloadBusy=true;setDtrActionsReady(false);button.setAttribute('aria-busy','true');
   selectors.forEach(id=>$(id).disabled=true);
-  setDtrPreviewNote('Preparing PDF…');
+  setDtrPreviewNote();
   try{
     const html2pdf=await loadLocalDtrPdf(frame);
     if(version!==dtrPreviewVersion)return;
-    const doc=frame.contentDocument;
-    const rendered=doc.querySelector('.print-layout');
-    const content=rendered.cloneNode(true);
-    const fittedWidth=rendered.getBoundingClientRect().width;
-    // Capture at the original font sizes. Fit the full rendered form within
-    // one physical page afterwards rather than dropping attendance rows.
-    content.style.zoom='1';
     const safeName=String(data.display_name||'Employee').replace(/[\\/:*?"<>|\x00-\x1f]/g,'_').trim().slice(0,100)||'Employee';
     const filename='DTR - '+safeName+' - '+data.month+' - '+category+(category==='GIP'?' - '+period:'')+'.pdf';
     const opts={filename,margin:DTR_NARROW_MM,image:{type:'png'},enableLinks:false,pagebreak:{mode:[]},
       html2canvas:{scale:3,backgroundColor:'#fff',logging:false,windowWidth:Math.ceil(paper.w*96/25.4),windowHeight:Math.ceil(paper.h*96/25.4)},
       jsPDF:{unit:'mm',format:[paper.w,paper.h],orientation:'portrait',compress:true}};
-    const captured=await captureDtrWithSeals(html2pdf,opts,rendered,content);
+    const canvas=await buildDtrDownloadCanvas(frame,html2pdf,opts,paper);
     if(version!==dtrPreviewVersion)return;
-    const w=paper.w-2*DTR_NARROW_MM,h=paper.h-2*DTR_NARROW_MM;
-    const canvas=doc.createElement('canvas');canvas.width=Math.max(1,captured.width);
-    // Leave two pixels of rounding tolerance to avoid an extra blank PDF page.
-    canvas.height=Math.max(1,Math.floor(canvas.width*h/w)-2);
-    const ctx=canvas.getContext('2d');ctx.fillStyle='#fff';ctx.fillRect(0,0,canvas.width,canvas.height);
-    // Match the preview's physical width and fit-to-page scale, then
-    // center vertically in the available area rather than top-aligning.
-    const physicalWidth=w*96/25.4;
-    const scale=Math.min(canvas.width/captured.width,canvas.height/captured.height,
-      (fittedWidth/physicalWidth)*canvas.width/captured.width);
-    const cw=captured.width*scale,ch=captured.height*scale;
-    ctx.drawImage(captured,(canvas.width-cw)/2,(canvas.height-ch)/2,cw,ch);
     await html2pdf().set(opts).from(canvas).save();
     if(version===dtrPreviewVersion)setDtrPreviewNote();
   }catch(error){

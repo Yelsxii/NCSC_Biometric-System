@@ -723,6 +723,13 @@ with connect() as con:
     assert.ok(await printable.locator('.print-seal').first().evaluate(async img=>{await img.decode();return img.naturalWidth>0;}));
     assert.ok((await printable.locator('.civil-copy').first().locator('.special-day').allTextContents()).includes('HOLIDAY'));
     assert.ok(!(await printable.locator('.civil-copy').first().locator('.special-day').allTextContents()).includes("All Saints' Day"));
+    assert.ok((await printable.locator('.print-offday .print-undertime').allTextContents()).every(v=>v===''));
+    assert.deepEqual(await page.evaluate(()=>{
+      const day={date:'2026-11-07',day:'Sat',is_weekend:true,calendar:{},has_attendance_entries:true,display_slots:{am_in:{happened_at:'2026-11-07T08:00:00'}},monitoring:{undertime_seconds:3600}};
+      const el=document.createElement('table');el.innerHTML='<tbody>'+dtrPrintRows({month:'2026-11',days:[day]},'COS')+'</tbody>';
+      return Array.from(el.querySelectorAll('.print-offday .print-undertime'),td=>td.textContent);
+    }),['','']);
+    assert.equal(await page.locator('#dtr-zoom-controls').evaluate(el=>getComputedStyle(el).position),'absolute');
     const toolbarWidth=await page.locator('.export-preview-toolbar').evaluate(el=>el.getBoundingClientRect().width);
     const initialPaper=await page.locator('#dtr-paper-canvas').evaluate(el=>el.getBoundingClientRect().width);
     await page.locator('#dtr-zoom-in').click();
@@ -731,6 +738,35 @@ with connect() as con:
     await page.locator('#dtr-zoom-fit').click();
     assert.ok(Math.abs(await page.locator('#dtr-paper-canvas').evaluate(el=>el.getBoundingClientRect().width)-initialPaper)<2);
     assert.equal(await page.locator('#dtr-zoom-fit').getAttribute('aria-pressed'),'true');
+    // Exercise the actual renderer, not just preview images. Both original
+    // seals must have visible red and blue pixels inside the final page boxes.
+    const sealCheck=await page.evaluate(async()=>{
+      const frame=document.getElementById('dtr-preview-frame'),doc=frame.contentDocument,paper=dtrPaper.a4;
+      const pdf=await loadLocalDtrPdf(frame);
+      const opts={margin:DTR_NARROW_MM,image:{type:'png'},enableLinks:false,pagebreak:{mode:[]},
+        html2canvas:{scale:3,backgroundColor:'#fff',logging:false,windowWidth:Math.ceil(paper.w*96/25.4),windowHeight:Math.ceil(paper.h*96/25.4)},
+        jsPDF:{unit:'mm',format:[paper.w,paper.h],orientation:'portrait',compress:true}};
+      const canvas=await buildDtrDownloadCanvas(frame,pdf,opts,paper);
+      const p=doc.querySelector('.print-content').getBoundingClientRect(),ctx=canvas.getContext('2d');
+      return Array.from(doc.querySelectorAll('.print-seal'),img=>{
+        const r=img.getBoundingClientRect(),x=Math.max(0,Math.floor((r.left-p.left)/p.width*canvas.width)),y=Math.max(0,Math.floor((r.top-p.top)/p.height*canvas.height));
+        const w=Math.max(1,Math.floor(r.width/p.width*canvas.width)),h=Math.max(1,Math.floor(r.height/p.height*canvas.height));
+        const pixels=ctx.getImageData(x,y,w,h).data;
+        let red=0,blue=0;
+        for(let i=0;i<pixels.length;i+=4){const [r,g,b]=[pixels[i],pixels[i+1],pixels[i+2]];if(r>120&&r>g*1.5&&r>b*1.4)red++;if(b>90&&b>r*1.4&&b>g*1.15)blue++;}
+        return {red,blue};
+      });
+    });
+    assert.equal(sealCheck.length,2);
+    assert.ok(sealCheck.every(s=>s.red>20&&s.blue>20),'Both PDF logo boxes contain the original red and blue seal');
+    const downloadPromise=page.waitForEvent('download',{timeout:60000});
+    await page.locator('#dtr-preview-download').click();
+    const downloaded=await downloadPromise;
+    const pdfBytes=require('node:fs').readFileSync(await downloaded.path());
+    assert.equal(pdfBytes.subarray(0,5).toString(),'%PDF-');
+    assert.equal((pdfBytes.toString('latin1').match(/\/Type\s*\/Page\b/g)||[]).length,1);
+    await page.locator('#dtr-preview-download:not(:disabled)').waitFor();
+    assert.equal(await page.locator('#dtr-preview-note').isVisible(),false);
     assert.equal(await printable.locator('.civil-copy h1').first().textContent(),'DAILY TIME RECORD');
     const printTypography=await printable.locator('.civil-copy').first().evaluate(el=>{
       const style=sel=>{const s=getComputedStyle(el.querySelector(sel));return [s.fontWeight,s.fontStyle,s.fontSize]};
