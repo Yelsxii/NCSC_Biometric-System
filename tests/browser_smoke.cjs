@@ -273,6 +273,13 @@ uvicorn.run('app.main:app',host='127.0.0.1',port=int(os.environ['QA_PORT']),log_
     assert.equal(await page.locator('#register-from-attendance').count(),0);
     assert.equal(await page.locator('#attendance-register-panel .pagination').count(),0);
     assert.equal(await page.locator('#register-count').textContent(),'1 employee');
+    assert.equal(await page.locator('.live-kpi').count(),6);
+    assert.equal(await page.locator('[data-live-count="all"]').textContent(),'1');
+    assert.equal(await page.locator('#register-rows .live-status').count(),1);
+    const kpiPositions=await page.locator('.live-kpi').evaluateAll(nodes=>nodes.map(el=>el.getBoundingClientRect().top));
+    assert.ok(kpiPositions.every(y=>Math.abs(y-kpiPositions[0])<1),'KPI cards stay in a single row');
+    await page.locator('[data-live-filter="all"]').click();
+    assert.equal(await page.locator('[data-live-filter="all"]').getAttribute('aria-pressed'),'true');
     assert.equal(await page.locator('#register-rows .name-avatar').count(),0);
     assert.equal(await page.locator('#register-rows [data-edit-profile]').count(),0);
     await page.locator('#register-rows .directory-action-cell .row-action').first().waitFor();

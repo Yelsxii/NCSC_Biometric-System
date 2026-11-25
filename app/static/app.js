@@ -11,6 +11,8 @@ let selectedName = '';
 let selectedDepartment = '';
 let activeDtr = null;
 let lastEmployeeRows = [];
+let liveFilter = 'all';
+let registerLiveAsOf = '';
 let toastTimer = null;
 let requestSerial = 0;
 let rosterPreviewOkay = false;
@@ -100,6 +102,7 @@ function navigate(page){
   stopDeviceRefresh();
   stopAttendanceRefresh();
   currentPage=page;
+  liveFilter='all';
   $('back-to-register').classList.add('hidden');
   document.querySelectorAll('[data-view]').forEach(node=>node.classList.toggle('hidden',node.dataset.view!==page));
   document.querySelectorAll('[data-page]').forEach(node=>{
@@ -134,15 +137,17 @@ async function loadRegister({quiet=false}={}){
   const serial=++requestSerial;
   const month=$('register-month').value||currentMonth();
   const q=$('employee-search').value.trim();
-  if(!quiet)$('register-rows').innerHTML='<tr><td colspan="4" class="table-empty">Loading employees…</td></tr>';
+  if(!quiet)$('register-rows').innerHTML='<tr><td colspan="6" class="table-empty">Loading employees…</td></tr>';
   try {
-    const result=await api('/api/employee-register?'+new URLSearchParams({month,q}));
+    const result=await api('/api/employee-register?'+new URLSearchParams({month,live:'true'}));
     if (serial!==requestSerial||currentPage!=='employees'||!session||selectedEmployee||q!==$('employee-search').value.trim()||month!==($('register-month').value||currentMonth())) return;
     lastEmployeeRows=result.items;
+    registerLiveAsOf=result.live_as_of||'';
     renderRegister();
   }catch(error){
     if(serial!==requestSerial || currentPage!=='employees' || !session || selectedEmployee)return;
-    if(!quiet){$('register-rows').innerHTML='<tr><td colspan="4" class="table-empty">Unable to load employee attendance.</td></tr>';toast(error.message,true);}
+    $('live-as-of').textContent='Refresh failed · '+(registerLiveAsOf?'last loaded '+liveTime(registerLiveAsOf):'no live data');
+    if(!quiet){$('register-rows').innerHTML='<tr><td colspan="6" class="table-empty">Unable to load employee attendance.</td></tr>';toast(error.message,true);}
   }
 }
 function categoryBadge(value){
@@ -155,8 +160,26 @@ function employeeCell(row){
   return '<div class="employee-cell"><span class="name-avatar" aria-hidden="true">'+esc(name.slice(0,1).toUpperCase())+
     '</span><span><strong>'+esc(name)+'</strong>'+source+(row.position?'<small>'+esc(row.position)+'</small>':'')+'</span></div>';
 }
+function liveTime(stamp){
+    if(!stamp)return '—';
+    const match=String(stamp).match(/(\d{2}):(\d{2}):(\d{2})/);
+    if(!match)return '—';
+    const h=Number(match[1]);
+    return String(h%12||12).padStart(2,'0')+':'+match[2]+':'+match[3]+' '+(h<12?'AM':'PM');
+}
+function liveMatches(row,key){
+    const status=row.live?.status||'review';
+    return key==='all'||(key==='other'?['review','offday'].includes(status):status===key);
+}
 function renderRegister(){
-    const rows=lastEmployeeRows;
+    const q=$('employee-search').value.trim().toLowerCase();
+    const rows=lastEmployeeRows.filter(row=>liveMatches(row,liveFilter)&&(!q||String(row.employee_code).toLowerCase().includes(q)||String(row.display_name||'').toLowerCase().includes(q)));
+    document.querySelectorAll('[data-live-count]').forEach(el=>{el.textContent=String(lastEmployeeRows.filter(row=>liveMatches(row,el.dataset.liveCount)).length);});
+    document.querySelectorAll('[data-live-filter]').forEach(el=>el.setAttribute('aria-pressed',String(el.dataset.liveFilter===liveFilter)));
+    const other=$('live-other-filter');
+    other.classList.toggle('hidden',!lastEmployeeRows.some(row=>liveMatches(row,'other'))&&liveFilter!=='other');
+    $('live-as-of').textContent=registerLiveAsOf?'As of '+registerLiveAsOf.slice(0,10)+' · '+liveTime(registerLiveAsOf)+' PHT':'No live data';
+    
     const total=rows.length;
     $('register-count').textContent=total?total+(total===1?' employee':' employees'):'No employees found';
     $('register-rows').innerHTML=rows.length?rows.map(row=>
@@ -164,9 +187,11 @@ function renderRegister(){
       '<td class="employee-name-cell"><strong>'+esc(row.display_name||'Name not synchronized')+'</strong></td>'+
       '<td>'+categoryBadge(row.employment_type)+'</td>'+
       '<td>'+esc(row.department||'—')+'</td>'+
+      '<td><span class="live-status live-'+esc(row.live?.status||'review')+'" title="'+esc(row.live?.reason||'Status unavailable')+'">'+esc(row.live?.label||'For review')+'</span></td>'+
+      '<td class="live-last-update">'+esc(liveTime(row.live?.at))+'</td>'+
       '<td class="directory-action-cell"><button type="button" class="button primary row-action" data-employee="'+esc(row.employee_code)+'" aria-label="View attendance: '+esc(row.display_name||row.employee_code)+'"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M2 12s4-7 10-7 10 7 10 7-4 7-10 7S2 12 2 12Z"/><circle cx="12" cy="12" r="3"/></svg>View attendance</button></td>'+
       '</tr>'
-    ).join(''):'<tr><td colspan="4" class="table-empty">No employees found.</td></tr>';
+    ).join(''):'<tr><td colspan="6" class="table-empty">No employees found.</td></tr>';
 }
 async function openEmployee(code){
   if (!code) return;
@@ -929,6 +954,13 @@ async function initialize(){
   document.querySelectorAll('[data-page],[data-go]').forEach(node=>
     node.addEventListener('click',()=>navigate(node.dataset.page||node.dataset.go)));
   $('employee-filter').addEventListener('submit',e=>{e.preventDefault();applyRegisterFilters();});
+  document.querySelectorAll('[data-live-filter]').forEach(button=>button.addEventListener('click',()=>{
+    liveFilter=button.dataset.liveFilter;
+    $('employee-search').value='';
+    updateRegisterSearchControl();
+    renderRegister();
+    $('attendance-register-panel').querySelector('.table-wrap').scrollTop=0;
+  }));
   $('employee-search').addEventListener('input',()=>applyRegisterFilters({debounce:true}));
   $('clear-employee-search').addEventListener('click',()=>{$('employee-search').value='';applyRegisterFilters();$('employee-search').focus();});
   $('register-month').addEventListener('change',()=>applyRegisterFilters());

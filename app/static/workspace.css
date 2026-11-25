@@ -698,3 +698,39 @@
   .workspace .content-shell #main-content{padding:6px 4px 6px}
   .workspace .content-shell .topbar{padding-inline:6px}
 }
+
+/* Daily status strip: single horizontal row, independent of reporting month. */
+.workspace #attendance-register-panel .live-overview{flex:0 0 auto;min-width:0;margin-bottom:12px}
+.workspace #attendance-register-panel .live-overview-head{display:flex;align-items:center;gap:9px;margin-bottom:6px;min-width:0;flex-wrap:wrap}
+.workspace #attendance-register-panel .live-overview-head>strong{font-size:11px;color:#304b72;font-weight:650}
+.workspace #attendance-register-panel #live-as-of{margin-left:auto;font-size:9px;color:#657997}
+.workspace #attendance-register-panel .live-other{border:0;border-radius:6px;background:#e8edf5;color:#526888;padding:3px 6px;font-size:9px}
+.workspace #attendance-register-panel .live-other[aria-pressed=true]{background:#d4e0f4;color:#234b8b}
+.workspace #attendance-register-panel .live-kpi-strip{display:grid;grid-template-columns:repeat(6,minmax(104px,1fr));gap:7px;overflow-x:auto;scrollbar-width:thin;padding:1px 1px 3px}
+.workspace #attendance-register-panel .live-kpi{--kpi:#315a96;display:flex;align-items:center;gap:8px;min-width:0;text-align:left;padding:7px 9px;border:1px solid #dbe4f1;background:#ffffff80;border-radius:8px;color:var(--kpi);transition:background .15s,border-color .15s}
+.workspace #attendance-register-panel .live-kpi svg{width:19px;height:19px;flex:none}
+.workspace #attendance-register-panel .live-kpi span{display:flex;flex-direction:column;gap:1px;min-width:0}
+.workspace #attendance-register-panel .live-kpi strong{font-size:19px;line-height:1.05;font-variant-numeric:tabular-nums}
+.workspace #attendance-register-panel .live-kpi small{font-size:9px;font-weight:600;color:#526985;white-space:nowrap}
+.workspace #attendance-register-panel .live-kpi:is(:hover,[aria-pressed=true]){background:#f8faff;border-color:var(--kpi)}
+.workspace #attendance-register-panel .live-kpi.kpi-in{--kpi:#28815f}
+.workspace #attendance-register-panel .live-kpi.kpi-out{--kpi:#426da9}
+.workspace #attendance-register-panel .live-kpi.kpi-missing{--kpi:#b74362}
+.workspace #attendance-register-panel .live-kpi.kpi-aja{--kpi:#956e20}
+.workspace #attendance-register-panel .live-kpi.kpi-travel{--kpi:#7951ae}
+.workspace #attendance-register-panel .attendance-directory{min-width:850px}
+.workspace #attendance-register-panel .directory-name{width:29%}
+.workspace #attendance-register-panel .directory-category{width:12%}
+.workspace #attendance-register-panel .directory-department{width:17%}
+.workspace #attendance-register-panel .directory-status{width:17%}
+.workspace #attendance-register-panel .directory-update{width:13%}
+.workspace #attendance-register-panel .directory-action{width:150px}
+.workspace #attendance-register-panel .live-status{display:inline-block;border-radius:6px;padding:4px 7px;font-size:10px;font-weight:650;background:#e9edf4;color:#536985;line-height:1.25}
+.workspace #attendance-register-panel .live-in{background:#e3f4eb;color:#23694e}
+.workspace #attendance-register-panel .live-out{background:#e6eefc;color:#345d9d}
+.workspace #attendance-register-panel .live-missing{background:#fbe7ed;color:#a83e5b}
+.workspace #attendance-register-panel .live-aja{background:#fff1d6;color:#805d18}
+.workspace #attendance-register-panel .live-travel{background:#eee6fa;color:#68459c}
+.workspace #attendance-register-panel .live-review{background:#f4eddf;color:#805d18}
+.workspace #attendance-register-panel .live-last-update{font-variant-numeric:tabular-nums;white-space:nowrap;font-size:11px}
+@media(max-width:740px){.workspace #attendance-register-panel .live-kpi-strip{grid-template-columns:repeat(6,minmax(96px,1fr));gap:5px}.workspace #attendance-register-panel .live-kpi{padding:6px;gap:5px}.workspace #attendance-register-panel .live-kpi svg{width:16px;height:16px}.workspace #attendance-register-panel .live-kpi strong{font-size:17px}.workspace #attendance-register-panel .directory-action{width:140px}}

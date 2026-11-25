@@ -6,9 +6,9 @@
   <meta name="theme-color" content="#142650">
   <title>NCSC | Attendance Records</title>
   <link rel="stylesheet" href="/static/app.css">
-  <link rel="stylesheet" href="/static/workspace.css?v=attendance-35">
+  <link rel="stylesheet" href="/static/workspace.css?v=attendance-36">
   <link rel="stylesheet" href="/static/attendance-detail.css?v=auto-dtr-16">
-  <script src="/static/app.js?v=auto-dtr-14" defer></script>
+  <script src="/static/app.js?v=auto-dtr-15" defer></script>
 </head>
 <body>
   <main id="login-view" class="auth-shell" aria-labelledby="login-heading">
@@ -80,6 +80,17 @@
       <main id="main-content">
         <section class="page" data-view="employees">
           <div class="panel list-panel" id="attendance-register-panel">
+            <section class="live-overview" aria-label="Today's attendance overview">
+              <div class="live-overview-head"><strong>Today's attendance</strong><button type="button" id="live-other-filter" class="live-other hidden" data-live-filter="other" aria-pressed="false">Other / review <span data-live-count="other">—</span></button><span id="live-as-of">Waiting for attendance data…</span></div>
+              <div class="live-kpi-strip" role="group" aria-label="Filter employees by today's status">
+                  <button type="button" class="live-kpi kpi-all" data-live-filter="all" aria-pressed="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.65" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="9" cy="8" r="3"/><path d="M3 20v-3a6 6 0 0 1 12 0v3M16 5a3 3 0 0 1 0 6m2 3a5 5 0 0 1 3 5"/></svg><span><strong data-live-count="all">—</strong><small>Employees</small></span></button>
+                  <button type="button" class="live-kpi kpi-in" data-live-filter="in" aria-pressed="false"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.65" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M10 17l5-5-5-5M15 12H3M15 4h6v16h-6"/></svg><span><strong data-live-count="in">—</strong><small>Timed in</small></span></button>
+                  <button type="button" class="live-kpi kpi-out" data-live-filter="out" aria-pressed="false"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.65" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 17l5-5-5-5M20 12H8M8 4H3v16h5"/></svg><span><strong data-live-count="out">—</strong><small>Timed out</small></span></button>
+                  <button type="button" class="live-kpi kpi-missing" data-live-filter="missing" aria-pressed="false"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.65" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 7v6m0 3h.01"/></svg><span><strong data-live-count="missing">—</strong><small>No entry</small></span></button>
+                  <button type="button" class="live-kpi kpi-aja" data-live-filter="aja" aria-pressed="false"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.65" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="7" width="18" height="14" rx="3"/><path d="M8 7V4h8v3M3 12h18"/></svg><span><strong data-live-count="aja">—</strong><small>On AJA</small></span></button>
+                  <button type="button" class="live-kpi kpi-travel" data-live-filter="travel" aria-pressed="false"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.65" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 21s7-6 7-12a7 7 0 1 0-14 0c0 6 7 12 7 12z"/><circle cx="12" cy="9" r="2"/></svg><span><strong data-live-count="travel">—</strong><small>Travel Order</small></span></button>
+              </div>
+            </section>
             <form id="employee-filter" class="toolbar" role="search" aria-label="Employee attendance filters">
               <div class="search-box"><label for="employee-search">Search employees</label><div class="employee-search-field"><svg class="search-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><circle cx="10.5" cy="10.5" r="6.5"/><path d="m16 16 4 4"/></svg><input id="employee-search" type="search" placeholder="Search by employee name" autocomplete="off" maxlength="80"><button id="clear-employee-search" type="button" aria-label="Clear search" title="Clear search" hidden><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><path d="m7 7 10 10M17 7 7 17"/></svg></button></div></div>
               <div class="register-month-control"><label id="register-month-label" for="register-month-trigger">Reporting month</label><input id="register-month" type="month" hidden tabindex="-1" aria-hidden="true"><button type="button" class="month-trigger" id="register-month-trigger" data-month-target="register-month" aria-haspopup="dialog" aria-controls="attendance-month-picker" aria-expanded="false"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="5" width="18" height="16" rx="3"/><path d="M8 3v4m8-4v4M3 10h18"/></svg><span class="month-trigger-value">Select month</span><svg class="month-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><path d="m7 10 5 5 5-5"/></svg></button></div>
@@ -89,7 +100,7 @@
               </button>
             </form>
             <div class="table-wrap">
-              <table class="records-table attendance-directory"><colgroup><col class="directory-name"><col class="directory-category"><col class="directory-department"><col class="directory-action"></colgroup><thead><tr><th>Employee name</th><th>Category</th><th>Department</th><th class="actions-column">Actions</th></tr></thead><tbody id="register-rows"><tr><td colspan="4">Loading employees…</td></tr></tbody></table>
+              <table class="records-table attendance-directory"><colgroup><col class="directory-name"><col class="directory-category"><col class="directory-department"><col class="directory-status"><col class="directory-update"><col class="directory-action"></colgroup><thead><tr><th>Employee name</th><th>Category</th><th>Department</th><th>Live status</th><th>Last update</th><th class="actions-column">Action</th></tr></thead><tbody id="register-rows"><tr><td colspan="6">Loading employees…</td></tr></tbody></table>
             </div>
             <div class="list-footer register-footer"><span id="register-count" role="status" aria-live="polite"></span></div>
           </div>

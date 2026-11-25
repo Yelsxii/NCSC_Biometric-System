@@ -36,6 +36,7 @@ from app.profiles import RegistrationInput, ProfileUpdateInput, get_profile, lis
 from app.attendance import DayReviewInput, CalendarInput, decorate_days, save_day_review, save_calendar
 from app.activity_mapping import activity_pairs, dtr_aja_periods
 from app.dtr_sources import present_day
+from app.live_attendance import live_status
 from app.bionet_roster import reconcile_workcodes
 from app.bionet_attendance import apply_evidence, active as bionet_active
 from app.manual_dtr import (MAX_MANUAL_BYTES, parse_package, preview_package, import_package,
@@ -588,6 +589,20 @@ def monitor_dtr(employee_code: str, month: str, user: dict = Depends(current_use
         raise HTTPException(400, "Dates must be between 2000 and 2100.")
     day_count = calendar.monthrange(start.year, start.month)[1]
     end = start + dt.timedelta(days=day_count)
+    employee, rows, scans, activities = _monitor_days(employee_code, start, end)
+    return {"employee_code": employee_code, "display_name": employee[0] if employee else "",
+            "name_source": employee["name_source"] if employee else "scan",
+            "department": employee["department"] if employee else "",
+            "employment_type": employee["employment_type"] if employee else None,
+            "position": employee["position"] if employee else "", "month": month, "days": rows,
+            "summary": {"scans": len(scans), "days_with_scans": sum(bool(r["scans"]) for r in rows),
+                        "activity_records": len(activities)},
+            "calculation_status": "not_calculated", "manual_source_status": automatic_status()}
+
+
+def _monitor_days(employee_code: str, start: dt.date, end: dt.date):
+    """Shared evidence resolution for a requested range, including today's single day."""
+    day_count = (end - start).days
     with closing(connect()) as con:
         scans = [dict(x) for x in con.execute(
             "SELECT p.id,p.employee_code,p.happened_at,p.device_id,p.status_code,p.verification_code,p.work_code,w.label AS work_label,w.activity_type,w.direction AS work_direction "
@@ -650,14 +665,7 @@ def monitor_dtr(employee_code: str, month: str, user: dict = Depends(current_use
             if any(p["review"] for p in day["aja_periods"]):
                 day["monitoring"]["aja_review"] = True
         present_day(day)
-    return {"employee_code": employee_code, "display_name": employee[0] if employee else "",
-            "name_source": employee["name_source"] if employee else "scan",
-            "department": employee["department"] if employee else "",
-            "employment_type": employee["employment_type"] if employee else None,
-            "position": employee["position"] if employee else "", "month": month, "days": rows,
-            "summary": {"scans": len(scans), "days_with_scans": sum(bool(r["scans"]) for r in rows),
-                        "activity_records": len(activities)},
-            "calculation_status": "not_calculated", "manual_source_status": automatic_status()}
+    return employee, rows, scans, activities
 
 
 @app.put("/api/attendance/{employee_code}/{date}")
@@ -723,7 +731,7 @@ async def import_manual_dtr(request: Request, file: UploadFile = File(...), mapp
         raise HTTPException(400, "Preview the current file and employee matches before importing.") from exc
 
 @app.get("/api/employee-register")
-def employee_register(month: str, q: str = "", user: dict = Depends(current_user)):
+def employee_register(month: str, q: str = "", live: bool = False, user: dict = Depends(current_user)):
     """Directory-first list for one chosen calendar month, including unscanned staff.
 
     No scan is interpreted as time-in/out here. The same personnel registry
@@ -758,8 +766,22 @@ def employee_register(month: str, q: str = "", user: dict = Depends(current_user
                         lower(e.display_name), e.employee_code LIMIT 1000""",
             (start.isoformat(), end.isoformat(), search, search, search),
         ).fetchall()]
-    return {"items": rows, "month": month, "search": search,
-            "note": "Scan counts only; no automatic absence or undertime calculation."}
+    result = {"items": rows, "month": month, "search": search,
+              "note": "Scan counts only; no automatic absence or undertime calculation."}
+    if live:
+        now = dt.datetime.now(dt.timezone(dt.timedelta(hours=8))).replace(tzinfo=None, microsecond=0)
+        today = now.date()
+        cutoff = os.getenv("ATTENDANCE_ARRIVAL_TIME", "").strip()
+        for row in rows:
+            try:
+                _, days, _, _ = _monitor_days(row["employee_code"], today, today + dt.timedelta(days=1))
+                row["live"] = live_status(days[0], now, cutoff)
+            except HTTPException:
+                row["live"] = {"status": "review", "label": "For review", "at": None,
+                               "reason": "Too many source records to classify safely."}
+        result["live_as_of"] = now.isoformat(sep=" ")
+        result["live_date"] = today.isoformat()
+    return result
 
 
 # ── LAN configuration without unauthorized reads/writes ────────────────────
