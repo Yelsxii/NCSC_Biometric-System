@@ -229,6 +229,12 @@ uvicorn.run('app.main:app',host='127.0.0.1',port=int(os.environ['QA_PORT']),log_
     assert.equal(await page.locator('.sidebar .nav-icon').first().evaluate(el=>getComputedStyle(el).width),'24px');
     assert.equal(await page.locator('#logout-sidebar svg').evaluate(el=>getComputedStyle(el).width),'24px');
     const menuHover=page.locator('[data-page="profiles"]');
+    await page.mouse.move(0,0);
+    await page.waitForFunction(()=>{
+      const el=document.querySelector('[data-page="profiles"]');
+      return getComputedStyle(el).color==='rgb(240, 245, 252)' &&
+        getComputedStyle(el.querySelector('.nav-icon')).color==='rgb(228, 237, 249)';
+    });
     await menuHover.hover();
     await page.waitForFunction(()=>{
       const el=document.querySelector('[data-page="profiles"]');

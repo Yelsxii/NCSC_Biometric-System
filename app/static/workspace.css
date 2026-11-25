@@ -236,7 +236,7 @@
 .workspace .sidebar .nav-item{
   position:relative;display:flex;align-items:center;justify-content:flex-start;
   width:100%;min-width:0;height:42px;padding:0 8px;gap:9px;
-  color:#c7d4ea;background:transparent;border:1px solid transparent;
+  color:#f0f5fc;background:transparent;border:1px solid transparent;
   background-clip:padding-box;
   border-radius:9px;font-size:12px;font-weight:550;letter-spacing:0;box-shadow:none;
   isolation:isolate;transition:background-color .28s cubic-bezier(.4,0,.2,1),color .28s cubic-bezier(.4,0,.2,1),border-color .28s cubic-bezier(.4,0,.2,1);
@@ -270,7 +270,7 @@
   transition:transform .32s cubic-bezier(.4,0,.2,1);
 }
 .workspace .sidebar .nav-icon{
-  color:#b6c7e3;transform-origin:center;overflow:visible;
+  color:#e4edf9;transform-origin:center;overflow:visible;
   transition:color .28s cubic-bezier(.4,0,.2,1),transform .32s cubic-bezier(.4,0,.2,1);
 }
 .workspace .sidebar .nav-item:is(:hover,:focus-visible) .nav-icon{
@@ -302,7 +302,7 @@
 .workspace .sidebar-signout{
   position:relative;display:flex;align-items:center;gap:10px;min-height:42px;
   padding:0 10px;border:1px solid transparent;border-radius:9px;
-  color:#c7d4ea;background:transparent;font-size:12px;font-weight:550;
+  color:#f0f5fc;background:transparent;font-size:12px;font-weight:550;
   text-transform:none;letter-spacing:0;transition:background-color .28s cubic-bezier(.4,0,.2,1),color .28s cubic-bezier(.4,0,.2,1),border-color .28s cubic-bezier(.4,0,.2,1);
 }
 .workspace .sidebar-signout svg{width:22px;height:22px;flex:none;overflow:visible}
