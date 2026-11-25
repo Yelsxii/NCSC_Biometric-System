@@ -387,10 +387,11 @@ with connect() as con:
     await page.locator('#register-month-trigger').click();
     await page.locator('#attendance-month-picker[open]').waitFor();
     const desktopPicker=await page.locator('#attendance-month-picker').boundingBox();
-    assert.ok(desktopPicker.width<=229,'Desktop month picker should be compact');
+    assert.ok(desktopPicker.width<=217 && desktopPicker.height<=220,'Desktop month picker should be compact');
     await page.setViewportSize({width:620,height:820});
     const narrowPicker=await page.locator('#attendance-month-picker').boundingBox();
-    assert.ok(narrowPicker.width>=269 && narrowPicker.width<=271,'Narrow month picker retains its size');
+    assert.ok(narrowPicker.width<=217 && narrowPicker.height<=220,'Narrow month picker should also be compact');
+    assert.equal(await page.locator('#month-picker-grid').evaluate(el=>getComputedStyle(el).gridTemplateColumns.split(' ').length),4);
     await page.setViewportSize({width:1440,height:900});
     await page.locator('#month-year-value').waitFor();
     const pickerYear=Number(await page.locator('#month-year-value').textContent());

@@ -426,38 +426,37 @@
 .workspace .month-trigger .month-chevron{width:12px;margin-left:auto}
 .workspace .month-trigger:focus-visible{outline:2px solid #6d92cd;outline-offset:2px}
 .workspace .attendance-month-picker{
-  position:fixed;inset:auto;margin:0;width:min(270px,calc(100vw - 16px));
+  position:fixed;inset:auto;margin:0;width:min(216px,calc(100vw - 16px));
   max-height:calc(100dvh - 16px);overflow:auto;
-  box-sizing:border-box;padding:12px;border:1px solid #e2e9f4;
-  border-radius:13px;background:#fff;color:#203b67;
-  box-shadow:0 12px 35px #14284e30;outline:0;
+  box-sizing:border-box;padding:8px;border:1px solid #e2e9f4;
+  border-radius:10px;background:#fff;color:#203b67;
+  box-shadow:0 10px 26px #14284e24;outline:0;
 }
 .workspace .attendance-month-picker::backdrop{background:transparent}
 .workspace .month-picker-heading,.workspace .month-picker-year,.workspace .month-picker-footer{
-  display:flex;align-items:center;justify-content:space-between;gap:8px;
+  display:flex;align-items:center;justify-content:space-between;gap:5px;
 }
 .workspace .month-picker-heading{font-size:11px;font-weight:650;color:#72829d}
 .workspace .month-picker-heading button,.workspace .month-picker-year button{
-  display:grid;place-items:center;width:29px;height:29px;border:0;border-radius:7px;
-  background:#f0f4fc;color:#244b9a;font-size:19px;line-height:1;
+  display:grid;place-items:center;width:26px;height:26px;border:0;border-radius:6px;
+  background:#f0f4fc;color:#244b9a;font-size:17px;line-height:1;
 }
-.workspace .month-picker-year{margin:10px 0;color:#203b67}
-.workspace .month-picker-year strong{font-size:16px;font-weight:700}
+.workspace .month-picker-year{margin:6px 0;color:#203b67}
+.workspace .month-picker-year strong{font-size:14px;font-weight:700}
 .workspace .month-picker-year button:disabled{opacity:.35}
-.workspace .month-picker-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:6px}
+.workspace .month-picker-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:4px}
 .workspace .month-picker-grid button{
-  position:relative;height:34px;border:1px solid transparent;border-radius:7px;
-  background:#f6f8fc;color:#536b91;font-size:12px;font-weight:550;
+  position:relative;height:28px;padding:0 2px;border:1px solid transparent;border-radius:6px;
+  background:#f6f8fc;color:#536b91;font-size:11px;font-weight:550;
   transition:background .15s,color .15s,box-shadow .15s;
 }
 .workspace .month-picker-grid button:hover{background:#e7effc;color:#244b9a}
 .workspace .month-picker-grid button[aria-pressed=true]{background:#244b9a;color:#fff;box-shadow:0 2px 5px #244b9a28}
 .workspace .month-picker-grid button.is-current::after{content:"";position:absolute;bottom:3px;left:calc(50% - 2px);width:4px;height:4px;border-radius:50%;background:#ed6477}
 .workspace .attendance-month-picker button:focus-visible{outline:2px solid #7499d0;outline-offset:1px}
-.workspace .month-picker-footer{border-top:1px solid #edf1f7;margin-top:10px;padding-top:9px;justify-content:flex-end}
-.workspace .month-picker-footer button{background:#eaf0fa;color:#244b9a;border:0;border-radius:7px;padding:7px 11px;font-size:11px;font-weight:650}
-/* Desktop action rail stays compact regardless of available table width.
-   Narrow windows retain the original proportional columns and picker sizing. */
+.workspace .month-picker-footer{border-top:1px solid #edf1f7;margin-top:6px;padding-top:6px;justify-content:flex-end}
+.workspace .month-picker-footer button{background:#eaf0fa;color:#244b9a;border:0;border-radius:6px;padding:5px 9px;font-size:11px;font-weight:650}
+/* Desktop action rail stays compact regardless of available table width. */
 @media(min-width:1101px){
   .workspace #attendance-register-panel .directory-name{width:40%}
   .workspace #attendance-register-panel .directory-category{width:22%}
@@ -467,20 +466,6 @@
   .workspace #attendance-register-panel .directory-action-cell .row-action{
     width:124px;min-width:124px;max-width:124px;
   }
-  .workspace .attendance-month-picker{
-    width:min(228px,calc(100vw - 16px));padding:9px;
-    border-radius:11px;box-shadow:0 10px 26px #14284e24;
-  }
-  .workspace .month-picker-heading,.workspace .month-picker-year,.workspace .month-picker-footer{gap:6px}
-  .workspace .month-picker-heading button,.workspace .month-picker-year button{
-    width:26px;height:26px;font-size:17px;
-  }
-  .workspace .month-picker-year{margin:7px 0}
-  .workspace .month-picker-year strong{font-size:15px}
-  .workspace .month-picker-grid{gap:5px}
-  .workspace .month-picker-grid button{height:29px;font-size:11px}
-  .workspace .month-picker-footer{margin-top:7px;padding-top:7px}
-  .workspace .month-picker-footer button{padding:5px 9px}
 }
 @media(max-width:740px){
   .workspace #attendance-register-panel #employee-filter .search-box{flex:1 1 100%;min-width:0}

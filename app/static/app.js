@@ -860,7 +860,7 @@ function initializeAttendanceMonthPicker(){
   grid.addEventListener('click',e=>{const b=e.target.closest('[data-month-value]');if(b)choose(b.dataset.monthValue);});
   grid.addEventListener('keydown',e=>{
     const buttons=[...grid.querySelectorAll('button')],i=buttons.indexOf(document.activeElement);
-    const delta={ArrowLeft:-1,ArrowRight:1,ArrowUp:-3,ArrowDown:3}[e.key];
+    const delta={ArrowLeft:-1,ArrowRight:1,ArrowUp:-4,ArrowDown:4}[e.key];
     if(i>=0&&delta!==undefined){e.preventDefault();buttons[(i+delta+12)%12].focus();}
   });
   $('month-year-prev').addEventListener('click',()=>{if(year>1900){year--;render();}});
