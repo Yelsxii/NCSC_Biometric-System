@@ -278,8 +278,21 @@ uvicorn.run('app.main:app',host='127.0.0.1',port=int(os.environ['QA_PORT']),log_
     assert.equal(await page.locator('.live-kpi .sculpted-accent').count(),6);
     assert.equal(await page.locator('.live-kpi .status-ring').count(),6);
     const cardStyles=await page.locator('.live-kpi').evaluateAll(nodes=>nodes.map(el=>({height:el.getBoundingClientRect().height,background:getComputedStyle(el).backgroundImage})));
-    assert.ok(cardStyles.every(s=>s.height<=77),'Desktop KPI cards remain compact');
+    assert.ok(cardStyles.every(s=>s.height<=67),'Desktop KPI cards remain compact');
     assert.equal(cardStyles[1].background,cardStyles[3].background,'Unselected KPI surfaces use the same neutral glass palette');
+    const kpiLayout=await page.locator('.live-kpi').evaluateAll(nodes=>nodes.every(el=>{
+      const icon=el.querySelector('.kpi-icon').getBoundingClientRect(),label=el.querySelector('.kpi-text').getBoundingClientRect();
+      return icon.right<=label.left && label.top<icon.bottom && label.bottom>icon.top;
+    }));
+    assert.ok(kpiLayout,'Icon on the left; label and count beside it');
+    const hoverKpi=page.locator('.kpi-missing');
+    await hoverKpi.hover();
+    await page.waitForFunction(()=>{
+      const el=document.querySelector('.kpi-missing');
+      const style=getComputedStyle(el),count=getComputedStyle(el.querySelector('strong'));
+      return count.textShadow!=='none' && count.color==='rgb(172, 73, 98)' && new DOMMatrix(style.transform).m42 < -2.5;
+    });
+    await page.locator('#employee-search').hover();
     assert.equal(await page.locator('.kpi-all .ring-label').textContent(),'100%');
     assert.equal(await page.locator('.live-kpi-strip').evaluate(el=>getComputedStyle(el).scrollbarWidth),'none');
     assert.equal(await page.locator('#live-as-of').count(),0);
