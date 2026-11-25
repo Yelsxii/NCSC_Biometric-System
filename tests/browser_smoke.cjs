@@ -563,9 +563,11 @@ with connect() as con:
     await filled.locator('[data-origin="manual_sheet"]').first().waitFor();
     assert.equal(await filled.locator('[data-origin="biometric"]').count(),2);
     assert.equal(await filled.locator('[data-origin="manual_sheet"]').count(),2);
-    assert.equal(await filled.locator('.daily-total-value').textContent(),'8:00');
+    assert.equal(await filled.locator('.daily-total-value').textContent(),'08:00:00');
     assert.equal(await filled.locator('.monitor-remark').textContent(),'Complete');
-    assert.equal(await page.locator('[data-date="2026-11-09"] .overtime-value').textContent(),'1:00');
+    assert.equal(await page.locator('[data-date="2026-11-09"] .overtime-value').textContent(),'01:00:00');
+    assert.deepEqual(await page.evaluate(()=>[durationText(28815),durationText(65),durationText(0),durationText(null),durationText(90061)]),['08:00:15','00:01:05','00:00:00','—','25:01:01']);
+    assert.equal((await page.locator('#dtr-form-preview').innerText()).trim(),'Export DTR');
     assert.equal(await page.locator('[data-date="2026-11-10"] .monitor-remark').textContent(),'Undertime');
     const headerAlignment=await page.evaluate(()=>{
       const name=document.querySelector('#detail-name').getBoundingClientRect();

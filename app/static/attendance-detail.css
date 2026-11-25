@@ -502,3 +502,19 @@
   .workspace .attendance-sheet .sheet-header{grid-template-columns:minmax(0,1fr);row-gap:6px}
   .workspace .attendance-sheet .sheet-personnel{flex-direction:row;align-items:center;text-align:left}
 }
+
+/* Duration columns retain second-level precision without wrapping.
+   Export opens the existing printable DTR, including Save as PDF. */
+.workspace .attendance-sheet .daily-total-value,
+.workspace .attendance-sheet .overtime-value{white-space:nowrap;font-variant-numeric:tabular-nums}
+.workspace .attendance-sheet .sheet-personnel #dtr-form-preview{
+  display:inline-flex;align-items:center;justify-content:center;gap:6px;
+  padding-inline:11px;border-radius:8px;font-size:11px;font-weight:650;
+  background:#244b9a;color:#fff;box-shadow:none;
+}
+.workspace .attendance-sheet .sheet-personnel #dtr-form-preview svg{width:15px;height:15px;flex:none}
+.workspace .attendance-sheet .sheet-personnel #dtr-form-preview:is(:hover,:focus-visible){background:#17356e;color:#fff}
+@media(max-width:740px){
+  .workspace .attendance-sheet .sheet-personnel #dtr-form-preview{padding-inline:7px;gap:4px;font-size:10px}
+  .workspace .attendance-sheet .sheet-personnel #dtr-form-preview svg{width:13px;height:13px}
+}

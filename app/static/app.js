@@ -319,7 +319,10 @@ function unassignedPunches(day){
     '</span>';
 }
 function durationText(seconds){
-  return Number.isFinite(seconds)?Math.floor(seconds/3600)+':'+String(Math.floor(seconds%3600/60)).padStart(2,'0'):'—';
+  if (!Number.isFinite(seconds)) return '—';
+  const whole=Math.trunc(Math.abs(seconds));
+  const hours=Math.floor(whole/3600), minutes=Math.floor(whole%3600/60), remainder=whole%60;
+  return (seconds<0?'-':'')+[hours,minutes,remainder].map(part=>String(part).padStart(2,'0')).join(':');
 }
 function attendanceTimeCells(day){
   if(day.travel_order){
