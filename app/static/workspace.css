@@ -595,8 +595,9 @@
 .workspace{
   height:calc(100dvh - 10px);margin:5px;min-height:0;
   padding:7px;gap:7px;
-  border:1px solid #ffffffeb;border-radius:19px;
-  box-shadow:inset 0 1px 0 #fff,inset 0 0 0 1px #a7bfdc55,0 3px 14px #223e701f;
+  /* A tinted, low-opacity edge keeps the glass rim without a white outline. */
+  border:1px solid #c5d6e97a;border-radius:19px;
+  box-shadow:inset 0 1px 0 #ffffff40,inset 0 0 0 1px #a7bfdc24,0 3px 14px #223e701a;
   background-color:#d4dfef;
   background-image:
     radial-gradient(ellipse at 20% 5%,#9eb9e2a8,transparent 47%),
