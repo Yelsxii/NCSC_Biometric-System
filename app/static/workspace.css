@@ -194,7 +194,7 @@
 /* Shared workspace chrome: dark institutional navy, restrained red accents,
    a responsive icon rail, and a single Manila clock. Login is unaffected. */
 .workspace .sidebar{
-  --rail-bg:#14284e;--rail-hover:#203963;--rail-active:#0b1d39;--rail-inset:12px;
+  --rail-bg:#14284e;--rail-hover:#203963;--rail-active:#f4f7fc;--rail-inset:12px;
   width:232px;min-width:232px;height:100%;flex:0 0 232px;
   display:flex;flex-direction:column;position:relative;z-index:15;
   background-color:var(--rail-bg);
@@ -247,17 +247,18 @@
   box-shadow:0 0 9px #ff769d22,inset 0 0 0 1px #ffb4c412;
 }
 .workspace .sidebar .nav-item.active{
-  color:#fff;background-color:var(--rail-active);
-  border-color:#a6c7f47a;
-  box-shadow:0 3px 10px #06152d30,inset 0 0 0 1px #dbeaff12;font-weight:650;
+  color:#203b66;background-color:var(--rail-active);
+  border-color:transparent;
+  box-shadow:0 2px 6px #06152d18;font-weight:650;
 }
 .workspace .sidebar .nav-item::before{
   content:"";position:absolute;inset:0;border-radius:inherit;z-index:-1;pointer-events:none;
   background:radial-gradient(ellipse 46px 34px at var(--nav-glow-position,21px) 50%,#ff9fba45,transparent 100%);
   opacity:0;transition:opacity .28s cubic-bezier(.4,0,.2,1);
 }
-.workspace .sidebar .nav-item.active::before{opacity:.72}
 .workspace .sidebar .nav-item:is(:hover,:focus-visible)::before{opacity:1}
+.workspace .sidebar .nav-item.active::before,
+.workspace .sidebar .nav-item.active:is(:hover,:focus-visible)::before{opacity:0}
 .workspace .sidebar .nav-item>span{
   text-transform:none;letter-spacing:0;font-size:12px;line-height:1.35;
   min-width:0;white-space:normal;
@@ -279,15 +280,15 @@
   transform:translateY(-1px) rotate(7deg) scale(1.10);
 }
 .workspace .sidebar .nav-item.active .nav-icon{
-  color:#ff98ae;stroke-width:2;filter:drop-shadow(0 0 4px #ff82a08c) drop-shadow(0 0 8px #ff749744);
+  color:#386bb1;stroke-width:2;filter:none;
 }
 .workspace .sidebar .nav-item.active:is(:hover,:focus-visible){
-  background-color:var(--rail-active);border-color:#ffabc4d9;
-  box-shadow:0 0 8px #ff84a75c,0 0 16px #ff749726,inset 0 0 0 1px #ffc1d326;
+  color:#17365e;background-color:#fff;border-color:transparent;
+  box-shadow:0 3px 8px #06152d25;
 }
 .workspace .sidebar .nav-item.active:is(:hover,:focus-visible) .nav-icon{
-  color:#ffb4c4;
-  filter:drop-shadow(0 0 4px #ff9cbac2) drop-shadow(0 0 9px #ff749778);
+  color:#235ba9;
+  filter:none;
 }
 .workspace .sidebar .nav-item:is(:hover,:focus-visible):active .nav-icon{
   transform:scale(.95);

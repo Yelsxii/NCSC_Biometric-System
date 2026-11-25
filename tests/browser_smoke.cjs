@@ -139,11 +139,10 @@ uvicorn.run('app.main:app',host='127.0.0.1',port=int(os.environ['QA_PORT']),log_
         clockLeft:clock.getBoundingClientRect().left,
         signoutLabel:getComputedStyle(document.querySelector('#logout-sidebar span')).display};
     });
-    assert.equal(compactChrome.accentContent,'none','No vertical accent bar');
-    assert.ok(compactChrome.activeHalo.includes('radial-gradient'),'Selected icon has a localized red halo');
-    assert.notEqual(compactChrome.glow,'none');
-    assert.equal(compactChrome.iconColor,'rgb(255, 152, 174)');
-    assert.equal(compactChrome.activeBackground,'rgb(11, 29, 57)');
+    assert.equal(compactChrome.activeHalo,'none','Selected item has a flat soft-white fill');
+    assert.equal(compactChrome.glow,'none','Selected icon is crisp without a glow');
+    assert.equal(compactChrome.iconColor,'rgb(56, 107, 177)');
+    assert.equal(compactChrome.activeBackground,'rgb(244, 247, 252)');
     assert.equal(compactChrome.iconStroke,'2px');
     assert.ok(Math.abs(compactChrome.timeLeft-compactChrome.dateLeft)<=1,'Time aligns with left edge of calendar row');
     const clockGlass=await page.locator('.workspace-clock').evaluate(el=>{
@@ -246,7 +245,7 @@ uvicorn.run('app.main:app',host='127.0.0.1',port=int(os.environ['QA_PORT']),log_
     await page.waitForFunction(()=>{
       const el=document.querySelector('[data-page="employees"]');
       const s=getComputedStyle(el),icon=getComputedStyle(el.querySelector('.nav-icon'));
-      return s.borderTopColor==='rgba(255, 171, 196, 0.85)' && icon.color==='rgb(255, 180, 196)';
+      return s.backgroundColor==='rgb(255, 255, 255)' && s.color==='rgb(23, 54, 94)' && icon.color==='rgb(35, 91, 169)';
     });
     const hoverEdges=await selectedNav.evaluate(el=>{
       const s=getComputedStyle(el);
@@ -257,7 +256,7 @@ uvicorn.run('app.main:app',host='127.0.0.1',port=int(os.environ['QA_PORT']),log_
     assert.deepEqual(hoverEdges.widths,['1px','1px','1px','1px']);
     assert.equal(new Set(hoverEdges.colors).size,1,'Hover border remains consistent on all edges');
     assert.equal(hoverEdges.clip,'padding-box');
-    assert.ok(hoverEdges.shadow.includes('inset'));
+    assert.ok(!hoverEdges.shadow.includes('inset'),'Selected highlight has no heavy inset border');
     assert.deepEqual(await selectedNav.boundingBox(),beforeHover,'Hover does not move or resize the selected card');
     await page.waitForFunction(()=>getComputedStyle(document.querySelector('[data-page="employees"]'),'::after').visibility==='visible');
     await page.setViewportSize({width:1440,height:900});
