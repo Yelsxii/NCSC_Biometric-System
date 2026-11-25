@@ -760,6 +760,17 @@
   filter:drop-shadow(0 0 2px color-mix(in srgb,var(--status-color) 40%,transparent));
   transition:none
 }
+/* Both attendance doorway paths are exact mirrors (9 x 16 SVG units).
+   Counterbalance the card's 1.06 zoom so the two glyphs remain equal in size. */
+@media(prefers-reduced-motion:no-preference){
+  .workspace #attendance-register-panel .live-kpi:is(.kpi-in,.kpi-out) .kpi-icon svg{
+    transform-origin:center;transform:scale(1);
+    transition:transform .34s cubic-bezier(.4,0,.2,1)
+  }
+  .workspace #attendance-register-panel .live-kpi:is(.kpi-in,.kpi-out):is([aria-pressed=true],:hover,:focus-visible) .kpi-icon svg{
+    transform:scale(.9433962264)
+  }
+}
 .workspace #attendance-register-panel .live-kpi .kpi-text{display:flex;flex-direction:column;align-items:flex-start;justify-content:center;gap:4px;min-width:0}
 .workspace #attendance-register-panel .live-kpi small{font-size:10px;font-weight:600;color:#4e607d;line-height:1.15;white-space:nowrap}
 .workspace #attendance-register-panel .live-kpi strong{font-size:22px;font-weight:700;line-height:1;color:#1b2e4e;letter-spacing:-.025em;font-variant-numeric:tabular-nums;text-shadow:none;transition:color .3s cubic-bezier(.4,0,.2,1)}

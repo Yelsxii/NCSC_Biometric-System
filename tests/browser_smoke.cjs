@@ -327,6 +327,19 @@ uvicorn.run('app.main:app',host='127.0.0.1',port=int(os.environ['QA_PORT']),log_
     assert.equal(directions[0][2],'m11 8 5 4-5 4','Inward arrow has clearance from the doorway');
     assert.equal(directions[1][1],'M8 12h13','Sign-out arrow extends rightward out of the doorway');
     assert.equal(directions[1][2],'m16 8 5 4-5 4','Outward arrowhead points right with clearance from the doorway');
+    const doorSizes=await page.locator('.kpi-in .kpi-icon svg path:first-child, .kpi-out .kpi-icon svg path:first-child').evaluateAll(nodes=>nodes.map(el=>({width:el.getBBox().width,height:el.getBBox().height})));
+    assert.deepEqual(doorSizes,[{width:9,height:16},{width:9,height:16}],'The two half rectangles are exact mirrored dimensions');
+    await page.locator('.kpi-in').click();
+    await page.locator('#employee-search').hover();
+    await page.waitForFunction(()=>{
+      const a=document.querySelector('.kpi-in'),b=document.querySelector('.kpi-out');
+      const r1=a.querySelector('svg path').getBoundingClientRect(),r2=b.querySelector('svg path').getBoundingClientRect();
+      return new DOMMatrix(getComputedStyle(a).transform).m11>=1.059
+        && Math.abs(r1.width-r2.width)<.1 && Math.abs(r1.height-r2.height)<.1;
+    });
+    await page.locator('.kpi-all').click();
+    await page.locator('#employee-search').hover();
+    await page.waitForFunction(()=>Math.abs(new DOMMatrix(getComputedStyle(document.querySelector('.kpi-in')).transform).m11-1)<.001);
     const glyphStyles=await page.locator('.live-kpi .kpi-icon svg').evaluateAll(nodes=>nodes.map(el=>{
       const s=getComputedStyle(el);return {stroke:s.strokeWidth,opacity:s.opacity,glow:s.filter};
     }));
