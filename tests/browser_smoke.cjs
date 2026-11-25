@@ -287,8 +287,11 @@ uvicorn.run('app.main:app',host='127.0.0.1',port=int(os.environ['QA_PORT']),log_
     }),'Unchanged live refresh retains existing rows and KPI text nodes');
     const highlightedRow=page.locator('#register-rows tr').first();
     await highlightedRow.locator('.employee-name-cell').hover();
-    assert.equal(await highlightedRow.evaluate(el=>getComputedStyle(el).backgroundColor),'rgb(219, 231, 247)');
-    assert.equal(await highlightedRow.locator('.directory-action-cell').evaluate(el=>getComputedStyle(el).backgroundColor),'rgb(219, 231, 247)');
+    await page.waitForFunction(()=>{
+      const row=document.querySelector('#register-rows tr');
+      return getComputedStyle(row).backgroundColor==='rgb(219, 231, 247)' &&
+        getComputedStyle(row.querySelector('.directory-action-cell')).backgroundColor==='rgb(219, 231, 247)';
+    });
     await page.locator('#employee-search').hover();
     assert.equal(await page.locator('.live-kpi').count(),6);
     assert.equal(await page.locator('.live-kpi .sculpted-accent').count(),0);
@@ -321,6 +324,18 @@ uvicorn.run('app.main:app',host='127.0.0.1',port=int(os.environ['QA_PORT']),log_
       const s=getComputedStyle(el);return {stroke:s.strokeWidth,opacity:s.opacity,glow:s.filter};
     }));
     assert.ok(glyphStyles.every(x=>parseFloat(x.stroke)===1.9 && x.opacity==='1' && x.glow.includes('drop-shadow')),'Crisp icon strokes with a gentle status-colored glow');
+    const motion=await page.locator('.kpi-missing').evaluate(el=>({
+      card:getComputedStyle(el).transitionDuration,
+      count:getComputedStyle(el.querySelector('strong')).transitionDuration,
+      glow:getComputedStyle(el,'::before').transitionProperty,
+      icon:getComputedStyle(el.querySelector('.kpi-icon svg')).transitionDuration,
+      filter:getComputedStyle(el).backdropFilter
+    }));
+    assert.equal(motion.card,'0.34s');
+    assert.equal(motion.count,'0.3s');
+    assert.equal(motion.glow,'opacity');
+    assert.equal(motion.icon,'0s','Glow filter itself stays static during motion');
+    assert.equal(motion.filter,'none');
     const hoverKpi=page.locator('.kpi-missing');
     await hoverKpi.hover();
     await page.waitForFunction(()=>{

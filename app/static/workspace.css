@@ -29,7 +29,7 @@
 .workspace .list-panel,.workspace [data-view="activities"]>.records-panel{flex:1;display:flex;flex-direction:column;min-height:0;overflow:hidden}
 .workspace .panel-header{margin-bottom:16px;gap:10px;flex-shrink:0}.workspace .panel-header h2{font-size:12px;letter-spacing:-.01em;font-weight:650;color:#50607f}.workspace .panel-header p{font-size:10px;color:#96a0b5;line-height:1.6}
 .workspace .surface-label{display:inline-flex;align-items:center;padding:5px 8px;gap:6px;background:#f6f7fc;border:1px solid #eef0f8;border-radius:6px;color:#939eb5;font-size:9px;font-weight:500;white-space:nowrap}
-.workspace .button,.app-dialog .button{height:33px;min-height:33px;padding:0 12px;font-size:10.5px;line-height:1;letter-spacing:0;border-radius:8px;font-weight:600;gap:6px;border:1px solid #e4e8f4;box-shadow:none;transition:background .15s,box-shadow .15s,transform .15s}
+.workspace .button,.app-dialog .button{height:33px;min-height:33px;padding:0 12px;font-size:10.5px;line-height:1;letter-spacing:0;border-radius:8px;font-weight:600;gap:6px;border:1px solid #e4e8f4;box-shadow:none;transition:background-color .28s cubic-bezier(.4,0,.2,1),color .28s cubic-bezier(.4,0,.2,1),border-color .28s cubic-bezier(.4,0,.2,1),transform .32s cubic-bezier(.4,0,.2,1)}
 .workspace .button.primary,.app-dialog .button.primary{color:#fff;background:var(--app-blue);border-color:var(--app-blue);box-shadow:0 3px 7px #3657d618}
 .workspace .button.primary:hover,.app-dialog .button.primary:hover{background:var(--app-blue-dark);border-color:var(--app-blue-dark)}
 .workspace .button.outline,.app-dialog .button.outline{color:#7887a4;background:#fff}.workspace .button.outline:hover,.app-dialog .button.outline:hover{background:#f5f7ff;border-color:#cdd6f7;color:var(--app-blue)}
@@ -43,7 +43,7 @@
 .workspace .records-table th{position:sticky;top:0;z-index:1;background:#f5f6fc;color:#939db4;font-size:9px;font-weight:600;border:0;border-bottom:1px solid #eef0f8;padding:12px 13px;letter-spacing:.01em;height:37px}
 .workspace .records-table th:first-child{border-top-left-radius:7px}.workspace .records-table th:last-child{border-top-right-radius:7px}
 .workspace .records-table td{padding:12px 13px;border-bottom:1px solid #f0f2f8;line-height:1.5;vertical-align:middle;height:49px}
-.workspace .records-table tbody tr:nth-child(even){background:#fafbfe}.workspace .records-table tbody tr:hover{background:#dbe7f7}
+.workspace .records-table tbody tr{transition:background-color .22s cubic-bezier(.4,0,.2,1)}.workspace .records-table tbody tr:nth-child(even){background:#fafbfe}.workspace .records-table tbody tr:hover{background:#dbe7f7}
 .workspace .records-table tbody tr.click-row{cursor:pointer}.workspace .records-table .actions-column{width:135px;text-align:right}.workspace .records-table td:last-child{text-align:right}
 .workspace .records-table .table-empty{text-align:center!important;padding:45px 20px;color:#a1acc0;font-size:11px}
 .workspace .id-cell{color:#6d7ca0;font-variant-numeric:tabular-nums;font-size:11px;white-space:nowrap}
@@ -239,29 +239,33 @@
   color:#c7d4ea;background:transparent;border:1px solid transparent;
   background-clip:padding-box;
   border-radius:9px;font-size:12px;font-weight:550;letter-spacing:0;box-shadow:none;
-  transition:background-color .16s ease,color .16s ease,border-color .16s ease;
+  isolation:isolate;transition:background-color .28s cubic-bezier(.4,0,.2,1),color .28s cubic-bezier(.4,0,.2,1),border-color .28s cubic-bezier(.4,0,.2,1);
 }
 .workspace .sidebar .nav-icon{width:22px;height:22px;flex:0 0 22px}
 .workspace .sidebar .nav-item:hover,.workspace .sidebar .nav-item:focus-visible{
   color:#fff;background-color:var(--rail-hover);border-color:#ff9fb477;
-  background-image:radial-gradient(ellipse 46px 34px at var(--nav-glow-position,21px) 50%,#ff91ac28,transparent 100%);
   box-shadow:0 0 9px #ff769d22,inset 0 0 0 1px #ffb4c412;
 }
 .workspace .sidebar .nav-item.active{
   color:#fff;background-color:var(--rail-active);
-  background-image:radial-gradient(ellipse 46px 34px at var(--nav-glow-position,21px) 50%,#ff8fae32,transparent 100%);
   border-color:#a6c7f47a;
   box-shadow:0 3px 10px #06152d30,inset 0 0 0 1px #dbeaff12;font-weight:650;
 }
-.workspace .sidebar .nav-item.active::before{content:none}
+.workspace .sidebar .nav-item::before{
+  content:"";position:absolute;inset:0;border-radius:inherit;z-index:-1;pointer-events:none;
+  background:radial-gradient(ellipse 46px 34px at var(--nav-glow-position,21px) 50%,#ff9fba45,transparent 100%);
+  opacity:0;transition:opacity .28s cubic-bezier(.4,0,.2,1);
+}
+.workspace .sidebar .nav-item.active::before{opacity:.72}
+.workspace .sidebar .nav-item:is(:hover,:focus-visible)::before{opacity:1}
 .workspace .sidebar .nav-item>span{
   text-transform:none;letter-spacing:0;font-size:12px;line-height:1.35;
   min-width:0;white-space:normal;
-  transition:transform .22s cubic-bezier(.2,.7,.25,1);
+  transition:transform .32s cubic-bezier(.4,0,.2,1);
 }
 .workspace .sidebar .nav-icon{
   color:#b6c7e3;transform-origin:center;overflow:visible;
-  transition:color .16s ease,transform .22s cubic-bezier(.2,.7,.25,1);
+  transition:color .28s cubic-bezier(.4,0,.2,1),transform .32s cubic-bezier(.4,0,.2,1);
 }
 .workspace .sidebar .nav-item:is(:hover,:focus-visible) .nav-icon{
   color:#ffb4c4;filter:drop-shadow(0 0 4px #ff8baa9c) drop-shadow(0 0 8px #ff74974d);
@@ -279,7 +283,6 @@
 }
 .workspace .sidebar .nav-item.active:is(:hover,:focus-visible){
   background-color:var(--rail-active);border-color:#ffabc4d9;
-  background-image:radial-gradient(ellipse 46px 34px at var(--nav-glow-position,21px) 50%,#ff9fba45,transparent 100%);
   box-shadow:0 0 8px #ff84a75c,0 0 16px #ff749726,inset 0 0 0 1px #ffc1d326;
 }
 .workspace .sidebar .nav-item.active:is(:hover,:focus-visible) .nav-icon{
@@ -294,13 +297,13 @@
   position:relative;display:flex;align-items:center;gap:10px;min-height:42px;
   padding:0 10px;border:1px solid transparent;border-radius:9px;
   color:#c7d4ea;background:transparent;font-size:12px;font-weight:550;
-  text-transform:none;letter-spacing:0;transition:background .16s,color .16s;
+  text-transform:none;letter-spacing:0;transition:background-color .28s cubic-bezier(.4,0,.2,1),color .28s cubic-bezier(.4,0,.2,1),border-color .28s cubic-bezier(.4,0,.2,1);
 }
 .workspace .sidebar-signout svg{width:22px;height:22px;flex:none;overflow:visible}
 .workspace .sidebar-signout .signout-door,
 .workspace .sidebar-signout .signout-arrow{
   transform-box:fill-box;transform-origin:left center;
-  transition:transform .32s cubic-bezier(.22,.8,.25,1);
+  transition:transform .38s cubic-bezier(.4,0,.2,1);
 }
 /* The jamb stays fixed; only the hinged door leaf swings toward the left.
    Skew and horizontal compression provide an opening-door silhouette in 2D. */
@@ -355,7 +358,7 @@
     padding:9px 12px;border-radius:8px;background:#14284e;color:#fff;
     font-size:11px;font-weight:600;line-height:1.25;white-space:nowrap;
     box-shadow:0 5px 18px #10234733;z-index:20;
-    transition:opacity .15s,transform .15s,visibility .15s;
+    transition:opacity .24s cubic-bezier(.4,0,.2,1),transform .28s cubic-bezier(.4,0,.2,1),visibility .24s;
   }
   .workspace .sidebar .nav-item:hover::after,.workspace .sidebar .nav-item:focus-visible::after,
   .workspace .sidebar-signout:hover::after,.workspace .sidebar-signout:focus-visible::after{
@@ -388,7 +391,7 @@
   .workspace .clock-time{font-size:11px}
 }
 @media(prefers-reduced-motion:reduce){
-  .workspace .sidebar .nav-item,.workspace .sidebar .nav-item::after,
+  .workspace .sidebar .nav-item,.workspace .sidebar .nav-item::before,.workspace .sidebar .nav-item::after,
   .workspace .sidebar .nav-icon,.workspace .sidebar .nav-item>span,.workspace .sidebar-signout,.workspace .sidebar-signout::after,
   .workspace .sidebar-signout .signout-door,.workspace .sidebar-signout .signout-arrow{transition:none}
   .workspace .sidebar-signout:is(:hover,:focus-visible) .signout-door,
@@ -430,7 +433,7 @@
 }
 .workspace #attendance-register-panel .directory-action-cell{
   position:sticky;right:0;z-index:2;text-align:center;background:#fff;
-  box-shadow:-3px 0 8px #263b601c;padding:6px 8px;
+  box-shadow:-3px 0 8px #263b601c;padding:6px 8px;transition:background-color .22s cubic-bezier(.4,0,.2,1);
 }
 .workspace #attendance-register-panel .attendance-directory tbody tr:hover{background:#dbe7f7}
 .workspace #attendance-register-panel .attendance-directory tbody tr:hover .directory-action-cell{background:#dbe7f7}
@@ -439,7 +442,7 @@
   height:30px;min-height:30px;padding:0 9px;border:0;
   background:#244b9a;color:#fff;font-size:10.5px;font-weight:650;
   text-decoration:none!important;border-radius:6px;box-shadow:0 2px 5px #244b9a26;
-  transition:transform .18s cubic-bezier(.2,.75,.25,1),background-color .16s ease;
+  transition:transform .32s cubic-bezier(.4,0,.2,1),background-color .28s cubic-bezier(.4,0,.2,1),color .28s cubic-bezier(.4,0,.2,1);
 }
 .workspace #attendance-register-panel .directory-action-cell .row-action svg{width:13px;height:13px;flex:none}
 .workspace #attendance-register-panel .directory-action-cell .row-action:hover,
@@ -460,7 +463,7 @@
   min-width:160px;height:34px;min-height:34px;padding:0 10px;
   border:1px solid #e1e8f5;border-radius:8px;background:#f0f4fc;
   color:#203b67;font-size:11px;font-weight:650;white-space:nowrap;
-  transition:background .18s,border-color .18s,box-shadow .18s;
+  transition:background-color .28s cubic-bezier(.4,0,.2,1),border-color .28s cubic-bezier(.4,0,.2,1),color .28s cubic-bezier(.4,0,.2,1);
 }
 .workspace .month-trigger:hover,.workspace .month-trigger[aria-expanded=true]{
   background:#e6eefc;border-color:#a7bce1;box-shadow:0 2px 7px #244b9a12;
@@ -491,7 +494,7 @@
 .workspace .month-picker-grid button{
   position:relative;height:28px;padding:0 2px;border:1px solid transparent;border-radius:6px;
   background:#f6f8fc;color:#536b91;font-size:11px;font-weight:550;
-  transition:background .15s,color .15s,box-shadow .15s;
+  transition:background-color .26s cubic-bezier(.4,0,.2,1),color .26s cubic-bezier(.4,0,.2,1);
 }
 .workspace .month-picker-grid button:hover{background:#e7effc;color:#244b9a}
 .workspace .month-picker-grid button[aria-pressed=true]{background:#244b9a;color:#fff;box-shadow:0 2px 5px #244b9a28}
@@ -499,7 +502,7 @@
 .workspace .month-picker-grid button::after{
   content:"";position:absolute;bottom:3px;left:50%;transform:translateX(-50%);
   width:0;height:1px;opacity:0;border-radius:999px;background:#f43f60;
-  pointer-events:none;transition:width .18s ease,opacity .18s ease,background .18s ease;
+  pointer-events:none;transition:width .28s cubic-bezier(.4,0,.2,1),opacity .28s cubic-bezier(.4,0,.2,1),background-color .28s cubic-bezier(.4,0,.2,1);
 }
 .workspace .month-picker-grid button:is(:hover,:focus-visible)::after,
 .workspace .month-picker-grid button[aria-pressed=true]::after{
@@ -556,7 +559,7 @@
   width:100%;min-width:0;height:38px;min-height:38px;
   padding:0 36px 0 37px;background:#f6f8fc;border:1px solid #e0e7f3;
   border-radius:9px;color:#203b67;font-size:12px;
-  transition:border-color .18s,background .18s,box-shadow .18s;
+  transition:border-color .28s cubic-bezier(.4,0,.2,1),background-color .28s cubic-bezier(.4,0,.2,1),color .28s cubic-bezier(.4,0,.2,1);
 }
 .workspace #attendance-register-panel #employee-search::-webkit-search-cancel-button{-webkit-appearance:none}
 .workspace #attendance-register-panel #employee-search:hover{border-color:#c5d2e8;background:#fff}
@@ -577,11 +580,11 @@
   gap:8px;padding:0 13px;border-radius:9px;border:1px solid #cbd9ef;
   color:#244b9a;background:#f1f5fc;font-weight:650;font-size:11px;
   text-decoration:none;box-shadow:0 2px 4px #244b9a0b;
-  transition:background .18s,color .18s,border-color .18s,box-shadow .18s,transform .18s;
+  transition:background-color .28s cubic-bezier(.4,0,.2,1),color .28s cubic-bezier(.4,0,.2,1),border-color .28s cubic-bezier(.4,0,.2,1),transform .32s cubic-bezier(.4,0,.2,1);
 }
 .workspace #attendance-register-panel #open-attendance-import .inline-icon{
   width:16px;height:16px;flex:none;color:inherit;stroke:currentColor;
-  transition:transform .18s ease;
+  transition:transform .32s cubic-bezier(.4,0,.2,1);
 }
 .workspace #attendance-register-panel #open-attendance-import:not(:disabled):is(:hover,:focus-visible){
   background:#244b9a;color:white;border-color:#244b9a;
@@ -722,7 +725,7 @@
   -webkit-backdrop-filter:none;backdrop-filter:none;
   box-shadow:inset 0 1px 0 #ffffff8a,inset 0 -1px 0 #ffffff28,0 3px 9px #31578b15;
   scroll-snap-align:start;transform:translateY(0) scale(1);
-  transition:transform .22s cubic-bezier(.2,.75,.25,1)
+  transition:transform .34s cubic-bezier(.4,0,.2,1)
 }
 /* Two nested, borderless glass surfaces: clear outer glass and a softly
    frosted inner pane. Scattered light is confined to the icon tile. */
@@ -733,7 +736,7 @@
   background-color:rgba(110,139,178,.10);background-image:none;
   -webkit-backdrop-filter:none;backdrop-filter:none;
   box-shadow:0 2px 5px #31578b14;
-  color:var(--status-color);transition:color .16s ease
+  color:var(--status-color);transition:color .28s cubic-bezier(.4,0,.2,1)
 }
 .workspace #attendance-register-panel .live-kpi .kpi-icon::before{
   content:"";position:absolute;inset:2px;z-index:-2;pointer-events:none;border-radius:8px;
@@ -743,7 +746,7 @@
     radial-gradient(circle at 64% 82%,color-mix(in srgb,var(--status-color) 24%,transparent) 0%,transparent 65%),
     radial-gradient(circle at 25% 72%,#ffffff65 0%,transparent 58%),
     radial-gradient(circle at 53% 36%,#ffffff45 0%,transparent 55%);
-  filter:blur(4px);opacity:.72;transition:opacity .2s
+  filter:blur(4px);opacity:.72;transition:opacity .32s cubic-bezier(.4,0,.2,1)
 }
 .workspace #attendance-register-panel .live-kpi .kpi-icon::after{
   content:"";position:absolute;inset:1.5px;z-index:-1;pointer-events:none;border-radius:8px;
@@ -754,35 +757,32 @@
 }
 .workspace #attendance-register-panel .live-kpi .kpi-icon svg{
   width:24px;height:24px;stroke-width:1.9;opacity:1;
-  filter:drop-shadow(0 0 2px color-mix(in srgb,var(--status-color) 26%,transparent));
+  filter:drop-shadow(0 0 2px color-mix(in srgb,var(--status-color) 40%,transparent));
   transition:none
 }
 .workspace #attendance-register-panel .live-kpi .kpi-text{display:flex;flex-direction:column;align-items:flex-start;justify-content:center;gap:4px;min-width:0}
 .workspace #attendance-register-panel .live-kpi small{font-size:10px;font-weight:600;color:#4e607d;line-height:1.15;white-space:nowrap}
-.workspace #attendance-register-panel .live-kpi strong{font-size:22px;font-weight:700;line-height:1;color:#1b2e4e;letter-spacing:-.025em;font-variant-numeric:tabular-nums;text-shadow:none;transition:color .2s}
+.workspace #attendance-register-panel .live-kpi strong{font-size:22px;font-weight:700;line-height:1;color:#1b2e4e;letter-spacing:-.025em;font-variant-numeric:tabular-nums;text-shadow:none;transition:color .3s cubic-bezier(.4,0,.2,1)}
 /* The selected card remains neutral: only the icon and count carry status color. */
-.workspace #attendance-register-panel .live-kpi[aria-pressed=true]{z-index:1;box-shadow:inset 0 1px 0 #ffffffcb,inset 0 -1px 0 #ffffff40,0 4px 10px #31578b23;transform:translateY(-4px) scale(1.06)}
+.workspace #attendance-register-panel .live-kpi::before{
+  content:"";position:absolute;inset:0;border-radius:inherit;z-index:-1;pointer-events:none;
+  background:#ffffff1c;opacity:0;transition:opacity .30s cubic-bezier(.4,0,.2,1);
+}
+.workspace #attendance-register-panel .live-kpi[aria-pressed=true]{z-index:1;transform:translateY(-4px) scale(1.06)}
+.workspace #attendance-register-panel .live-kpi:is([aria-pressed=true],:hover,:focus-visible)::before{opacity:1}
 .workspace #attendance-register-panel .live-kpi:is([aria-pressed=true],:hover,:focus-visible) .kpi-icon{
-  color:var(--status-color);box-shadow:0 2px 5px #31578b1c
+  color:var(--status-color)
 }
 .workspace #attendance-register-panel .live-kpi:is([aria-pressed=true],:hover,:focus-visible) .kpi-icon::before{opacity:.92}
-.workspace #attendance-register-panel .live-kpi[aria-pressed=true] .kpi-icon svg{
-  filter:drop-shadow(0 0 2px color-mix(in srgb,var(--status-color) 52%,transparent))
-    drop-shadow(0 0 4px color-mix(in srgb,var(--status-color) 22%,transparent))
-}
 .workspace #attendance-register-panel .live-kpi:is([aria-pressed=true],:hover,:focus-visible) strong{color:var(--count-bright);text-shadow:none}
-.workspace #attendance-register-panel .live-kpi:is(:hover,:focus-visible){z-index:2;box-shadow:inset 0 1px 0 #ffffffdd,inset 0 -1px 0 #ffffff50,0 5px 12px #31578b25;transform:translateY(-4px) scale(1.06)}
-.workspace #attendance-register-panel .live-kpi:is(:hover,:focus-visible) .kpi-icon svg{
-  filter:drop-shadow(0 0 2px color-mix(in srgb,var(--status-color) 62%,transparent))
-    drop-shadow(0 0 5px color-mix(in srgb,var(--status-color) 32%,transparent))
-}
+.workspace #attendance-register-panel .live-kpi:is(:hover,:focus-visible){z-index:2;transform:translateY(-4px) scale(1.06)}
 .workspace #attendance-register-panel .live-kpi:focus-visible{outline:2px solid #315a96;outline-offset:-3px}
 .workspace #attendance-register-panel .live-kpi.kpi-in{--status-color:#367e67;--count-bright:#16805c}
 .workspace #attendance-register-panel .live-kpi.kpi-out{--status-color:#426da9;--count-bright:#246bb6}
 .workspace #attendance-register-panel .live-kpi.kpi-missing{--status-color:#ac4962;--count-bright:#c02e55}
 .workspace #attendance-register-panel .live-kpi.kpi-aja{--status-color:#956e20;--count-bright:#a36a0c}
 .workspace #attendance-register-panel .live-kpi.kpi-travel{--status-color:#625b99;--count-bright:#7050b9}
-@media(prefers-reduced-motion:reduce){.workspace #attendance-register-panel .live-kpi,.workspace #attendance-register-panel .live-kpi *{transition:none}.workspace #attendance-register-panel .live-kpi:is([aria-pressed=true],:hover,:focus-visible){transform:none}}
+@media(prefers-reduced-motion:reduce){.workspace #attendance-register-panel .live-kpi,.workspace #attendance-register-panel .live-kpi::before,.workspace #attendance-register-panel .live-kpi *,.workspace #attendance-register-panel .live-kpi .kpi-icon::before{transition:none}.workspace #attendance-register-panel .live-kpi:is([aria-pressed=true],:hover,:focus-visible){transform:none}}
 .workspace #attendance-register-panel .attendance-directory{min-width:850px}
 .workspace #attendance-register-panel .directory-name{width:29%}
 .workspace #attendance-register-panel .directory-category{width:12%}
