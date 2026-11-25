@@ -118,11 +118,11 @@ uvicorn.run('app.main:app',host='127.0.0.1',port=int(os.environ['QA_PORT']),log_
     assert.equal(await page.locator('#logout-sidebar').evaluate(el=>getComputedStyle(el).textTransform),'none');
     assert.equal(await page.locator('.sidebar .brand img').evaluate(el=>el.getBoundingClientRect().width),58);
     assert.equal(await page.locator('.sidebar .brand strong').innerText(),'NATIONAL COMMISSION\nOF SENIOR CITIZENS');
-    assert.equal(await page.locator('.sidebar .brand .brand-region').textContent(),'REGION I · BIOMETRIC RECORDS');
+    assert.equal(await page.locator('.sidebar .brand .brand-region').count(),0);
     assert.ok(await page.locator('.sidebar .brand').evaluate(el=>{
-      const label=el.querySelector('strong'),region=el.querySelector('.brand-region');
-      return label.scrollWidth<=label.clientWidth && region.scrollWidth<=region.clientWidth;
-    }),'Agency name and regional label fit the desktop sidebar');
+      const label=el.querySelector('strong'),country=el.querySelector('.brand-country');
+      return label.scrollWidth<=label.clientWidth && country.scrollWidth<=country.clientWidth;
+    }),'Agency name and country label fit the desktop sidebar');
     assert.equal(await page.locator('.topbar #logout').count(),0);
     assert.equal(await page.locator('.sidebar-footer').count(),0);
     assert.match(await page.locator('#live-time').textContent(),/\d{1,2}:\d{2}:\d{2}/);

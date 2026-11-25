@@ -232,7 +232,6 @@
 .workspace .sidebar .brand>div{flex:1;min-width:0}
 .workspace .sidebar .brand .brand-country{color:#e3edf9;font-size:9px;font-weight:500;letter-spacing:0;line-height:1.3;margin:0 0 3px}
 .workspace .sidebar .brand strong{display:block;color:#fff;font-size:11.5px;font-weight:750;line-height:1.28;letter-spacing:0;white-space:nowrap}
-.workspace .sidebar .brand .brand-region{color:#d2e1f5;font-size:8px;font-weight:650;line-height:1.35;letter-spacing:.035em;margin:4px 0 0;white-space:nowrap}
 .workspace .sidebar .nav-title{display:block;padding:24px 10px 11px;color:#a4b4d2;font-size:9px}
 .workspace .sidebar .nav{display:flex;flex-direction:column;gap:6px;overflow:visible;padding:0}
 .workspace .sidebar .nav-item{
