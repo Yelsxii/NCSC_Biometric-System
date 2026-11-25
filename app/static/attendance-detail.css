@@ -332,7 +332,7 @@
 .workspace .attendance-sheet .sheet-filters{
   gap:var(--detail-control-gap);align-items:center;
 }
-/* The back action is now in its own row above the employee identity. */
+/* The back action sits inline with the employee identity. */
 .workspace .attendance-sheet .sheet-filters .month-inline{
   flex:0 0 auto;width:auto;min-width:0;gap:0;
 }
@@ -398,26 +398,26 @@
 
 /* Compact identity hierarchy and readable DTR typography.
    Keep the existing sticky columns, row heights and attendance status colors. */
-.workspace .attendance-sheet .sheet-navigation{
-  display:flex;align-items:center;flex-shrink:0;margin:0 0 10px;
+.workspace .attendance-sheet .sheet-identity{
+  display:flex;align-items:center;gap:10px;min-width:0;
 }
-.workspace .attendance-sheet .sheet-navigation .back-button{
+.workspace .attendance-sheet .sheet-identity .sheet-name-line{flex:1;min-width:0}
+.workspace .attendance-sheet .sheet-identity .back-button{
   display:inline-flex;align-items:center;justify-content:center;
-  width:33px;min-width:33px;height:33px;min-height:33px;padding:0;
-  border:1px solid #b7cbe57a!important;border-radius:8px;
-  background:linear-gradient(160deg,#ffffffa0,#e4edfb90);
-  box-shadow:inset 0 1px 0 #ffffff85,0 2px 5px #244b9a12;
-  color:#234778;font-size:11px;font-weight:650;cursor:pointer;
-  transition:background .18s ease,color .18s ease,box-shadow .18s ease;
+  width:32px;min-width:32px;height:32px;min-height:32px;padding:0;
+  flex:0 0 32px;border:0!important;border-radius:50%;
+  background:transparent;box-shadow:none;
+  color:#234778;cursor:pointer;
+  transition:background .18s ease,color .18s ease;
 }
-.workspace .attendance-sheet .sheet-navigation .back-button svg{
-  width:18px;height:18px;flex:none;transition:transform .18s ease;
+.workspace .attendance-sheet .sheet-identity .back-button svg{
+  width:21px;height:21px;flex:none;transition:transform .18s ease;
 }
-.workspace .attendance-sheet .sheet-navigation .back-button:is(:hover,:focus-visible){
-  background:#244b9a;color:#fff;box-shadow:0 3px 8px #244b9a35;
+.workspace .attendance-sheet .sheet-identity .back-button:is(:hover,:focus-visible){
+  background:#244b9a12;color:#173e80;box-shadow:none;
 }
-.workspace .attendance-sheet .sheet-navigation .back-button:is(:hover,:focus-visible) svg{transform:translateX(-2px)}
-.workspace .attendance-sheet .sheet-navigation .back-button:focus-visible{outline:2px solid #7c9bd0;outline-offset:2px}
+.workspace .attendance-sheet .sheet-identity .back-button:is(:hover,:focus-visible) svg{transform:translateX(-2px)}
+.workspace .attendance-sheet .sheet-identity .back-button:focus-visible{outline:2px solid #7c9bd0;outline-offset:2px}
 .workspace .attendance-sheet .sheet-identity h2{
   font-size:21px;line-height:1.28;font-weight:700;letter-spacing:0;color:#20375f;
 }
@@ -443,8 +443,9 @@
 .workspace .attendance-sheet .overtime-value{color:#3b6193;font-weight:600}
 .workspace .attendance-sheet .undertime-value{color:#80556b;font-weight:550}
 @media(max-width:740px){
-  .workspace .attendance-sheet .sheet-navigation{margin-bottom:8px}
-  .workspace .attendance-sheet .sheet-navigation .back-button{width:30px;min-width:30px;height:30px;min-height:30px}
+  .workspace .attendance-sheet .sheet-identity{gap:6px}
+  .workspace .attendance-sheet .sheet-identity .back-button{width:28px;min-width:28px;height:28px;min-height:28px;flex-basis:28px}
+  .workspace .attendance-sheet .sheet-identity .back-button svg{width:19px;height:19px}
   .workspace .attendance-sheet .sheet-identity h2{font-size:16px}
   .workspace .attendance-sheet .attendance-legend span{font-size:9px}
 }
@@ -452,7 +453,7 @@
   .workspace .attendance-sheet .sheet-filters #detail-month-trigger{min-width:150px}
 }
 @media(prefers-reduced-motion:reduce){
-  .workspace .attendance-sheet .sheet-navigation .back-button,
-  .workspace .attendance-sheet .sheet-navigation .back-button svg{transition:none}
-  .workspace .attendance-sheet .sheet-navigation .back-button:is(:hover,:focus-visible) svg{transform:none}
+  .workspace .attendance-sheet .sheet-identity .back-button,
+  .workspace .attendance-sheet .sheet-identity .back-button svg{transition:none}
+  .workspace .attendance-sheet .sheet-identity .back-button:is(:hover,:focus-visible) svg{transform:none}
 }

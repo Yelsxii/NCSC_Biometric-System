@@ -576,15 +576,20 @@ with connect() as con:
         categoryLeft:category.left,nameRight:name.right,categoryTop:category.top,nameTop:name.top,
         categoryRadius:getComputedStyle(document.querySelector('#detail-category .tag')).borderTopLeftRadius,
         monthHeight:month.height,backHeight:back.height,backBottom:back.bottom,
+        backTop:back.top,nameBottom:name.bottom,
+        backBorder:getComputedStyle(document.querySelector('#back-to-register')).borderTopWidth,
+        backBackground:getComputedStyle(document.querySelector('#back-to-register')).backgroundColor,
         nameLabelRemoved:document.querySelector('.sheet-identity .metadata-label')===null,
         labelHidden:document.querySelector('.month-inline .sr-only')!==null};
     });
-    assert.ok(Math.abs(headerAlignment.nameLeft-headerAlignment.backLeft)<=2,'Employee name must return to the left edge');
+    assert.ok(headerAlignment.backRight<=headerAlignment.nameLeft,'Back arrow sits left of the name');
     assert.ok(headerAlignment.categoryLeft>=headerAlignment.nameRight,'Category must sit next to employee name');
     assert.ok(Math.abs(headerAlignment.categoryTop-headerAlignment.nameTop)<=12,'Category and name should share a row');
     assert.equal(headerAlignment.categoryRadius,'999px');
-    assert.ok(headerAlignment.backBottom<=headerAlignment.nameTop,'Back action sits above the employee name');
-    assert.ok(Math.abs(headerAlignment.nameLeft-headerAlignment.monthLeft)<=2,'Month aligns to the employee name');
+    assert.ok(headerAlignment.backTop<headerAlignment.nameBottom && headerAlignment.backBottom>headerAlignment.nameTop,'Back arrow and name share a row');
+    assert.ok(Math.abs(headerAlignment.backLeft-headerAlignment.monthLeft)<=2,'Month aligns to the header left edge');
+    assert.equal(headerAlignment.backBorder,'0px');
+    assert.equal(headerAlignment.backBackground,'rgba(0, 0, 0, 0)');
     assert.ok(headerAlignment.nameLabelRemoved,'Redundant employee-name label removed');
     assert.ok(headerAlignment.labelHidden,'Month label is available to assistive technology only');
     const detailStyle=await page.evaluate(()=>({
