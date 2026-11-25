@@ -627,9 +627,12 @@
   backdrop-filter:blur(6px) saturate(120%);
 }
 .workspace .content-shell .topbar{
-  background:linear-gradient(115deg,#ffffff80 0%,#ffffff18 34%,#c4d6ee38 76%,#b8cce54d 100%);
+  /* Uniform glass tint across the header; a restrained vertical sheen
+     replaces the broad diagonal gradient without flattening the glass. */
+  background-color:#e3ecf8df;
+  background-image:linear-gradient(180deg,#ffffff24 0%,#ffffff08 32%,transparent 65%,#b8cce513 100%);
   border-bottom:1px solid #b9cde342;
-  box-shadow:0 2px 8px #223e7006;
+  box-shadow:inset 0 1px 0 #ffffff30,0 2px 8px #223e7006;
 }
 .workspace .content-shell #main-content{
   padding:13px 16px 16px;
