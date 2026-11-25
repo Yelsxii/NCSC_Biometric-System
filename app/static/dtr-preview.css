@@ -1,0 +1,71 @@
+/* Modern same-tab preview; only the printable iframe is sent to print. */
+#dtr-preview-dialog{width:min(1240px,calc(100vw - 28px));max-width:none;height:calc(100dvh - 28px);max-height:none;border:1px solid #dce6f4;border-radius:16px;padding:0;background:#e5edf7;color:#203b66;overflow:hidden;box-shadow:0 16px 60px #10294f35;font-family:Arial,sans-serif}
+#dtr-preview-dialog[open]{display:flex;flex-direction:column}
+#dtr-preview-dialog::backdrop{background:#12294e75}
+.export-preview-toolbar{display:flex;align-items:center;gap:14px;flex-wrap:wrap;padding:14px 18px;background:#f8faff;border-bottom:1px solid #dae5f3;flex:none}
+.preview-back{display:grid;place-items:center;width:36px;height:36px;border:0;border-radius:9px;background:#e7effc;color:#2859a7;cursor:pointer}
+.preview-back:hover{background:#d6e5fa;color:#163e83}
+.preview-identity{flex:1;min-width:150px}
+.preview-identity h2{font-size:18px;margin:0;color:#203b66}
+.preview-identity p{font-size:11px;color:#657997;margin:4px 0 0}
+.preview-controls{display:flex;align-items:flex-end;gap:10px;flex-wrap:wrap}
+.preview-controls label{display:flex;flex-direction:column;gap:4px;color:#526b8c;font-size:10px;font-weight:600}
+.preview-controls [hidden]{display:none!important}
+.preview-controls select{border:1px solid #d4e1f3;border-radius:8px;background:#fff;color:#203b66;padding:7px 9px;min-height:34px;font-size:12px}
+#dtr-preview-print{display:inline-flex;align-items:center;gap:7px;border-radius:8px;background:#244b9a;color:#fff;border:0;min-height:34px;padding:8px 12px;font-size:12px}
+#dtr-preview-print:disabled{opacity:.45}
+.export-preview-note{font-size:11px;padding:9px 18px;color:#526b8c;background:#f0f5fc;border-bottom:1px solid #dbe6f3;flex:none}
+.export-preview-stage{flex:1;min-height:0;overflow:auto;padding:20px;display:block;text-align:center}
+#dtr-preview-frame{display:block;max-width:none;min-width:0;margin:0 auto;border:0;background:#fff;box-shadow:0 6px 25px #243e6b24}
+#dtr-preview-frame[hidden]{display:none}
+@media(max-width:760px){.export-preview-toolbar{padding:10px;gap:8px}.preview-controls{width:100%;gap:7px}.export-preview-stage{padding:12px;text-align:left}.export-preview-note{padding:8px 10px}#dtr-preview-dialog{width:calc(100vw - 12px);height:calc(100dvh - 12px)}}
+/* Source-like document, isolated from all glass/website styles. */
+html:has(body.print-document){margin:0;padding:0;background:white}
+body.print-document{box-sizing:border-box;margin:0;padding:6mm;width:var(--paper-width);min-height:var(--paper-height);color:#000;background:white;font:8pt Arial,sans-serif;line-height:1.15}
+.print-document *{box-sizing:border-box}
+.print-content{width:var(--content-width);margin:0 auto}
+.civil-page{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:5mm;align-items:start}
+.civil-copy{min-width:0}
+.form-number{font-size:8pt;margin:0 0 1mm}
+.civil-header{text-align:center;font:8pt/1.15 Arial,sans-serif}
+.print-seal{width:13mm;height:13mm;display:block;object-fit:contain;margin:0 auto .8mm}
+.print-agency{display:block;color:#0b5394;font-weight:bold}
+.print-email{margin:2mm 0 1mm}
+.civil-copy h1{border-block:.2mm solid #000;margin:0;text-align:center;font:700 17pt/1.22 Arial,sans-serif;padding:.7mm 0}
+.print-name{text-align:center;font:700 13pt/1.2 Arial,sans-serif;min-height:6mm;padding:.6mm 0;overflow-wrap:anywhere}
+.name-label{font:700 8pt Arial,sans-serif;text-align:center;border-block:.2mm solid #000;padding:.5mm 0;margin:0 0 2mm}
+.print-document table{width:100%;border-collapse:collapse;table-layout:fixed}
+.print-document td,.print-document th{border:.2mm solid #000;overflow-wrap:anywhere;vertical-align:middle}
+.form-meta{font:8pt Arial,sans-serif;margin:0 0 1mm}
+.form-meta td{height:3.8mm;padding:.25mm .5mm}
+.form-meta .date-value{text-align:center;font-weight:bold}
+.civil-grid th,.civil-grid td{font:700 8pt/1.1 Arial,sans-serif;text-align:center;padding:.3mm .35mm}
+.civil-grid td{height:4mm}
+.print-document .special-day{text-align:center}
+.print-document .print-aja td{font:7pt/1.1 Arial,sans-serif;height:auto;padding:.4mm}
+.certification,.verification{font:italic 8pt/1.2 Arial,sans-serif;margin:1.4mm 0}
+.signature-line{border-top:.2mm solid #000;text-align:center;font:8pt Arial,sans-serif;margin:8mm 0 3mm;padding-top:.7mm}
+.signatory{text-align:center;border-bottom:.2mm solid #000;margin-top:5mm;font:700 11pt/1.15 Arial,sans-serif;overflow-wrap:anywhere}
+.signatory-role{text-align:center;font:italic 700 8pt Arial,sans-serif;padding-top:.6mm}
+.print-evidence{font:7pt Arial,sans-serif;margin:1mm 0 0}
+.gip-form{font:10pt/1.15 Arial,sans-serif}
+.gip-header{text-align:center;font:700 9pt/1.2 Arial,sans-serif;margin-bottom:3mm}
+.gip-header div{margin-top:2mm}
+.gip-meta,.gip-columns{display:grid;grid-template-columns:minmax(0,1.15fr) minmax(0,1fr);gap:3mm}
+.gip-meta{font:9pt Arial,sans-serif;margin-bottom:2mm}
+.gip-meta p,.gip-form p{margin:1mm 0}
+.gip-meta strong{font:700 10pt Arial,sans-serif}
+.blank-field{display:inline-block;min-width:18mm;border-bottom:.2mm solid #000}
+.gip-section-title{text-align:center;font:700 10pt/1.2 Arial,sans-serif;border:.2mm solid #000;border-bottom:0;min-height:9mm;display:flex;flex-direction:column;justify-content:center;padding:.8mm}
+.gip-section-title span{font:9pt Arial,sans-serif}
+.gip-grid th,.gip-grid td{text-align:center;font:10pt/1.1 Arial,sans-serif;padding:.25mm .2mm}
+.gip-grid th{font-weight:bold}
+.gip-grid td{height:4mm}
+.gip-report{display:flex;flex-direction:column}
+.gip-report-blank{border:.2mm solid #000;flex:1}
+.gip-signatures{margin:3mm 0;font:10pt Arial,sans-serif}
+.gip-signatures>div>div{text-align:center}
+.gip-signature{margin-top:7mm;border-bottom:.2mm solid #000;min-height:5mm;overflow-wrap:anywhere}
+.gip-review{font:10pt Arial,sans-serif;margin-top:4mm}
+.gip-review p{margin:1mm 0}
+@media print{html:has(body.print-document){background:white}body.print-document{width:var(--content-width);min-height:0;padding:0;margin:0;print-color-adjust:exact;-webkit-print-color-adjust:exact}.print-content{break-inside:avoid}.print-document tr{break-inside:avoid}}

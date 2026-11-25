@@ -621,32 +621,6 @@ async function saveDayReview(event){
   }catch(error){if(context.account===session){$('day-review-error').textContent=error.message;$('day-review-error').classList.remove('hidden');}}
   finally{$('save-day-review').disabled=false;}
 }
-function openDtrFormPreview(){
-  const data=activeDtr;
-  if(!data || data.employee_code!==selectedEmployee || data.month!==$('detail-month').value)return;
-  const preview=window.open('','_blank');
-  if(!preview){toast('Allow pop-ups to open the DTR preview.',true);return;}
-  const clock=event=>event?esc(event.happened_at.slice(11,16))+(event.origin==='hr_approved'?'*':''):'';
-  const ajaClock=entry=>entry?esc(entry.time.slice(0,5))+(entry.origin==='hr_approved'?'*':entry.origin==='biometric'?'':'†'):'—';
-  const rows=Array.from({length:31},(_,i)=>{
-    const day=data.days[i];
-    if(!day)return '<tr><td>'+(i+1)+'</td><td></td><td></td><td></td><td></td><td></td><td></td></tr>';
-    const periods=day.travel_order?[]:(day.aja_periods||[]);
-    const span=periods.length+1,ut=day.monitoring?.undertime_seconds;
-    const sourceNote=day.manual_source?.notes?.find(x=>/leave/i.test(x));
-    const special=day.travel_order?travelLabel(day):
-      (!day.has_attendance_entries&&!periods.length?(day.calendar.holiday_name||sourceNote||(day.is_weekend?(day.day==='Sat'?'SATURDAY':'SUNDAY'):'')):'');
-    return '<tr><td rowspan="'+span+'">'+(i+1)+'</td>'+
-      (special?'<td colspan="4">'+esc(special)+'</td>':['am_in','am_out','pm_in','pm_out'].map(k=>'<td>'+clock(day.display_slots?.[k])+'</td>').join(''))+
-      '<td rowspan="'+span+'">'+(ut==null?'':Math.floor(ut/3600))+'</td><td rowspan="'+span+'">'+(ut==null?'':Math.floor(ut%3600/60))+'</td></tr>'+
-      periods.map(p=>'<tr class="aja-sub"><td colspan="2">AJA OUT '+ajaClock(p.out)+'</td><td colspan="2">AJA '+(p.in?.origin==='biometric'?'IN':'END')+' '+ajaClock(p.in)+(p.review?' ?':'')+'</td></tr>').join('');
-  }).join('');
-  const copy='<section><header><b>NATIONAL COMMISSION OF SENIOR CITIZENS</b><div>29th Floor, The Upper Class Tower, Quezon City</div><h2>DAILY TIME RECORD</h2><h3>'+esc(data.display_name||'')+'</h3><div>(Name)</div></header><p>For the month of <b>'+esc(data.month)+'</b></p><p>Official hours for arrival and departure: __________________</p><table><thead><tr><th rowspan="2">Day</th><th colspan="2">A.M.</th><th colspan="2">P.M.</th><th colspan="2">UNDERTIME</th></tr><tr><th>IN</th><th>OUT</th><th>IN</th><th>OUT</th><th>Hours</th><th>Minutes</th></tr></thead><tbody>'+rows+'</tbody></table><p class="legend">* HR-approved adjustment · † documented AJA time (not a fingerprint) · ? review</p><p>Employee signature: __________________</p><p>Verified by: __________________</p></section>';
-  preview.document.open();
-  preview.document.write('<!doctype html><html><head><meta charset="utf-8"><title>DTR preview</title><style>body{font:11px Arial,sans-serif;color:#111;margin:12px}main{display:grid;grid-template-columns:1fr 1fr;gap:12px}section{min-width:0}header{text-align:center}h2{font-size:17px;margin:5px 0}h3{font-size:13px;margin:4px 0}p{margin:5px 0}table{width:100%;table-layout:fixed;border-collapse:collapse}th,td{border:1px solid #222;text-align:center;padding:2px 1px;font-size:10px;overflow-wrap:anywhere}td{height:13px}.aja-sub td{font-size:9px;background:#eef3fa;height:auto}.legend{font-size:8px}tr{break-inside:avoid}button{margin-bottom:10px}@media print{button,.preview-note{display:none}body{margin:0}main{gap:8px}th,td{font-size:8pt;padding:1px}.aja-sub td{font-size:7pt}header h2{font-size:13pt}}</style></head><body><button id="print">Print / Save PDF</button><p class="preview-note">Review layout and approved entries with HR before official use. Print scaling depends on the selected paper.</p><main>'+copy+copy+'</main></body></html>');
-  preview.document.close();
-  preview.document.getElementById('print').addEventListener('click',()=>preview.print());
-}
 function calendarDateChanged(){
   const day=activeDtr?.days.find(x=>x.date===$('calendar-date').value);
   $('calendar-name').value=day?.calendar.holiday_name||'';$('calendar-error').classList.add('hidden');
@@ -1074,6 +1048,7 @@ async function initialize(){
     $('attendance-register-panel').classList.remove('hidden');
     void loadRegister({quiet:true});
   });
+  initDtrPreview();
   $('dtr-form-preview').addEventListener('click',openDtrFormPreview);
   $('detail-month').addEventListener('change',()=>{setAttendanceMonth('register-month',$('detail-month').value);loadDetail();});
   $('daily-rows').addEventListener('click',event=>{

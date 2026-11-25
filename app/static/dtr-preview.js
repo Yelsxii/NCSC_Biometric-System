@@ -1,0 +1,143 @@
+'use strict';
+// Category-specific document renderer. The printable frame uses the same
+// authenticated monthly attendance snapshot as the employee detail view.
+let dtrPreviewData=null;
+let dtrPreviewVersion=0;
+const dtrPaper={a4:{width:'210mm',height:'297mm',w:210,h:297},folio:{width:'215.9mm',height:'330.2mm',w:215.9,h:330.2}};
+const dtrSignatory={
+  COS:['ATTY. GLAIZA BERNADETH P. PINTO-TADEO','REGIONAL DIRECTOR'],
+  Permanent:['ATTY. GLAIZA BERNADETH P. PINTO-TADEO','REGIONAL DIRECTOR'],
+  OJT:['DR. MA. ELYZA GRACILDA R. PONCIANO','INTERNSHIP SUPERVISOR'],
+  GIP:['DR. MA. ELYZA GRACILDA R. PONCIANO','']
+};
+function dtrDateLabel(month,day){
+  const [year,m]=month.split('-').map(Number);
+  return new Intl.DateTimeFormat('en-US',{month:'long',day:'numeric',year:'numeric',timeZone:'UTC'}).format(new Date(Date.UTC(year,m-1,day)));
+}
+function dtrLastDay(month){
+  const [year,m]=month.split('-').map(Number);
+  return new Date(Date.UTC(year,m,0)).getUTCDate();
+}
+function dtrClock(event,shortHour=false){
+  if(!event)return '';
+  const t=String(event.happened_at||'').slice(11,16);
+  return esc(shortHour?t.replace(/^0/,''):t)+(event.origin==='hr_approved'?'*':'');
+}
+function dtrAjaClock(event){
+  return event?esc(String(event.time||'').slice(0,5))+(event.origin==='hr_approved'?'*':event.origin==='biometric'?'':'†'):'—';
+}
+function dtrPrintRows(data,category,from=1,to=dtrLastDay(data.month)){
+  const gip=category==='GIP',metricsCols=gip?1:2;
+  const days=new Map(data.days.map(day=>[Number(day.date.slice(-2)),day]));
+  return Array.from({length:31},(_,i)=>{
+    const n=i+1,day=n>=from&&n<=to?days.get(n):null;
+    if(!day)return '<tr><td>'+n+'</td>'+ '<td></td>'.repeat(4+metricsCols)+'</tr>';
+    const periods=day.travel_order?[]:(day.aja_periods||[]);
+    const slots=day.display_slots||{};
+    const hasEntries=day.has_attendance_entries||Object.values(slots).some(Boolean);
+    const offday=day.is_weekend||Boolean(day.calendar?.holiday_name);
+    const note=day.manual_source?.notes?.find(x=>/\b(?:LEAVE|CTO|WORK SUSPENSION)\b/i.test(x));
+    const special=day.travel_order?travelLabel(day):
+      (!hasEntries&&!periods.length?(day.calendar?.holiday_name||note||(day.is_weekend?(day.day==='Sat'?'SATURDAY':'SUNDAY'):'')):'');
+    const span=periods.length+1,ut=offday?null:day.monitoring?.undertime_seconds;
+    const total=day.monitoring?.total_seconds;
+    const metricCells=gip?'<td rowspan="'+span+'">'+(total==null?'':esc(durationText(total).slice(0,-3)))+'</td>':
+      '<td rowspan="'+span+'">'+(ut==null?'':Math.floor(ut/3600))+'</td><td rowspan="'+span+'">'+(ut==null?'':Math.floor(ut%3600/60))+'</td>';
+    return '<tr><td rowspan="'+span+'">'+n+'</td>'+
+      (special?'<td colspan="4" class="special-day">'+esc(special)+'</td>':['am_in','am_out','pm_in','pm_out'].map(k=>'<td>'+dtrClock(slots[k],!gip)+'</td>').join(''))+
+      metricCells+'</tr>'+periods.map(p=>'<tr class="print-aja"><td colspan="2">AJA OUT '+dtrAjaClock(p.out)+'</td><td colspan="2">AJA '+(p.in?.origin==='biometric'?'IN':'END')+' '+dtrAjaClock(p.in)+(p.review?' ?':'')+'</td></tr>').join('');
+  }).join('');
+}
+function civilDtrCopy(data,category){
+  const signer=dtrSignatory[category],name=esc(String(data.display_name||'').toUpperCase());
+  return '<section class="civil-copy"><div class="form-number">Civil Service Form No. 48</div>'+
+    '<header class="civil-header"><img class="print-seal" src="/static/images/ncsc-seal.jpg" alt="NCSC seal"><div>Republic of the Philippines</div><b class="print-agency">NATIONAL COMMISSION OF SENIOR CITIZENS</b><div>29th Floor, The Upper Class Tower, Corner Scout Reyes, Quezon Ave., Brgy Paligsahan,<br>Quezon City</div><div class="print-email">Email address: ph.ncsc@gmail.com</div></header>'+
+    '<h1>DAILY TIME RECORD</h1><div class="print-name">'+name+'</div><div class="name-label">(Name)</div>'+
+    '<table class="form-meta"><colgroup><col style="width:13%"><col style="width:15%"><col style="width:15%"><col style="width:15%"><col style="width:15%"><col style="width:13.5%"><col style="width:13.5%"></colgroup><tbody>'+
+    '<tr><td colspan="2">For the month of</td><td colspan="2" class="date-value">'+esc(dtrDateLabel(data.month,1))+'</td><td class="date-value">-</td><td colspan="2" class="date-value">'+esc(dtrDateLabel(data.month,dtrLastDay(data.month)))+'</td></tr>'+
+    '<tr><td colspan="4" rowspan="2">Official hours for arrival and departure</td><td>Regular days</td><td colspan="2"></td></tr><tr><td>Saturdays</td><td colspan="2"></td></tr></tbody></table>'+
+    '<table class="civil-grid"><colgroup><col style="width:8%"><col span="4" style="width:15.5%"><col span="2" style="width:15%"></colgroup><thead><tr><th rowspan="2">Day</th><th colspan="2">A.M.</th><th colspan="2">P.M.</th><th colspan="2">UNDERTIME</th></tr><tr><th>IN</th><th>OUT</th><th>IN</th><th>OUT</th><th>Hours</th><th>Minutes</th></tr></thead><tbody>'+dtrPrintRows(data,category)+'</tbody></table>'+
+    '<p class="certification">I certify on my honor that the above is a true and correct report of the hours of work performed, record of which was made daily at the time of arrival and departure from office.</p><div class="signature-line">Signature</div><p class="verification">Verified as to the prescribed office hours:</p><div class="signatory">'+esc(signer[0])+'</div><div class="signatory-role">'+esc(signer[1])+'</div></section>';
+}
+function gipDtrForm(data,period){
+  const last=dtrLastDay(data.month),from=period==='second'?16:1,to=period==='first'?15:last;
+  return '<section class="gip-form"><header class="gip-header">DEPARTMENT OF LABOR AND EMPLOYMENT<br><span>Regional Office No. 1</span><div>GOVERNMENT INTERNSHIP PROGRAM</div></header>'+
+    '<div class="gip-meta"><div><p><b>NAME:</b> <strong>'+esc(String(data.display_name||'').toUpperCase())+'</strong></p><p><b>PARTNER AGENCY:</b> <strong>NATIONAL COMMISSION OF SENIOR CITIZENS - RO1</strong></p><p><b>OFFICE OF ASSIGNMENT:</b> <strong>'+esc(String(data.department||'').toUpperCase())+'</strong></p></div><div><p><b>For the Period:</b> '+esc(dtrDateLabel(data.month,from))+' - '+esc(dtrDateLabel(data.month,to))+'</p><p><b>LBP Account Number:</b> <span class="blank-field"></span></p></div></div>'+
+    '<div class="gip-columns"><div><div class="gip-section-title">DAILY TIME RECORD (DTR)</div><table class="gip-grid"><colgroup><col style="width:11%"><col span="4" style="width:17%"><col style="width:21%"></colgroup><thead><tr><th rowspan="2">DAYS</th><th colspan="2">MORNING</th><th colspan="2">AFTERNOON</th><th>Daily</th></tr><tr><th>IN</th><th>OUT</th><th>IN</th><th>OUT</th><th>Total</th></tr></thead><tbody>'+dtrPrintRows(data,'GIP',from,to)+'</tbody></table></div><div class="gip-report"><div class="gip-section-title">GIP ACCOMPLISHMENT REPORT<br><span>(Please attach additional sheet, if necessary)</span></div><div class="gip-report-blank"></div></div></div>'+
+    '<p>I hereby certify that the above records are true &amp; correct</p><div class="gip-columns gip-signatures"><div>Prepared By:<div class="gip-signature">'+esc(String(data.display_name||'').toUpperCase())+'</div><div>PRINTED NAME AND SIGNATURE OF INTERN</div></div><div>Certified by:<div class="gip-signature">'+esc(dtrSignatory.GIP[0])+'</div><div>PRINTED NAME AND SIGNATURE OF SUPERVISOR</div></div></div>'+
+    '<div class="gip-columns gip-review"><div><b>To be filled-up by FO</b><p>Total No. of Working Days: <span class="blank-field"></span></p><p>No. of Absences: <span class="blank-field"></span></p><p>Tardiness: <span class="blank-field"></span></p><p>Undertime: <span class="blank-field"></span></p><b>TOTAL DAYS WORKED <span class="blank-field"></span></b></div><div>Checked by:<div class="gip-signature"></div></div></div></section>';
+}
+function buildDtrDocument(data,category,period,paperKey,version){
+  const paper=dtrPaper[paperKey]||dtrPaper.a4;
+  const body=category==='GIP'?gipDtrForm(data,period):civilDtrCopy(data,category)+civilDtrCopy(data,category);
+  const hasAja=data.days.some(day=>(day.aja_periods||[]).length),hasApproved=data.days.some(day=>Object.values(day.display_slots||{}).some(x=>x?.origin==='hr_approved'));
+  const legend=hasAja||hasApproved?'<p class="print-evidence">* HR-approved adjustment · † documented AJA time · ? requires review</p>':'';
+  return '<!doctype html><html lang="en"><head><meta charset="utf-8"><title>DTR - '+esc(data.display_name||'')+' - '+esc(data.month)+'</title><link rel="stylesheet" href="/static/dtr-preview.css?v=1"><style>@page{size:'+paper.width+' '+paper.height+';margin:6mm} :root{--paper-width:'+paper.width+';--paper-height:'+paper.height+';--content-width:'+(paper.w-12)+'mm;--content-height:'+(paper.h-12)+'mm}</style></head><body class="print-document" data-preview-version="'+version+'"><main class="print-content"><div class="'+(category==='GIP'?'gip-page':'civil-page')+'">'+body+'</div>'+legend+'</main></body></html>';
+}
+function renderDtrPreview(){
+  const frame=$('dtr-preview-frame'),category=$('dtr-preview-template').value,period=$('dtr-preview-period').value,paperKey=$('dtr-preview-paper').value;
+  const paper=dtrPaper[paperKey]||dtrPaper.a4;
+  const version=++dtrPreviewVersion;
+  $('dtr-preview-print').disabled=true;
+  $('dtr-preview-period-control').hidden=category!=='GIP';
+  if(!dtrPreviewData||!dtrSignatory[category]){
+    frame.hidden=true;frame.removeAttribute('srcdoc');
+    $('dtr-preview-note').textContent='Select the verified employee category to choose the correct form.';
+    return;
+  }
+  $('dtr-preview-note').textContent=category==='GIP'?'DOLE template · Account number, accomplishment report and FO verification fields remain blank.':'Civil Service Form No. 48 · Two copies · Verify entries and signatory before official use.';
+  frame.hidden=false;frame.style.width=paper.width;frame.style.height=paper.height;
+  frame.srcdoc=buildDtrDocument(dtrPreviewData,category,period,paperKey,version);
+}
+function openDtrFormPreview(push=true){
+  const data=activeDtr;
+  if(!session||!data||data.employee_code!==selectedEmployee||data.month!==$('detail-month').value)return;
+  const dialog=$('dtr-preview-dialog');
+  if(dialog.open)return;
+  dtrPreviewData=data;
+  const category=dtrSignatory[data.employment_type]?data.employment_type:'';
+  $('dtr-preview-template').value=category;
+  $('dtr-preview-period').value='first';
+  $('dtr-preview-context').textContent=(data.display_name||'Employee')+' · '+dtrDateLabel(data.month,1).replace(/ 1,/,',');
+  dialog.showModal();
+  if(push)history.pushState({ncscDtrPreview:true},'', '#employees/dtr-preview');
+  renderDtrPreview();
+}
+function closeDtrPreview(){
+  if(!$('dtr-preview-dialog').open)return;
+  if(history.state?.ncscDtrPreview)history.back();
+  else $('dtr-preview-dialog').close();
+}
+function initDtrPreview(){
+  const dialog=$('dtr-preview-dialog'),frame=$('dtr-preview-frame');
+  $('dtr-preview-back').addEventListener('click',closeDtrPreview);
+  dialog.addEventListener('cancel',e=>{e.preventDefault();closeDtrPreview();});
+  dialog.addEventListener('close',()=>{
+    dtrPreviewData=null;dtrPreviewVersion++;frame.removeAttribute('srcdoc');frame.hidden=true;
+    $('dtr-preview-print').disabled=true;
+    if(history.state?.ncscDtrPreview)history.replaceState(null,'','#employees');
+  });
+  window.addEventListener('popstate',()=>{
+    if(dialog.open&&!history.state?.ncscDtrPreview)dialog.close();
+    else if(history.state?.ncscDtrPreview&&!dialog.open){
+      if(session&&currentPage==='employees'&&activeDtr&&selectedEmployee)openDtrFormPreview(false);
+      else history.replaceState(null,'','#'+(titles[currentPage]?currentPage:'employees'));
+    }
+  });
+  for(const id of ['dtr-preview-template','dtr-preview-period','dtr-preview-paper'])$(id).addEventListener('change',renderDtrPreview);
+  frame.addEventListener('load',()=>{
+    const doc=frame.contentDocument;
+    if(!dialog.open||!doc?.body||doc.body.dataset.previewVersion!==String(dtrPreviewVersion))return;
+    // Fit the document including AJA subrows, not the interface, within one
+    // physical sheet. No source entries are removed to fit the page.
+    const content=doc.querySelector('.print-content');
+    const paper=dtrPaper[$('dtr-preview-paper').value]||dtrPaper.a4;
+    const height=(paper.h-12)*96/25.4;
+    const scale=Math.min(1,height/(content.getBoundingClientRect().height||1));
+    if(scale<1)content.style.zoom=String(scale*.995);
+    $('dtr-preview-print').disabled=false;
+  });
+  $('dtr-preview-print').addEventListener('click',()=>{
+    if(!$('dtr-preview-print').disabled&&dialog.open){frame.contentWindow.focus();frame.contentWindow.print();}
+  });
+}
