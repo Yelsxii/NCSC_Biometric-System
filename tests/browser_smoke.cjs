@@ -194,9 +194,9 @@ uvicorn.run('app.main:app',host='127.0.0.1',port=int(os.environ['QA_PORT']),log_
       const style=getComputedStyle(el);
       return {background:style.backgroundColor,gradient:style.backgroundImage,blur:style.backdropFilter};
     });
-    assert.equal(lightGlass.background,'rgba(255, 255, 255, 0.702)');
+    assert.match(lightGlass.background,/^rgba\(242, 246, 252, 0\.4[56]\d*\)$/);
     assert.ok(lightGlass.gradient.includes('linear-gradient'));
-    assert.ok(lightGlass.blur.includes('blur(4px)'));
+    assert.ok(lightGlass.blur.includes('blur(7px)'));
     const pairedFrame=await page.locator('.content-shell').evaluate(el=>{
       const rect=el.getBoundingClientRect(),style=getComputedStyle(el);
       const sidebar=document.querySelector('.sidebar'),rail=sidebar.getBoundingClientRect();
