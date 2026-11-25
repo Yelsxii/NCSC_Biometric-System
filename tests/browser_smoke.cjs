@@ -145,6 +145,16 @@ uvicorn.run('app.main:app',host='127.0.0.1',port=int(os.environ['QA_PORT']),log_
     assert.equal(compactChrome.activeBackground,'rgb(11, 29, 57)');
     assert.equal(compactChrome.iconStroke,'2px');
     assert.ok(Math.abs(compactChrome.timeLeft-compactChrome.dateLeft)<=1,'Time aligns with left edge of calendar row');
+    const clockGlass=await page.locator('.workspace-clock').evaluate(el=>{
+      const style=getComputedStyle(el);
+      return {background:style.backgroundImage,blur:style.backdropFilter,
+        shadow:style.boxShadow,dateColor:getComputedStyle(el.querySelector('.clock-date')).color,
+        timeColor:getComputedStyle(el.querySelector('.clock-time')).color};
+    });
+    assert.ok(clockGlass.background.includes('linear-gradient') && clockGlass.blur.includes('blur(4px)'));
+    assert.ok(clockGlass.shadow.includes('inset'));
+    assert.equal(clockGlass.dateColor,'rgb(64, 91, 128)');
+    assert.equal(clockGlass.timeColor,'rgb(20, 46, 85)');
     assert.equal(compactChrome.signoutLabel,'none');
     await page.locator('#logout-sidebar').hover();
     await page.waitForFunction(()=>getComputedStyle(document.querySelector('.signout-arrow')).transform!=='none');
