@@ -456,6 +456,32 @@
 .workspace .attendance-month-picker button:focus-visible{outline:2px solid #7499d0;outline-offset:1px}
 .workspace .month-picker-footer{border-top:1px solid #edf1f7;margin-top:10px;padding-top:9px;justify-content:flex-end}
 .workspace .month-picker-footer button{background:#eaf0fa;color:#244b9a;border:0;border-radius:7px;padding:7px 11px;font-size:11px;font-weight:650}
+/* Desktop action rail stays compact regardless of available table width.
+   Narrow windows retain the original proportional columns and picker sizing. */
+@media(min-width:1101px){
+  .workspace #attendance-register-panel .directory-name{width:40%}
+  .workspace #attendance-register-panel .directory-category{width:22%}
+  .workspace #attendance-register-panel .directory-department{width:auto}
+  .workspace #attendance-register-panel .directory-action{width:154px}
+  .workspace #attendance-register-panel .directory-action-cell{padding:6px}
+  .workspace #attendance-register-panel .directory-action-cell .row-action{
+    width:124px;min-width:124px;max-width:124px;
+  }
+  .workspace .attendance-month-picker{
+    width:min(228px,calc(100vw - 16px));padding:9px;
+    border-radius:11px;box-shadow:0 10px 26px #14284e24;
+  }
+  .workspace .month-picker-heading,.workspace .month-picker-year,.workspace .month-picker-footer{gap:6px}
+  .workspace .month-picker-heading button,.workspace .month-picker-year button{
+    width:26px;height:26px;font-size:17px;
+  }
+  .workspace .month-picker-year{margin:7px 0}
+  .workspace .month-picker-year strong{font-size:15px}
+  .workspace .month-picker-grid{gap:5px}
+  .workspace .month-picker-grid button{height:29px;font-size:11px}
+  .workspace .month-picker-footer{margin-top:7px;padding-top:7px}
+  .workspace .month-picker-footer button{padding:5px 9px}
+}
 @media(max-width:740px){
   .workspace #attendance-register-panel #employee-filter .search-box{flex:1 1 100%;min-width:0}
   .workspace #attendance-register-panel #employee-filter .search-box>input{min-width:0}

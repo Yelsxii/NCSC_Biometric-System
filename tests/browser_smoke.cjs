@@ -194,6 +194,13 @@ uvicorn.run('app.main:app',host='127.0.0.1',port=int(os.environ['QA_PORT']),log_
     await page.locator('#register-rows .directory-action-cell .row-action').first().waitFor();
     assert.equal(await page.locator('#register-rows .row-action').first().evaluate(el=>getComputedStyle(el).textDecorationLine),'none');
     assert.notEqual(await page.locator('#register-rows .directory-action-cell').first().evaluate(el=>getComputedStyle(el).boxShadow),'none');
+    const actionCell=page.locator('#register-rows .directory-action-cell').first();
+    const desktopAction=await actionCell.boundingBox();
+    assert.ok(desktopAction.width>=145 && desktopAction.width<=165,'Desktop action rail should be compact');
+    await page.setViewportSize({width:620,height:820});
+    const narrowAction=await actionCell.boundingBox();
+    assert.ok(narrowAction.width>=125 && narrowAction.width<=160,'Narrow action rail retains its proportional layout');
+    await page.setViewportSize({width:1440,height:900});
     // USB recovery is a modal next to View records, not an embedded form.
     await page.locator('#open-attendance-import').click();
     await page.locator('#attendance-import-dialog[open]').waitFor();
@@ -359,6 +366,12 @@ with connect() as con:
     await page.locator('[data-page="employees"]').click();
     await page.locator('#register-month-trigger').click();
     await page.locator('#attendance-month-picker[open]').waitFor();
+    const desktopPicker=await page.locator('#attendance-month-picker').boundingBox();
+    assert.ok(desktopPicker.width<=229,'Desktop month picker should be compact');
+    await page.setViewportSize({width:620,height:820});
+    const narrowPicker=await page.locator('#attendance-month-picker').boundingBox();
+    assert.ok(narrowPicker.width>=269 && narrowPicker.width<=271,'Narrow month picker retains its size');
+    await page.setViewportSize({width:1440,height:900});
     await page.locator('#month-year-value').waitFor();
     const pickerYear=Number(await page.locator('#month-year-value').textContent());
     for(let y=pickerYear;y>2026;y--)await page.locator('#month-year-prev').click();
