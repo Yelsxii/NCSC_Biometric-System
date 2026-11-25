@@ -186,6 +186,19 @@ uvicorn.run('app.main:app',host='127.0.0.1',port=int(os.environ['QA_PORT']),log_
     assert.equal(lightGlass.background,'rgba(255, 255, 255, 0.788)');
     assert.ok(lightGlass.gradient.includes('linear-gradient'));
     assert.ok(lightGlass.blur.includes('blur(12px)'));
+    const pairedFrame=await page.locator('.content-shell').evaluate(el=>{
+      const rect=el.getBoundingClientRect(),style=getComputedStyle(el);
+      const rail=document.querySelector('.sidebar').getBoundingClientRect();
+      const header=el.querySelector('.topbar').getBoundingClientRect();
+      return {topInset:rect.top-rail.top,bottomInset:rail.bottom-rect.bottom,
+        rightInset:innerWidth-rect.right,radius:style.borderTopLeftRadius,
+        blur:style.backdropFilter,gradient:style.backgroundImage,
+        headerInside:header.top>=rect.top && header.right<=rect.right};
+    });
+    assert.ok(Math.abs(pairedFrame.topInset-5)<=1 && Math.abs(pairedFrame.bottomInset-5)<=1,'Both glass frames share their vertical inset');
+    assert.ok(pairedFrame.rightInset>=4 && pairedFrame.radius==='12px');
+    assert.ok(pairedFrame.blur.includes('blur(18px)') && pairedFrame.gradient.includes('radial-gradient'));
+    assert.ok(pairedFrame.headerInside,'Topbar belongs inside the right glass frame');
     assert.equal(railLayout.labelDisplay,'none');
     assert.equal(await page.locator('.sidebar .nav-icon').first().evaluate(el=>getComputedStyle(el).width),'24px');
     assert.equal(await page.locator('#logout-sidebar svg').evaluate(el=>getComputedStyle(el).width),'24px');

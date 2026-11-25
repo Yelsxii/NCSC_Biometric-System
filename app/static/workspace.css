@@ -590,33 +590,58 @@
 .workspace #attendance-register-panel .register-footer{padding-top:9px;min-height:0;justify-content:flex-start;font-size:10px;color:#657997;}
 
 
-/* Companion light glass workspace. Restrict the treatment to workspace chrome
-   and top-level panels; table cells, form controls and print dialogs retain
-   their own opaque backgrounds and semantic colors. */
-.workspace .content-shell{
-  min-width:0;
-  background-color:#eaf0f8;
+/* A paired glass shell: the right frame shares the sidebar's 5px top/bottom
+   inset and encloses both the header and the page. The luminous background
+   is visible through two light glass layers, without tinting text or controls. */
+.workspace{
+  background-color:#d4dfef;
   background-image:
-    radial-gradient(ellipse at 0% 0%,#c6d8f2a6,transparent 54%),
-    radial-gradient(ellipse at 100% 100%,#d3dff5b8,transparent 56%),
-    linear-gradient(135deg,#edf2fa 0%,#f7f9fc 55%,#e8edf7 100%);
+    radial-gradient(ellipse at 20% 5%,#9eb9e2a8,transparent 47%),
+    radial-gradient(ellipse at 95% 92%,#afc5e5b8,transparent 48%),
+    linear-gradient(145deg,#c4d4e9,#e8eef7 52%,#cbd9ed);
+}
+.workspace .content-shell{
+  min-width:0;min-height:0;height:calc(100% - 10px);
+  margin:5px 6px 5px 0;
+  border:1px solid #ffffffdf;border-radius:14px;
+  background-color:#e8f0fa80;
+  background-image:
+    linear-gradient(125deg,#ffffff85 0%,#ffffff20 23%,transparent 44%),
+    radial-gradient(ellipse at 0% 0%,#9ebce54d,transparent 54%),
+    radial-gradient(ellipse at 100% 100%,#b7c9ee80,transparent 60%),
+    linear-gradient(150deg,#ffffff35,#d4e2f725 52%,#ffffff50);
+  box-shadow:0 5px 18px #263e6926,inset 0 1px 0 #fff,
+    inset 0 0 0 1px #b3cae84a,inset -1px -1px 0 #ffffffa0;
+  -webkit-backdrop-filter:blur(18px) saturate(120%);
+  backdrop-filter:blur(18px) saturate(120%);
 }
 .workspace .content-shell .topbar{
-  background:linear-gradient(105deg,#ffffffd9,#f7faffc9);
-  border-bottom:1px solid #ffffffd9;
-  box-shadow:0 2px 12px #223e7010,inset 0 1px 0 #fff;
-  -webkit-backdrop-filter:blur(12px) saturate(115%);
-  backdrop-filter:blur(12px) saturate(115%);
+  background:linear-gradient(105deg,#ffffff69,#f7faff26);
+  border-bottom:1px solid #ffffffb8;
+  box-shadow:0 2px 8px #223e7008;
+}
+.workspace .content-shell #main-content{
+  padding:13px 16px 16px;
 }
 .workspace .content-shell .page .panel{
   background-color:#ffffffc9;
-  background-image:linear-gradient(150deg,#ffffffbd 0%,#ffffff26 45%,#eaf1fb22 100%);
+  background-image:linear-gradient(150deg,#ffffff42 0%,#ffffff0d 42%,#dbe9ff30 100%);
   border:1px solid #ffffffed;
-  box-shadow:0 6px 24px #263e6910,inset 0 1px 0 #fff,inset 0 0 0 1px #c9d8ed30;
+  border-radius:12px;
+  box-shadow:0 5px 20px #263e6918,inset 0 1px 0 #fff,inset 0 0 0 1px #bfd1eb48;
   -webkit-backdrop-filter:blur(12px) saturate(115%);
   backdrop-filter:blur(12px) saturate(115%);
 }
 .workspace .content-shell .workspace-clock{
   background:linear-gradient(145deg,#ffffffd6,#e8f0fbd9);
   border-color:#dbe5f4;box-shadow:inset 0 1px 0 #fff,0 2px 6px #244b9a08;
+}
+@media(max-width:740px){
+  .workspace .content-shell{margin-right:5px;border-radius:12px}
+  .workspace .content-shell #main-content{padding:8px 7px 9px}
+  .workspace .content-shell .page .panel{border-radius:10px}
+}
+@media(max-width:400px){
+  .workspace .content-shell #main-content{padding:6px 4px 6px}
+  .workspace .content-shell .topbar{padding-inline:6px}
 }
