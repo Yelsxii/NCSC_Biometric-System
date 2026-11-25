@@ -405,8 +405,8 @@
 .workspace .attendance-sheet .sheet-identity .back-button{
   display:inline-flex;align-items:center;justify-content:center;
   width:32px;min-width:32px;height:32px;min-height:32px;padding:0;
-  flex:0 0 32px;border:0!important;border-radius:50%;
-  background:transparent;box-shadow:none;
+  flex:0 0 32px;border:0!important;border-radius:9px;
+  background:#dce7f6;box-shadow:none;
   color:#234778;cursor:pointer;
   transition:background .18s ease,color .18s ease;
 }
@@ -414,7 +414,7 @@
   width:21px;height:21px;flex:none;transition:transform .18s ease;
 }
 .workspace .attendance-sheet .sheet-identity .back-button:is(:hover,:focus-visible){
-  background:#244b9a12;color:#173e80;box-shadow:none;
+  background:#315a96;color:#fff;box-shadow:none;
 }
 .workspace .attendance-sheet .sheet-identity .back-button:is(:hover,:focus-visible) svg{transform:translateX(-2px)}
 .workspace .attendance-sheet .sheet-identity .back-button:focus-visible{outline:2px solid #7c9bd0;outline-offset:2px}
