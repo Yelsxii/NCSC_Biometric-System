@@ -721,6 +721,21 @@ with connect() as con:
     assert.equal(await printable.locator('.print-name').first().evaluate(el=>getComputedStyle(el).fontSize),'17.3333px');
     assert.equal(await printable.locator('.print-seal').count(),2);
     assert.equal(await printable.locator('.civil-copy h1').first().textContent(),'DAILY TIME RECORD');
+    const printTypography=await printable.locator('.civil-copy').first().evaluate(el=>{
+      const style=sel=>{const s=getComputedStyle(el.querySelector(sel));return [s.fontWeight,s.fontStyle,s.fontSize]};
+      return {nameLabel:style('.name-label'),certification:style('.certification'),signature:style('.signature-line'),verification:style('.verification'),role:style('.signatory-role'),signatory:style('.signatory')};
+    });
+    assert.deepEqual(printTypography.nameLabel,['700','italic','10.6667px']);
+    assert.deepEqual(printTypography.certification,['400','italic','10.6667px']);
+    assert.deepEqual(printTypography.signature,['400','normal','10.6667px']);
+    assert.deepEqual(printTypography.verification,['400','italic','10.6667px']);
+    assert.deepEqual(printTypography.role,['700','italic','10.6667px']);
+    assert.deepEqual(printTypography.signatory,['700','normal','14.6667px']);
+    assert.equal(await printable.locator('.print-evidence').count(),0);
+    assert.ok(await printable.locator('.print-content').evaluate(el=>{
+      const paper=el.getBoundingClientRect(),form=el.querySelector('.print-layout').getBoundingClientRect();
+      return form.top>paper.top+8 && Math.abs((form.top-paper.top)-(paper.bottom-form.bottom))<3;
+    }),'Form is vertically centered inside the narrow page margins');
     assert.equal(await printable.locator('.signatory-role').first().textContent(),'REGIONAL DIRECTOR');
     await page.locator('#dtr-preview-template').selectOption('OJT');
     await printable.locator('.signatory-role').first().filter({hasText:'INTERNSHIP SUPERVISOR'}).waitFor();

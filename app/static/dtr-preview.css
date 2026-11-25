@@ -35,25 +35,34 @@
 html:has(body.print-document){margin:0;padding:0;background:white;overflow:hidden}
 body.print-document{box-sizing:border-box;margin:0;padding:var(--paper-margin);width:100%;min-height:100vh;color:#000;background:white;font:8pt Arial,sans-serif;line-height:1.15;overflow:hidden}
 .print-document *{box-sizing:border-box}
-.print-content{width:var(--content-width);margin:0 auto}
+.print-content{width:var(--content-width);height:calc(var(--content-height) - 1mm);margin:0 auto;display:flex;flex-direction:column;justify-content:center;align-items:center}
+.print-layout{width:var(--content-width);flex:none}
 .civil-page{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:5mm;align-items:start}
 .civil-copy{min-width:0}
 .form-number{font-size:8pt;margin:0 0 1mm}
 .civil-header{text-align:center;font:8pt/1.15 Arial,sans-serif}
-.print-seal{width:13mm;height:13mm;display:block;object-fit:contain;margin:0 auto .8mm}
+.print-seal{width:10mm;height:10mm;display:block;object-fit:contain;margin:0 auto .8mm}
 .print-agency{display:block;color:#0b5394;font-weight:bold}
 .print-email{margin:2mm 0 1mm}
-.civil-copy h1{border-block:.2mm solid #000;margin:0;text-align:center;font:700 17pt/1.22 Arial,sans-serif;padding:.7mm 0}
-.print-name{text-align:center;font:700 13pt/1.2 Arial,sans-serif;min-height:6mm;padding:.6mm 0;overflow-wrap:anywhere}
-.name-label{font:700 8pt Arial,sans-serif;text-align:center;border-block:.2mm solid #000;padding:.5mm 0;margin:0 0 2mm}
+.civil-copy h1{border:0;margin:0;text-align:center;font:700 17pt/1.22 Arial,sans-serif;padding:.7mm 0}
+.print-name{text-align:center;font:700 13pt/1.2 Arial,sans-serif;min-height:6mm;padding:.6mm 0;overflow-wrap:anywhere;border-bottom:.2mm solid #000}
+.name-label{font:italic 700 8pt Arial,sans-serif;text-align:center;padding:.5mm 0;margin:0}
+.civil-cos .name-label{border:.2mm solid #000;border-top:0}
+.form-spacer td{height:3mm}
+.civil-permanent .form-spacer td,.civil-ojt .form-spacer td{border:0}
 .print-document table{width:100%;border-collapse:collapse;table-layout:fixed}
 .print-document td,.print-document th{border:.2mm solid #000;overflow-wrap:anywhere;vertical-align:middle}
 .form-meta{font:8pt Arial,sans-serif;margin:0 0 1mm}
 .form-meta td{height:3.8mm;padding:.25mm .5mm}
 .form-meta .date-value{text-align:center;font-weight:bold;white-space:nowrap}
-.form-dates{margin:0}
+.form-meta .date-start{text-align:right}
+.form-meta .date-end{text-align:left}
+.form-dates,.form-schedule{margin:0}
 .form-schedule tr:first-child td{border-top:0}
-.form-schedule td:nth-child(2){white-space:nowrap}
+.form-schedule td:nth-child(2),.form-schedule tr:last-child td:first-child{text-align:center;white-space:nowrap}
+.civil-permanent .form-meta td,.civil-ojt .form-meta td{border:0}
+.civil-permanent .form-dates .date-value,.civil-ojt .form-dates .date-value,
+.civil-permanent .form-schedule td:last-child,.civil-ojt .form-schedule td:last-child{border-bottom:.2mm solid #000}
 .civil-grid th,.civil-grid td{font:700 8pt/1.1 Arial,sans-serif;text-align:center;padding:.3mm .35mm}
 .civil-grid td{height:4mm}
 .print-document .special-day{text-align:center}
@@ -62,19 +71,21 @@ body.print-document{box-sizing:border-box;margin:0;padding:var(--paper-margin);w
 .signature-line{border-top:.2mm solid #000;text-align:center;font:8pt Arial,sans-serif;margin:8mm 0 3mm;padding-top:.7mm}
 .signatory{text-align:center;border-bottom:.2mm solid #000;margin-top:5mm;font:700 11pt/1.15 Arial,sans-serif;overflow-wrap:anywhere}
 .signatory-role{text-align:center;font:italic 700 8pt Arial,sans-serif;padding-top:.6mm}
-.print-evidence{font:7pt Arial,sans-serif;margin:1mm 0 0}
 .gip-form{font:10pt/1.15 Arial,sans-serif}
 .gip-header{text-align:center;font:700 9pt/1.2 Arial,sans-serif;margin-bottom:3mm}
 .gip-header div{margin-top:2mm}
 .gip-meta,.gip-columns{display:grid;grid-template-columns:minmax(0,1.15fr) minmax(0,1fr);gap:3mm}
 .gip-meta{font:9pt Arial,sans-serif;margin-bottom:2mm}
 .gip-meta p,.gip-form p{margin:1mm 0}
-.gip-meta strong{font:700 10pt Arial,sans-serif}
+.gip-meta strong{font:700 9pt Arial,sans-serif}
+.gip-meta>div:first-child p:first-child strong{font-size:10pt}
 .blank-field{display:inline-block;min-width:18mm;border-bottom:.2mm solid #000}
 .gip-section-title{text-align:center;font:700 10pt/1.2 Arial,sans-serif;border:.2mm solid #000;border-bottom:0;min-height:9mm;display:flex;flex-direction:column;justify-content:center;padding:.8mm}
-.gip-section-title span{font:9pt Arial,sans-serif}
-.gip-grid th,.gip-grid td{text-align:center;font:10pt/1.1 Arial,sans-serif;padding:.25mm .2mm}
-.gip-grid th{font-weight:bold}
+.gip-section-title span{font:700 10pt Arial,sans-serif}
+.gip-grid th,.gip-grid td{text-align:center;font:9pt/1.1 Arial,sans-serif;padding:.25mm .2mm}
+.gip-grid th{font:700 10pt/1.1 Arial,sans-serif}
+.gip-grid thead tr:first-child th:first-child{font:7pt Arial,sans-serif;text-align:left}
+.gip-grid tbody tr:not(.print-aja)>td:first-child{font:10pt Arial,sans-serif}
 .gip-grid td{height:4mm}
 .gip-report{display:flex;flex-direction:column}
 .gip-report-blank{border:.2mm solid #000;flex:1}
@@ -83,4 +94,5 @@ body.print-document{box-sizing:border-box;margin:0;padding:var(--paper-margin);w
 .gip-signature{margin-top:7mm;border-bottom:.2mm solid #000;min-height:5mm;overflow-wrap:anywhere}
 .gip-review{font:10pt Arial,sans-serif;margin-top:4mm}
 .gip-review p{margin:1mm 0}
+.gip-review .gip-undertime{font-size:11pt}
 @media print{html:has(body.print-document){background:white;overflow:visible}body.print-document{width:var(--content-width);min-height:0;padding:0;margin:0;overflow:visible;print-color-adjust:exact;-webkit-print-color-adjust:exact}.print-content{break-inside:avoid}.print-document tr{break-inside:avoid}}

@@ -23,10 +23,10 @@ function dtrLastDay(month){
 function dtrClock(event,shortHour=false){
   if(!event)return '';
   const t=String(event.happened_at||'').slice(11,16);
-  return esc(shortHour?t.replace(/^0/,''):t)+(event.origin==='hr_approved'?'*':'');
+  return esc(shortHour?t.replace(/^0/,''):t);
 }
 function dtrAjaClock(event){
-  return event?esc(String(event.time||'').slice(0,5))+(event.origin==='hr_approved'?'*':event.origin==='biometric'?'':'†'):'—';
+  return event?esc(String(event.time||'').slice(0,5)):'';
 }
 function dtrPrintRows(data,category,from=1,to=dtrLastDay(data.month)){
   const gip=category==='GIP',metricsCols=gip?1:2;
@@ -47,35 +47,34 @@ function dtrPrintRows(data,category,from=1,to=dtrLastDay(data.month)){
       '<td rowspan="'+span+'">'+(ut==null?'':Math.floor(ut/3600))+'</td><td rowspan="'+span+'">'+(ut==null?'':Math.floor(ut%3600/60))+'</td>';
     return '<tr><td rowspan="'+span+'">'+n+'</td>'+
       (special?'<td colspan="4" class="special-day">'+esc(special)+'</td>':['am_in','am_out','pm_in','pm_out'].map(k=>'<td>'+dtrClock(slots[k],!gip)+'</td>').join(''))+
-      metricCells+'</tr>'+periods.map(p=>'<tr class="print-aja"><td colspan="2">AJA OUT '+dtrAjaClock(p.out)+'</td><td colspan="2">AJA '+(p.in?.origin==='biometric'?'IN':'END')+' '+dtrAjaClock(p.in)+(p.review?' ?':'')+'</td></tr>').join('');
+      metricCells+'</tr>'+periods.map(p=>'<tr class="print-aja"><td colspan="2">AJA OUT '+dtrAjaClock(p.out)+'</td><td colspan="2">AJA '+(p.in?.origin==='biometric'?'IN':'END')+' '+dtrAjaClock(p.in)+'</td></tr>').join('');
   }).join('');
 }
 function civilDtrCopy(data,category){
   const signer=dtrSignatory[category],name=esc(String(data.display_name||'').toUpperCase());
-  return '<section class="civil-copy"><div class="form-number">Civil Service Form No. 48</div>'+
+  const blankRow='<table class="form-spacer" aria-hidden="true"><tbody><tr>'+'<td></td>'.repeat(7)+'</tr></tbody></table>';
+  return '<section class="civil-copy civil-'+category.toLowerCase()+'"><div class="form-number">Civil Service Form No. 48</div>'+
     '<header class="civil-header"><img class="print-seal" src="/static/images/ncsc-seal.jpg" alt="NCSC seal"><div>Republic of the Philippines</div><b class="print-agency">NATIONAL COMMISSION OF SENIOR CITIZENS</b><div>29th Floor, The Upper Class Tower, Corner Scout Reyes, Quezon Ave., Brgy Paligsahan,<br>Quezon City</div><div class="print-email">Email address: ph.ncsc@gmail.com</div></header>'+
-    '<h1>DAILY TIME RECORD</h1><div class="print-name">'+name+'</div><div class="name-label">(Name)</div>'+
+    '<h1>DAILY TIME RECORD</h1><div class="print-name">'+name+'</div><div class="name-label">(Name)</div>'+blankRow+
     '<table class="form-meta form-dates"><colgroup><col style="width:27%"><col style="width:33%"><col style="width:7%"><col style="width:33%"></colgroup><tbody>'+
-    '<tr><td>For the month of</td><td class="date-value">'+esc(dtrDateLabel(data.month,1))+'</td><td class="date-value">-</td><td class="date-value">'+esc(dtrDateLabel(data.month,dtrLastDay(data.month)))+'</td></tr></tbody></table>'+
+    '<tr><td>For the month of</td><td class="date-value date-start">'+esc(dtrDateLabel(data.month,1))+'</td><td class="date-value">-</td><td class="date-value date-end">'+esc(dtrDateLabel(data.month,dtrLastDay(data.month)))+'</td></tr></tbody></table>'+
     '<table class="form-meta form-schedule"><colgroup><col style="width:60%"><col style="width:21%"><col style="width:19%"></colgroup><tbody>'+
-    '<tr><td rowspan="2">Official hours for arrival and departure</td><td>Regular days</td><td></td></tr><tr><td>Saturdays</td><td></td></tr></tbody></table>'+
+    '<tr><td rowspan="2">Official hours for arrival and departure</td><td>Regular days</td><td></td></tr><tr><td>Saturdays</td><td></td></tr></tbody></table>'+blankRow+
     '<table class="civil-grid"><colgroup><col style="width:8%"><col span="4" style="width:15.5%"><col span="2" style="width:15%"></colgroup><thead><tr><th rowspan="2">Day</th><th colspan="2">A.M.</th><th colspan="2">P.M.</th><th colspan="2">UNDERTIME</th></tr><tr><th>IN</th><th>OUT</th><th>IN</th><th>OUT</th><th>Hours</th><th>Minutes</th></tr></thead><tbody>'+dtrPrintRows(data,category)+'</tbody></table>'+
     '<p class="certification">I certify on my honor that the above is a true and correct report of the hours of work performed, record of which was made daily at the time of arrival and departure from office.</p><div class="signature-line">Signature</div><p class="verification">Verified as to the prescribed office hours:</p><div class="signatory">'+esc(signer[0])+'</div><div class="signatory-role">'+esc(signer[1])+'</div></section>';
 }
 function gipDtrForm(data,period){
   const last=dtrLastDay(data.month),from=period==='second'?16:1,to=period==='first'?15:last;
   return '<section class="gip-form"><header class="gip-header">DEPARTMENT OF LABOR AND EMPLOYMENT<br><span>Regional Office No. 1</span><div>GOVERNMENT INTERNSHIP PROGRAM</div></header>'+
-    '<div class="gip-meta"><div><p><b>NAME:</b> <strong>'+esc(String(data.display_name||'').toUpperCase())+'</strong></p><p><b>PARTNER AGENCY:</b> <strong>NATIONAL COMMISSION OF SENIOR CITIZENS - RO1</strong></p><p><b>OFFICE OF ASSIGNMENT:</b> <strong>'+esc(String(data.department||'').toUpperCase())+'</strong></p></div><div><p><b>For the Period:</b> '+esc(dtrDateLabel(data.month,from))+' - '+esc(dtrDateLabel(data.month,to))+'</p><p><b>LBP Account Number:</b> <span class="blank-field"></span></p></div></div>'+
+    '<div class="gip-meta"><div><p><b>NAME:</b> <strong>'+esc(String(data.display_name||'').toUpperCase())+'</strong></p><p><b>PARTNER AGENCY:</b> <strong>NATIONAL COMMISSION OF SENIOR CITIZENS - RO1</strong></p><p><b>OFFICE OF ASSIGNMENT:</b> <strong>'+esc(String(data.department||'').toUpperCase())+'</strong></p></div><div><p><b>For the Period:</b> <b>'+esc(dtrDateLabel(data.month,from))+' - '+esc(dtrDateLabel(data.month,to))+'</b></p><p><b>LBP Account Number:</b> <span class="blank-field"></span></p></div></div>'+
     '<div class="gip-columns"><div><div class="gip-section-title">DAILY TIME RECORD (DTR)</div><table class="gip-grid"><colgroup><col style="width:11%"><col span="4" style="width:17%"><col style="width:21%"></colgroup><thead><tr><th rowspan="2">DAYS</th><th colspan="2">MORNING</th><th colspan="2">AFTERNOON</th><th>Daily</th></tr><tr><th>IN</th><th>OUT</th><th>IN</th><th>OUT</th><th>Total</th></tr></thead><tbody>'+dtrPrintRows(data,'GIP',from,to)+'</tbody></table></div><div class="gip-report"><div class="gip-section-title">GIP ACCOMPLISHMENT REPORT<br><span>(Please attach additional sheet, if necessary)</span></div><div class="gip-report-blank"></div></div></div>'+
     '<p>I hereby certify that the above records are true &amp; correct</p><div class="gip-columns gip-signatures"><div>Prepared By:<div class="gip-signature">'+esc(String(data.display_name||'').toUpperCase())+'</div><div>PRINTED NAME AND SIGNATURE OF INTERN</div></div><div>Certified by:<div class="gip-signature">'+esc(dtrSignatory.GIP[0])+'</div><div>PRINTED NAME AND SIGNATURE OF SUPERVISOR</div></div></div>'+
-    '<div class="gip-columns gip-review"><div><b>To be filled-up by FO</b><p>Total No. of Working Days: <span class="blank-field"></span></p><p>No. of Absences: <span class="blank-field"></span></p><p>Tardiness: <span class="blank-field"></span></p><p>Undertime: <span class="blank-field"></span></p><b>TOTAL DAYS WORKED <span class="blank-field"></span></b></div><div>Checked by:<div class="gip-signature"></div></div></div></section>';
+    '<div class="gip-columns gip-review"><div><b>To be filled-up by FO</b><p><b>Total No. of Working Days:</b> <span class="blank-field"></span></p><p>No. of Absences: <span class="blank-field"></span></p><p>Tardiness: <span class="blank-field"></span></p><p class="gip-undertime">Undertime: <span class="blank-field"></span></p><b>TOTAL DAYS WORKED <span class="blank-field"></span></b></div><div>Checked by:<div class="gip-signature"></div></div></div></section>';
 }
 function buildDtrDocument(data,category,period,paperKey,version){
   const paper=dtrPaper[paperKey]||dtrPaper.a4;
   const body=category==='GIP'?gipDtrForm(data,period):civilDtrCopy(data,category)+civilDtrCopy(data,category);
-  const hasAja=data.days.some(day=>(day.aja_periods||[]).length),hasApproved=data.days.some(day=>Object.values(day.display_slots||{}).some(x=>x?.origin==='hr_approved'));
-  const legend=hasAja||hasApproved?'<p class="print-evidence">* HR-approved adjustment · † documented AJA time · ? requires review</p>':'';
-  return '<!doctype html><html lang="en"><head><meta charset="utf-8"><title>DTR - '+esc(data.display_name||'')+' - '+esc(data.month)+'</title><link rel="stylesheet" href="/static/dtr-preview.css?v=2"><style>@page{size:'+paper.width+' '+paper.height+';margin:'+DTR_NARROW_MM+'mm} :root{--paper-width:'+paper.width+';--paper-height:'+paper.height+';--paper-margin:'+DTR_NARROW_MM+'mm;--content-width:'+(paper.w-2*DTR_NARROW_MM)+'mm;--content-height:'+(paper.h-2*DTR_NARROW_MM)+'mm}</style></head><body class="print-document" data-preview-version="'+version+'"><main class="print-content"><div class="'+(category==='GIP'?'gip-page':'civil-page')+'">'+body+'</div>'+legend+'</main></body></html>';
+  return '<!doctype html><html lang="en"><head><meta charset="utf-8"><title>DTR - '+esc(data.display_name||'')+' - '+esc(data.month)+'</title><link rel="stylesheet" href="/static/dtr-preview.css?v=3"><style>@page{size:'+paper.width+' '+paper.height+';margin:'+DTR_NARROW_MM+'mm} :root{--paper-width:'+paper.width+';--paper-height:'+paper.height+';--paper-margin:'+DTR_NARROW_MM+'mm;--content-width:'+(paper.w-2*DTR_NARROW_MM)+'mm;--content-height:'+(paper.h-2*DTR_NARROW_MM)+'mm}</style></head><body class="print-document" data-preview-version="'+version+'"><main class="print-content"><div class="print-layout '+(category==='GIP'?'gip-page':'civil-page')+'">'+body+'</div></main></body></html>';
 }
 function freshDtrFrame(){
   // Replacing the browsing context avoids accumulating iframe history entries
@@ -171,11 +170,14 @@ function finishDtrFrame(frame){
   if(frame!==$('dtr-preview-frame')||!$('dtr-preview-dialog').open||!doc?.body||doc.body.dataset.previewVersion!==String(dtrPreviewVersion))return;
   // Fit the document including AJA subrows, not the interface, within one
   // physical sheet. No source entries are removed to fit the page.
-  const content=doc.querySelector('.print-content');
+  const content=doc.querySelector('.print-content'),layout=doc.querySelector('.print-layout');
   const paper=dtrPaper[$('dtr-preview-paper').value]||dtrPaper.a4;
-  const height=(paper.h-2*DTR_NARROW_MM)*96/25.4;
-  const scale=Math.min(1,(height-2)/(content.getBoundingClientRect().height||1));
-  if(scale<1)content.style.zoom=String(scale);
+  // Center the complete form vertically, leaving narrow paper margins
+  // and a little extra breathing room for even the longest month.
+  const available=Math.min(content.clientHeight,(paper.h-2*DTR_NARROW_MM-1)*96/25.4);
+  const target=available-8*96/25.4;
+  const scale=Math.min(1,target/(layout.getBoundingClientRect().height||1));
+  if(scale<1)layout.style.zoom=String(scale);
   fitDtrPaper();
   setDtrActionsReady(true);
 }
@@ -205,7 +207,9 @@ async function downloadDtrPdf(){
     const html2pdf=await loadLocalDtrPdf(frame);
     if(version!==dtrPreviewVersion)return;
     const doc=frame.contentDocument;
-    const content=doc.querySelector('.print-content').cloneNode(true);
+    const rendered=doc.querySelector('.print-layout');
+    const content=rendered.cloneNode(true);
+    const fittedWidth=rendered.getBoundingClientRect().width;
     // Capture at the original font sizes. Fit the full rendered form within
     // one physical page afterwards rather than dropping attendance rows.
     content.style.zoom='1';
@@ -221,9 +225,13 @@ async function downloadDtrPdf(){
     // Leave two pixels of rounding tolerance to avoid an extra blank PDF page.
     canvas.height=Math.max(1,Math.floor(canvas.width*h/w)-2);
     const ctx=canvas.getContext('2d');ctx.fillStyle='#fff';ctx.fillRect(0,0,canvas.width,canvas.height);
-    const scale=Math.min(canvas.width/captured.width,canvas.height/captured.height);
+    // Match the preview's physical width and fit-to-page scale, then
+    // center vertically in the available area rather than top-aligning.
+    const physicalWidth=w*96/25.4;
+    const scale=Math.min(canvas.width/captured.width,canvas.height/captured.height,
+      (fittedWidth/physicalWidth)*canvas.width/captured.width);
     const cw=captured.width*scale,ch=captured.height*scale;
-    ctx.drawImage(captured,(canvas.width-cw)/2,0,cw,ch);
+    ctx.drawImage(captured,(canvas.width-cw)/2,(canvas.height-ch)/2,cw,ch);
     await html2pdf().set(opts).from(canvas).save();
     if(version===dtrPreviewVersion)setDtrPreviewNote();
   }catch(error){
