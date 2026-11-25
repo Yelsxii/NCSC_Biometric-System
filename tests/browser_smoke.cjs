@@ -211,7 +211,16 @@ uvicorn.run('app.main:app',host='127.0.0.1',port=int(os.environ['QA_PORT']),log_
     assert.equal(await page.locator('#employee-search').inputValue(),'');
     await page.locator('#register-rows .row-action').first().waitFor();
     // USB recovery remains a separate modal.
-    await page.locator('#open-attendance-import').click();
+    const importButton=page.locator('#open-attendance-import');
+    await importButton.hover();
+    await page.waitForFunction(()=>{
+      const button=document.querySelector('#open-attendance-import');
+      const icon=button.querySelector('svg');
+      const styles=getComputedStyle(icon);
+      return getComputedStyle(button).color==='rgb(255, 255, 255)' &&
+        styles.color==='rgb(255, 255, 255)' && styles.stroke==='rgb(255, 255, 255)';
+    });
+    await importButton.click();
     await page.locator('#attendance-import-dialog[open]').waitFor();
     await page.screenshot({path:join(root,'docs/import-modal-preview.png'),animations:'disabled'});
     const attlog=Buffer.from(

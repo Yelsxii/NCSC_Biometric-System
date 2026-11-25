@@ -537,7 +537,8 @@
   transition:background .18s,color .18s,border-color .18s,box-shadow .18s,transform .18s;
 }
 .workspace #attendance-register-panel #open-attendance-import .inline-icon{
-  width:16px;height:16px;transition:transform .18s ease;
+  width:16px;height:16px;flex:none;color:inherit;stroke:currentColor;
+  transition:transform .18s ease;
 }
 .workspace #attendance-register-panel #open-attendance-import:not(:disabled):is(:hover,:focus-visible){
   background:#244b9a;color:white;border-color:#244b9a;
