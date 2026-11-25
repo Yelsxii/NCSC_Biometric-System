@@ -143,10 +143,12 @@ async function loadRegister({quiet=false}={}){
     if (serial!==requestSerial||currentPage!=='employees'||!session||selectedEmployee||q!==$('employee-search').value.trim()||month!==($('register-month').value||currentMonth())) return;
     lastEmployeeRows=result.items;
     registerLiveAsOf=result.live_as_of||'';
+    $('live-refresh-note').hidden=true;
     renderRegister();
   }catch(error){
     if(serial!==requestSerial || currentPage!=='employees' || !session || selectedEmployee)return;
-    $('live-as-of').textContent='Refresh failed · '+(registerLiveAsOf?'last loaded '+liveTime(registerLiveAsOf):'no live data');
+    $('live-refresh-note').textContent='Attendance refresh failed';
+    $('live-refresh-note').hidden=false;
     if(!quiet){$('register-rows').innerHTML='<tr><td colspan="6" class="table-empty">Unable to load employee attendance.</td></tr>';toast(error.message,true);}
   }
 }
@@ -178,7 +180,14 @@ function renderRegister(){
     document.querySelectorAll('[data-live-filter]').forEach(el=>el.setAttribute('aria-pressed',String(el.dataset.liveFilter===liveFilter)));
     const other=$('live-other-filter');
     other.classList.toggle('hidden',!lastEmployeeRows.some(row=>liveMatches(row,'other'))&&liveFilter!=='other');
-    $('live-as-of').textContent=registerLiveAsOf?'As of '+registerLiveAsOf.slice(0,10)+' · '+liveTime(registerLiveAsOf)+' PHT':'No live data';
+    document.querySelectorAll('.live-kpi').forEach(button=>{
+      const total=lastEmployeeRows.length;
+      const count=lastEmployeeRows.filter(row=>liveMatches(row,button.dataset.liveFilter)).length;
+      const pct=total?Math.round(100*count/total):0;
+      button.querySelector('.ring-progress').setAttribute('stroke-dasharray',pct+' '+(100-pct));
+      button.querySelector('.ring-label').textContent=pct+'%';
+      button.setAttribute('aria-label',button.querySelector('small').textContent+': '+count+' of '+total+' employees ('+pct+'%)');
+    });
     
     const total=rows.length;
     $('register-count').textContent=total?total+(total===1?' employee':' employees'):'No employees found';
@@ -961,6 +970,13 @@ async function initialize(){
     renderRegister();
     $('attendance-register-panel').querySelector('.table-wrap').scrollTop=0;
   }));
+  const kpiStrip=document.querySelector('.live-kpi-strip');
+  kpiStrip.addEventListener('wheel',e=>{
+    if(kpiStrip.scrollWidth>kpiStrip.clientWidth && Math.abs(e.deltaY)>Math.abs(e.deltaX)){
+      e.preventDefault();
+      kpiStrip.scrollLeft+=e.deltaY*(e.deltaMode===1?16:e.deltaMode===2?kpiStrip.clientWidth:1);
+    }
+  },{passive:false});
   $('employee-search').addEventListener('input',()=>applyRegisterFilters({debounce:true}));
   $('clear-employee-search').addEventListener('click',()=>{$('employee-search').value='';applyRegisterFilters();$('employee-search').focus();});
   $('register-month').addEventListener('change',()=>applyRegisterFilters());

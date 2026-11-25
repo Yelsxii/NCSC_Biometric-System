@@ -218,10 +218,10 @@ uvicorn.run('app.main:app',host='127.0.0.1',port=int(os.environ['QA_PORT']),log_
     const glassTints=await page.evaluate(()=>{
       const outer=getComputedStyle(document.querySelector('#workspace'));
       const header=getComputedStyle(document.querySelector('.topbar'));
-      return {outer:outer.backgroundImage,header:header.backgroundImage,tint:header.backgroundColor};
+      return {outer:outer.backgroundImage,header:header.backgroundImage,tint:header.backgroundColor,wave:getComputedStyle(document.querySelector('.topbar'),'::before').backgroundImage};
     });
     assert.ok(glassTints.outer.includes('radial-gradient') && glassTints.outer.includes('linear-gradient'),'Outer shell retains layered glass reflections');
-    assert.equal(glassTints.header,'none','Topbar must not inherit a visible gradient');
+    assert.ok(glassTints.header.includes('linear-gradient') && glassTints.wave.includes('data:image/svg+xml'),'Approved topbar wave and soft blue tint');
     assert.equal(glassTints.tint,'rgb(228, 236, 247)','Topbar tint stays even and opaque');
     assert.equal(railLayout.labelDisplay,'none');
     assert.equal(await page.locator('.sidebar .nav-icon').first().evaluate(el=>getComputedStyle(el).width),'24px');
@@ -274,6 +274,11 @@ uvicorn.run('app.main:app',host='127.0.0.1',port=int(os.environ['QA_PORT']),log_
     assert.equal(await page.locator('#attendance-register-panel .pagination').count(),0);
     assert.equal(await page.locator('#register-count').textContent(),'1 employee');
     assert.equal(await page.locator('.live-kpi').count(),6);
+    assert.equal(await page.locator('.live-kpi .sculpted-accent').count(),6);
+    assert.equal(await page.locator('.live-kpi .status-ring').count(),6);
+    assert.equal(await page.locator('.kpi-all .ring-label').textContent(),'100%');
+    assert.equal(await page.locator('.live-kpi-strip').evaluate(el=>getComputedStyle(el).scrollbarWidth),'none');
+    assert.equal(await page.locator('#live-as-of').count(),0);
     assert.equal(await page.locator('[data-live-count="all"]').textContent(),'1');
     assert.equal(await page.locator('#register-rows .live-status').count(),1);
     const kpiPositions=await page.locator('.live-kpi').evaluateAll(nodes=>nodes.map(el=>el.getBoundingClientRect().top));
