@@ -221,7 +221,8 @@ uvicorn.run('app.main:app',host='127.0.0.1',port=int(os.environ['QA_PORT']),log_
       return {outer:outer.backgroundImage,header:header.backgroundImage,tint:header.backgroundColor,wave:getComputedStyle(document.querySelector('.topbar'),'::before').backgroundImage};
     });
     assert.ok(glassTints.outer.includes('radial-gradient') && glassTints.outer.includes('linear-gradient'),'Outer shell retains layered glass reflections');
-    assert.ok(glassTints.header.includes('linear-gradient') && glassTints.wave.includes('data:image/svg+xml'),'Approved topbar wave and soft blue tint');
+    assert.equal(glassTints.header,'none','Restored uniform topbar tint');
+    assert.equal(glassTints.wave,'none','No decorative wave');
     assert.equal(glassTints.tint,'rgb(228, 236, 247)','Topbar tint stays even and opaque');
     assert.equal(railLayout.labelDisplay,'none');
     assert.equal(await page.locator('.sidebar .nav-icon').first().evaluate(el=>getComputedStyle(el).width),'24px');
@@ -276,6 +277,9 @@ uvicorn.run('app.main:app',host='127.0.0.1',port=int(os.environ['QA_PORT']),log_
     assert.equal(await page.locator('.live-kpi').count(),6);
     assert.equal(await page.locator('.live-kpi .sculpted-accent').count(),6);
     assert.equal(await page.locator('.live-kpi .status-ring').count(),6);
+    const cardStyles=await page.locator('.live-kpi').evaluateAll(nodes=>nodes.map(el=>({height:el.getBoundingClientRect().height,background:getComputedStyle(el).backgroundImage})));
+    assert.ok(cardStyles.every(s=>s.height<=77),'Desktop KPI cards remain compact');
+    assert.equal(cardStyles[1].background,cardStyles[3].background,'Unselected KPI surfaces use the same neutral glass palette');
     assert.equal(await page.locator('.kpi-all .ring-label').textContent(),'100%');
     assert.equal(await page.locator('.live-kpi-strip').evaluate(el=>getComputedStyle(el).scrollbarWidth),'none');
     assert.equal(await page.locator('#live-as-of').count(),0);
