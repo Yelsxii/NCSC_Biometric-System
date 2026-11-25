@@ -194,7 +194,7 @@
 /* Shared workspace chrome: dark institutional navy, restrained red accents,
    a responsive icon rail, and a single Manila clock. Login is unaffected. */
 .workspace .sidebar{
-  --rail-bg:#14284e;--rail-hover:#203963;--rail-active:#f4f7fc;--rail-inset:12px;
+  --rail-bg:#14284e;--rail-hover:rgba(220,235,255,.16);--rail-active:#f4f7fc;--rail-inset:12px;
   width:232px;min-width:232px;height:100%;flex:0 0 232px;
   display:flex;flex-direction:column;position:relative;z-index:15;
   background-color:var(--rail-bg);
@@ -243,8 +243,8 @@
 }
 .workspace .sidebar .nav-icon{width:22px;height:22px;flex:0 0 22px}
 .workspace .sidebar .nav-item:hover,.workspace .sidebar .nav-item:focus-visible{
-  color:#fff;background-color:var(--rail-hover);border-color:#ff9fb477;
-  box-shadow:0 0 9px #ff769d22,inset 0 0 0 1px #ffb4c412;
+  color:#fff;background-color:var(--rail-hover);border-color:transparent;
+  box-shadow:0 0 8px #ff769d16,inset 0 0 7px #ff9fb420;
 }
 .workspace .sidebar .nav-item.active{
   /* Desktop: soft inward blue illumination, without an outline or outer halo. */
