@@ -131,7 +131,7 @@ uvicorn.run('app.main:app',host='127.0.0.1',port=int(os.environ['QA_PORT']),log_
       const clock=document.querySelector('.workspace-clock');
       const date=document.querySelector('.clock-date-row');
       const time=document.querySelector('#live-time');
-      return {accentContent:getComputedStyle(nav,'::before').content,activeHalo:getComputedStyle(nav).backgroundImage,
+      return {accentContent:getComputedStyle(nav,'::before').content,activeHalo:getComputedStyle(nav,'::before').backgroundImage,activeShadow:getComputedStyle(nav).boxShadow,
         glow:getComputedStyle(icon).filter, iconColor:getComputedStyle(icon).color,
         activeBackground:getComputedStyle(nav).backgroundColor,
         iconStroke:getComputedStyle(icon).strokeWidth,
@@ -139,8 +139,9 @@ uvicorn.run('app.main:app',host='127.0.0.1',port=int(os.environ['QA_PORT']),log_
         clockLeft:clock.getBoundingClientRect().left,
         signoutLabel:getComputedStyle(document.querySelector('#logout-sidebar span')).display};
     });
-    assert.equal(compactChrome.activeHalo,'none','Selected item has a flat soft-white fill');
-    assert.equal(compactChrome.glow,'none','Selected icon is crisp without a glow');
+    assert.ok(compactChrome.activeHalo.includes('radial-gradient') && compactChrome.activeHalo.includes('109, 167, 255'),'Selected item has a subtle blue inner halo');
+    assert.ok(compactChrome.activeShadow.includes('132, 182, 255'),'Selected item has a soft blue outer glow');
+    assert.ok(compactChrome.glow.includes('drop-shadow'),'Selected icon has a subtle blue glow');
     assert.equal(compactChrome.iconColor,'rgb(56, 107, 177)');
     assert.equal(compactChrome.activeBackground,'rgb(244, 247, 252)');
     assert.equal(compactChrome.iconStroke,'2px');
