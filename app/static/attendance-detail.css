@@ -402,8 +402,8 @@
   display:flex;align-items:center;flex-shrink:0;margin:0 0 10px;
 }
 .workspace .attendance-sheet .sheet-navigation .back-button{
-  display:inline-flex;align-items:center;justify-content:center;gap:7px;
-  width:auto;height:30px;min-height:30px;padding:0 10px;
+  display:inline-flex;align-items:center;justify-content:center;
+  width:33px;min-width:33px;height:33px;min-height:33px;padding:0;
   border:1px solid #b7cbe57a!important;border-radius:8px;
   background:linear-gradient(160deg,#ffffffa0,#e4edfb90);
   box-shadow:inset 0 1px 0 #ffffff85,0 2px 5px #244b9a12;
@@ -411,7 +411,7 @@
   transition:background .18s ease,color .18s ease,box-shadow .18s ease;
 }
 .workspace .attendance-sheet .sheet-navigation .back-button svg{
-  width:16px;height:16px;flex:none;transition:transform .18s ease;
+  width:18px;height:18px;flex:none;transition:transform .18s ease;
 }
 .workspace .attendance-sheet .sheet-navigation .back-button:is(:hover,:focus-visible){
   background:#244b9a;color:#fff;box-shadow:0 3px 8px #244b9a35;
@@ -444,7 +444,7 @@
 .workspace .attendance-sheet .undertime-value{color:#80556b;font-weight:550}
 @media(max-width:740px){
   .workspace .attendance-sheet .sheet-navigation{margin-bottom:8px}
-  .workspace .attendance-sheet .sheet-navigation .back-button{height:28px;min-height:28px;font-size:10px}
+  .workspace .attendance-sheet .sheet-navigation .back-button{width:30px;min-width:30px;height:30px;min-height:30px}
   .workspace .attendance-sheet .sheet-identity h2{font-size:16px}
   .workspace .attendance-sheet .attendance-legend span{font-size:9px}
 }
