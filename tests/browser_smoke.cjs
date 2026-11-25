@@ -656,6 +656,8 @@ with connect() as con:
     assert.equal(await travelDay.locator('td.slot-travel[colspan="4"]').count(),1);
     assert.equal(await travelDay.locator('td.slot-travel[colspan="2"]').count(),0);
     assert.equal(await travelDay.locator('.time-value').count(),0);
+    assert.equal(await travelDay.locator('.monitor-remark.remark-travel').textContent(),'Travel Order');
+    assert.equal(await travelDay.locator('.remark-travel').evaluate(el=>getComputedStyle(el).backgroundColor),'rgb(231, 217, 250)');
     await travelDay.locator('[data-edit-day]').click();
     await page.locator('#day-review-dialog[open]').waitFor();
     assert.equal(await page.locator('#review-time-section').isVisible(),false);
@@ -736,6 +738,8 @@ with connect() as con:
     assert.equal(await filled.locator('[data-origin="manual_sheet"]').count(),2);
     assert.equal(await filled.locator('.daily-total-value').textContent(),'08:00:00');
     assert.equal(await filled.locator('.monitor-remark').textContent(),'Complete');
+    assert.equal(await filled.locator('.remark-complete').evaluate(el=>getComputedStyle(el).backgroundColor),'rgb(207, 234, 219)');
+    assert.equal(await page.locator('[data-date="2026-11-09"] .remark-overtime').evaluate(el=>getComputedStyle(el).backgroundColor),'rgb(211, 228, 252)');
     assert.equal(await page.locator('[data-date="2026-11-09"] .overtime-value').textContent(),'01:00:00');
     assert.deepEqual(await page.evaluate(()=>[durationText(28815),durationText(65),durationText(0),durationText(null),durationText(90061)]),['08:00:15','00:01:05','00:00:00','—','25:01:01']);
     assert.equal((await page.locator('#dtr-form-preview').innerText()).trim(),'Export DTR');

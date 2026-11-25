@@ -172,7 +172,7 @@ def present_day(day):
     day["travel_reference"] = reviewed_reference or (references[0] if len(references)==1 else "")
     day["travel_source_references"] = references
     if day["travel_order"]:
-        text = "Review" if (status in ("Source difference","Future entry") or (len(references)>1 and not reviewed_reference)) else ""
+        text = "Review" if (status in ("Source difference","Future entry") or (len(references)>1 and not reviewed_reference)) else "Travel Order"
     elif status == "Future entry":
         text = status
     elif status == "Source difference" or metrics.get("aja_review"):

@@ -502,7 +502,7 @@ def test_travel_reference_edit_preserves_source_and_updates_display(admin):
     import_one(client,headers,packet([row(times=['Travel Order No.: RO 1 2026-11-2',None,None,None])]))
     day=monitor(client)
     assert day['travel_reference']=='RO 1 2026-11-2'
-    assert day['display_remark']==''
+    assert day['display_remark']=='Travel Order'
     result=client.put('/api/attendance/001/2026-11-06',headers=headers,json={
         'version':0,'activity_type':'Travel Order','activity_reference':'RO 1 2026-11-3'})
     assert result.status_code==200,result.text

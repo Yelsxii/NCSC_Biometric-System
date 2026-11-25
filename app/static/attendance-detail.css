@@ -264,20 +264,29 @@
 #clock-picker-clear{background:#f3f5fa;color:#61718e}
 #review-reason-field{margin-top:8px}
 
-/* Single readable remark, with the travel reference in its merged time cell. */
+/* Single readable status badge; travel reference stays in its merged time cell. */
 .workspace .attendance-sheet .dtr-grid{min-width:960px}
 .workspace .attendance-sheet .dtr-col-clock{width:8%}
 .workspace .attendance-sheet .dtr-col-total{width:8%}
 .workspace .attendance-sheet .dtr-col-remarks{width:16%}
 .workspace .attendance-sheet .dtr-col-action{width:8%}
 .workspace .attendance-sheet .dtr-grid .day-activities{padding:5px 10px;vertical-align:middle}
-.workspace .attendance-sheet .monitor-remark{font-size:11px;line-height:1.25;font-weight:600;padding:3px 7px;margin:0;white-space:normal;overflow-wrap:anywhere}
-.workspace .attendance-sheet .remark-complete{color:#26734e}
-.workspace .attendance-sheet .remark-undertime{color:#a33655}
-.workspace .attendance-sheet .remark-overtime{color:#2d5d9e}
-.workspace .attendance-sheet .remark-conflict{color:#896018}
-.workspace .attendance-sheet .remark-holiday{color:#3468a5;background:#eaf3ff}
-.workspace .attendance-sheet .remark-pending{color:#64748b}
+.workspace .attendance-sheet .monitor-remark{
+  display:inline-block;font-size:11px;line-height:1.25;font-weight:600;
+  padding:4px 8px;margin:0;border:0;border-radius:6px;
+  white-space:normal;overflow-wrap:anywhere;max-width:100%;box-sizing:border-box;
+  background:#e0e7f0;color:#4b5f7a;
+}
+.workspace .attendance-sheet .remark-complete{background:#cfeadb;color:#216743}
+.workspace .attendance-sheet .remark-undertime{background:#f6d4df;color:#97334e}
+.workspace .attendance-sheet .remark-overtime{background:#d3e4fc;color:#25579b}
+.workspace .attendance-sheet .remark-conflict{background:#f7e4b9;color:#80560f}
+.workspace .attendance-sheet .remark-holiday{background:#d5e9f8;color:#285c86}
+.workspace .attendance-sheet .remark-travel{background:#e7d9fa;color:#654297}
+.workspace .attendance-sheet .remark-aja{background:#f6e4bc;color:#84590f}
+.workspace .attendance-sheet .remark-missing{background:#f6d4df;color:#97334e}
+.workspace .attendance-sheet .remark-weekend{background:#dfe5ef;color:#53647d}
+.workspace .attendance-sheet .remark-pending{background:#e0e7f0;color:#4b5f7a}
 .workspace .attendance-sheet .dtr-grid .travel-status{overflow-wrap:anywhere}
 .workspace .attendance-sheet .sheet-toolbar{padding:12px 0 13px}
 .app-dialog.day-review-dialog #review-travel-info{background:none;border-radius:0;padding:0;color:#654297;justify-content:flex-start;font-size:11px}
