@@ -637,9 +637,20 @@
 .workspace .content-shell .page .panel{
   background-color:#ffffffb3;
   background-image:linear-gradient(135deg,#ffffff70 0%,#ffffff18 14%,transparent 34%,#dbe9ff18 75%,#ffffff30 100%);
-  border:1px solid #c5d6e966;
+  /* A refractive glass rim: a cool edge, directional highlight and soft
+     inner bevel give the clear pane definition without a white outline. */
+  border:1px solid #a7bdd5a0;
+  border-top-color:#c4d5e8c9;
+  border-left-color:#b8cde5b8;
   border-radius:12px;
-  box-shadow:0 5px 20px #263e6912,inset 0 1px 0 #ffffff40,inset 0 0 0 1px #bfd1eb24;
+  background-clip:padding-box;
+  box-shadow:
+    inset 0 1px 1px #ffffffa6,
+    inset 1px 0 1px #ffffff65,
+    inset 0 -2px 3px #9db7d22b,
+    inset -1px 0 2px #9db7d226,
+    0 1px 2px #526f9620,
+    0 6px 16px #263e691c;
   -webkit-backdrop-filter:blur(4px) saturate(115%);
   backdrop-filter:blur(4px) saturate(115%);
 }
