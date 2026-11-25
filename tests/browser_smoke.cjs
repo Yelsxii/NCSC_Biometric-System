@@ -292,11 +292,12 @@ uvicorn.run('app.main:app',host='127.0.0.1',port=int(os.environ['QA_PORT']),log_
     const iconGlass=await page.locator('.live-kpi .kpi-icon').evaluateAll(nodes=>nodes.map(el=>{
       const style=getComputedStyle(el),light=getComputedStyle(el,'::before');
       const inner=getComputedStyle(el,'::after');
-      return {color:style.color,surface:style.backgroundImage,spots:light.backgroundImage,blur:light.filter,outerBorder:style.borderTopWidth,innerBorder:inner.borderTopWidth,innerInset:inner.top,innerBlur:inner.backdropFilter};
+      return {color:style.color,surface:style.backgroundImage,spots:light.backgroundImage,blur:light.filter,outerBorder:style.borderTopWidth,innerBorder:inner.borderTopWidth,innerInset:inner.top,innerBlur:inner.backdropFilter,outerTint:style.backgroundColor,innerTint:inner.backgroundColor};
     }));
     assert.deepEqual(iconGlass.map(x=>x.color),['rgb(82, 126, 185)','rgb(54, 126, 103)','rgb(66, 109, 169)','rgb(172, 73, 98)','rgb(149, 110, 32)','rgb(98, 91, 153)'],'Every icon uses its own status color, even when not selected');
     assert.ok(iconGlass.every(x=>x.surface==='none' && (x.spots.match(/radial-gradient\(/g)||[]).length===5 && x.blur==='blur(4px)'),'Icon glass uses scattered radial lights rather than a directional gradient');
     assert.ok(iconGlass.every(x=>x.outerBorder==='0px' && x.innerBorder==='0px' && x.innerInset==='3px' && x.innerBlur.includes('blur(3px)')),'Two borderless nested glass layers');
+    assert.ok(iconGlass.every(x=>x.outerTint.startsWith('rgba(110, 139, 178,') && x.innerTint.startsWith('rgba(255, 255, 255,') && x.outerTint!==x.innerTint),'Separate translucent tints distinguish the two layers without borders');
     assert.equal(await page.locator('.kpi-all strong').evaluate(el=>getComputedStyle(el).color),'rgb(82, 126, 185)','Default selection retains its colored count');
     const hoverKpi=page.locator('.kpi-missing');
     await hoverKpi.hover();
