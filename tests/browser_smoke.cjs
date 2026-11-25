@@ -277,6 +277,9 @@ uvicorn.run('app.main:app',host='127.0.0.1',port=int(os.environ['QA_PORT']),log_
     assert.equal(await page.locator('.live-kpi').count(),6);
     assert.equal(await page.locator('.live-kpi .sculpted-accent').count(),6);
     assert.equal(await page.locator('.live-kpi .status-ring').count(),0);
+    await page.locator('#employee-search').hover();
+    assert.equal(await page.locator('.live-kpi[aria-pressed=true]').count(),1);
+    assert.equal(await page.locator('.kpi-all').getAttribute('aria-pressed'),'true');
     const cardStyles=await page.locator('.live-kpi').evaluateAll(nodes=>nodes.map(el=>({height:el.getBoundingClientRect().height,background:getComputedStyle(el).backgroundImage})));
     assert.ok(cardStyles.every(s=>s.height<=67),'Desktop KPI cards remain compact');
     assert.equal(cardStyles[1].background,cardStyles[3].background,'Unselected KPI surfaces use the same neutral glass palette');
@@ -285,6 +288,8 @@ uvicorn.run('app.main:app',host='127.0.0.1',port=int(os.environ['QA_PORT']),log_
       return icon.right<=label.left && label.top<icon.bottom && label.bottom>icon.top;
     }));
     assert.ok(kpiLayout,'Icon on the left; label and count beside it');
+    assert.ok(await page.locator('.kpi-all .kpi-icon').evaluate(el=>getComputedStyle(el).backgroundImage.includes('radial-gradient')),'Icons have softly shaded glass containers');
+    assert.equal(await page.locator('.kpi-all strong').evaluate(el=>getComputedStyle(el).color),'rgb(82, 126, 185)','Default selection retains its colored count');
     const hoverKpi=page.locator('.kpi-missing');
     await hoverKpi.hover();
     await page.waitForFunction(()=>{
@@ -292,7 +297,20 @@ uvicorn.run('app.main:app',host='127.0.0.1',port=int(os.environ['QA_PORT']),log_
       const style=getComputedStyle(el),count=getComputedStyle(el.querySelector('strong'));
       return count.textShadow!=='none' && count.color==='rgb(172, 73, 98)' && new DOMMatrix(style.transform).m42 < -2.5;
     });
+    await hoverKpi.click();
     await page.locator('#employee-search').hover();
+    await page.waitForFunction(()=>{
+      const selected=document.querySelector('.live-kpi[aria-pressed=true]');
+      const previous=document.querySelector('.kpi-all');
+      return selected?.classList.contains('kpi-missing') && previous.getAttribute('aria-pressed')==='false'
+        && getComputedStyle(selected.querySelector('strong')).color==='rgb(172, 73, 98)'
+        && getComputedStyle(previous.querySelector('strong')).color==='rgb(27, 46, 78)'
+        && Math.abs(new DOMMatrix(getComputedStyle(selected).transform).m42)<.1;
+    });
+    assert.equal(await page.locator('.live-kpi[aria-pressed=true]').count(),1);
+    await page.locator('.kpi-all').click();
+    await page.locator('#employee-search').hover();
+    await page.waitForFunction(()=>Math.abs(new DOMMatrix(getComputedStyle(document.querySelector('.kpi-all')).transform).m42)<.1);
     assert.equal(await page.locator('.live-kpi .ring-label').count(),0);
     assert.ok((await page.locator('.kpi-all').getAttribute('aria-label')).includes('employees'));
     assert.equal(await page.locator('.live-kpi-strip').evaluate(el=>getComputedStyle(el).scrollbarWidth),'none');
