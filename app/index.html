@@ -7,7 +7,7 @@
   <title>NCSC | Attendance Records</title>
   <link rel="stylesheet" href="/static/app.css">
   <link rel="stylesheet" href="/static/workspace.css?v=attendance-32">
-  <link rel="stylesheet" href="/static/attendance-detail.css?v=auto-dtr-14">
+  <link rel="stylesheet" href="/static/attendance-detail.css?v=auto-dtr-15">
   <script src="/static/app.js?v=auto-dtr-13" defer></script>
 </head>
 <body>
@@ -97,11 +97,14 @@
           <section id="employee-detail" class="detail-section hidden">
             <div class="panel attendance-sheet">
               <div class="sheet-header">
-                <div class="sheet-identity"><div class="sheet-name-line"><h2 id="detail-name">—</h2><span id="detail-category" class="sheet-category" role="group" aria-label="Employment category">—</span></div></div>
-                <div class="sheet-personnel"><div class="sheet-meta"><span class="metadata-label">Department</span><strong id="detail-department">—</strong></div></div>
-              </div>
-              <div class="sheet-filters">
-                <div class="month-inline"><span class="sr-only" id="detail-month-label">Reporting month</span><input id="detail-month" type="month" hidden tabindex="-1" aria-hidden="true"><button type="button" class="month-trigger" id="detail-month-trigger" data-month-target="detail-month" aria-haspopup="dialog" aria-controls="attendance-month-picker" aria-expanded="false"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="5" width="18" height="16" rx="3"/><path d="M8 3v4m8-4v4M3 10h18"/></svg><span class="month-trigger-value">Select month</span><svg class="month-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><path d="m7 10 5 5 5-5"/></svg></button></div><button id="dtr-form-preview" class="button primary" type="button">DTR preview</button>
+                <div class="sheet-identity">
+                  <div class="sheet-name-line"><h2 id="detail-name">—</h2><span id="detail-category" class="sheet-category" role="group" aria-label="Employment category">—</span></div>
+                  <div class="sheet-filters"><div class="month-inline"><span class="sr-only" id="detail-month-label">Reporting month</span><input id="detail-month" type="month" hidden tabindex="-1" aria-hidden="true"><button type="button" class="month-trigger" id="detail-month-trigger" data-month-target="detail-month" aria-haspopup="dialog" aria-controls="attendance-month-picker" aria-expanded="false"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="5" width="18" height="16" rx="3"/><path d="M8 3v4m8-4v4M3 10h18"/></svg><span class="month-trigger-value">Select month</span><svg class="month-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><path d="m7 10 5 5 5-5"/></svg></button></div></div>
+                </div>
+                <div class="sheet-personnel">
+                  <div class="sheet-meta"><span class="metadata-label">Department</span><strong id="detail-department">—</strong></div>
+                  <button id="dtr-form-preview" class="button primary" type="button">DTR preview</button>
+                </div>
               </div>
               <div class="sheet-toolbar">
                 <div class="attendance-legend" aria-label="Attendance colors"><span class="legend-missing">No entry / incomplete</span><span class="legend-entry">Entry</span><span class="legend-holiday">Holiday</span><span class="legend-aja">AJA</span><span class="legend-travel">Travel Order</span></div>
