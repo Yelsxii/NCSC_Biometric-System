@@ -160,7 +160,7 @@ uvicorn.run('app.main:app',host='127.0.0.1',port=int(os.environ['QA_PORT']),log_
     });
     assert.ok(glassPane.base.includes('radial-gradient'));
     assert.ok(glassPane.glass.includes('linear-gradient'));
-    assert.ok(glassPane.filter.includes('blur(18px)'));
+    assert.ok(glassPane.filter.includes('blur(5px)'));
     const reflection=await page.locator('.sidebar').evaluate(el=>{
       const sheen=getComputedStyle(el,'::after');
       return {image:sheen.backgroundImage,pointerEvents:sheen.pointerEvents};
@@ -183,9 +183,9 @@ uvicorn.run('app.main:app',host='127.0.0.1',port=int(os.environ['QA_PORT']),log_
       const style=getComputedStyle(el);
       return {background:style.backgroundColor,gradient:style.backgroundImage,blur:style.backdropFilter};
     });
-    assert.equal(lightGlass.background,'rgba(255, 255, 255, 0.788)');
+    assert.equal(lightGlass.background,'rgba(255, 255, 255, 0.702)');
     assert.ok(lightGlass.gradient.includes('linear-gradient'));
-    assert.ok(lightGlass.blur.includes('blur(12px)'));
+    assert.ok(lightGlass.blur.includes('blur(4px)'));
     const pairedFrame=await page.locator('.content-shell').evaluate(el=>{
       const rect=el.getBoundingClientRect(),style=getComputedStyle(el);
       const sidebar=document.querySelector('.sidebar'),rail=sidebar.getBoundingClientRect();
@@ -202,7 +202,7 @@ uvicorn.run('app.main:app',host='127.0.0.1',port=int(os.environ['QA_PORT']),log_
     assert.ok(Math.abs(pairedFrame.topInset)<=1 && Math.abs(pairedFrame.bottomInset)<=1,'Both glass frames align inside their shared shell');
     assert.ok(pairedFrame.outerTop>=5 && pairedFrame.outerLeft>=5 && pairedFrame.outerBottom>=5 && pairedFrame.rightInset>=5,'Visible outer glass surrounds both panels');
     assert.ok(pairedFrame.gutter>=5 && pairedFrame.outerRadius>pairedFrame.railRadius && pairedFrame.radius==='11px','Rounded panels are separated by a smooth glass gutter');
-    assert.ok(pairedFrame.blur.includes('blur(18px)') && pairedFrame.gradient.includes('radial-gradient'));
+    assert.ok(pairedFrame.blur.includes('blur(6px)') && pairedFrame.gradient.includes('radial-gradient'));
     assert.ok(pairedFrame.headerInside,'Topbar belongs inside the right glass frame');
     assert.equal(railLayout.labelDisplay,'none');
     assert.equal(await page.locator('.sidebar .nav-icon').first().evaluate(el=>getComputedStyle(el).width),'24px');
