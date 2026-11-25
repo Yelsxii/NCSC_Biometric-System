@@ -430,14 +430,18 @@ async function loadDetail({quiet=false}={}){
       const metrics=day.monitoring||{total_seconds:day.daily_total_seconds,undertime_seconds:day.review.undertime_minutes===null?null:day.review.undertime_minutes*60,overtime_seconds:null,remarks:'For review'};
       const ut=metrics.undertime_seconds;
       const status=metrics.remarks;
-      const visibleStatus=day.display_remark || (day.travel_order?(['Source difference','Future entry'].includes(status)?'Review':'Travel Order'):(status==='Source difference'?'Review':status));
+      const calendarLabel=day.calendar.holiday_name||(day.is_weekend?(day.day==='Sat'?'Saturday':'Sunday'):'');
+      // Empty display_remark is intentional for unworked weekends and holidays.
+      const visibleStatus=day.travel_order
+        ? (day.display_remark||(['Source difference','Future entry'].includes(status)?'Review':'Travel Order'))
+        : (day.display_remark??(!day.has_attendance_entries&&calendarLabel?'':status==='Source difference'?'Review':status));
       const unassigned=day.display_unassigned_count??day.unassigned_count;
       const assignedIds=new Set(Object.values(day.display_slots||{}).filter(Boolean).map(x=>x.id));
       const rawHint=day.scans.filter(x=>!assignedIds.has(x.id)&&!['AJA','Travel Order','Fieldwork','Official Business'].includes(x.activity_type)).map(x=>x.happened_at.slice(11,19)+(x.k14_punch_type!=null?' · State '+x.k14_punch_type:'')).join(' | ');
       const detail=[status,day.calendar.holiday_name,day.is_weekend?(day.day==='Sat'?'Saturday':'Sunday'):'',metrics.aja_review?'AJA evidence incomplete':'',day.review.remark,unassigned?'Unassigned punches: '+(rawHint||unassigned):''].filter(Boolean).join(' · ');
       const kind=visibleStatus==='Complete'?'complete':visibleStatus==='Undertime'?'undertime':visibleStatus==='Overtime'?'overtime':visibleStatus==='Travel Order'?'travel':visibleStatus==='AJA'?'aja':['Review','Incomplete','Future entry','For review'].includes(visibleStatus)?'conflict':visibleStatus==='No entry'?'missing':!day.has_attendance_entries&&day.calendar.holiday_name?'holiday':['Saturday','Sunday','Weekend'].includes(visibleStatus)?'weekend':'pending';
       return '<tr class="day-row day-'+esc(day.tone)+'" data-date="'+esc(day.date)+'">'+
-        '<td class="dtr-date"><strong>'+esc(day.date.slice(8))+'</strong><span>'+esc(day.day)+'</span></td>'+
+        '<td class="dtr-date'+(day.is_weekend&&!day.calendar.holiday_name?' calendar-weekend':'')+'"'+(calendarLabel?' title="'+esc(calendarLabel)+'"':'')+'><strong>'+esc(day.date.slice(8))+'</strong><span>'+esc(day.day)+'</span></td>'+
         attendanceTimeCells(day)+
         '<td class="daily-total-value" title="'+esc(metrics.metrics_origin==='manual_sheet'?'Manual DTR calculated result':'Elapsed AM + PM time; '+(metrics.total_seconds??'unknown')+' seconds')+'">'+durationText(metrics.total_seconds)+'</td>'+
         '<td class="undertime-value" title="'+(ut==null?'For review':'Available DTR undertime')+'">'+(ut==null?'—':Math.floor(ut/3600))+'</td>'+

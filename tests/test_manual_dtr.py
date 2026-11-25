@@ -524,5 +524,6 @@ def test_worked_holiday_and_weekend_use_attendance_result_in_remarks(admin):
     assert days[1]['calendar']['holiday_name']=="All Souls' Day"
     assert days[1]['display_remark']=='Complete'
     assert days[6]['is_weekend'] and days[6]['display_remark']=='Overtime'
-    assert days[0]['display_remark']=="All Saints' Day"
-    assert days[7]['display_remark']=='Sunday'
+    assert days[0]['calendar']['holiday_name']=="All Saints' Day"
+    assert days[0]['display_remark']==''
+    assert days[7]['is_weekend'] and days[7]['display_remark']==''

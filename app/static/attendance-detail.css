@@ -286,6 +286,11 @@
 .workspace .attendance-sheet .remark-aja{background:#f6e4bc;color:#84590f}
 .workspace .attendance-sheet .remark-missing{background:#f6d4df;color:#97334e}
 .workspace .attendance-sheet .remark-weekend{background:#dfe5ef;color:#53647d}
+/* Keep the calendar indication in the date cell, even on worked weekends.
+   Travel and AJA keep their existing date accents. */
+.workspace .attendance-sheet .dtr-grid tbody tr:not(.day-travel):not(.day-aja) .dtr-date.calendar-weekend{
+  background:#eef2f7;box-shadow:inset 3px 0 #aab9cd;
+}
 .workspace .attendance-sheet .remark-pending{background:#e0e7f0;color:#4b5f7a}
 .workspace .attendance-sheet .dtr-grid .travel-status{overflow-wrap:anywhere}
 .workspace .attendance-sheet .sheet-toolbar{padding:12px 0 13px}

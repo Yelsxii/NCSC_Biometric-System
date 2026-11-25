@@ -182,10 +182,10 @@ def present_day(day):
                 "Incomplete entries":"Incomplete"}.get(status,status)
         if text in ("Holiday","Weekend","No entry","Upcoming"):
             text = "Review"
-    elif day["calendar"]["holiday_name"]:
-        text = day["calendar"]["holiday_name"]
-    elif day["is_weekend"]:
-        text = "Saturday" if day["day"]=="Sat" else "Sunday"
+    elif day["calendar"]["holiday_name"] or day["is_weekend"]:
+        # Off-days without attendance have no attendance result to report.
+        # Their calendar designation remains available on the date column.
+        text = ""
     elif day["is_future"]:
         text = "Upcoming"
     else:
