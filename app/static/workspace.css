@@ -249,7 +249,7 @@
 .workspace .sidebar .nav-item.active{
   color:#203b66;background-color:var(--rail-active);
   border-color:transparent;
-  box-shadow:0 0 0 1px #4d91ff80,0 0 7px 2px #4c89ffb3,0 0 18px 3px #3470eb80,0 3px 8px #06152d2e;font-weight:650;
+  box-shadow:0 0 0 1px #4d91ff70,0 0 4px 1px #4c89ff80,0 0 8px #3470eb40,0 2px 5px #06152d20;font-weight:650;
 }
 .workspace .sidebar .nav-item::before{
   content:"";position:absolute;inset:0;border-radius:inherit;z-index:-1;pointer-events:none;
@@ -287,7 +287,7 @@
 }
 .workspace .sidebar .nav-item.active:is(:hover,:focus-visible){
   color:#17365e;background-color:#fff;border-color:transparent;
-  box-shadow:0 0 0 1px #4d91ff80,0 0 7px 2px #4c89ffb3,0 0 18px 3px #3470eb80,0 3px 8px #06152d2e;
+  box-shadow:0 0 0 1px #4d91ff70,0 0 4px 1px #4c89ff80,0 0 8px #3470eb40,0 2px 5px #06152d20;
 }
 .workspace .sidebar .nav-item.active:is(:hover,:focus-visible) .nav-icon{
   color:#235ba9;
