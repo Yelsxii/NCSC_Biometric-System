@@ -276,7 +276,7 @@ uvicorn.run('app.main:app',host='127.0.0.1',port=int(os.environ['QA_PORT']),log_
     assert.equal(await page.locator('#register-count').textContent(),'1 employee');
     assert.equal(await page.locator('.live-kpi').count(),6);
     assert.equal(await page.locator('.live-kpi .sculpted-accent').count(),6);
-    assert.equal(await page.locator('.live-kpi .status-ring').count(),6);
+    assert.equal(await page.locator('.live-kpi .status-ring').count(),0);
     const cardStyles=await page.locator('.live-kpi').evaluateAll(nodes=>nodes.map(el=>({height:el.getBoundingClientRect().height,background:getComputedStyle(el).backgroundImage})));
     assert.ok(cardStyles.every(s=>s.height<=67),'Desktop KPI cards remain compact');
     assert.equal(cardStyles[1].background,cardStyles[3].background,'Unselected KPI surfaces use the same neutral glass palette');
@@ -293,7 +293,8 @@ uvicorn.run('app.main:app',host='127.0.0.1',port=int(os.environ['QA_PORT']),log_
       return count.textShadow!=='none' && count.color==='rgb(172, 73, 98)' && new DOMMatrix(style.transform).m42 < -2.5;
     });
     await page.locator('#employee-search').hover();
-    assert.equal(await page.locator('.kpi-all .ring-label').textContent(),'100%');
+    assert.equal(await page.locator('.live-kpi .ring-label').count(),0);
+    assert.ok((await page.locator('.kpi-all').getAttribute('aria-label')).includes('employees'));
     assert.equal(await page.locator('.live-kpi-strip').evaluate(el=>getComputedStyle(el).scrollbarWidth),'none');
     assert.equal(await page.locator('#live-as-of').count(),0);
     assert.equal(await page.locator('[data-live-count="all"]').textContent(),'1');

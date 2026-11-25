@@ -183,10 +183,7 @@ function renderRegister(){
     document.querySelectorAll('.live-kpi').forEach(button=>{
       const total=lastEmployeeRows.length;
       const count=lastEmployeeRows.filter(row=>liveMatches(row,button.dataset.liveFilter)).length;
-      const pct=total?Math.round(100*count/total):0;
-      button.querySelector('.ring-progress').setAttribute('stroke-dasharray',pct+' '+(100-pct));
-      button.querySelector('.ring-label').textContent=pct+'%';
-      button.setAttribute('aria-label',button.querySelector('small').textContent+': '+count+' of '+total+' employees ('+pct+'%)');
+      button.setAttribute('aria-label',button.querySelector('small').textContent+': '+count+' of '+total+' employees');
     });
     
     const total=rows.length;
