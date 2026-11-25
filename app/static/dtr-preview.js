@@ -74,13 +74,22 @@ function buildDtrDocument(data,category,period,paperKey,version){
   const legend=hasAja||hasApproved?'<p class="print-evidence">* HR-approved adjustment · † documented AJA time · ? requires review</p>':'';
   return '<!doctype html><html lang="en"><head><meta charset="utf-8"><title>DTR - '+esc(data.display_name||'')+' - '+esc(data.month)+'</title><link rel="stylesheet" href="/static/dtr-preview.css?v=1"><style>@page{size:'+paper.width+' '+paper.height+';margin:6mm} :root{--paper-width:'+paper.width+';--paper-height:'+paper.height+';--content-width:'+(paper.w-12)+'mm;--content-height:'+(paper.h-12)+'mm}</style></head><body class="print-document" data-preview-version="'+version+'"><main class="print-content"><div class="'+(category==='GIP'?'gip-page':'civil-page')+'">'+body+'</div>'+legend+'</main></body></html>';
 }
+function freshDtrFrame(){
+  // Replacing the browsing context avoids accumulating iframe history entries
+  // when a user changes category, period, or paper size.
+  const frame=document.createElement('iframe');
+  frame.id='dtr-preview-frame';frame.title='Printable daily time record';frame.hidden=true;
+  frame.addEventListener('load',()=>finishDtrFrame(frame));
+  $('dtr-preview-frame').replaceWith(frame);
+  return frame;
+}
 function renderDtrPreview(){
-  const frame=$('dtr-preview-frame'),category=$('dtr-preview-template').value,period=$('dtr-preview-period').value,paperKey=$('dtr-preview-paper').value;
+  const frame=freshDtrFrame(),category=$('dtr-preview-template').value,period=$('dtr-preview-period').value,paperKey=$('dtr-preview-paper').value;
   const paper=dtrPaper[paperKey]||dtrPaper.a4;
   const version=++dtrPreviewVersion;
   $('dtr-preview-print').disabled=true;
   $('dtr-preview-period-control').hidden=category!=='GIP';
-  if(!dtrPreviewData||!dtrSignatory[category]){
+  if(!dtrPreviewData||!Object.hasOwn(dtrSignatory,category)){
     frame.hidden=true;frame.removeAttribute('srcdoc');
     $('dtr-preview-note').textContent='Select the verified employee category to choose the correct form.';
     return;
@@ -95,7 +104,7 @@ function openDtrFormPreview(push=true){
   const dialog=$('dtr-preview-dialog');
   if(dialog.open)return;
   dtrPreviewData=data;
-  const category=dtrSignatory[data.employment_type]?data.employment_type:'';
+  const category=Object.hasOwn(dtrSignatory,data.employment_type)?data.employment_type:'';
   $('dtr-preview-template').value=category;
   $('dtr-preview-period').value='first';
   $('dtr-preview-context').textContent=(data.display_name||'Employee')+' · '+dtrDateLabel(data.month,1).replace(/ 1,/,',');
@@ -109,11 +118,11 @@ function closeDtrPreview(){
   else $('dtr-preview-dialog').close();
 }
 function initDtrPreview(){
-  const dialog=$('dtr-preview-dialog'),frame=$('dtr-preview-frame');
+  const dialog=$('dtr-preview-dialog');
   $('dtr-preview-back').addEventListener('click',closeDtrPreview);
   dialog.addEventListener('cancel',e=>{e.preventDefault();closeDtrPreview();});
   dialog.addEventListener('close',()=>{
-    dtrPreviewData=null;dtrPreviewVersion++;frame.removeAttribute('srcdoc');frame.hidden=true;
+    dtrPreviewData=null;dtrPreviewVersion++;freshDtrFrame();
     $('dtr-preview-print').disabled=true;
     if(history.state?.ncscDtrPreview)history.replaceState(null,'','#employees');
   });
@@ -125,19 +134,20 @@ function initDtrPreview(){
     }
   });
   for(const id of ['dtr-preview-template','dtr-preview-period','dtr-preview-paper'])$(id).addEventListener('change',renderDtrPreview);
-  frame.addEventListener('load',()=>{
-    const doc=frame.contentDocument;
-    if(!dialog.open||!doc?.body||doc.body.dataset.previewVersion!==String(dtrPreviewVersion))return;
-    // Fit the document including AJA subrows, not the interface, within one
-    // physical sheet. No source entries are removed to fit the page.
-    const content=doc.querySelector('.print-content');
-    const paper=dtrPaper[$('dtr-preview-paper').value]||dtrPaper.a4;
-    const height=(paper.h-12)*96/25.4;
-    const scale=Math.min(1,height/(content.getBoundingClientRect().height||1));
-    if(scale<1)content.style.zoom=String(scale*.995);
-    $('dtr-preview-print').disabled=false;
-  });
   $('dtr-preview-print').addEventListener('click',()=>{
+    const frame=$('dtr-preview-frame');
     if(!$('dtr-preview-print').disabled&&dialog.open){frame.contentWindow.focus();frame.contentWindow.print();}
   });
+}
+function finishDtrFrame(frame){
+  const doc=frame.contentDocument;
+  if(frame!==$('dtr-preview-frame')||!$('dtr-preview-dialog').open||!doc?.body||doc.body.dataset.previewVersion!==String(dtrPreviewVersion))return;
+  // Fit the document including AJA subrows, not the interface, within one
+  // physical sheet. No source entries are removed to fit the page.
+  const content=doc.querySelector('.print-content');
+  const paper=dtrPaper[$('dtr-preview-paper').value]||dtrPaper.a4;
+  const height=(paper.h-12)*96/25.4;
+  const scale=Math.min(1,height/(content.getBoundingClientRect().height||1));
+  if(scale<1)content.style.zoom=String(scale*.995);
+  $('dtr-preview-print').disabled=false;
 }

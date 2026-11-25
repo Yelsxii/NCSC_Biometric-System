@@ -721,6 +721,10 @@ with connect() as con:
     await page.locator('#dtr-preview-template').selectOption('GIP');
     await printable.locator('.gip-form').waitFor();
     assert.equal(await printable.locator('.civil-copy').count(),0);
+    await page.locator('#dtr-preview-paper').selectOption('folio');
+    await page.locator('#dtr-preview-print:not(:disabled)').waitFor();
+    await page.locator('#dtr-preview-period').selectOption('second');
+    await page.locator('#dtr-preview-print:not(:disabled)').waitFor();
     await page.locator('#dtr-preview-back').click();
     await page.locator('#dtr-preview-dialog').waitFor({state:'hidden'});
     assert.equal(await page.locator('#detail-month').inputValue(),originalMonth);
