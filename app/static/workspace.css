@@ -599,13 +599,14 @@
   /* A tinted, low-opacity edge keeps the glass rim without a white outline. */
   border:1px solid #c5d6e97a;border-radius:19px;
   box-shadow:inset 0 1px 0 #ffffff40,inset 0 0 0 1px #a7bfdc24,0 3px 14px #223e701a;
-  /* Keep the underlying tint even across the width so transparent
-     inner panes do not inherit a dark-left/light-right color shift. */
-  background-color:#cbd9ec;
+  /* Muted steel-blue glass with softly layered reflections, inspired by
+     the navy rail. Keep the top edge even and concentrate depth below it. */
+  background-color:#becde2;
   background-image:
-    radial-gradient(ellipse at 50% 0%,#e2ebf640,transparent 70%),
-    radial-gradient(ellipse at 50% 100%,#a9c1e126,transparent 65%),
-    linear-gradient(180deg,#c8d7eb 0%,#d3dfef 48%,#c7d6ea 100%);
+    radial-gradient(ellipse 85% 38% at 50% 0%,#f0f5ff45,transparent 80%),
+    radial-gradient(ellipse 75% 52% at 0% 85%,#8da6ca35,transparent 78%),
+    radial-gradient(ellipse 75% 55% at 100% 92%,#94add034,transparent 78%),
+    linear-gradient(180deg,#c9d6e8 0%,#c4d2e5 36%,#b6c8e0 100%);
 }
 .workspace .sidebar{
   height:100%;border-radius:13px;
@@ -617,22 +618,22 @@
   min-width:0;min-height:0;height:100%;
   margin:0;
   border:1px solid #c5d6e97a;border-radius:14px;
-  background-color:#e8f0fa40;
+  background-color:#e8eff85c;
   background-image:
-    linear-gradient(180deg,#ffffff38 0%,#ffffff0d 18%,transparent 45%),
-    radial-gradient(ellipse at 50% 0%,#e5efff20,transparent 65%),
-    radial-gradient(ellipse at 50% 100%,#c1d5f326,transparent 60%),
-    linear-gradient(180deg,#ffffff12,transparent 52%,#ffffff20);
+    linear-gradient(180deg,#ffffff40 0%,#ffffff18 20%,transparent 50%),
+    radial-gradient(ellipse at 50% 0%,#f0f5ff26,transparent 65%),
+    radial-gradient(ellipse at 50% 100%,#91afd21c,transparent 65%),
+    linear-gradient(180deg,#ffffff12,transparent 52%,#ffffff18);
   box-shadow:0 5px 18px #263e691c,inset 0 1px 0 #ffffff40,
     inset 0 0 0 1px #b3cae824,inset -1px -1px 0 #ffffff30;
   -webkit-backdrop-filter:blur(6px) saturate(120%);
   backdrop-filter:blur(6px) saturate(120%);
 }
 .workspace .content-shell .topbar{
-  /* Uniform glass tint across the header; a restrained vertical sheen
-     replaces the broad diagonal gradient without flattening the glass. */
-  background-color:#e3ecf8df;
-  background-image:linear-gradient(180deg,#ffffff24 0%,#ffffff08 32%,transparent 65%,#b8cce513 100%);
+  /* An opaque, even tint isolates title and clock from the outer gradient.
+     The existing rim and inset highlight retain the glass character. */
+  background-color:#e4ecf7;
+  background-image:none;
   border-bottom:1px solid #b9cde342;
   box-shadow:inset 0 1px 0 #ffffff30,0 2px 8px #223e7006;
 }

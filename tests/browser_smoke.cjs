@@ -214,6 +214,14 @@ uvicorn.run('app.main:app',host='127.0.0.1',port=int(os.environ['QA_PORT']),log_
     assert.ok(pairedFrame.gutter>=5 && pairedFrame.outerRadius>pairedFrame.railRadius && pairedFrame.radius==='11px','Rounded panels are separated by a smooth glass gutter');
     assert.ok(pairedFrame.blur.includes('blur(6px)') && pairedFrame.gradient.includes('radial-gradient'));
     assert.ok(pairedFrame.headerInside,'Topbar belongs inside the right glass frame');
+    const glassTints=await page.evaluate(()=>{
+      const outer=getComputedStyle(document.querySelector('#workspace'));
+      const header=getComputedStyle(document.querySelector('.topbar'));
+      return {outer:outer.backgroundImage,header:header.backgroundImage,tint:header.backgroundColor};
+    });
+    assert.ok(glassTints.outer.includes('radial-gradient') && glassTints.outer.includes('linear-gradient'),'Outer shell retains layered glass reflections');
+    assert.equal(glassTints.header,'none','Topbar must not inherit a visible gradient');
+    assert.equal(glassTints.tint,'rgb(228, 236, 247)','Topbar tint stays even and opaque');
     assert.equal(railLayout.labelDisplay,'none');
     assert.equal(await page.locator('.sidebar .nav-icon').first().evaluate(el=>getComputedStyle(el).width),'24px');
     assert.equal(await page.locator('#logout-sidebar svg').evaluate(el=>getComputedStyle(el).width),'24px');
