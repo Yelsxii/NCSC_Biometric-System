@@ -366,3 +366,102 @@
   .workspace .sidebar .nav-item[data-page="activities"]:is(:hover,:focus-visible) .nav-icon,
   .workspace .sidebar .nav-item:is(:hover,:focus-visible):active .nav-icon{transform:none}
 }
+
+
+/* Attendance register: plain names, balanced columns, a raised action rail. */
+.workspace #attendance-register-panel .attendance-directory{
+  width:100%;min-width:650px;table-layout:fixed;
+}
+.workspace #attendance-register-panel .directory-name{width:38%}
+.workspace #attendance-register-panel .directory-category{width:19%}
+.workspace #attendance-register-panel .directory-department{width:23%}
+.workspace #attendance-register-panel .directory-action{width:20%}
+.workspace #attendance-register-panel .attendance-directory th{
+  width:auto;text-align:left;color:#536b91;background:#eaf0fa;font-size:11px;
+}
+.workspace #attendance-register-panel .attendance-directory td{overflow-wrap:anywhere}
+.workspace #attendance-register-panel .employee-name-cell strong{
+  font-size:12px;color:#263b60;font-weight:600;line-height:1.4;
+}
+.workspace #attendance-register-panel .attendance-directory .actions-column{
+  position:sticky;right:0;z-index:4;text-align:center;
+  box-shadow:-3px 0 8px #263b6014;
+}
+.workspace #attendance-register-panel .directory-action-cell{
+  position:sticky;right:0;z-index:2;text-align:center;background:#fff;
+  box-shadow:-3px 0 8px #263b601c;padding:6px 8px;
+}
+.workspace #attendance-register-panel .directory-action-cell .row-action{
+  display:inline-flex;align-items:center;justify-content:center;gap:5px;
+  height:30px;min-height:30px;padding:0 9px;border:0;
+  background:#244b9a;color:#fff;font-size:10.5px;font-weight:650;
+  text-decoration:none!important;border-radius:6px;box-shadow:0 2px 5px #244b9a26;
+  transition:transform .18s ease,background .18s ease,box-shadow .18s ease;
+}
+.workspace #attendance-register-panel .directory-action-cell .row-action svg{width:13px;height:13px;flex:none}
+.workspace #attendance-register-panel .directory-action-cell .row-action:hover,
+.workspace #attendance-register-panel .directory-action-cell .row-action:focus-visible{
+  background:#17356e;color:#fff;text-decoration:none!important;
+  transform:translateY(-1px);box-shadow:0 4px 10px #244b9a40;
+}
+.workspace #attendance-register-panel .directory-action-cell .row-action:active{transform:translateY(0)}
+.workspace #attendance-register-panel .table-wrap{scrollbar-width:thin;scrollbar-color:#b8c6dd transparent}
+.workspace #attendance-register-panel .table-wrap::-webkit-scrollbar{display:block;width:6px;height:6px}
+.workspace #attendance-register-panel .table-wrap::-webkit-scrollbar-thumb{background:#b8c6dd;border-radius:999px}
+.workspace #attendance-register-panel #employee-filter{flex-wrap:wrap}
+.workspace #attendance-register-panel #employee-filter .button.primary{background:#244b9a;border-color:#244b9a}
+.workspace #attendance-register-panel #employee-filter .button.primary:hover{background:#17356e}
+.workspace .register-month-control{display:flex;flex-direction:column;gap:6px;flex:0 0 auto}
+.workspace .month-trigger{
+  display:inline-flex;align-items:center;gap:8px;justify-content:flex-start;
+  min-width:160px;height:34px;min-height:34px;padding:0 10px;
+  border:1px solid #e1e8f5;border-radius:8px;background:#f0f4fc;
+  color:#203b67;font-size:11px;font-weight:650;white-space:nowrap;
+  transition:background .18s,border-color .18s,box-shadow .18s;
+}
+.workspace .month-trigger:hover,.workspace .month-trigger[aria-expanded=true]{
+  background:#e6eefc;border-color:#a7bce1;box-shadow:0 2px 7px #244b9a12;
+}
+.workspace .month-trigger svg{width:15px;height:15px;flex:none;color:#536e9e}
+.workspace .month-trigger .month-chevron{width:12px;margin-left:auto}
+.workspace .month-trigger:focus-visible{outline:2px solid #6d92cd;outline-offset:2px}
+.workspace .attendance-month-picker{
+  position:fixed;inset:auto;margin:0;width:min(270px,calc(100vw - 16px));
+  max-height:calc(100dvh - 16px);overflow:auto;
+  box-sizing:border-box;padding:12px;border:1px solid #e2e9f4;
+  border-radius:13px;background:#fff;color:#203b67;
+  box-shadow:0 12px 35px #14284e30;outline:0;
+}
+.workspace .attendance-month-picker::backdrop{background:transparent}
+.workspace .month-picker-heading,.workspace .month-picker-year,.workspace .month-picker-footer{
+  display:flex;align-items:center;justify-content:space-between;gap:8px;
+}
+.workspace .month-picker-heading{font-size:11px;font-weight:650;color:#72829d}
+.workspace .month-picker-heading button,.workspace .month-picker-year button{
+  display:grid;place-items:center;width:29px;height:29px;border:0;border-radius:7px;
+  background:#f0f4fc;color:#244b9a;font-size:19px;line-height:1;
+}
+.workspace .month-picker-year{margin:10px 0;color:#203b67}
+.workspace .month-picker-year strong{font-size:16px;font-weight:700}
+.workspace .month-picker-year button:disabled{opacity:.35}
+.workspace .month-picker-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:6px}
+.workspace .month-picker-grid button{
+  position:relative;height:34px;border:1px solid transparent;border-radius:7px;
+  background:#f6f8fc;color:#536b91;font-size:12px;font-weight:550;
+  transition:background .15s,color .15s,box-shadow .15s;
+}
+.workspace .month-picker-grid button:hover{background:#e7effc;color:#244b9a}
+.workspace .month-picker-grid button[aria-pressed=true]{background:#244b9a;color:#fff;box-shadow:0 2px 5px #244b9a28}
+.workspace .month-picker-grid button.is-current::after{content:"";position:absolute;bottom:3px;left:calc(50% - 2px);width:4px;height:4px;border-radius:50%;background:#ed6477}
+.workspace .attendance-month-picker button:focus-visible{outline:2px solid #7499d0;outline-offset:1px}
+.workspace .month-picker-footer{border-top:1px solid #edf1f7;margin-top:10px;padding-top:9px;justify-content:flex-end}
+.workspace .month-picker-footer button{background:#eaf0fa;color:#244b9a;border:0;border-radius:7px;padding:7px 11px;font-size:11px;font-weight:650}
+@media(max-width:740px){
+  .workspace #attendance-register-panel #employee-filter .search-box{flex:1 1 100%;min-width:0}
+  .workspace #attendance-register-panel #employee-filter .search-box>input{min-width:0}
+}
+@media(prefers-reduced-motion:reduce){
+  .workspace #attendance-register-panel .directory-action-cell .row-action,
+  .workspace .month-trigger,.workspace .month-picker-grid button{transition:none}
+  .workspace #attendance-register-panel .directory-action-cell .row-action:is(:hover,:active,:focus-visible){transform:none}
+}

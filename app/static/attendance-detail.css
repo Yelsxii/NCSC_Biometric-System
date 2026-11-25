@@ -391,3 +391,11 @@
   .workspace .attendance-sheet .sheet-filters{padding:9px 0}
   .workspace .attendance-sheet .sheet-toolbar{padding:9px 0}
 }
+
+/* Match the custom reporting month trigger to the existing DTR back button. */
+.workspace .attendance-sheet .sheet-filters #detail-month-trigger{
+  width:150px;min-width:150px;height:var(--detail-back-size);
+  min-height:var(--detail-back-size);background:#e9effd;color:#18386f;
+  padding:0 9px;font-size:10.5px;gap:6px;
+}
+.workspace .attendance-sheet .sheet-filters #detail-month-trigger:hover{background:#dbe6fc}

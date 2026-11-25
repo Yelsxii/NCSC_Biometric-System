@@ -188,6 +188,12 @@ uvicorn.run('app.main:app',host='127.0.0.1',port=int(os.environ['QA_PORT']),log_
     assert.equal(await page.locator('thead').first().getByText('Last scan').count(),0);
     assert.equal(await page.locator('thead').first().getByText('Scans this month').count(),0);
     assert.equal(await page.locator('#add-staff').count(),0);
+    assert.equal(await page.locator('#register-from-attendance').count(),0);
+    assert.equal(await page.locator('#register-rows .name-avatar').count(),0);
+    assert.equal(await page.locator('#register-rows [data-edit-profile]').count(),0);
+    await page.locator('#register-rows .directory-action-cell .row-action').first().waitFor();
+    assert.equal(await page.locator('#register-rows .row-action').first().evaluate(el=>getComputedStyle(el).textDecorationLine),'none');
+    assert.notEqual(await page.locator('#register-rows .directory-action-cell').first().evaluate(el=>getComputedStyle(el).boxShadow),'none');
     // USB recovery is a modal next to View records, not an embedded form.
     await page.locator('#open-attendance-import').click();
     await page.locator('#attendance-import-dialog[open]').waitFor();
@@ -351,12 +357,25 @@ with connect() as con:
     });
     assert.equal(dailySeed,200);
     await page.locator('[data-page="employees"]').click();
-    await page.locator('#register-month').fill('2026-11');
+    await page.locator('#register-month-trigger').click();
+    await page.locator('#attendance-month-picker[open]').waitFor();
+    await page.locator('#month-year-value').waitFor();
+    const pickerYear=Number(await page.locator('#month-year-value').textContent());
+    for(let y=pickerYear;y>2026;y--)await page.locator('#month-year-prev').click();
+    for(let y=pickerYear;y<2026;y++)await page.locator('#month-year-next').click();
+    await page.locator('[data-month-value="2026-11"]').click();
+    assert.equal(await page.locator('#register-month').inputValue(),'2026-11');
+    assert.match(await page.locator('#register-month-trigger').textContent(),/November 2026/);
     await page.locator('#employee-filter button[type="submit"]').click();
     await page.locator('#register-rows').getByText('Sample One').waitFor();
     await page.locator('[data-employee="1"]').last().click();
     await page.locator('#employee-detail:not(.hidden)').waitFor();
     await page.locator('#detail-name').filter({hasText:'Sample One'}).waitFor();
+    await page.locator('#detail-month-trigger').click();
+    await page.locator('#attendance-month-picker[open]').waitFor();
+    assert.equal(await page.locator('[data-month-value="2026-11"]').getAttribute('aria-pressed'),'true');
+    await page.keyboard.press('Escape');
+    await page.locator('#attendance-month-picker:not([open])').waitFor();
     await page.locator('#daily-rows .slot-travel .travel-status').first().waitFor();
     assert.ok((await page.locator('#daily-rows').textContent()).includes('Travel Order'));
     assert.equal(await page.locator('#daily-table-wrap colgroup col').count(),13);
@@ -451,7 +470,7 @@ with connect() as con:
     assert.equal(await page.locator('[data-date="2026-11-10"] .monitor-remark').textContent(),'Undertime');
     const headerAlignment=await page.evaluate(()=>{
       const name=document.querySelector('#detail-name').getBoundingClientRect();
-      const month=document.querySelector('#detail-month').getBoundingClientRect();
+      const month=document.querySelector('#detail-month-trigger').getBoundingClientRect();
       const back=document.querySelector('#back-to-register').getBoundingClientRect();
       const category=document.querySelector('#detail-category').getBoundingClientRect();
       return {nameLeft:name.left,monthLeft:month.left,backLeft:back.left,backRight:back.right,
@@ -516,7 +535,7 @@ with connect() as con:
     });
     assert.ok(rail.remarkRight<=rail.actionLeft+2,'Remarks must be readable when scrolled to the right');
     assert.ok(rail.actionRight<=rail.wrapRight+2,'Action rail must remain in the table');
-    assert.ok((await page.locator('#detail-month').boundingBox()).width>=150,'Mobile reporting month must fit its full label');
+    assert.ok((await page.locator('#detail-month-trigger').boundingBox()).width>=150,'Mobile reporting month must fit its full label');
     await page.screenshot({path:join(root,'docs/mobile-attendance-preview.png'),animations:'disabled'});
     await day.locator('[data-edit-day]').click();
     const dayPopup=await page.locator('#day-review-dialog').boundingBox();

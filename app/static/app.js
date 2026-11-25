@@ -89,9 +89,8 @@ function showApp(){
   $('open-attendance-import').disabled=!canWrite;
   $('open-user-import').disabled=!canWrite;
   $('open-profile').disabled=!canWrite;
-  $('register-from-attendance').disabled=!canWrite;
-  $('register-month').value=currentMonth();
-  $('detail-month').value=currentMonth();
+  setAttendanceMonth('register-month',currentMonth());
+  setAttendanceMonth('detail-month',currentMonth());
   $('activity-month').value=currentMonth();
   navigate('employees');
 }
@@ -155,11 +154,10 @@ function renderRegister(){
     $('register-prev').disabled=registerPage===1;$('register-next').disabled=registerPage===pages;
     $('register-rows').innerHTML=rows.length?rows.map(row=>
       '<tr>'+
-      '<td class="employee-name-cell">'+employeeCell(row)+'</td>'+
+      '<td class="employee-name-cell"><strong>'+esc(row.display_name||'Name not synchronized')+'</strong></td>'+
       '<td>'+categoryBadge(row.employment_type)+'</td>'+
       '<td>'+esc(row.department||'—')+'</td>'+
-      '<td><div class="row-buttons"><button type="button" class="button outline row-action" data-employee="'+esc(row.employee_code)+'">View attendance</button>'+
-      (session?.role==='admin'?'<button type="button" class="icon-button" data-edit-profile="'+esc(row.employee_code)+'" aria-label="Edit employee profile" title="Edit employee profile">'+editIcon()+'</button>':'')+'</div></td>'+
+      '<td class="directory-action-cell"><button type="button" class="button primary row-action" data-employee="'+esc(row.employee_code)+'" aria-label="View attendance: '+esc(row.display_name||row.employee_code)+'"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M2 12s4-7 10-7 10 7 10 7-4 7-10 7S2 12 2 12Z"/><circle cx="12" cy="12" r="3"/></svg>View attendance</button></td>'+
       '</tr>'
     ).join(''):'<tr><td colspan="4" class="table-empty">No employees found.</td></tr>';
 }
@@ -172,7 +170,7 @@ async function openEmployee(code){
   $('detail-name').textContent=selectedName;
   $('detail-department').textContent=selectedDepartment||'—';
   $('detail-category').innerHTML=categoryBadge(row?.employment_type);
-  $('detail-month').value=$('register-month').value;
+  setAttendanceMonth('detail-month',$('register-month').value);
   $('employee-detail').classList.remove('hidden');
   $('attendance-register-panel').classList.add('hidden');
   await loadDetail();
@@ -265,7 +263,7 @@ async function saveProfile(event){
     if(profileReturn?.page==='employees'){
       const previous=profileReturn;
       await loadRegister();
-      if(previous.employee){await openEmployee(previous.employee);$('detail-month').value=previous.month;await loadDetail();}
+      if(previous.employee){await openEmployee(previous.employee);setAttendanceMonth('detail-month',previous.month);await loadDetail();}
     }else await navigate('profiles');
   }catch(error){
     if(session===account){$('profile-error').textContent=error.message;$('profile-error').classList.remove('hidden');}
@@ -609,7 +607,7 @@ async function loadActivities(){
 }
 async function viewActivityEmployee(code){
   $('employee-search').value=code;
-  $('register-month').value=$('activity-month').value||currentMonth();
+  setAttendanceMonth('register-month',$('activity-month').value||currentMonth());
   await navigate('employees');
   await openEmployee(code);
 }
@@ -805,7 +803,69 @@ async function saveCode(event){
     if(selectedEmployee && currentPage==='employees')void loadDetail({quiet:true});
   }catch(error){toast(error.message,true);}
 }
+const attendanceMonthNames=Array.from({length:12},(_,i)=>new Intl.DateTimeFormat('en-US',{month:'short',timeZone:'UTC'}).format(new Date(Date.UTC(2020,i,1))));
+const attendanceMonthFull=new Intl.DateTimeFormat('en-US',{month:'long',year:'numeric',timeZone:'UTC'});
+function setAttendanceMonth(id,value){
+  const input=$(id);
+  input.value=value;
+  const selected=input.value||currentMonth();
+  const [year,month]=selected.split('-').map(Number);
+  const text=attendanceMonthFull.format(new Date(Date.UTC(year,month-1,1)));
+  const trigger=$(id+'-trigger');
+  trigger.querySelector('.month-trigger-value').textContent=text;
+  trigger.setAttribute('aria-label','Reporting month: '+text);
+}
+function initializeAttendanceMonthPicker(){
+  const dialog=$('attendance-month-picker'),grid=$('month-picker-grid');
+  let target=null,year=0,anchor=null;
+  function render(){
+    $('month-year-value').textContent=String(year);
+    $('month-year-prev').disabled=year<=1900;
+    $('month-year-next').disabled=year>=2100;
+    const current=currentMonth(),selected=$(target).value;
+    grid.replaceChildren(...attendanceMonthNames.map((name,index)=>{
+      const value=String(year)+'-'+String(index+1).padStart(2,'0');
+      const b=document.createElement('button');b.type='button';b.textContent=name;
+      b.dataset.monthValue=value;b.setAttribute('aria-pressed',String(value===selected));
+      b.setAttribute('aria-label',attendanceMonthFull.format(new Date(Date.UTC(year,index,1))));
+      if(value===current)b.classList.add('is-current');
+      return b;
+    }));
+  }
+  function position(){
+    if(!anchor||!dialog.open)return;
+    const rect=anchor.getBoundingClientRect(),width=dialog.offsetWidth,height=dialog.offsetHeight;
+    const left=Math.max(8,Math.min(rect.left,innerWidth-width-8));
+    const top=rect.bottom+height+16<=innerHeight?rect.bottom+8:Math.max(8,rect.top-height-8);
+    dialog.style.left=left+'px';dialog.style.top=top+'px';
+  }
+  function choose(value){
+    if(!target)return;
+    const id=target,previous=$(id).value;
+    setAttendanceMonth(id,value);dialog.close();
+    if($(id).value!==previous)$(id).dispatchEvent(new Event('change',{bubbles:true}));
+  }
+  document.querySelectorAll('[data-month-target]').forEach(b=>b.addEventListener('click',()=>{
+    target=b.dataset.monthTarget;anchor=b;year=Number(($(target).value||currentMonth()).slice(0,4));
+    render();anchor.setAttribute('aria-expanded','true');dialog.showModal();position();
+    (grid.querySelector('[aria-pressed="true"]')||grid.firstElementChild)?.focus();
+  }));
+  grid.addEventListener('click',e=>{const b=e.target.closest('[data-month-value]');if(b)choose(b.dataset.monthValue);});
+  grid.addEventListener('keydown',e=>{
+    const buttons=[...grid.querySelectorAll('button')],i=buttons.indexOf(document.activeElement);
+    const delta={ArrowLeft:-1,ArrowRight:1,ArrowUp:-3,ArrowDown:3}[e.key];
+    if(i>=0&&delta!==undefined){e.preventDefault();buttons[(i+delta+12)%12].focus();}
+  });
+  $('month-year-prev').addEventListener('click',()=>{if(year>1900){year--;render();}});
+  $('month-year-next').addEventListener('click',()=>{if(year<2100){year++;render();}});
+  $('month-picker-current').addEventListener('click',()=>choose(currentMonth()));
+  $('month-picker-close').addEventListener('click',()=>dialog.close());
+  dialog.addEventListener('click',e=>{if(e.target===dialog){const rect=dialog.getBoundingClientRect();if(e.clientX<rect.left||e.clientX>rect.right||e.clientY<rect.top||e.clientY>rect.bottom)dialog.close();}});
+  dialog.addEventListener('close',()=>{if(anchor){anchor.setAttribute('aria-expanded','false');if(anchor.getClientRects().length)anchor.focus();}target=null;anchor=null;});
+  window.addEventListener('resize',position);
+}
 async function initialize(){
+  initializeAttendanceMonthPicker();
   document.addEventListener('visibilitychange',()=>{
     if(document.hidden){
       stopDeviceRefresh();
@@ -862,7 +922,6 @@ async function initialize(){
   $('register-prev').addEventListener('click',()=>{registerPage--;renderRegister();});
   $('register-next').addEventListener('click',()=>{registerPage++;renderRegister();});
   $('open-profile').addEventListener('click',()=>openProfile());
-  $('register-from-attendance').addEventListener('click',()=>openProfile());
   $('close-profile').addEventListener('click',()=>$('profile-dialog').close());
   $('cancel-profile').addEventListener('click',()=>$('profile-dialog').close());
   $('profile-dialog').addEventListener('close',()=>profileFormToken++);
@@ -877,7 +936,6 @@ async function initialize(){
     const button=event.target.closest('[data-edit-profile]');if(button)openProfile(button.dataset.editProfile);
   });
   $('register-rows').addEventListener('click',e=>{
-    const edit=e.target.closest('[data-edit-profile]');if(edit){openProfile(edit.dataset.editProfile);return;}
     const row=e.target.closest('[data-employee]');if(row)openEmployee(row.dataset.employee);
   });
   $('register-rows').addEventListener('keydown',e=>{
@@ -889,7 +947,7 @@ async function initialize(){
     $('attendance-register-panel').classList.remove('hidden');
   });
   $('dtr-form-preview').addEventListener('click',openDtrFormPreview);
-  $('detail-month').addEventListener('change',()=>{$('register-month').value=$('detail-month').value;loadDetail();});
+  $('detail-month').addEventListener('change',()=>{setAttendanceMonth('register-month',$('detail-month').value);loadDetail();});
   $('daily-rows').addEventListener('click',event=>{
     const button=event.target.closest('[data-edit-day]');if(button)openDayReview(button.dataset.editDay);
   });
