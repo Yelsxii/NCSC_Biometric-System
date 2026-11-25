@@ -392,6 +392,11 @@ with connect() as con:
     const narrowPicker=await page.locator('#attendance-month-picker').boundingBox();
     assert.ok(narrowPicker.width<=217 && narrowPicker.height<=220,'Narrow month picker should also be compact');
     assert.equal(await page.locator('#month-picker-grid').evaluate(el=>getComputedStyle(el).gridTemplateColumns.split(' ').length),4);
+    const currentAccent=await page.locator('#month-picker-grid .is-current').evaluateAll(nodes=>nodes.map(el=>{
+      const accent=getComputedStyle(el,'::after');
+      return {width:accent.width,height:accent.height};
+    }));
+    assert.ok(currentAccent.every(accent=>accent.width==='14px'&&accent.height==='2px'),'Current month uses a compact coral light strip');
     await page.setViewportSize({width:1440,height:900});
     await page.locator('#month-year-value').waitFor();
     const pickerYear=Number(await page.locator('#month-year-value').textContent());
