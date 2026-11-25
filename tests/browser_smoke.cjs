@@ -201,7 +201,16 @@ uvicorn.run('app.main:app',host='127.0.0.1',port=int(os.environ['QA_PORT']),log_
     const narrowAction=await actionCell.boundingBox();
     assert.ok(narrowAction.width>=125 && narrowAction.width<=160,'Narrow action rail retains its proportional layout');
     await page.setViewportSize({width:1440,height:900});
-    // USB recovery is a modal next to View records, not an embedded form.
+    assert.equal(await page.locator('#attendance-register-panel .panel-header').count(),0);
+    assert.equal(await page.locator('#employee-filter button[type="submit"]').count(),0);
+    await page.locator('#employee-search').fill('zzzz-no-match');
+    await page.locator('#register-rows').getByText('No employees found.').waitFor();
+    await page.locator('#employee-search').fill('s');
+    await page.locator('#register-rows .row-action').first().waitFor();
+    await page.locator('#clear-employee-search').click();
+    assert.equal(await page.locator('#employee-search').inputValue(),'');
+    await page.locator('#register-rows .row-action').first().waitFor();
+    // USB recovery remains a separate modal.
     await page.locator('#open-attendance-import').click();
     await page.locator('#attendance-import-dialog[open]').waitFor();
     await page.screenshot({path:join(root,'docs/import-modal-preview.png'),animations:'disabled'});
@@ -379,7 +388,7 @@ with connect() as con:
     await page.locator('[data-month-value="2026-11"]').click();
     assert.equal(await page.locator('#register-month').inputValue(),'2026-11');
     assert.match(await page.locator('#register-month-trigger').textContent(),/November 2026/);
-    await page.locator('#employee-filter button[type="submit"]').click();
+    await page.locator('#register-rows .row-action').first().waitFor();
     await page.locator('#register-rows').getByText('Sample One').waitFor();
     await page.locator('[data-employee="1"]').last().click();
     await page.locator('#employee-detail:not(.hidden)').waitFor();

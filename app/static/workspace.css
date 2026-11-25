@@ -491,3 +491,70 @@
   .workspace .month-trigger,.workspace .month-picker-grid button{transition:none}
   .workspace #attendance-register-panel .directory-action-cell .row-action:is(:hover,:active,:focus-visible){transform:none}
 }
+
+
+/* Live attendance filter toolbar: no extra heading or submit action. */
+.workspace #attendance-register-panel #employee-filter{
+  gap:12px;align-items:flex-end;margin:0 0 16px;flex-wrap:wrap;
+}
+.workspace #attendance-register-panel .search-box{
+  display:flex;flex-direction:column;gap:6px;flex:1 1 240px;min-width:160px;
+}
+.workspace #attendance-register-panel #employee-filter label{
+  font-size:11px;font-weight:550;color:#657997;
+}
+.workspace #attendance-register-panel .employee-search-field{
+  position:relative;display:flex;align-items:center;min-width:0;
+}
+.workspace #attendance-register-panel .employee-search-field .search-icon{
+  position:absolute;left:12px;width:17px;height:17px;color:#6f86ae;pointer-events:none;
+}
+.workspace #attendance-register-panel #employee-search{
+  width:100%;min-width:0;height:38px;min-height:38px;
+  padding:0 36px 0 37px;background:#f6f8fc;border:1px solid #e0e7f3;
+  border-radius:9px;color:#203b67;font-size:12px;
+  transition:border-color .18s,background .18s,box-shadow .18s;
+}
+.workspace #attendance-register-panel #employee-search::-webkit-search-cancel-button{-webkit-appearance:none}
+.workspace #attendance-register-panel #employee-search:hover{border-color:#c5d2e8;background:#fff}
+.workspace #attendance-register-panel #employee-search:focus{
+  border-color:#7295ce;background:#fff;box-shadow:0 0 0 3px #244b9a12;
+}
+.workspace #clear-employee-search{
+  position:absolute;right:7px;width:25px;height:25px;padding:5px;border:0;border-radius:6px;
+  background:transparent;color:#6f86ae;display:grid;place-items:center;
+}
+.workspace #clear-employee-search[hidden]{display:none}
+.workspace #clear-employee-search svg{width:15px;height:15px}
+.workspace #clear-employee-search:hover{background:#e7eefb;color:#244b9a}
+.workspace #clear-employee-search:focus-visible{outline:2px solid #7295ce}
+.workspace #attendance-register-panel #register-month-trigger{height:38px;min-height:38px}
+.workspace #attendance-register-panel #open-attendance-import{
+  height:38px;min-height:38px;display:inline-flex;align-items:center;justify-content:center;
+  gap:8px;padding:0 13px;border-radius:9px;border:1px solid #cbd9ef;
+  color:#244b9a;background:#f1f5fc;font-weight:650;font-size:11px;
+  text-decoration:none;box-shadow:0 2px 4px #244b9a0b;
+  transition:background .18s,color .18s,border-color .18s,box-shadow .18s,transform .18s;
+}
+.workspace #attendance-register-panel #open-attendance-import .inline-icon{
+  width:16px;height:16px;transition:transform .18s ease;
+}
+.workspace #attendance-register-panel #open-attendance-import:not(:disabled):is(:hover,:focus-visible){
+  background:#244b9a;color:white;border-color:#244b9a;
+  box-shadow:0 4px 10px #244b9a35;transform:translateY(-1px);text-decoration:none;
+}
+.workspace #attendance-register-panel #open-attendance-import:not(:disabled):is(:hover,:focus-visible) .inline-icon{transform:translateY(-2px)}
+@media(max-width:740px){
+  .workspace #attendance-register-panel #employee-filter{gap:9px;margin-bottom:12px}
+  .workspace #attendance-register-panel #employee-filter .search-box{flex:1 1 100%;min-width:0}
+  .workspace #attendance-register-panel .register-month-control{flex:1 1 150px;min-width:0}
+  .workspace #attendance-register-panel #register-month-trigger{width:100%;min-width:0}
+  .workspace #attendance-register-panel #open-attendance-import{flex:0 0 auto}
+}
+@media(prefers-reduced-motion:reduce){
+  .workspace #attendance-register-panel #employee-search,
+  .workspace #attendance-register-panel #open-attendance-import,
+  .workspace #attendance-register-panel #open-attendance-import .inline-icon{transition:none}
+  .workspace #attendance-register-panel #open-attendance-import:not(:disabled):is(:hover,:focus-visible),
+  .workspace #attendance-register-panel #open-attendance-import:not(:disabled):is(:hover,:focus-visible) .inline-icon{transform:none}
+}

@@ -18,6 +18,7 @@ let usbPreviewOkay = false;
 let connectorReadPending = false;
 const EMPLOYEE_PAGE_SIZE = 15;
 let registerPage = 1;
+let registerSearchTimer = null;
 let profilePage = 1;
 let profileCategory = 'All';
 let profileRequest = 0;
@@ -96,6 +97,7 @@ function showApp(){
 }
 function navigate(page){
   if (!session || !titles[page]) return;
+  cancelRegisterSearch();
   stopDeviceRefresh();
   stopAttendanceRefresh();
   currentPage=page;
@@ -119,18 +121,27 @@ function navigate(page){
   if (page==='activities') return loadActivities();
   if (page==='staff') {startDeviceRefresh();return loadDevice();}
 }
+function cancelRegisterSearch(){clearTimeout(registerSearchTimer);registerSearchTimer=null;requestSerial++;}
+function updateRegisterSearchControl(){$('clear-employee-search').hidden=!$('employee-search').value;}
+function applyRegisterFilters({debounce=false}={}){
+  cancelRegisterSearch();updateRegisterSearchControl();registerPage=1;
+  if(!session||currentPage!=='employees'||selectedEmployee)return;
+  if(debounce){registerSearchTimer=setTimeout(()=>{registerSearchTimer=null;if(session&&currentPage==='employees'&&!selectedEmployee)void loadRegister({quiet:true});},120);}
+  else void loadRegister();
+}
 async function loadRegister({quiet=false}={}){
+  updateRegisterSearchControl();
   const serial=++requestSerial;
   const month=$('register-month').value||currentMonth();
   const q=$('employee-search').value.trim();
   if(!quiet)$('register-rows').innerHTML='<tr><td colspan="4" class="table-empty">Loading employees…</td></tr>';
   try {
     const result=await api('/api/employee-register?'+new URLSearchParams({month,q}));
-    if (serial!==requestSerial||currentPage!=='employees') return;
+    if (serial!==requestSerial||currentPage!=='employees'||!session||selectedEmployee||q!==$('employee-search').value.trim()||month!==($('register-month').value||currentMonth())) return;
     lastEmployeeRows=result.items;
     renderRegister();
   }catch(error){
-    if(serial!==requestSerial || currentPage!=='employees' || !session)return;
+    if(serial!==requestSerial || currentPage!=='employees' || !session || selectedEmployee)return;
     if(!quiet){$('register-rows').innerHTML='<tr><td colspan="4" class="table-empty">Unable to load employee attendance.</td></tr>';toast(error.message,true);}
   }
 }
@@ -163,6 +174,7 @@ function renderRegister(){
 }
 async function openEmployee(code){
   if (!code) return;
+  cancelRegisterSearch();
   selectedEmployee=code;
   const row=lastEmployeeRows.find(x=>x.employee_code===code);
   selectedName=row?.display_name||'Name not synchronized';
@@ -916,9 +928,10 @@ async function initialize(){
   $('logout-sidebar').addEventListener('click',signOut);
   document.querySelectorAll('[data-page],[data-go]').forEach(node=>
     node.addEventListener('click',()=>navigate(node.dataset.page||node.dataset.go)));
-  $('employee-filter').addEventListener('submit',e=>{
-    e.preventDefault();registerPage=1;$('employee-detail').classList.add('hidden');selectedEmployee=null;activeDtr=null;loadRegister();
-  });
+  $('employee-filter').addEventListener('submit',e=>{e.preventDefault();applyRegisterFilters();});
+  $('employee-search').addEventListener('input',()=>applyRegisterFilters({debounce:true}));
+  $('clear-employee-search').addEventListener('click',()=>{$('employee-search').value='';applyRegisterFilters();$('employee-search').focus();});
+  $('register-month').addEventListener('change',()=>applyRegisterFilters());
   $('register-prev').addEventListener('click',()=>{registerPage--;renderRegister();});
   $('register-next').addEventListener('click',()=>{registerPage++;renderRegister();});
   $('open-profile').addEventListener('click',()=>openProfile());
@@ -945,6 +958,7 @@ async function initialize(){
   $('back-to-register').addEventListener('click',()=>{
     $('employee-detail').classList.add('hidden');selectedEmployee=null;activeDtr=null;detailRequest++;
     $('attendance-register-panel').classList.remove('hidden');
+    void loadRegister({quiet:true});
   });
   $('dtr-form-preview').addEventListener('click',openDtrFormPreview);
   $('detail-month').addEventListener('change',()=>{setAttendanceMonth('register-month',$('detail-month').value);loadDetail();});
