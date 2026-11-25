@@ -3,7 +3,7 @@
 .workspace,.workspace *,.app-dialog,.app-dialog *{scrollbar-width:none;-ms-overflow-style:none}
 .workspace::-webkit-scrollbar,.workspace *::-webkit-scrollbar,.app-dialog::-webkit-scrollbar,.app-dialog *::-webkit-scrollbar{display:none;width:0;height:0}
 .workspace{height:100dvh;min-height:0;overflow:hidden;background:#f5f6fb}
-.workspace .sidebar{width:206px;min-width:206px;height:100%;position:relative;border-color:var(--app-line);padding:0 12px;background:#fff}
+.workspace .sidebar{width:232px;min-width:232px;height:100%;position:relative;border-color:var(--app-line);padding:0 12px;background:#fff}
 .workspace .brand{padding:25px 9px 22px;gap:10px;border-bottom:1px solid var(--app-line);position:relative}
 .workspace .brand::after{content:"";position:absolute;bottom:-1px;left:10px;width:30px;height:2px;background:#df485e;border-radius:2px}
 .workspace .brand img{width:38px;height:38px}.workspace .brand strong{font-size:19px;letter-spacing:-.045em;color:#233b7a}.workspace .brand span{font-size:8px;letter-spacing:.1em;margin-top:2px;color:#8c96ab}
@@ -195,7 +195,7 @@
    a responsive icon rail, and a single Manila clock. Login is unaffected. */
 .workspace .sidebar{
   --rail-bg:#14284e;--rail-hover:#203963;--rail-active:#0b1d39;--rail-inset:12px;
-  width:206px;min-width:206px;height:100%;flex:0 0 206px;
+  width:232px;min-width:232px;height:100%;flex:0 0 232px;
   display:flex;flex-direction:column;position:relative;z-index:15;
   background-color:var(--rail-bg);
   background-image:

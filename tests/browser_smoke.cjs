@@ -112,6 +112,7 @@ uvicorn.run('app.main:app',host='127.0.0.1',port=int(os.environ['QA_PORT']),log_
     const navTypography=await page.locator('.sidebar .nav-item > span').first().evaluate(el=>({size:getComputedStyle(el).fontSize,casing:getComputedStyle(el).textTransform}));
     assert.equal(navTypography.size,'12px');
     assert.equal(navTypography.casing,'none');
+    assert.equal(await page.locator('.sidebar').evaluate(el=>el.getBoundingClientRect().width),232,'Expanded desktop sidebar provides more room for navigation labels');
     assert.equal(await page.locator('.sidebar .nav-icon').first().evaluate(el=>getComputedStyle(el).width),'22px');
     assert.equal(await page.locator('#logout-sidebar svg').evaluate(el=>getComputedStyle(el).width),'22px');
     assert.equal(await page.locator('#logout-sidebar').evaluate(el=>getComputedStyle(el).textTransform),'none');
