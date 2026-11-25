@@ -375,7 +375,7 @@ with connect() as con:
     await page.locator('#attendance-month-picker[open]').waitFor();
     assert.equal(await page.locator('[data-month-value="2026-11"]').getAttribute('aria-pressed'),'true');
     await page.keyboard.press('Escape');
-    await page.locator('#attendance-month-picker:not([open])').waitFor();
+    await page.locator('#attendance-month-picker').waitFor({state:'hidden'});
     await page.locator('#daily-rows .slot-travel .travel-status').first().waitFor();
     assert.ok((await page.locator('#daily-rows').textContent()).includes('Travel Order'));
     assert.equal(await page.locator('#daily-table-wrap colgroup col').count(),13);
