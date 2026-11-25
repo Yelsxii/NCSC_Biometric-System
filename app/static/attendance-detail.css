@@ -292,6 +292,7 @@
   background:#eef2f7;box-shadow:inset 3px 0 #aab9cd;
 }
 .workspace .attendance-sheet .remark-pending{background:#e0e7f0;color:#4b5f7a}
+.workspace .attendance-sheet .remark-progress{background:#d5e9f8;color:#285c86}
 .workspace .attendance-sheet .dtr-grid .travel-status{overflow-wrap:anywhere}
 .workspace .attendance-sheet .sheet-toolbar{padding:12px 0 13px}
 .app-dialog.day-review-dialog #review-travel-info{background:none;border-radius:0;padding:0;color:#654297;justify-content:flex-start;font-size:11px}

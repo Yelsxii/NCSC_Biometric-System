@@ -437,8 +437,14 @@ async function loadDetail({quiet=false}={}){
       const unassigned=day.display_unassigned_count??day.unassigned_count;
       const assignedIds=new Set(Object.values(day.display_slots||{}).filter(Boolean).map(x=>x.id));
       const rawHint=day.scans.filter(x=>!assignedIds.has(x.id)&&!['AJA','Travel Order','Fieldwork','Official Business'].includes(x.activity_type)).map(x=>x.happened_at.slice(11,19)+(x.k14_punch_type!=null?' · State '+x.k14_punch_type:'')).join(' | ');
-      const detail=[status,day.calendar.holiday_name,day.is_weekend?(day.day==='Sat'?'Saturday':'Sunday'):'',metrics.aja_review?'AJA evidence incomplete':'',day.review.remark,unassigned?'Unassigned punches: '+(rawHint||unassigned):''].filter(Boolean).join(' · ');
-      const kind=['Complete','Present'].includes(visibleStatus)?'complete':visibleStatus==='Undertime'?'undertime':visibleStatus==='Overtime'?'overtime':visibleStatus==='Travel Order'?'travel':visibleStatus==='AJA'?'aja':['Review','Incomplete','Future entry','For review'].includes(visibleStatus)?'conflict':visibleStatus==='No entry'?'missing':!day.has_attendance_entries&&day.calendar.holiday_name?'holiday':['Saturday','Sunday','Weekend'].includes(visibleStatus)?'weekend':'pending';
+      const sourceLabels={am_in:'AM In',am_out:'AM Out',pm_in:'PM In',pm_out:'PM Out'};
+      const differences=(day.source_differences||[]).map(key=>sourceLabels[key]||key);
+      const detail=[status,...(day.remark_issues||[]),
+        (day.missing_entries||[]).length?'Missing: '+day.missing_entries.join(', '):'',
+        differences.length?'Biometric preferred over sheet: '+differences.join(', '):'',
+        day.calendar.holiday_name,day.is_weekend?(day.day==='Sat'?'Saturday':'Sunday'):'',day.review.remark,
+        unassigned?'Unassigned punches: '+(rawHint||unassigned):''].filter(Boolean).join(' · ');
+      const kind=['Complete','Present'].includes(visibleStatus)?'complete':visibleStatus==='Undertime'?'undertime':visibleStatus==='Overtime'?'overtime':visibleStatus==='Travel Order'?'travel':visibleStatus==='AJA'?'aja':visibleStatus==='In progress'?'progress':visibleStatus==='Invalid time sequence'?'missing':visibleStatus==='Incomplete AJA'?'aja':visibleStatus==='Travel Order conflict'?'travel':visibleStatus==='Hours for review'?'pending':(day.remark_issues||[]).length||/^(Missing |Incomplete|Review|Future entry|For review)/.test(visibleStatus)?'conflict':visibleStatus==='No entry'?'missing':!day.has_attendance_entries&&day.calendar.holiday_name?'holiday':['Saturday','Sunday','Weekend'].includes(visibleStatus)?'weekend':'pending';
       return '<tr class="day-row day-'+esc(day.tone)+'" data-date="'+esc(day.date)+'">'+
         '<td class="dtr-date'+(day.is_weekend&&!day.calendar.holiday_name?' calendar-weekend':'')+'"'+(calendarLabel?' title="'+esc(calendarLabel)+'"':'')+'><strong>'+esc(day.date.slice(8))+'</strong><span>'+esc(day.day)+'</span></td>'+
         attendanceTimeCells(day)+

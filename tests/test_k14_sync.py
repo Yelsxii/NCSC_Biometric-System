@@ -458,7 +458,7 @@ def test_all_four_confirmed_office_states_and_unknown_state(admin, monkeypatch, 
     unknown = client.get("/api/dtr/monitor?employee_code=18&month=2026-11").json()["days"][23]
     assert not any(unknown["display_slots"].values())
     assert unknown["display_unassigned_count"] == 1
-    assert unknown["display_remark"] == "Review"
+    assert unknown["display_remark"] in ("Unassigned scan","Review (2 issues)","Work code pending")
 
 
 def test_bionet_code_overlay_uses_exact_match_and_preserves_raw_punches(admin, monkeypatch, tmp_path):
@@ -499,7 +499,7 @@ def test_bionet_code_overlay_uses_exact_match_and_preserves_raw_punches(admin, m
     conflict_day = day()
     assert any(x.get("work_code_conflict") for x in conflict_day["scans"])
     assert "work_code_pending" in conflict_day["source_conflicts"]
-    assert conflict_day["display_remark"] in ("Review","Future entry")
+    assert conflict_day["display_remark"] in ("Work code conflict","Future entry","Review (2 issues)","Review (3 issues)")
 
 
 def test_bionet_attendance_diagnostic_compares_exact_states_without_identifying_staff(admin,monkeypatch,tmp_path):

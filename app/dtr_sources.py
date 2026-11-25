@@ -46,7 +46,7 @@ def resolve_day(day, manual):
         if key not in observed and not day['slots'][key] and event['id'] not in used:
             observed[key]=event
             used.add(event['id'])
-    display, conflicts = {}, []
+    display, conflicts, differences = {}, [], []
     for key in KEYS:
         reviewed = day['slots'][key]
         if reviewed and (reviewed.get('activity_type') in OFFICIAL or reviewed.get('work_code_conflict')):
@@ -60,7 +60,9 @@ def resolve_day(day, manual):
         elif event:
             display[key] = {**event,'origin':'reviewed' if reviewed else 'biometric', 'placement':'reviewed' if reviewed else 'observed'}
             if not reviewed and sheet_times.get(key) and event['happened_at'][11:16]!=sheet_times[key][:5]:
-                conflicts.append(key)
+                # A matched biometric entry wins over a stale sheet value.
+                # Preserve the discrepancy as source evidence, not a blocking conflict.
+                differences.append(key)
         elif sheet_times.get(key):
             display[key] = {'id':None,'happened_at':day['date']+' '+sheet_times[key],'work_code':'',
                 'origin':'manual_sheet','placement':'named_source_column','source_row':manual['row'],'source_sheet':manual['sheet']}
@@ -68,6 +70,7 @@ def resolve_day(day, manual):
             display[key] = None
     day['display_slots'] = display
     day['source_conflicts'] = conflicts
+    day['source_differences'] = differences
     display_ids = {x['id'] for x in display.values() if x and x.get('id')}
     unplaced = len([x for x in ordinary if x['id'] not in display_ids])
     if unplaced and (source or any(x.get('k14_state_pending') for x in ordinary if x['id'] not in display_ids)):
@@ -83,23 +86,29 @@ def resolve_day(day, manual):
     now = dt.datetime.now(dt.timezone(dt.timedelta(hours=8))).strftime('%Y-%m-%d %H:%M:%S')
     future_entry = any(value > now for value in chosen)
     chronological = chosen == sorted(chosen)
-    complete = all(display.values()) and chronological and not future_entry and not code_pending
+    offday = day['is_weekend'] or bool(day['calendar']['holiday_name'])
+    pairs = [('am_in','am_out'),('pm_in','pm_out')]
+    paired = [pair for pair in pairs if all(display[k] for k in pair)]
+    dangling = any(bool(display[a]) != bool(display[b]) for a,b in pairs)
+    # Non-working days need only a valid recorded AM or PM pair, not four entries.
+    # Never infer a lunch break or a full-day duration from unrelated endpoints.
+    complete = bool((all(display.values()) or (offday and paired and not dangling))
+                    and chronological and not future_entry and not code_pending)
     if not chronological:
         conflicts.append('order')
     elapsed = None
     if complete:
-        stamps = {key:dt.datetime.fromisoformat(event['happened_at']) for key,event in display.items()}
-        if stamps['am_in']<stamps['am_out']<=stamps['pm_in']<stamps['pm_out']:
-            elapsed = int(((stamps['am_out']-stamps['am_in'])+(stamps['pm_out']-stamps['pm_in'])).total_seconds())
+        stamps = {key:dt.datetime.fromisoformat(event['happened_at']) for key,event in display.items() if event}
+        if all(stamps[a]<stamps[b] for a,b in paired):
+            elapsed = int(sum((stamps[b]-stamps[a]).total_seconds() for a,b in paired))
         else:
             complete = False
             conflicts.append('order')
-    comparable = bool(complete and source and not conflicts and all(sheet_times.get(k) and display[k]['origin']!='hr_approved' and display[k]['happened_at'][11:16]==sheet_times[k][:5] for k in KEYS))
+    comparable = bool(complete and all(display.values()) and source and not conflicts and not differences and all(sheet_times.get(k) and display[k]['origin']!='hr_approved' and display[k]['happened_at'][11:16]==sheet_times[k][:5] for k in KEYS))
     total = source['reported_total'] if comparable and source['reported_total'] is not None else elapsed
     reviewed_ut = day['review']['undertime_minutes']
     # No required hours on weekends or holidays. Keep source/review evidence intact,
     # but do not charge or display undertime for these calendar days.
-    offday = day['is_weekend'] or bool(day['calendar']['holiday_name'])
     undertime = None if future_entry or offday else reviewed_ut*60 if reviewed_ut is not None else source['reported_ut'] if comparable else None
     overtime = source['reported_ot'] if comparable else None
     remarks = ('Future entry' if future_entry else 'Source difference' if conflicts else
@@ -175,23 +184,64 @@ def present_day(day):
     reviewed_reference = _travel_number(day["review"]["activity_reference"]) if day["review"]["activity_type"]=="Travel Order" else ""
     day["travel_reference"] = reviewed_reference or (references[0] if len(references)==1 else "")
     day["travel_source_references"] = references
-    if day["travel_order"]:
-        text = "Review" if (status in ("Source difference","Future entry") or (len(references)>1 and not reviewed_reference)) else "Travel Order"
-    elif status == "Future entry":
-        text = status
-    elif status == "Source difference" or metrics.get("aja_review"):
-        text = "Review"
+    labels = dict(zip(KEYS, ("AM In", "AM Out", "PM In", "PM Out")))
+    slots = day["display_slots"]
+    offday = day["is_weekend"] or bool(day["calendar"]["holiday_name"])
+    missing = [labels[k] for k in KEYS if not slots[k]]
+    if offday:
+        missing = [labels[k] for a,b in (("am_in","am_out"),("pm_in","pm_out"))
+                   if bool(slots[a]) != bool(slots[b]) for k in (a,b) if not slots[k]]
+    issues = []
+    conflicts = day.get("source_conflicts", [])
+    if "order" in conflicts:
+        issues.append("Invalid time sequence")
+    if "unplaced_biometric" in conflicts or status == "Needs time review":
+        issues.append("Unassigned scan")
+    if "work_code_pending" in conflicts or "reviewed_activity_slot" in conflicts:
+        issues.append("Work code conflict" if any(x.get("work_code_conflict") for x in day["scans"]) or "reviewed_activity_slot" in conflicts else "Work code pending")
+    if "travel_with_regular_entries" in conflicts or (day["travel_order"] and len(references)>1 and not reviewed_reference):
+        issues.append("Travel Order conflict")
+    if metrics.get("aja_review"):
+        issues.append("Incomplete AJA")
+    if status == "Future entry":
+        issues.append("Future entry")
+    if status == "Source difference" and not issues:
+        issues.append("Source conflict")
+    if status == "Needs hour review":
+        issues.append("Hours for review")
+    if status == "Manual DTR note" and has_entries:
+        issues.append("DTR note for review")
+    if not issues and day["travel_order"]:
+        text = "Travel Order"
+    elif issues:
+        text = issues[0] if len(issues)==1 else f"Review ({len(issues)} issues)"
     elif has_entries:
-        text = {"Needs hour review":"Review","Needs time review":"Review","Manual DTR note":"Review",
-                "Incomplete entries":"Incomplete"}.get(status,status)
-        if text in ("Holiday","Weekend","No entry","Upcoming"):
-            text = "Review"
-    elif day["calendar"]["holiday_name"] or day["is_weekend"]:
+        now = dt.datetime.now(dt.timezone(dt.timedelta(hours=8)))
+        ongoing = day["date"] == now.date().isoformat() and now.time() < dt.time(17)
+        if status == "Incomplete entries":
+            if ongoing:
+                text = "In progress"
+            elif len(missing)==1:
+                text = "Missing " + missing[0]
+            elif missing:
+                text = f"Incomplete entries ({len(missing)})"
+            else:
+                text = "Incomplete entries"
+        elif status in ("Holiday","Weekend","No entry","Upcoming"):
+            text = "Unassigned scan"
+            issues.append(text)
+        else:
+            text = status
+    elif offday:
         text = day["calendar"]["holiday_name"] or ("Saturday" if day["day"]=="Sat" else "Sunday")
     elif day["is_future"]:
         text = "Upcoming"
     else:
         notes = source.get("notes", [])
         leave = next((n for n in notes if re.search(r"\b(?:LEAVE|CTO|WORK SUSPENSION)\b",n,re.I)), "")
-        text = leave or ("Review" if status in ("Manual DTR note","AJA","Needs time review") else status)
+        text = leave or ("DTR note for review" if status in ("Manual DTR note","AJA") else status)
+        if text == "DTR note for review":
+            issues.append(text)
+    day["remark_issues"] = issues
+    day["missing_entries"] = missing if has_entries and not day["travel_order"] and status=="Incomplete entries" and text!="In progress" else []
     day["display_remark"] = text

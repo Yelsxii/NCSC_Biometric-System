@@ -179,7 +179,7 @@ def test_source_row_cannot_be_remapped_to_another_employee(admin):
         assert con.execute("SELECT display_name FROM employees WHERE employee_code='002'").fetchone()[0]==''
 
 
-def test_source_disagreement_is_visible_and_calculations_are_withheld(admin):
+def test_biometric_wins_over_sheet_disagreement_without_copying_stale_totals(admin):
     client,headers=admin
     seed_employee()
     client.post('/api/imports',headers=headers,files={'file':('fictional.dat',b'001\t2026-11-06 08:10:07\t1\t9\t1\t0\n001\t2026-11-06 17:00:11\t1\t9\t1\t0\n')})
@@ -187,7 +187,11 @@ def test_source_disagreement_is_visible_and_calculations_are_withheld(admin):
     day=monitor(client)
     assert day['display_slots']['am_in']['happened_at'].endswith('08:10:07')
     assert day['manual_source']['times']['am_in']=='08:00:00'
-    assert day['monitoring']['remarks']=='Source difference'
+    assert day['source_differences']==['am_in']
+    assert day['source_conflicts']==[]
+    assert day['monitoring']['remarks']=='Needs hour review'
+    assert day['display_remark']=='Hours for review'
+    assert day['monitoring']['total_seconds']==28204
     assert day['monitoring']['undertime_seconds'] is None
     assert day['monitoring']['overtime_seconds'] is None
 
@@ -226,6 +230,8 @@ def test_incomplete_and_future_rows_do_not_create_deficit_hours(admin):
     day=monitor(client)
     assert day['monitoring']['total_seconds'] is None
     assert day['monitoring']['remarks']=='Incomplete entries'
+    assert day['display_remark']=='Incomplete entries (3)'
+    assert day['missing_entries']==['AM Out','PM In','PM Out']
 
 
 def test_travel_order_numbers_are_references_and_not_regular_punches(admin):
@@ -266,6 +272,7 @@ def test_unplaced_biometric_events_remain_for_review(admin):
     day=monitor(client)
     assert day['display_unassigned_count']==3
     assert day['monitoring']['remarks']=='Source difference'
+    assert day['display_remark']=='Unassigned scan'
     assert day['monitoring']['overtime_seconds'] is None
 
 
@@ -457,6 +464,7 @@ def test_full_day_travel_order_preserves_mixed_regular_evidence(admin):
     day=monitor(client)
     assert day['travel_periods']==['am','pm']
     assert 'travel_with_regular_entries' in day['source_conflicts']
+    assert day['display_remark']=='Travel Order conflict'
     assert day['monitoring']['undertime_seconds'] is None
     assert day['monitoring']['overtime_seconds'] is None
     assert day['display_slots']['am_in']['happened_at'].endswith('08:00:00')
@@ -544,3 +552,18 @@ def test_short_worked_offdays_do_not_charge_undertime(admin):
         assert day['monitoring']['overtime_seconds']==0
         assert day['display_remark']=='Present'
         assert all(day['display_slots'].values())
+
+
+def test_specific_missing_entry_and_worked_offday_pair(admin):
+    client,headers=admin
+    seed_employee()
+    import_one(client,headers,packet([
+        row('2026-11-06',times=['08:00','12:00','13:00',None],total=None,number=7),
+        row('2026-11-07',times=['08:00','12:00',None,None],total=None,number=8)]))
+    days=client.get('/api/dtr/monitor?employee_code=001&month=2026-11').json()['days']
+    assert days[5]['display_remark']=='Missing PM Out'
+    assert days[5]['missing_entries']==['PM Out']
+    assert days[6]['display_remark']=='Present'
+    assert days[6]['monitoring']['total_seconds']==14400
+    assert days[6]['monitoring']['undertime_seconds'] is None
+    assert days[6]['monitoring']['overtime_seconds'] is None
