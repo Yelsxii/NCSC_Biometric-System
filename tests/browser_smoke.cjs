@@ -275,20 +275,21 @@ uvicorn.run('app.main:app',host='127.0.0.1',port=int(os.environ['QA_PORT']),log_
     assert.equal(await page.locator('#attendance-register-panel .pagination').count(),0);
     assert.equal(await page.locator('#register-count').textContent(),'1 employee');
     assert.equal(await page.locator('.live-kpi').count(),6);
-    assert.equal(await page.locator('.live-kpi .sculpted-accent').count(),6);
+    assert.equal(await page.locator('.live-kpi .sculpted-accent').count(),0);
     assert.equal(await page.locator('.live-kpi .status-ring').count(),0);
     await page.locator('#employee-search').hover();
     assert.equal(await page.locator('.live-kpi[aria-pressed=true]').count(),1);
     assert.equal(await page.locator('.kpi-all').getAttribute('aria-pressed'),'true');
     const cardStyles=await page.locator('.live-kpi').evaluateAll(nodes=>nodes.map(el=>({height:el.getBoundingClientRect().height,background:getComputedStyle(el).backgroundImage})));
     assert.ok(cardStyles.every(s=>s.height<=67),'Desktop KPI cards remain compact');
-    assert.equal(cardStyles[1].background,cardStyles[3].background,'Unselected KPI surfaces use the same neutral glass palette');
+    assert.ok(cardStyles.every(s=>s.background===cardStyles[0].background),'All KPI surfaces stay neutral, including the selected card');
+    assert.equal(await page.locator('.kpi-all').evaluate(el=>getComputedStyle(el).borderTopColor),'rgba(0, 0, 0, 0)');
     const kpiLayout=await page.locator('.live-kpi').evaluateAll(nodes=>nodes.every(el=>{
       const icon=el.querySelector('.kpi-icon').getBoundingClientRect(),label=el.querySelector('.kpi-text').getBoundingClientRect();
       return icon.right<=label.left && label.top<icon.bottom && label.bottom>icon.top;
     }));
     assert.ok(kpiLayout,'Icon on the left; label and count beside it');
-    assert.ok(await page.locator('.kpi-all .kpi-icon').evaluate(el=>getComputedStyle(el).backgroundImage.includes('radial-gradient')),'Icons have softly shaded glass containers');
+    assert.ok(await page.locator('.kpi-all .kpi-icon').evaluate(el=>getComputedStyle(el,'::before').backgroundImage.includes('radial-gradient')),'Icons have softly shaded glass containers');
     assert.equal(await page.locator('.kpi-all strong').evaluate(el=>getComputedStyle(el).color),'rgb(82, 126, 185)','Default selection retains its colored count');
     const hoverKpi=page.locator('.kpi-missing');
     await hoverKpi.hover();

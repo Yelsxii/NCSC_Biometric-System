@@ -704,19 +704,51 @@
 .workspace #attendance-register-panel .live-kpi-strip{display:grid;grid-template-columns:repeat(6,minmax(124px,1fr));gap:9px;padding:7px 4px 8px;overflow-x:auto;overflow-y:hidden;scrollbar-width:none;-ms-overflow-style:none;scroll-snap-type:x proximity;overscroll-behavior-inline:contain}
 .workspace #attendance-register-panel .live-kpi-strip::-webkit-scrollbar{display:none;width:0;height:0}
 /* Thin luminous glass edges rather than a raised, stacked card base. */
-.workspace #attendance-register-panel .live-kpi{--status-color:#527eb9;--kpi:#adc4e4;--accent:#e9f4ff;position:relative;isolation:isolate;overflow:hidden;display:grid;grid-template-columns:36px minmax(0,1fr);align-items:center;gap:8px;min-width:0;height:66px;min-height:66px;text-align:left;padding:7px 10px 7px 8px;border:1px solid #ffffffdc;border-radius:11px;color:#243d65;background:linear-gradient(145deg,#ffffffb8 0%,#f5f9ff80 48%,#e3edf9a6 100%);box-shadow:inset 0 0 0 1px #ffffff46,inset 0 1px 0 #ffffffcf,0 2px 5px #31578b12;scroll-snap-align:start;transform:translateY(0) scale(1);transition:box-shadow .2s,border-color .2s,transform .2s,background .2s}
-.workspace #attendance-register-panel .live-kpi .sculpted-accent{position:absolute;right:0;top:0;width:9px;height:100%;pointer-events:none;z-index:-1;opacity:.24;overflow:visible;transition:opacity .2s}
-.workspace #attendance-register-panel .live-kpi .kpi-icon{display:grid;place-items:center;width:36px;height:36px;border-radius:10px;border:1px solid #ffffffbf;background:radial-gradient(ellipse at 22% 12%,#ffffffdf,transparent 72%),radial-gradient(ellipse at 86% 85%,color-mix(in srgb,var(--status-color) 11%,transparent),transparent 76%),linear-gradient(145deg,#f7fbffb0,#dce8f6a6);box-shadow:inset 0 1px 0 #ffffffc2,inset 0 0 0 1px #ffffff30,0 2px 5px #31578b10;color:#38547d;transition:color .2s,box-shadow .2s,background .2s}
+.workspace #attendance-register-panel .live-kpi{
+  --status-color:#527eb9;
+  position:relative;isolation:isolate;overflow:hidden;display:grid;
+  grid-template-columns:36px minmax(0,1fr);align-items:center;gap:8px;min-width:0;
+  height:66px;min-height:66px;text-align:left;padding:7px 10px 7px 8px;
+  border:1px solid transparent;border-radius:11px;color:#243d65;
+  background:linear-gradient(145deg,#ffffff76,#f9fcff35 54%,#ffffff26);
+  -webkit-backdrop-filter:blur(7px) saturate(112%);backdrop-filter:blur(7px) saturate(112%);
+  box-shadow:inset 0 1px 0 #ffffff8a,inset 0 -1px 0 #ffffff28,0 3px 9px #31578b15;
+  scroll-snap-align:start;transform:translateY(0) scale(1);
+  transition:box-shadow .2s,transform .2s,background .2s
+}
+/* The glass icon tile alone contains colored, softly diffused light. */
+.workspace #attendance-register-panel .live-kpi .kpi-icon{
+  --glass-light:color-mix(in srgb,var(--status-color) 46%,white);
+  position:relative;isolation:isolate;overflow:hidden;display:grid;place-items:center;
+  width:36px;height:36px;border-radius:10px;border:1px solid #ffffff66;
+  background:linear-gradient(145deg,#ffffff58,#f8fbff15);
+  box-shadow:inset 0 1px 0 #ffffffb0,inset 0 -1px 0 #ffffff40,0 3px 7px #31578b16;
+  color:#38547d;transition:color .2s,box-shadow .2s
+}
+.workspace #attendance-register-panel .live-kpi .kpi-icon::before{
+  content:"";position:absolute;inset:-6px;z-index:-2;pointer-events:none;
+  background:radial-gradient(ellipse at 78% 75%,var(--glass-light) 0%,transparent 68%),
+    radial-gradient(ellipse at 17% 15%,#ffffff 0%,transparent 66%),
+    radial-gradient(ellipse at 85% 12%,#b5ccec 0%,transparent 62%);
+  filter:blur(5px);opacity:.58;transition:opacity .2s
+}
+.workspace #attendance-register-panel .live-kpi .kpi-icon::after{
+  content:"";position:absolute;inset:0;z-index:-1;pointer-events:none;border-radius:inherit;
+  background:linear-gradient(145deg,#ffffff60 0%,#ffffff16 55%,#ffffff38);
+  -webkit-backdrop-filter:blur(2px);backdrop-filter:blur(2px)
+}
 .workspace #attendance-register-panel .live-kpi .kpi-icon svg{width:23px;height:23px;stroke-width:1.7;transition:filter .2s}
 .workspace #attendance-register-panel .live-kpi .kpi-text{display:flex;flex-direction:column;align-items:flex-start;justify-content:center;gap:4px;min-width:0}
 .workspace #attendance-register-panel .live-kpi small{font-size:10px;font-weight:600;color:#4e607d;line-height:1.15;white-space:nowrap}
 .workspace #attendance-register-panel .live-kpi strong{font-size:22px;font-weight:700;line-height:1;color:#1b2e4e;letter-spacing:-.025em;font-variant-numeric:tabular-nums;transition:color .2s,text-shadow .2s}
-/* A single persistent selection, distinct from the temporary hover animation. */
-.workspace #attendance-register-panel .live-kpi:is([aria-pressed=true],:hover,:focus-visible){--accent:color-mix(in srgb,var(--status-color) 45%,white);--kpi:color-mix(in srgb,var(--status-color) 82%,white);background:radial-gradient(ellipse 95% 135% at 100% 90%,color-mix(in srgb,var(--status-color) 17%,transparent),transparent 83%),linear-gradient(145deg,#ffffffdf,#edf5ffbb 65%,#e3edf9ce);border-color:color-mix(in srgb,var(--status-color) 35%,white);box-shadow:inset 0 0 0 1px #ffffffa8,inset 0 1px 0 #fff,0 3px 7px #31578b1c}
-.workspace #attendance-register-panel .live-kpi:is([aria-pressed=true],:hover,:focus-visible) .sculpted-accent{opacity:.72}
-.workspace #attendance-register-panel .live-kpi:is([aria-pressed=true],:hover,:focus-visible) .kpi-icon{color:var(--status-color);background:radial-gradient(ellipse at 18% 8%,#fffffff2,transparent 78%),radial-gradient(ellipse at 82% 88%,color-mix(in srgb,var(--status-color) 30%,transparent),transparent 83%),linear-gradient(145deg,#ffffffb8,color-mix(in srgb,var(--status-color) 13%,#e9f2ff));box-shadow:inset 0 1px 0 #ffffffed,inset 0 0 0 1px #ffffff50,0 2px 7px color-mix(in srgb,var(--status-color) 17%,transparent)}
-.workspace #attendance-register-panel .live-kpi:is([aria-pressed=true],:hover,:focus-visible) strong{color:var(--status-color);text-shadow:0 0 6px color-mix(in srgb,var(--status-color) 40%,transparent)}
-.workspace #attendance-register-panel .live-kpi:is(:hover,:focus-visible){z-index:2;box-shadow:inset 0 0 0 1px #ffffffa8,inset 0 1px 0 #fff,0 3px 9px #31578b24;transform:translateY(-3px) scale(1.025)}
+/* The selected card remains neutral: only the icon and count carry status color. */
+.workspace #attendance-register-panel .live-kpi[aria-pressed=true]{box-shadow:inset 0 1px 0 #ffffffcb,inset 0 -1px 0 #ffffff40,0 4px 10px #31578b23}
+.workspace #attendance-register-panel .live-kpi:is([aria-pressed=true],:hover,:focus-visible) .kpi-icon{
+  color:var(--status-color);box-shadow:inset 0 1px 0 #ffffffdf,inset 0 -1px 0 #ffffff55,0 3px 8px color-mix(in srgb,var(--status-color) 22%,transparent)
+}
+.workspace #attendance-register-panel .live-kpi:is([aria-pressed=true],:hover,:focus-visible) .kpi-icon::before{opacity:.96}
+.workspace #attendance-register-panel .live-kpi:is([aria-pressed=true],:hover,:focus-visible) strong{color:var(--status-color);text-shadow:0 0 6px color-mix(in srgb,var(--status-color) 36%,transparent)}
+.workspace #attendance-register-panel .live-kpi:is(:hover,:focus-visible){z-index:2;box-shadow:inset 0 1px 0 #ffffffdd,inset 0 -1px 0 #ffffff50,0 5px 12px #31578b25;transform:translateY(-3px) scale(1.025)}
 .workspace #attendance-register-panel .live-kpi:is(:hover,:focus-visible) .kpi-icon svg{filter:drop-shadow(0 0 3px color-mix(in srgb,var(--status-color) 30%,transparent))}
 .workspace #attendance-register-panel .live-kpi:focus-visible{outline:2px solid #315a96;outline-offset:-3px}
 .workspace #attendance-register-panel .live-kpi.kpi-in{--status-color:#367e67}
