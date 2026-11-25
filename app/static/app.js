@@ -867,6 +867,7 @@ function initializeAttendanceMonthPicker(){
 async function initialize(){
   initializeAttendanceMonthPicker();
   document.addEventListener('visibilitychange',()=>{
+    if(!document.hidden)updateWorkspaceClock();
     if(document.hidden){
       stopDeviceRefresh();
       stopAttendanceRefresh();
@@ -895,7 +896,6 @@ async function initialize(){
   }
   updateWorkspaceClock();
   window.setInterval(updateWorkspaceClock,1000);
-  document.addEventListener('visibilitychange',()=>{if(!document.hidden)updateWorkspaceClock();});
   $('login-form').addEventListener('submit',async event=>{
     event.preventDefault();
     $('login-error').classList.add('hidden');

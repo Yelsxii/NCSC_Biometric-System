@@ -30,11 +30,13 @@ async function app() {
     elements.set(id, {id,textContent:'',innerHTML:'',value:'',disabled:false,
       classList:{add:x=>classes.add(x),remove:x=>classes.delete(x),
         contains:x=>classes.has(x),toggle:(x,on)=>on?classes.add(x):classes.delete(x)},
-      addEventListener(){},setAttribute(){},reset(){},focus(){document.activeElement=this;}});
+      addEventListener(){},setAttribute(){},reset(){},focus(){document.activeElement=this;},
+      querySelector(selector){if(selector==='.month-trigger-value')return this.monthLabel||(this.monthLabel={textContent:''});return null;}});
   }
   const state = {data:statusData(),statusFetch:null,postFetch:null,registerFetch:null,detailFetch:null};
   const context = vm.createContext({document,console,Headers,FormData,AbortController,URLSearchParams,
-    window:{history:{replaceState(){}},location:{reload(){reloads++;}}},
+    window:{history:{replaceState(){}},location:{reload(){reloads++;}},
+      setInterval(){return 1;},addEventListener(){}},
     setTimeout:(fn,delay)=>{timers.set(++nextTimer,{fn,delay});return nextTimer;},
     clearTimeout:id=>timers.delete(id),
     fetch:async(path,options)=>{
