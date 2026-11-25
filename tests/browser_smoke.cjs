@@ -365,7 +365,7 @@ uvicorn.run('app.main:app',host='127.0.0.1',port=int(os.environ['QA_PORT']),log_
     await page.waitForFunction(()=>{
       const el=document.querySelector('.kpi-missing');
       const style=getComputedStyle(el),count=getComputedStyle(el.querySelector('strong'));
-      return count.textShadow==='none' && count.color==='rgb(192, 46, 85)' && new DOMMatrix(style.transform).m42 < -3.5 && new DOMMatrix(style.transform).m11 >= 1.055;
+      return count.textShadow==='none' && count.color==='rgb(192, 46, 85)' && Math.abs(new DOMMatrix(style.transform).m42)<.1 && new DOMMatrix(style.transform).m11 >= 1.055;
     });
     await hoverKpi.click();
     await page.locator('#employee-search').hover();
@@ -375,19 +375,26 @@ uvicorn.run('app.main:app',host='127.0.0.1',port=int(os.environ['QA_PORT']),log_
       return selected?.classList.contains('kpi-missing') && previous.getAttribute('aria-pressed')==='false'
         && getComputedStyle(selected.querySelector('strong')).color==='rgb(192, 46, 85)'
         && getComputedStyle(previous.querySelector('strong')).color==='rgb(27, 46, 78)'
-        && new DOMMatrix(getComputedStyle(selected).transform).m42 < -3.5
+        && Math.abs(new DOMMatrix(getComputedStyle(selected).transform).m42)<.1
         && new DOMMatrix(getComputedStyle(selected).transform).m11 >= 1.055
         && Math.abs(new DOMMatrix(getComputedStyle(previous).transform).m42)<.1
         && Math.abs(new DOMMatrix(getComputedStyle(previous).transform).m11-1)<.01
         && getComputedStyle(selected.querySelector('strong')).textShadow==='none';
     });
     assert.equal(await page.locator('.live-kpi[aria-pressed=true]').count(),1);
+    const centeredZoom=await page.evaluate(()=>{
+      const selected=document.querySelector('.kpi-missing').getBoundingClientRect();
+      const normal=document.querySelector('.kpi-all').getBoundingClientRect();
+      const top=normal.top-selected.top,bottom=selected.bottom-normal.bottom;
+      return {top,bottom};
+    });
+    assert.ok(centeredZoom.top>1 && centeredZoom.bottom>1 && Math.abs(centeredZoom.top-centeredZoom.bottom)<.2,'Selected KPI expands equally above and below the unselected cards');
     await page.locator('.kpi-all').click();
     await page.locator('#employee-search').hover();
     await page.waitForFunction(()=>{
       const all=new DOMMatrix(getComputedStyle(document.querySelector('.kpi-all')).transform);
       const old=new DOMMatrix(getComputedStyle(document.querySelector('.kpi-missing')).transform);
-      return all.m42 < -3.5 && all.m11>=1.055 && Math.abs(old.m42)<.1 && Math.abs(old.m11-1)<.01;
+      return Math.abs(all.m42)<.1 && all.m11>=1.055 && Math.abs(old.m42)<.1 && Math.abs(old.m11-1)<.01;
     });
     assert.equal(await page.locator('.live-kpi .ring-label').count(),0);
     assert.ok((await page.locator('.kpi-all').getAttribute('aria-label')).includes('employees'));
