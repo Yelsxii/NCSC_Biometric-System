@@ -143,7 +143,7 @@ uvicorn.run('app.main:app',host='127.0.0.1',port=int(os.environ['QA_PORT']),log_
     assert.ok(compactChrome.activeShadow.includes('76, 137, 255') && compactChrome.activeShadow.includes('52, 112, 235'),'Selected item has a narrow blue outer halo');
     assert.ok(compactChrome.activeShadow.includes('0px 0px 4px 1px') && compactChrome.activeShadow.includes('0px 0px 8px 0px'),'Blue glow stays close to the selected edge');
     assert.ok(compactChrome.glow.includes('drop-shadow'),'Selected icon has a subtle blue glow');
-    assert.equal(compactChrome.iconColor,'rgb(56, 107, 177)');
+    assert.equal(compactChrome.iconColor,'rgb(36, 104, 213)');
     assert.equal(compactChrome.activeBackground,'rgb(244, 247, 252)');
     assert.equal(compactChrome.iconStroke,'2px');
     assert.ok(Math.abs(compactChrome.timeLeft-compactChrome.dateLeft)<=1,'Time aligns with left edge of calendar row');
@@ -247,7 +247,7 @@ uvicorn.run('app.main:app',host='127.0.0.1',port=int(os.environ['QA_PORT']),log_
     await page.waitForFunction(()=>{
       const el=document.querySelector('[data-page="employees"]');
       const s=getComputedStyle(el),icon=getComputedStyle(el.querySelector('.nav-icon'));
-      return s.backgroundColor==='rgb(255, 255, 255)' && s.color==='rgb(23, 54, 94)' && icon.color==='rgb(35, 91, 169)';
+      return s.backgroundColor==='rgb(255, 255, 255)' && s.color==='rgb(23, 54, 94)' && icon.color==='rgb(29, 110, 229)';
     });
     const hoverEdges=await selectedNav.evaluate(el=>{
       const s=getComputedStyle(el);

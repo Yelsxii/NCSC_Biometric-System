@@ -285,14 +285,14 @@
   transform:translateY(-1px) rotate(7deg) scale(1.10);
 }
 .workspace .sidebar .nav-item.active .nav-icon{
-  color:#386bb1;stroke-width:2;filter:drop-shadow(0 0 3px #79adff65);
+  color:#2468d5;stroke-width:2;filter:drop-shadow(0 0 3px #79adff65);
 }
 .workspace .sidebar .nav-item.active:is(:hover,:focus-visible){
   color:#17365e;background-color:#fff;border-color:transparent;
   box-shadow:var(--nav-active-glow);
 }
 .workspace .sidebar .nav-item.active:is(:hover,:focus-visible) .nav-icon{
-  color:#235ba9;
+  color:#1d6ee5;
   filter:drop-shadow(0 0 3px #79adff65);
 }
 .workspace .sidebar .nav-item:is(:hover,:focus-visible):active .nav-icon{
