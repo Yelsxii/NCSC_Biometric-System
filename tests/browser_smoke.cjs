@@ -322,8 +322,9 @@ uvicorn.run('app.main:app',host='127.0.0.1',port=int(os.environ['QA_PORT']),log_
     assert.equal(await page.locator('.kpi-all strong').evaluate(el=>getComputedStyle(el).textShadow),'none');
     const directions=await page.locator('.kpi-in .kpi-icon svg, .kpi-out .kpi-icon svg').evaluateAll(nodes=>nodes.map(el=>Array.from(el.querySelectorAll('path'),p=>p.getAttribute('d'))));
     assert.equal(directions.length,2);
-    assert.equal(directions[0][0],directions[1][0],'Sign-in and sign-out share the same doorway');
-    assert.equal(directions[0][2],'m11 7 5 5-5 5','Inward arrow points toward the door');
+    assert.equal(directions[0][0],'M12 4h7a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2h-7','Sign-in doorway has no inward-facing stubs that collide with the arrow');
+    assert.equal(directions[1][0],'M12 6V4h7a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2h-7v-2','Sign-out doorway remains unchanged');
+    assert.equal(directions[0][2],'m11 8 5 4-5 4','Inward arrow has clearance from the doorway');
     assert.equal(directions[1][2],'m8 7-5 5 5 5','Outward arrow points away from the door');
     const glyphStyles=await page.locator('.live-kpi .kpi-icon svg').evaluateAll(nodes=>nodes.map(el=>{
       const s=getComputedStyle(el);return {stroke:s.strokeWidth,opacity:s.opacity,glow:s.filter};
