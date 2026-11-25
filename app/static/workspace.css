@@ -424,8 +424,34 @@
   box-shadow:0 2px 3px #304d7510;
 }
 .workspace #attendance-register-panel .attendance-directory td{overflow-wrap:anywhere}
+.workspace #attendance-register-panel .register-identity{
+  display:flex;align-items:center;gap:9px;min-width:0;
+}
+.workspace #attendance-register-panel .register-identity .name-avatar{
+  display:grid;place-items:center;flex:0 0 29px;width:29px;height:29px;
+  border:0;border-radius:9px;background-color:#e0e9f5;
+  background-image:radial-gradient(ellipse at 20% 10%,#ffffff70,transparent 75%);
+  color:#49678f;font-size:10px;font-weight:700;letter-spacing:.02em;
+  box-shadow:0 1px 3px #34547c0d;
+  transition:background-color .28s cubic-bezier(.4,0,.2,1),color .28s cubic-bezier(.4,0,.2,1);
+}
 .workspace #attendance-register-panel .employee-name-cell strong{
-  font-size:12px;color:#263b60;font-weight:600;line-height:1.4;
+  font-size:12px;color:#263b60;font-weight:600;line-height:1.4;min-width:0;
+  transition:color .28s cubic-bezier(.4,0,.2,1);
+}
+.workspace #attendance-register-panel .attendance-directory tbody tr:is(:hover,:focus-within) .employee-name-cell strong{
+  color:#235ab2;
+}
+.workspace #attendance-register-panel .attendance-directory tbody tr:is(:hover,:focus-within) .register-identity .name-avatar{
+  background-color:#c0d5f3;color:#235ab2;
+}
+@media(max-width:740px){
+  .workspace #attendance-register-panel .register-identity{gap:7px}
+  .workspace #attendance-register-panel .register-identity .name-avatar{width:26px;height:26px;flex-basis:26px;font-size:9.5px}
+}
+@media(prefers-reduced-motion:reduce){
+  .workspace #attendance-register-panel .register-identity .name-avatar,
+  .workspace #attendance-register-panel .employee-name-cell strong{transition:none}
 }
 .workspace #attendance-register-panel .attendance-directory .actions-column{
   position:sticky;right:0;z-index:4;text-align:center;

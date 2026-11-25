@@ -177,6 +177,26 @@ function employeeCell(row){
   return '<div class="employee-cell"><span class="name-avatar" aria-hidden="true">'+esc(name.slice(0,1).toUpperCase())+
     '</span><span><strong>'+esc(name)+'</strong>'+source+(row.position?'<small>'+esc(row.position)+'</small>':'')+'</span></div>';
 }
+// Initials are derived from the synchronized display name, never a photo.
+function registerInitials(value){
+  const name=String(value||'').trim();
+  if(!name || name.toLowerCase()==='name not synchronized')return '—';
+  const words=s=>s.trim().split(/\s+/).filter(Boolean);
+  const initial=s=>(s.match(/\p{L}/u)?.[0]||'').toUpperCase();
+  const parts=name.split(',');
+  const suffix=/^(?:jr|sr|ii|iii|iv|v)\.?$/i;
+  if(parts.length>1 && parts[1].trim() && !suffix.test(parts[1].trim())){
+    return initial(words(parts[1])[0]||'')+initial(words(parts[0])[0]||'')||'—';
+  }
+  const tokens=words(parts[0]);
+  while(tokens.length>1 && suffix.test(tokens[tokens.length-1]))tokens.pop();
+  return (initial(tokens[0]||'')+(tokens.length>1?initial(tokens[tokens.length-1]):''))||'—';
+}
+function registerNameCell(row){
+  const name=row.display_name||'Name not synchronized';
+  return '<div class="register-identity"><span class="name-avatar" aria-hidden="true">'+esc(registerInitials(row.display_name))+
+    '</span><strong>'+esc(name)+'</strong></div>';
+}
 function liveTime(stamp){
     if(!stamp)return '—';
     const match=String(stamp).match(/(\d{2}):(\d{2}):(\d{2})/);
@@ -205,7 +225,7 @@ function renderRegister(){
     setTextIfChanged($('register-count'),total?total+(total===1?' employee':' employees'):'No employees found');
     setHtmlIfChanged($('register-rows'),rows.length?rows.map(row=>
       '<tr>'+
-      '<td class="employee-name-cell"><strong>'+esc(row.display_name||'Name not synchronized')+'</strong></td>'+
+      '<td class="employee-name-cell">'+registerNameCell(row)+'</td>'+
       '<td>'+categoryBadge(row.employment_type)+'</td>'+
       '<td>'+esc(row.department||'—')+'</td>'+
       '<td><span class="live-status live-'+esc(row.live?.status||'review')+'" title="'+esc(row.live?.reason||'Status unavailable')+'">'+esc(row.live?.label||'For review')+'</span></td>'+
