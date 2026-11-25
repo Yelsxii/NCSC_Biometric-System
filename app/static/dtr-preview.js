@@ -3,6 +3,8 @@
 // authenticated monthly attendance snapshot as the employee detail view.
 let dtrPreviewData=null;
 let dtrPreviewVersion=0;
+let dtrDownloadBusy=false;
+const DTR_NARROW_MM=6.35;
 const dtrPaper={a4:{width:'210mm',height:'297mm',w:210,h:297},folio:{width:'215.9mm',height:'330.2mm',w:215.9,h:330.2}};
 const dtrSignatory={
   COS:['ATTY. GLAIZA BERNADETH P. PINTO-TADEO','REGIONAL DIRECTOR'],
@@ -53,9 +55,10 @@ function civilDtrCopy(data,category){
   return '<section class="civil-copy"><div class="form-number">Civil Service Form No. 48</div>'+
     '<header class="civil-header"><img class="print-seal" src="/static/images/ncsc-seal.jpg" alt="NCSC seal"><div>Republic of the Philippines</div><b class="print-agency">NATIONAL COMMISSION OF SENIOR CITIZENS</b><div>29th Floor, The Upper Class Tower, Corner Scout Reyes, Quezon Ave., Brgy Paligsahan,<br>Quezon City</div><div class="print-email">Email address: ph.ncsc@gmail.com</div></header>'+
     '<h1>DAILY TIME RECORD</h1><div class="print-name">'+name+'</div><div class="name-label">(Name)</div>'+
-    '<table class="form-meta"><colgroup><col style="width:13%"><col style="width:15%"><col style="width:15%"><col style="width:15%"><col style="width:15%"><col style="width:13.5%"><col style="width:13.5%"></colgroup><tbody>'+
-    '<tr><td colspan="2">For the month of</td><td colspan="2" class="date-value">'+esc(dtrDateLabel(data.month,1))+'</td><td class="date-value">-</td><td colspan="2" class="date-value">'+esc(dtrDateLabel(data.month,dtrLastDay(data.month)))+'</td></tr>'+
-    '<tr><td colspan="4" rowspan="2">Official hours for arrival and departure</td><td>Regular days</td><td colspan="2"></td></tr><tr><td>Saturdays</td><td colspan="2"></td></tr></tbody></table>'+
+    '<table class="form-meta form-dates"><colgroup><col style="width:27%"><col style="width:33%"><col style="width:7%"><col style="width:33%"></colgroup><tbody>'+
+    '<tr><td>For the month of</td><td class="date-value">'+esc(dtrDateLabel(data.month,1))+'</td><td class="date-value">-</td><td class="date-value">'+esc(dtrDateLabel(data.month,dtrLastDay(data.month)))+'</td></tr></tbody></table>'+
+    '<table class="form-meta form-schedule"><colgroup><col style="width:60%"><col style="width:21%"><col style="width:19%"></colgroup><tbody>'+
+    '<tr><td rowspan="2">Official hours for arrival and departure</td><td>Regular days</td><td></td></tr><tr><td>Saturdays</td><td></td></tr></tbody></table>'+
     '<table class="civil-grid"><colgroup><col style="width:8%"><col span="4" style="width:15.5%"><col span="2" style="width:15%"></colgroup><thead><tr><th rowspan="2">Day</th><th colspan="2">A.M.</th><th colspan="2">P.M.</th><th colspan="2">UNDERTIME</th></tr><tr><th>IN</th><th>OUT</th><th>IN</th><th>OUT</th><th>Hours</th><th>Minutes</th></tr></thead><tbody>'+dtrPrintRows(data,category)+'</tbody></table>'+
     '<p class="certification">I certify on my honor that the above is a true and correct report of the hours of work performed, record of which was made daily at the time of arrival and departure from office.</p><div class="signature-line">Signature</div><p class="verification">Verified as to the prescribed office hours:</p><div class="signatory">'+esc(signer[0])+'</div><div class="signatory-role">'+esc(signer[1])+'</div></section>';
 }
@@ -72,30 +75,51 @@ function buildDtrDocument(data,category,period,paperKey,version){
   const body=category==='GIP'?gipDtrForm(data,period):civilDtrCopy(data,category)+civilDtrCopy(data,category);
   const hasAja=data.days.some(day=>(day.aja_periods||[]).length),hasApproved=data.days.some(day=>Object.values(day.display_slots||{}).some(x=>x?.origin==='hr_approved'));
   const legend=hasAja||hasApproved?'<p class="print-evidence">* HR-approved adjustment · † documented AJA time · ? requires review</p>':'';
-  return '<!doctype html><html lang="en"><head><meta charset="utf-8"><title>DTR - '+esc(data.display_name||'')+' - '+esc(data.month)+'</title><link rel="stylesheet" href="/static/dtr-preview.css?v=1"><style>@page{size:'+paper.width+' '+paper.height+';margin:6mm} :root{--paper-width:'+paper.width+';--paper-height:'+paper.height+';--content-width:'+(paper.w-12)+'mm;--content-height:'+(paper.h-12)+'mm}</style></head><body class="print-document" data-preview-version="'+version+'"><main class="print-content"><div class="'+(category==='GIP'?'gip-page':'civil-page')+'">'+body+'</div>'+legend+'</main></body></html>';
+  return '<!doctype html><html lang="en"><head><meta charset="utf-8"><title>DTR - '+esc(data.display_name||'')+' - '+esc(data.month)+'</title><link rel="stylesheet" href="/static/dtr-preview.css?v=2"><style>@page{size:'+paper.width+' '+paper.height+';margin:'+DTR_NARROW_MM+'mm} :root{--paper-width:'+paper.width+';--paper-height:'+paper.height+';--paper-margin:'+DTR_NARROW_MM+'mm;--content-width:'+(paper.w-2*DTR_NARROW_MM)+'mm;--content-height:'+(paper.h-2*DTR_NARROW_MM)+'mm}</style></head><body class="print-document" data-preview-version="'+version+'"><main class="print-content"><div class="'+(category==='GIP'?'gip-page':'civil-page')+'">'+body+'</div>'+legend+'</main></body></html>';
 }
 function freshDtrFrame(){
   // Replacing the browsing context avoids accumulating iframe history entries
   // when a user changes category, period, or paper size.
   const frame=document.createElement('iframe');
-  frame.id='dtr-preview-frame';frame.title='Printable daily time record';frame.hidden=true;
+  frame.id='dtr-preview-frame';frame.title='Printable daily time record';frame.hidden=true;frame.setAttribute('scrolling','no');
   frame.addEventListener('load',()=>finishDtrFrame(frame));
   $('dtr-preview-frame').replaceWith(frame);
   return frame;
+}
+function setDtrPreviewNote(message=''){
+  const note=$('dtr-preview-note');
+  note.textContent=message;note.hidden=!message;
+}
+function setDtrActionsReady(ready){
+  $('dtr-preview-print').disabled=!ready||dtrDownloadBusy;
+  $('dtr-preview-download').disabled=!ready||dtrDownloadBusy;
+}
+function fitDtrPaper(){
+  const canvas=$('dtr-paper-canvas'),frame=$('dtr-preview-frame');
+  if(canvas.hidden||frame.hidden)return;
+  const stage=canvas.parentElement,paper=dtrPaper[$('dtr-preview-paper').value]||dtrPaper.a4;
+  const style=getComputedStyle(stage);
+  const available=stage.clientWidth-parseFloat(style.paddingLeft)-parseFloat(style.paddingRight);
+  const width=Math.ceil(paper.w*96/25.4),height=Math.ceil(paper.h*96/25.4);
+  const scale=Math.min(1,Math.max(.01,available/width));
+  canvas.style.width=(width*scale)+'px';canvas.style.height=(height*scale)+'px';
+  frame.style.width=width+'px';frame.style.height=height+'px';frame.style.transform='scale('+scale+')';
 }
 function renderDtrPreview(){
   const frame=freshDtrFrame(),category=$('dtr-preview-template').value,period=$('dtr-preview-period').value,paperKey=$('dtr-preview-paper').value;
   const paper=dtrPaper[paperKey]||dtrPaper.a4;
   const version=++dtrPreviewVersion;
-  $('dtr-preview-print').disabled=true;
+  setDtrActionsReady(false);
   $('dtr-preview-period-control').hidden=category!=='GIP';
+  $('dtr-paper-canvas').parentElement.scrollTop=0;
+  setDtrPreviewNote();
   if(!dtrPreviewData||!Object.hasOwn(dtrSignatory,category)){
-    frame.hidden=true;frame.removeAttribute('srcdoc');
-    $('dtr-preview-note').textContent='Select the verified employee category to choose the correct form.';
+    frame.hidden=true;$('dtr-paper-canvas').hidden=true;
+    setDtrPreviewNote('Select the verified employee category to choose the correct form.');
     return;
   }
-  $('dtr-preview-note').textContent=category==='GIP'?'DOLE template · Account number, accomplishment report and FO verification fields remain blank.':'Civil Service Form No. 48 · Two copies · Verify entries and signatory before official use.';
-  frame.hidden=false;frame.style.width=paper.width;frame.style.height=paper.height;
+  frame.hidden=false;$('dtr-paper-canvas').hidden=false;
+  fitDtrPaper();
   frame.srcdoc=buildDtrDocument(dtrPreviewData,category,period,paperKey,version);
 }
 function openDtrFormPreview(push=true){
@@ -107,7 +131,8 @@ function openDtrFormPreview(push=true){
   const category=Object.hasOwn(dtrSignatory,data.employment_type)?data.employment_type:'';
   $('dtr-preview-template').value=category;
   $('dtr-preview-period').value='first';
-  $('dtr-preview-context').textContent=(data.display_name||'Employee')+' · '+dtrDateLabel(data.month,1).replace(/ 1,/,',');
+  $('dtr-preview-name').textContent=data.display_name||'Employee';
+  $('dtr-preview-context').textContent=dtrDateLabel(data.month,1).replace(/ 1,/,',');
   dialog.showModal();
   if(push)history.pushState({ncscDtrPreview:true},'', '#employees/dtr-preview');
   renderDtrPreview();
@@ -123,7 +148,7 @@ function initDtrPreview(){
   dialog.addEventListener('cancel',e=>{e.preventDefault();closeDtrPreview();});
   dialog.addEventListener('close',()=>{
     dtrPreviewData=null;dtrPreviewVersion++;freshDtrFrame();
-    $('dtr-preview-print').disabled=true;
+    $('dtr-paper-canvas').hidden=true;setDtrPreviewNote();setDtrActionsReady(false);
     if(history.state?.ncscDtrPreview)history.replaceState(null,'','#employees');
   });
   window.addEventListener('popstate',()=>{
@@ -134,6 +159,8 @@ function initDtrPreview(){
     }
   });
   for(const id of ['dtr-preview-template','dtr-preview-period','dtr-preview-paper'])$(id).addEventListener('change',renderDtrPreview);
+  new ResizeObserver(fitDtrPaper).observe($('dtr-paper-canvas').parentElement);
+  $('dtr-preview-download').addEventListener('click',downloadDtrPdf);
   $('dtr-preview-print').addEventListener('click',()=>{
     const frame=$('dtr-preview-frame');
     if(!$('dtr-preview-print').disabled&&dialog.open){frame.contentWindow.focus();frame.contentWindow.print();}
@@ -146,8 +173,65 @@ function finishDtrFrame(frame){
   // physical sheet. No source entries are removed to fit the page.
   const content=doc.querySelector('.print-content');
   const paper=dtrPaper[$('dtr-preview-paper').value]||dtrPaper.a4;
-  const height=(paper.h-12)*96/25.4;
-  const scale=Math.min(1,height/(content.getBoundingClientRect().height||1));
-  if(scale<1)content.style.zoom=String(scale*.995);
-  $('dtr-preview-print').disabled=false;
+  const height=(paper.h-2*DTR_NARROW_MM)*96/25.4;
+  const scale=Math.min(1,(height-2)/(content.getBoundingClientRect().height||1));
+  if(scale<1)content.style.zoom=String(scale);
+  fitDtrPaper();
+  setDtrActionsReady(true);
+}
+
+function loadLocalDtrPdf(frame){
+  const win=frame.contentWindow,doc=frame.contentDocument;
+  if(typeof win.html2pdf==='function')return Promise.resolve(win.html2pdf);
+  return new Promise((resolve,reject)=>{
+    const script=doc.createElement('script');
+    script.src='/static/vendor/html2pdf.bundle.min.js';
+    script.onload=()=>typeof win.html2pdf==='function'?resolve(win.html2pdf):reject(new Error('PDF renderer unavailable.'));
+    script.onerror=()=>{script.remove();reject(new Error('Could not load local PDF renderer.'));};
+    doc.head.appendChild(script);
+  });
+}
+async function downloadDtrPdf(){
+  if(dtrDownloadBusy||$('dtr-preview-download').disabled||!dtrPreviewData)return;
+  const frame=$('dtr-preview-frame'),version=dtrPreviewVersion,data=dtrPreviewData;
+  const category=$('dtr-preview-template').value,period=$('dtr-preview-period').value;
+  const paper=dtrPaper[$('dtr-preview-paper').value]||dtrPaper.a4;
+  const button=$('dtr-preview-download');
+  const selectors=['dtr-preview-template','dtr-preview-period','dtr-preview-paper'];
+  dtrDownloadBusy=true;setDtrActionsReady(false);button.setAttribute('aria-busy','true');
+  selectors.forEach(id=>$(id).disabled=true);
+  setDtrPreviewNote('Preparing PDF…');
+  try{
+    const html2pdf=await loadLocalDtrPdf(frame);
+    if(version!==dtrPreviewVersion)return;
+    const doc=frame.contentDocument;
+    const content=doc.querySelector('.print-content').cloneNode(true);
+    // Capture at the original font sizes. Fit the full rendered form within
+    // one physical page afterwards rather than dropping attendance rows.
+    content.style.zoom='1';
+    const safeName=String(data.display_name||'Employee').replace(/[\\/:*?"<>|\x00-\x1f]/g,'_').trim().slice(0,100)||'Employee';
+    const filename='DTR - '+safeName+' - '+data.month+' - '+category+(category==='GIP'?' - '+period:'')+'.pdf';
+    const opts={filename,margin:DTR_NARROW_MM,image:{type:'png'},enableLinks:false,pagebreak:{mode:[]},
+      html2canvas:{scale:3,backgroundColor:'#fff',logging:false,windowWidth:Math.ceil(paper.w*96/25.4),windowHeight:Math.ceil(paper.h*96/25.4)},
+      jsPDF:{unit:'mm',format:[paper.w,paper.h],orientation:'portrait',compress:true}};
+    const captured=await html2pdf().set(opts).from(content).toCanvas().get('canvas');
+    if(version!==dtrPreviewVersion)return;
+    const w=paper.w-2*DTR_NARROW_MM,h=paper.h-2*DTR_NARROW_MM;
+    const canvas=doc.createElement('canvas');canvas.width=Math.max(1,captured.width);
+    // Leave two pixels of rounding tolerance to avoid an extra blank PDF page.
+    canvas.height=Math.max(1,Math.floor(canvas.width*h/w)-2);
+    const ctx=canvas.getContext('2d');ctx.fillStyle='#fff';ctx.fillRect(0,0,canvas.width,canvas.height);
+    const scale=Math.min(canvas.width/captured.width,canvas.height/captured.height);
+    const cw=captured.width*scale,ch=captured.height*scale;
+    ctx.drawImage(captured,(canvas.width-cw)/2,0,cw,ch);
+    await html2pdf().set(opts).from(canvas).save();
+    if(version===dtrPreviewVersion)setDtrPreviewNote();
+  }catch(error){
+    if(version===dtrPreviewVersion)setDtrPreviewNote('PDF download failed. Use Print and choose Save as PDF, or try downloading again.');
+  }finally{
+    dtrDownloadBusy=false;button.removeAttribute('aria-busy');
+    selectors.forEach(id=>$(id).disabled=false);
+    const current=$('dtr-preview-frame');
+    if($('dtr-preview-dialog').open&&!current.hidden&&current.contentDocument?.body?.dataset.previewVersion===String(dtrPreviewVersion))setDtrActionsReady(true);
+  }
 }

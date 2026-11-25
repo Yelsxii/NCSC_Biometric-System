@@ -713,6 +713,12 @@ with connect() as con:
     await page.locator('#dtr-preview-print:not(:disabled)').waitFor();
     const printable=page.frameLocator('#dtr-preview-frame');
     assert.equal(await printable.locator('.civil-copy').count(),2);
+    assert.equal(await page.locator('#dtr-preview-note').isVisible(),false);
+    assert.ok(await page.locator('#dtr-preview-download').isEnabled());
+    assert.equal(await page.locator('.export-preview-stage').evaluate(el=>getComputedStyle(el).scrollbarColor),'rgb(184, 198, 221) rgba(0, 0, 0, 0)');
+    assert.equal(await printable.locator('html').evaluate(el=>getComputedStyle(el).overflow),'hidden');
+    assert.equal(await printable.locator('.civil-copy h1').first().evaluate(el=>getComputedStyle(el).fontSize),'22.6667px');
+    assert.equal(await printable.locator('.print-name').first().evaluate(el=>getComputedStyle(el).fontSize),'17.3333px');
     assert.equal(await printable.locator('.print-seal').count(),2);
     assert.equal(await printable.locator('.civil-copy h1').first().textContent(),'DAILY TIME RECORD');
     assert.equal(await printable.locator('.signatory-role').first().textContent(),'REGIONAL DIRECTOR');
