@@ -410,13 +410,15 @@
 .workspace #attendance-register-panel .directory-department{width:23%}
 .workspace #attendance-register-panel .directory-action{width:20%}
 .workspace #attendance-register-panel .attendance-directory th{
-  /* A continuous cool-blue header band, visually separated from pale glass rows.
-     Opaque stops keep sticky headings readable above scrolling content. */
-  width:auto;text-align:left;color:#29466f;font-size:11px;font-weight:700;
-  background-color:#cbdcf0;
-  background-image:linear-gradient(180deg,#dce8f7 0%,#cbdcf0 100%);
-  border-bottom:1px solid #b5cbe5;
-  box-shadow:inset 0 1px 0 #ffffff66;
+  /* Quiet slate-blue glass: separation through tint and soft depth,
+     not a saturated gradient or hard dividing line. The opaque surface
+     keeps the sticky header readable when records scroll beneath it. */
+  width:auto;text-align:left;color:#3a5275;font-size:11px;font-weight:600;
+  letter-spacing:.01em;
+  background-color:#dfe8f3;
+  background-image:none;
+  border-bottom:1px solid transparent;
+  box-shadow:0 2px 3px #304d7510;
 }
 .workspace #attendance-register-panel .attendance-directory td{overflow-wrap:anywhere}
 .workspace #attendance-register-panel .employee-name-cell strong{
@@ -424,7 +426,7 @@
 }
 .workspace #attendance-register-panel .attendance-directory .actions-column{
   position:sticky;right:0;z-index:4;text-align:center;
-  box-shadow:inset 0 1px 0 #ffffff66,-3px 0 8px #263b6014;
+  box-shadow:0 2px 3px #304d7510,-3px 0 8px #263b600d;
 }
 .workspace #attendance-register-panel .directory-action-cell{
   position:sticky;right:0;z-index:2;text-align:center;background:#fff;
