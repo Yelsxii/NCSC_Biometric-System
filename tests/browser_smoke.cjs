@@ -189,6 +189,8 @@ uvicorn.run('app.main:app',host='127.0.0.1',port=int(os.environ['QA_PORT']),log_
     assert.equal(await page.locator('thead').first().getByText('Scans this month').count(),0);
     assert.equal(await page.locator('#add-staff').count(),0);
     assert.equal(await page.locator('#register-from-attendance').count(),0);
+    assert.equal(await page.locator('#attendance-register-panel .pagination').count(),0);
+    assert.equal(await page.locator('#register-count').textContent(),'1 employee');
     assert.equal(await page.locator('#register-rows .name-avatar').count(),0);
     assert.equal(await page.locator('#register-rows [data-edit-profile]').count(),0);
     await page.locator('#register-rows .directory-action-cell .row-action').first().waitFor();

@@ -17,7 +17,6 @@ let rosterPreviewOkay = false;
 let usbPreviewOkay = false;
 let connectorReadPending = false;
 const EMPLOYEE_PAGE_SIZE = 15;
-let registerPage = 1;
 let registerSearchTimer = null;
 let profilePage = 1;
 let profileCategory = 'All';
@@ -124,7 +123,7 @@ function navigate(page){
 function cancelRegisterSearch(){clearTimeout(registerSearchTimer);registerSearchTimer=null;requestSerial++;}
 function updateRegisterSearchControl(){$('clear-employee-search').hidden=!$('employee-search').value;}
 function applyRegisterFilters({debounce=false}={}){
-  cancelRegisterSearch();updateRegisterSearchControl();registerPage=1;
+  cancelRegisterSearch();updateRegisterSearchControl();
   if(!session||currentPage!=='employees'||selectedEmployee)return;
   if(debounce){registerSearchTimer=setTimeout(()=>{registerSearchTimer=null;if(session&&currentPage==='employees'&&!selectedEmployee)void loadRegister({quiet:true});},120);}
   else void loadRegister();
@@ -156,13 +155,9 @@ function employeeCell(row){
     '</span><span><strong>'+esc(name)+'</strong>'+source+(row.position?'<small>'+esc(row.position)+'</small>':'')+'</span></div>';
 }
 function renderRegister(){
-    const total=lastEmployeeRows.length,pages=Math.max(1,Math.ceil(total/EMPLOYEE_PAGE_SIZE));
-    registerPage=Math.max(1,Math.min(registerPage,pages));
-    const start=(registerPage-1)*EMPLOYEE_PAGE_SIZE;
-    const rows=lastEmployeeRows.slice(start,start+EMPLOYEE_PAGE_SIZE);
-    $('register-count').textContent=total?('Showing '+(start+1)+'–'+Math.min(start+EMPLOYEE_PAGE_SIZE,total)+' of '+total+' employees'):'No employees found';
-    $('register-page').textContent='Page '+registerPage+' of '+pages;
-    $('register-prev').disabled=registerPage===1;$('register-next').disabled=registerPage===pages;
+    const rows=lastEmployeeRows;
+    const total=rows.length;
+    $('register-count').textContent=total?total+(total===1?' employee':' employees'):'No employees found';
     $('register-rows').innerHTML=rows.length?rows.map(row=>
       '<tr>'+
       '<td class="employee-name-cell"><strong>'+esc(row.display_name||'Name not synchronized')+'</strong></td>'+
@@ -932,8 +927,6 @@ async function initialize(){
   $('employee-search').addEventListener('input',()=>applyRegisterFilters({debounce:true}));
   $('clear-employee-search').addEventListener('click',()=>{$('employee-search').value='';applyRegisterFilters();$('employee-search').focus();});
   $('register-month').addEventListener('change',()=>applyRegisterFilters());
-  $('register-prev').addEventListener('click',()=>{registerPage--;renderRegister();});
-  $('register-next').addEventListener('click',()=>{registerPage++;renderRegister();});
   $('open-profile').addEventListener('click',()=>openProfile());
   $('close-profile').addEventListener('click',()=>$('profile-dialog').close());
   $('cancel-profile').addEventListener('click',()=>$('profile-dialog').close());

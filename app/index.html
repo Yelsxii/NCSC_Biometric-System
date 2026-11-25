@@ -6,9 +6,9 @@
   <meta name="theme-color" content="#142650">
   <title>NCSC | Attendance Records</title>
   <link rel="stylesheet" href="/static/app.css">
-  <link rel="stylesheet" href="/static/workspace.css?v=attendance-15">
+  <link rel="stylesheet" href="/static/workspace.css?v=attendance-16">
   <link rel="stylesheet" href="/static/attendance-detail.css?v=auto-dtr-10">
-  <script src="/static/app.js?v=auto-dtr-10" defer></script>
+  <script src="/static/app.js?v=auto-dtr-11" defer></script>
 </head>
 <body>
   <main id="login-view" class="auth-shell" aria-labelledby="login-heading">
@@ -91,7 +91,7 @@
             <div class="table-wrap">
               <table class="records-table attendance-directory"><colgroup><col class="directory-name"><col class="directory-category"><col class="directory-department"><col class="directory-action"></colgroup><thead><tr><th>Employee name</th><th>Category</th><th>Department</th><th class="actions-column">Actions</th></tr></thead><tbody id="register-rows"><tr><td colspan="4">Loading employees…</td></tr></tbody></table>
             </div>
-            <div class="list-footer"><span id="register-count" role="status" aria-live="polite"></span><div class="pagination"><button id="register-prev" type="button" aria-label="Previous employee page">‹</button><span id="register-page">Page 1</span><button id="register-next" type="button" aria-label="Next employee page">›</button></div></div>
+            <div class="list-footer register-footer"><span id="register-count" role="status" aria-live="polite"></span></div>
           </div>
 
           <section id="employee-detail" class="detail-section hidden">

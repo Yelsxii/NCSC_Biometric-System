@@ -559,3 +559,6 @@
   .workspace #attendance-register-panel #open-attendance-import:not(:disabled):is(:hover,:focus-visible),
   .workspace #attendance-register-panel #open-attendance-import:not(:disabled):is(:hover,:focus-visible) .inline-icon{transform:none}
 }
+
+/* Attendance directory shows all matching employees in its own scroll area. */
+.workspace #attendance-register-panel .register-footer{padding-top:9px;min-height:0;justify-content:flex-start;font-size:10px;color:#657997;}
