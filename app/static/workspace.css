@@ -428,39 +428,22 @@
   display:flex;align-items:center;gap:9px;min-width:0;
 }
 .workspace #attendance-register-panel .register-identity .name-avatar{
-  /* Match the KPI icon's two translucent panes at a smaller scale.
-     No live blur, heavy outline, or embossed shadow on scrolling rows. */
-  position:relative;isolation:isolate;overflow:hidden;
+  /* A flat pastel badge, distinct from the surrounding glass table. */
   display:grid;place-items:center;flex:0 0 29px;width:29px;height:29px;
-  border:0;border-radius:9px;background-color:rgba(110,139,178,.08);
-  background-image:none;color:#49678f;font-size:10px;font-weight:650;letter-spacing:.02em;
-  box-shadow:0 1px 3px #34547c08;
+  border:0;border-radius:9px;background-color:#dbe8fa;background-image:none;
+  color:#365b8e;font-size:10px;font-weight:700;letter-spacing:.02em;
+  box-shadow:none;
   transition:background-color .28s cubic-bezier(.4,0,.2,1),color .28s cubic-bezier(.4,0,.2,1);
-}
-.workspace #attendance-register-panel .register-identity .name-avatar::before{
-  content:"";position:absolute;inset:1.5px;z-index:-2;border-radius:7px;pointer-events:none;
-  background:radial-gradient(circle at 20% 18%,#8aadd52b,transparent 65%),
-    radial-gradient(circle at 76% 72%,#7a9fd02e,transparent 72%),
-    radial-gradient(circle at 35% 84%,#ffffff80,transparent 62%),
-    radial-gradient(circle at 78% 18%,#ffffff65,transparent 55%);
-  opacity:.58;transition:opacity .28s cubic-bezier(.4,0,.2,1);
-}
-.workspace #attendance-register-panel .register-identity .name-avatar::after{
-  content:"";position:absolute;inset:1.5px;z-index:-1;border-radius:7px;pointer-events:none;
-  border:0;background:#ffffff38;box-shadow:none;
 }
 .workspace #attendance-register-panel .employee-name-cell strong{
   font-size:12px;color:#263b60;font-weight:600;line-height:1.4;min-width:0;
   transition:color .28s cubic-bezier(.4,0,.2,1);
 }
 .workspace #attendance-register-panel .attendance-directory tbody tr:is(:hover,:focus-within) .employee-name-cell strong{
-  color:#235ab2;
+  color:#1257ba;
 }
 .workspace #attendance-register-panel .attendance-directory tbody tr:is(:hover,:focus-within) .register-identity .name-avatar{
-  background-color:rgba(91,133,193,.13);color:#235ab2;
-}
-.workspace #attendance-register-panel .attendance-directory tbody tr:is(:hover,:focus-within) .register-identity .name-avatar::before{
-  opacity:1;
+  background-color:#afcdf5;color:#154c99;
 }
 @media(max-width:740px){
   .workspace #attendance-register-panel .register-identity{gap:7px}
@@ -468,7 +451,6 @@
 }
 @media(prefers-reduced-motion:reduce){
   .workspace #attendance-register-panel .register-identity .name-avatar,
-  .workspace #attendance-register-panel .register-identity .name-avatar::before,
   .workspace #attendance-register-panel .employee-name-cell strong{transition:none}
 }
 .workspace #attendance-register-panel .attendance-directory .actions-column{
