@@ -265,7 +265,7 @@ uvicorn.run('app.main:app',host='127.0.0.1',port=int(os.environ['QA_PORT']),log_
     await page.locator('#workspace:not(.hidden)').waitFor();
     await page.locator('[data-page="employees"].active').waitFor();
     const desktopActive=await page.locator('[data-page="employees"].active').evaluate(el=>({shadow:getComputedStyle(el).boxShadow,border:getComputedStyle(el).borderTopColor}));
-    assert.ok(desktopActive.shadow.includes('0px 0px 5px 0px') && desktopActive.shadow.includes('0px 0px 10px 0px'),'Desktop active glow has soft blurred light with no spread');
+    assert.ok(desktopActive.shadow.includes('0px 0px 8px 0px inset') && desktopActive.shadow.includes('0px 0px 16px 0px inset'),'Desktop active glow is softly diffused inward without spread');
     assert.ok(!desktopActive.shadow.includes('0px 0px 0px 1px'),'Desktop selected item has no solid blue ring');
     assert.equal(desktopActive.border,'rgba(0, 0, 0, 0)');
     assert.equal(await page.locator('[data-page]').count(),4);

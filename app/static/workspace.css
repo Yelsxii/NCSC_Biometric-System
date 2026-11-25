@@ -247,7 +247,8 @@
   box-shadow:0 0 9px #ff769d22,inset 0 0 0 1px #ffb4c412;
 }
 .workspace .sidebar .nav-item.active{
-  --nav-active-glow:0 0 5px #4c89ff70,0 0 10px #3470eb40,0 2px 5px #06152d20;
+  /* Desktop: soft inward blue illumination, without an outline or outer halo. */
+  --nav-active-glow:inset 0 0 8px #4c89ff45,inset 0 0 16px #3470eb18,0 2px 5px #06152d20;
   color:#203b66;background-color:var(--rail-active);
   border-color:transparent;
   box-shadow:var(--nav-active-glow);font-weight:650;
