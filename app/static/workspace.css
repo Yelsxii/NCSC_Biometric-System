@@ -716,29 +716,31 @@
   scroll-snap-align:start;transform:translateY(0) scale(1);
   transition:box-shadow .2s,transform .2s,background .2s
 }
-/* A thin frosted glass pane over scattered, soft-focus points of colored light.
-   Avoid the opaque directional sheen and raised bevel of the old icon tile. */
+/* Two nested, borderless glass surfaces: clear outer glass and a softly
+   frosted inner pane. Scattered light is confined to the icon tile. */
 .workspace #attendance-register-panel .live-kpi .kpi-icon{
   position:relative;isolation:isolate;overflow:hidden;display:grid;place-items:center;
-  width:36px;height:36px;border-radius:10px;border:1px solid #ffffff65;
-  background-color:#ffffff0f;background-image:none;
-  box-shadow:inset 0 0 0 1px #ffffff1c,0 1px 3px #31578b08;
+  width:36px;height:36px;border-radius:10px;border:0;
+  background-color:#ffffff19;background-image:none;
+  -webkit-backdrop-filter:blur(4px) saturate(110%);backdrop-filter:blur(4px) saturate(110%);
+  box-shadow:0 1px 3px #31578b0b;
   color:var(--status-color);transition:color .2s,box-shadow .2s
 }
 .workspace #attendance-register-panel .live-kpi .kpi-icon::before{
-  content:"";position:absolute;inset:0;z-index:-2;pointer-events:none;
+  content:"";position:absolute;inset:2px;z-index:-2;pointer-events:none;border-radius:8px;
   background:
-    radial-gradient(circle at 15% 20%,color-mix(in srgb,var(--status-color) 35%,transparent) 0%,transparent 49%),
-    radial-gradient(circle at 85% 25%,color-mix(in srgb,var(--status-color) 26%,transparent) 0%,transparent 44%),
-    radial-gradient(circle at 64% 82%,color-mix(in srgb,var(--status-color) 48%,transparent) 0%,transparent 57%),
-    radial-gradient(circle at 25% 72%,#ffffffb0 0%,transparent 49%),
-    radial-gradient(circle at 53% 36%,#ffffff80 0%,transparent 46%);
-  filter:blur(3px);opacity:.85;transition:opacity .2s
+    radial-gradient(circle at 15% 20%,color-mix(in srgb,var(--status-color) 17%,transparent) 0%,transparent 58%),
+    radial-gradient(circle at 85% 25%,color-mix(in srgb,var(--status-color) 12%,transparent) 0%,transparent 55%),
+    radial-gradient(circle at 64% 82%,color-mix(in srgb,var(--status-color) 24%,transparent) 0%,transparent 65%),
+    radial-gradient(circle at 25% 72%,#ffffff65 0%,transparent 58%),
+    radial-gradient(circle at 53% 36%,#ffffff45 0%,transparent 55%);
+  filter:blur(4px);opacity:.72;transition:opacity .2s
 }
 .workspace #attendance-register-panel .live-kpi .kpi-icon::after{
-  content:"";position:absolute;inset:0;z-index:-1;pointer-events:none;border-radius:inherit;
-  background:#ffffff14;
-  -webkit-backdrop-filter:blur(1.5px);backdrop-filter:blur(1.5px)
+  content:"";position:absolute;inset:3px;z-index:-1;pointer-events:none;border-radius:7px;
+  border:0;background:#ffffff20;
+  -webkit-backdrop-filter:blur(3px) saturate(108%);backdrop-filter:blur(3px) saturate(108%);
+  box-shadow:0 1px 3px #29476b0a
 }
 .workspace #attendance-register-panel .live-kpi .kpi-icon svg{width:23px;height:23px;stroke-width:1.7;opacity:.9;transition:opacity .2s,filter .2s}
 .workspace #attendance-register-panel .live-kpi .kpi-text{display:flex;flex-direction:column;align-items:flex-start;justify-content:center;gap:4px;min-width:0}
@@ -747,9 +749,9 @@
 /* The selected card remains neutral: only the icon and count carry status color. */
 .workspace #attendance-register-panel .live-kpi[aria-pressed=true]{box-shadow:inset 0 1px 0 #ffffffcb,inset 0 -1px 0 #ffffff40,0 4px 10px #31578b23}
 .workspace #attendance-register-panel .live-kpi:is([aria-pressed=true],:hover,:focus-visible) .kpi-icon{
-  color:var(--status-color);box-shadow:inset 0 0 0 1px #ffffff35,0 1px 4px color-mix(in srgb,var(--status-color) 12%,transparent)
+  color:var(--status-color);box-shadow:0 1px 4px color-mix(in srgb,var(--status-color) 10%,transparent)
 }
-.workspace #attendance-register-panel .live-kpi:is([aria-pressed=true],:hover,:focus-visible) .kpi-icon::before{opacity:1}
+.workspace #attendance-register-panel .live-kpi:is([aria-pressed=true],:hover,:focus-visible) .kpi-icon::before{opacity:.92}
 .workspace #attendance-register-panel .live-kpi:is([aria-pressed=true],:hover,:focus-visible) .kpi-icon svg{opacity:1}
 .workspace #attendance-register-panel .live-kpi:is([aria-pressed=true],:hover,:focus-visible) strong{color:var(--status-color);text-shadow:0 0 6px color-mix(in srgb,var(--status-color) 36%,transparent)}
 .workspace #attendance-register-panel .live-kpi:is(:hover,:focus-visible){z-index:2;box-shadow:inset 0 1px 0 #ffffffdd,inset 0 -1px 0 #ffffff50,0 5px 12px #31578b25;transform:translateY(-3px) scale(1.025)}
