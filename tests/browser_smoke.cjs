@@ -299,6 +299,10 @@ uvicorn.run('app.main:app',host='127.0.0.1',port=int(os.environ['QA_PORT']),log_
     assert.ok(iconGlass.every(x=>x.outerBorder==='0px' && x.innerBorder==='0px' && x.innerInset==='1.5px' && x.innerBlur.includes('blur(3px)')),'Two borderless nested glass layers');
     assert.ok(iconGlass.every(x=>x.outerTint.startsWith('rgba(110, 139, 178,') && x.innerTint.startsWith('rgba(255, 255, 255,') && x.outerTint!==x.innerTint),'Separate translucent tints distinguish the two layers without borders');
     assert.equal(await page.locator('.kpi-all strong').evaluate(el=>getComputedStyle(el).color),'rgb(82, 126, 185)','Default selection retains its colored count');
+    const glyphStyles=await page.locator('.live-kpi .kpi-icon svg').evaluateAll(nodes=>nodes.map(el=>{
+      const s=getComputedStyle(el);return {stroke:s.strokeWidth,opacity:s.opacity,glow:s.filter};
+    }));
+    assert.ok(glyphStyles.every(x=>parseFloat(x.stroke)===1.9 && x.opacity==='1' && x.glow.includes('drop-shadow')),'Crisp icon strokes with a gentle status-colored glow');
     const hoverKpi=page.locator('.kpi-missing');
     await hoverKpi.hover();
     await page.waitForFunction(()=>{
