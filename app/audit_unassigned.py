@@ -95,6 +95,7 @@ def audit_month(month, include_review=False):
                                    "slot": s.get("verified_slot") or s.get("historical_slot"),
                                    "work_code": s.get("work_code"),
                                    "unassigned": s["id"] in ids} for s in day["scans"]],
+                    "suggested_slots": {key: {"time": value["time"], "device_slot": value["device_slot"]} for key,value in day.get("historical_suggestions", {}).items()},
                     "raw_scan_count": len(day["scans"]),
                     "unassigned_count": len(ids),
                     "unassigned_scans": [describe(scan, day) for scan in day["scans"] if scan["id"] in ids],
@@ -128,6 +129,8 @@ def audit_all(details=False):
         counts=Counter(d["remarks"] for d in days)
         summary={"month":month,"employees_checked":report["employees_checked"],
             "days_to_review":len(days),"unassigned_scans":sum(d["unassigned_count"] for d in days),
+            "days_with_suggestions":sum(bool(d["suggested_slots"]) for d in days),
+            "suggested_scans":sum(len(d["suggested_slots"]) for d in days),
             "provisional_undertime_days":sum(d.get("undertime_origin")=="documented_partial" for d in days),
             "remarks":dict(counts)}
         if details:
@@ -149,7 +152,7 @@ def audit_all(details=False):
                     cases.append({"employee":alias,"date":d["date"],"remarks":status,
                         "issues":d["issues"],"missing":d["missing_entries"],
                         "conflicts":d["source_conflicts"],
-                        "sheet_times":d["sheet_times"],
+                        "sheet_times":d["sheet_times"],"suggested_slots":d["suggested_slots"],
                         "displayed_slots":d["displayed_slots"],"raw_scans":d["raw_scans"],
                         "unassigned_reasons":[s["reason"] for s in d["unassigned_scans"]],
                         "undertime_seconds":d["undertime_seconds"],"undertime_origin":d["undertime_origin"],
