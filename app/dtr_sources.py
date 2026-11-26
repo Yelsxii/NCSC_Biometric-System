@@ -12,11 +12,31 @@ def resolve_day(day, manual):
     source = manual['data'] if manual else None
     sheet_times = source['times'] if source else {}
     ordinary = sorted((x for x in day['scans'] if x.get('activity_type') not in OFFICIAL and not x.get('work_code_conflict')),key=lambda x:(x['happened_at'],x['id']))
+    plan = (manual or {}).get('reconciliation', {})
+    force_sheet = set(plan.get('force_sheet', []))
+    require_bio = set(plan.get('require_bio', []))
+    def exact_event(spec, events):
+        return next((e for e in events if e['id']==spec['id'] and
+                     e['happened_at']==day['date']+' '+spec['time']), None)
+    ignored_ids = {e['id'] for spec in plan.get('ignored', [])
+                   if (e := exact_event(spec, ordinary)) is not None}
+    ordinary = [e for e in ordinary if e['id'] not in ignored_ids]
     observed = {}
+    confirmed_ids = set()
+    reconciliation_conflict = len(ignored_ids) != len(plan.get('ignored', []))
     # Explicit reviewed selections are reserved for their assigned slots.
     reserved = {x['id'] for x in day['slots'].values() if x}
+    for key, spec in plan.get('confirmed', {}).items():
+        event = exact_event(spec, ordinary)
+        if event and event.get('verified_slot') in (None, key) and event['id'] not in reserved and event['id'] not in confirmed_ids:
+            observed[key] = event
+            confirmed_ids.add(event['id'])
+        elif not (day['slots'][key] and day['slots'][key]['id']==spec['id']):
+            reconciliation_conflict = True
     for key in KEYS:
-        matches = [x for x in ordinary if x.get('verified_slot')==key and x['id'] not in reserved]
+        if key in observed:
+            continue
+        matches = [x for x in ordinary if x.get('verified_slot')==key and x['id'] not in reserved and x['id'] not in confirmed_ids]
         if len(matches)==1:
             observed[key] = matches[0]
     # Named sheet slots may identify an unknown raw state, but never override
@@ -26,7 +46,7 @@ def resolve_day(day, manual):
             continue
         clock = sheet_times.get(key)
         matches = [x for x in ordinary if clock and x['happened_at'][11:16]==clock[:5]
-                   and x['id'] not in reserved and not x.get('verified_slot')]
+                   and x['id'] not in reserved and x['id'] not in {e['id'] for e in observed.values()} and not x.get('verified_slot')]
         same_slots = [slot for slot,value in sheet_times.items() if clock and value and value[:5]==clock[:5]]
         if len(matches)==1 and len(same_slots)==1:
             observed[key] = matches[0]
@@ -46,7 +66,16 @@ def resolve_day(day, manual):
         if key not in observed and not day['slots'][key] and event['id'] not in used:
             observed[key]=event
             used.add(event['id'])
+    # The explicit PM OUT-only instruction may use a single remaining
+    # afternoon punch when no verified direction contradicts it.
+    if 'pm_out' in require_bio and 'pm_out' not in observed and not day['slots']['pm_out']:
+        unused = [e for e in ordinary if e['id'] not in used and
+                  not e.get('verified_slot') and e['happened_at'][11:19]>='13:00:00']
+        if len(unused)==1:
+            observed['pm_out']=unused[0]
     display, conflicts, differences = {}, [], []
+    if reconciliation_conflict:
+        conflicts.append('reconciliation_evidence_missing')
     superseded_ids = set()
     for key in KEYS:
         reviewed = day['slots'][key]
@@ -61,13 +90,19 @@ def resolve_day(day, manual):
                 superseded_ids.add(event['id'])
             display[key] = {'id':None,'happened_at':day['date']+' '+approved,'work_code':'',
                 'origin':'hr_approved','placement':'approved_adjustment'}
+        elif key in force_sheet and not reviewed:
+            if event:
+                superseded_ids.add(event['id'])
+            display[key] = ({'id':None,'happened_at':day['date']+' '+sheet_times[key],'work_code':'',
+                'origin':'manual_sheet','placement':'reviewed_source_preference','source_row':manual['row'],'source_sheet':manual['sheet']}
+                if sheet_times.get(key) else None)
         elif event:
             display[key] = {**event,'origin':'reviewed' if reviewed else 'biometric', 'placement':'reviewed' if reviewed else 'observed'}
             if not reviewed and sheet_times.get(key) and event['happened_at'][11:16]!=sheet_times[key][:5]:
                 # A matched biometric entry wins over a stale sheet value.
                 # Preserve the discrepancy as source evidence, not a blocking conflict.
                 differences.append(key)
-        elif sheet_times.get(key):
+        elif sheet_times.get(key) and key not in require_bio:
             display[key] = {'id':None,'happened_at':day['date']+' '+sheet_times[key],'work_code':'',
                 'origin':'manual_sheet','placement':'named_source_column','source_row':manual['row'],'source_sheet':manual['sheet']}
         else:
@@ -121,7 +156,9 @@ def resolve_day(day, manual):
     recalculated = False
     adjusted = bool(complete and all(display.values()) and not conflicts and
                     any(display[k]['origin']=='hr_approved' for k in KEYS))
-    if (comparable or adjusted) and not offday:
+    reconciled = bool(complete and all(display.values()) and source and not conflicts and
+                      (plan or differences or any(display[k]['origin']=='reviewed' for k in KEYS)))
+    if (comparable or adjusted or reconciled) and not offday:
         clocks = {key: dt.time.fromisoformat(sheet_times[key] if comparable else display[key]['happened_at'][11:19]) for key in KEYS}
         # The worksheet uses minute-precision slots; keep original seconds in evidence.
         sec = {key: clock.hour*3600 + clock.minute*60 + (clock.second if comparable else 0) for key, clock in clocks.items()}
@@ -129,7 +166,7 @@ def resolve_day(day, manual):
                     + max(0, sec['pm_out'] - max(sec['pm_in'], 13*3600)))
         expected_ut = max(8*3600 - credited, 0)
         expected_ot = max(credited - 8*3600, 0)
-        recalculated = adjusted or (source['reported_total'], source_ut, overtime) != (credited, expected_ut, expected_ot)
+        recalculated = adjusted or reconciled or (source['reported_total'], source_ut, overtime) != (credited, expected_ut, expected_ot)
         total, source_ut, overtime = credited, expected_ut, expected_ot
     reviewed_ut = day['review']['undertime_minutes']
     # No required hours on weekends or holidays. Keep source/review evidence intact,
@@ -156,6 +193,7 @@ def resolve_day(day, manual):
     day['display_unassigned_count'] = unplaced
     day['display_unassigned_ids'] = sorted(unplaced_ids)
     day['display_superseded_ids'] = sorted(superseded_ids)
+    day['display_ignored_ids'] = sorted(ignored_ids)
     if aja_evidence:
         day['display_activities'].append({'category':'AJA','reference':aja_evidence['purpose']})
     if source:
