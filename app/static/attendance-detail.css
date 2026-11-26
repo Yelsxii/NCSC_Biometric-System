@@ -658,3 +658,12 @@
 .workspace .attendance-sheet .dtr-grid .slot-suggested .time-value{color:#7b551f}
 .workspace .attendance-sheet .suggested-caption{display:block;font-size:9px;color:#8a6124;line-height:1.2;margin-top:2px}
 #review-historical-suggestions{margin-top:8px;align-self:flex-start}
+
+.workspace .attendance-sheet .sheet-personnel #dtr-form-preview{position:relative;isolation:isolate;overflow:hidden;transition:background-color .22s ease,color .22s ease,transform .28s cubic-bezier(.2,.8,.25,1),box-shadow .28s ease}
+.workspace .attendance-sheet .sheet-personnel #dtr-form-preview::after{content:"";position:absolute;z-index:-1;top:-35%;bottom:-35%;left:0;width:36%;background:linear-gradient(90deg,transparent,#ffffff32,transparent);transform:translateX(-180%) skewX(-20deg);opacity:0;pointer-events:none}
+.workspace .attendance-sheet .sheet-personnel #dtr-form-preview:not(:disabled):is(:hover,:focus-visible){transform:translateY(-1px);box-shadow:0 4px 9px #193d8324}
+.workspace .attendance-sheet .sheet-personnel #dtr-form-preview:not(:disabled):is(:hover,:focus-visible)::after{animation:ncsc-action-sweep .72s cubic-bezier(.22,.61,.36,1) both}
+.workspace .attendance-sheet .sheet-personnel #dtr-form-preview:not(:disabled):active{transform:translateY(0) scale(.98);box-shadow:none}
+@media(prefers-reduced-motion:reduce){.workspace .attendance-sheet .sheet-personnel #dtr-form-preview,.workspace .attendance-sheet .sheet-personnel #dtr-form-preview svg{transition:none!important;animation:none!important;transform:none!important}.workspace .attendance-sheet .sheet-personnel #dtr-form-preview::after{display:none}.workspace .attendance-sheet .sheet-personnel #dtr-form-preview:not(:disabled):is(:hover,:focus-visible){transform:none;box-shadow:none}}
+.workspace .attendance-sheet .sheet-personnel #dtr-form-preview:not(:disabled):is(:hover,:focus-visible) svg{animation:ncsc-action-download .46s cubic-bezier(.2,.75,.3,1) both}
+@media(prefers-reduced-motion:reduce){.workspace .attendance-sheet .sheet-personnel #dtr-form-preview:not(:disabled):is(:hover,:focus-visible) svg{animation:none!important}}
