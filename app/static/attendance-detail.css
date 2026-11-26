@@ -631,3 +631,13 @@
 #day-review-dialog :is(.app-dialog-footer,.clock-picker-actions) .button:not(:disabled):active{transform:scale(.98)}
 #day-review-dialog :is(.app-dialog-footer,.clock-picker-actions) .button:focus-visible{outline:2px solid #7095d1;outline-offset:2px}
 @media(prefers-reduced-motion:reduce){#day-review-dialog .review-close,#day-review-dialog :is(.app-dialog-footer,.clock-picker-actions) .button{transition:none;transform:none!important}}
+
+/* Documented leave and AJA coverage are not missing attendance. */
+.workspace .legend-leave{--legend-dot:#6b8da6;--legend-glow:#6b8da625}
+.workspace .attendance-sheet .dtr-grid .time-slot.slot-leave{background:#e5edf4!important}
+.workspace .attendance-sheet .dtr-grid .leave-status,
+.workspace .attendance-sheet .dtr-grid .aja-coverage-status{font-size:11px;font-weight:700;overflow-wrap:anywhere}
+.workspace .attendance-sheet .dtr-grid .leave-status{color:#45627b}
+.workspace .attendance-sheet .dtr-grid .aja-coverage-status{color:#84590f}
+.workspace .attendance-sheet .day-leave .dtr-date{box-shadow:inset 3px 0 #94adc3;background:#eff4f8}
+.workspace .attendance-sheet .remark-leave{background:#dbe6ef;color:#45627b;--remark-active:#496d89}
