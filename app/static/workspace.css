@@ -857,10 +857,10 @@
 /* Shared entrance motion for full-size application dialogs. Keep their
    normal dimensions stable so DTR paper fitting and form layout are unchanged. */
 dialog.app-dialog[open],#dtr-preview-dialog[open]{
-  animation:ncsc-modal-enter 340ms cubic-bezier(.22,.75,.25,1) both;
+  animation:ncsc-modal-enter 260ms cubic-bezier(.22,.75,.25,1) both;
 }
 dialog.app-dialog[open]::backdrop,#dtr-preview-dialog[open]::backdrop{
-  animation:ncsc-modal-backdrop-enter 300ms ease-out both;
+  animation:ncsc-modal-backdrop-enter 230ms ease-out both;
 }
 @keyframes ncsc-modal-enter{
   from{opacity:0;transform:translateY(10px)}
