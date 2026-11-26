@@ -749,7 +749,7 @@ with connect() as con:
       const morning=make(['07:40:00','12:00:00','13:00:00','17:00:00'],'09:01:00','10:51:00');
       const spanning=make(['07:40:00','12:00:00','13:00:00','17:00:00'],'10:21:00','13:02:00');
       const cells=day=>{const t=document.createElement('table');t.innerHTML='<tbody><tr>'+attendanceTimeCells(day)+'</tr></tbody>';return [...t.querySelectorAll('td')].map(td=>({aja:td.classList.contains('slot-aja'),text:td.textContent,covered:td.classList.contains('slot-aja-covered'),span:td.colSpan}));};
-      const print=day=>{const t=document.createElement('table');t.innerHTML='<tbody>'+dtrPrintRows({month:'2026-11',days:[day]},'COS')+'</tbody>';return {extra:[...t.querySelectorAll('.print-aja:not(.print-aja-subrow) td')].map(td=>[td.colSpan,td.textContent]),coverage:[...t.querySelectorAll('.print-aja-coverage')].map(td=>[td.textContent,td.colSpan]),inline:[...t.querySelectorAll('.print-aja-subcell')].map(td=>[td.dataset.slot,td.textContent]),regular:[...t.querySelector('.print-aja-subrow')?.previousElementSibling?.cells||[]].slice(1,5).map(td=>[td.textContent,td.rowSpan]),rows:t.rows.length};};
+      const print=day=>{const t=document.createElement('table');t.innerHTML='<tbody>'+dtrPrintRows({month:'2026-11',days:[day]},'COS')+'</tbody>';return {extra:[...t.querySelectorAll('.print-aja')].map(tr=>tr.textContent),coverage:[...t.querySelectorAll('.print-aja-coverage')].map(td=>[td.textContent,td.colSpan]),inline:[...t.querySelectorAll('.print-aja-inline-note')].map(td=>[td.dataset.slot,td.textContent]),regular:[...t.querySelectorAll('.print-aja-clock-cell .print-regular-clock')].map(el=>[el.textContent,el.parentElement.rowSpan]),rows:t.rows.length};};
       return {complete:cells(complete),covered:cells(covered),morning:cells(morning),spanning:cells(spanning),completePrint:print(complete),morningPrint:print(morning),spanningPrint:print(spanning),coveredPrint:print(covered)};
     });
     assert.deepEqual(ajaLayouts.complete.map(x=>x.aja),[false,false,true,false]);
@@ -765,12 +765,14 @@ with connect() as con:
     assert.deepEqual(ajaLayouts.completePrint.extra,[]);
     assert.deepEqual(ajaLayouts.completePrint.inline,[['pm_in','AJA14:28-14:45']]);
     assert.deepEqual(ajaLayouts.completePrint.regular,[['8:40',1],['12:30',1],['12:33',1],['17:40',1]]);
-    assert.equal(ajaLayouts.completePrint.rows,32);
-    assert.equal(await page.evaluate(()=>{const day={date:'2026-11-12',day:'Thu',calendar:{},has_attendance_entries:true,display_slots:Object.fromEntries(['am_in','am_out','pm_in','pm_out'].map((k,i)=>[k,{happened_at:'2026-11-12 '+['08:40:00','12:30:00','12:33:00','17:40:00'][i]}])),aja_periods:[{out:{time:'14:28:00'},in:{time:'14:45:00'},review:false}],monitoring:{}};const t=document.createElement('table');t.innerHTML='<tbody>'+dtrPrintRows({month:'2026-11',days:[day]},'COS')+'</tbody>';const row=t.querySelector('.print-aja-subrow');return row.cells.length===4&&row.cells[2].dataset.slot==='pm_in'&&row.cells[3].textContent==='';}),true,'AJA note occupies only PM IN in a separate aligned row');
+    assert.equal(ajaLayouts.completePrint.rows,31);
     assert.deepEqual(ajaLayouts.morningPrint.extra,[]);
     assert.deepEqual(ajaLayouts.morningPrint.inline,[['am_in','AJA09:01-10:51']]);
     assert.deepEqual(ajaLayouts.morningPrint.regular,[['7:40',1],['12:00',1],['13:00',1],['17:00',1]]);
-    assert.deepEqual(ajaLayouts.spanningPrint.extra,[[3,'AJA 10:21-13:02'],[1,'']]);
+    assert.deepEqual(ajaLayouts.spanningPrint.extra,[]);
+    assert.deepEqual(ajaLayouts.spanningPrint.inline,[['am_in','AJA10:21-13:02'],['am_out','AJA'],['pm_in','AJA']]);
+    assert.deepEqual(ajaLayouts.spanningPrint.regular,[['7:40',1],['12:00',1],['13:00',1],['17:00',1]]);
+    assert.equal(ajaLayouts.spanningPrint.rows,31);
     assert.deepEqual(ajaLayouts.coveredPrint.extra,[]);
     assert.deepEqual(ajaLayouts.coveredPrint.coverage,[['AJA 08:07-18:00',2]]);
     assert.equal(ajaLayouts.coveredPrint.rows,31);
