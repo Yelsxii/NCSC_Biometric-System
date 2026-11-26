@@ -490,10 +490,10 @@ async function loadDetail({quiet=false}={}){
       return '<tr class="day-row day-'+esc(day.tone)+'" data-date="'+esc(day.date)+'">'+
         '<td class="dtr-date'+(day.is_weekend&&!day.calendar.holiday_name?' calendar-weekend':'')+'"'+(calendarLabel?' title="'+esc(calendarLabel)+'"':'')+'><strong>'+esc(day.date.slice(8))+'</strong><span>'+esc(day.day)+'</span></td>'+
         attendanceTimeCells(day)+
-        '<td class="daily-total-value" title="'+esc(metrics.metrics_origin==='manual_sheet'?'Manual DTR calculated result':'Elapsed AM + PM time; '+(metrics.total_seconds??'unknown')+' seconds')+'">'+durationText(metrics.total_seconds)+'</td>'+
-        '<td class="undertime-value '+utTone+'" title="'+(calendarLabel?'Not applicable on weekends and holidays':ut==null?'For review':'Available DTR undertime')+'">'+(ut==null?'—':Math.floor(ut/3600))+'</td>'+
+        '<td class="daily-total-value" title="'+esc(metrics.metrics_origin==='template_recalculated'?'Recalculated using the existing DTR template and matched source times':metrics.metrics_origin==='manual_sheet'?'Manual DTR calculated result':'Elapsed AM + PM time; '+(metrics.total_seconds??'unknown')+' seconds')+'">'+durationText(metrics.total_seconds)+'</td>'+
+        '<td class="undertime-value '+utTone+'" title="'+esc(calendarLabel?'Not applicable on weekends and holidays':ut==null?'For review':metrics.undertime_origin==='reviewed'?'Saved HR undertime override':metrics.undertime_origin==='template_recalculated'?'Recalculated from matching DTR time entries':'Available DTR undertime')+'">'+(ut==null?'—':Math.floor(ut/3600))+'</td>'+
         '<td class="undertime-value '+utTone+'">'+(ut==null?'—':String(Math.floor(ut%3600/60)).padStart(2,'0'))+'</td>'+
-        '<td class="overtime-value '+otTone+'" title="Manual DTR overtime result">'+durationText(metrics.overtime_seconds)+'</td>'+
+        '<td class="overtime-value '+otTone+'" title="'+esc(metrics.metrics_origin==='template_recalculated'?'Recalculated DTR excess hours; not payroll overtime approval':'Manual DTR overtime result')+'">'+durationText(metrics.overtime_seconds)+'</td>'+
         activityScanCell(day)+'<td class="day-activities">'+(visibleStatus?'<span title="'+esc(detail)+'" class="monitor-remark remark-'+kind+'">'+esc(visibleStatus)+'</span>':'<span class="empty-cell">—</span>')+'</td>'+
         '<td class="day-action"><button type="button" class="button outline edit-day" data-edit-day="'+esc(day.date)+'" aria-label="'+(session.role==='admin'?'Edit':'View')+' attendance for '+esc(day.date)+'">'+editIcon()+(session.role==='admin'?'Edit':'View')+'</button></td></tr>';
     }).join(''));
