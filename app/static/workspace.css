@@ -992,7 +992,7 @@ dialog.app-dialog[open]::backdrop,#dtr-preview-dialog[open]::backdrop{
 .workspace #employee-profile-panel .profile-table{width:100%;min-width:650px;table-layout:fixed;font-size:11.5px}
 .workspace #employee-profile-panel .profile-table td{height:44px;padding:7px 10px;vertical-align:middle}
 .workspace #employee-profile-panel .profile-table th{height:34px;padding:9px 10px}
-.workspace #employee-profile-panel .profile-name{width:34%}.workspace #employee-profile-panel .profile-id{width:100px}.workspace #employee-profile-panel .profile-category{width:15%}.workspace #employee-profile-panel .profile-department{width:auto}.workspace #employee-profile-panel .profile-action{width:132px}
+.workspace #employee-profile-panel .profile-name{width:34%}.workspace #employee-profile-panel .profile-id{width:100px}.workspace #employee-profile-panel .profile-category{width:15%}.workspace #employee-profile-panel .profile-department{width:auto}.workspace #employee-profile-panel .profile-action{width:60px}
 .workspace #employee-profile-panel .profile-table tbody tr:nth-child(even){background:#f7f9fc}
 .workspace #employee-profile-panel .profile-table tbody tr:is(:hover,:focus-within){background:#dbe7f7}
 .workspace #employee-profile-panel .employee-name-cell small{font-size:10px;color:#657997;line-height:1.3}
@@ -1018,7 +1018,7 @@ dialog.app-dialog[open]::backdrop,#dtr-preview-dialog[open]::backdrop{
 .workspace #employee-profile-panel .category-tab:focus-visible{outline:2px solid #7295ce;outline-offset:2px}
 .workspace #employee-profile-panel #open-profile{height:38px;min-height:38px;border-radius:9px;font-size:11px;font-weight:650;gap:7px;flex-shrink:0}
 .workspace #employee-profile-panel #open-profile svg{width:16px;height:16px;flex:none}
-@media(max-width:740px){.workspace #employee-profile-panel .category-tabs{gap:5px;justify-content:flex-start;margin-left:0}.workspace #employee-profile-panel .category-tab{padding:0 8px;font-size:11px}.workspace #employee-profile-panel .profile-toolbar .search-box{flex:1 1 100%;width:100%;min-width:0;max-width:none}.workspace #employee-profile-panel .profile-action{width:128px}}
+@media(max-width:740px){.workspace #employee-profile-panel .category-tabs{gap:5px;justify-content:flex-start;margin-left:0}.workspace #employee-profile-panel .category-tab{padding:0 8px;font-size:11px}.workspace #employee-profile-panel .profile-toolbar .search-box{flex:1 1 100%;width:100%;min-width:0;max-width:none} .workspace #employee-profile-panel .profile-action{width:60px}}
 @media(prefers-reduced-motion:reduce){.workspace #employee-profile-panel .category-tab,.workspace #employee-profile-panel .category-tab span{transition:none}.workspace #employee-profile-panel .category-tab:is(:hover,:focus-visible,:active){transform:none}}
 
 /* Keep the leftmost device-linked employee identifier compact and readable. */
@@ -1079,19 +1079,20 @@ dialog.app-dialog[open]::backdrop,#dtr-preview-dialog[open]::backdrop{
 /* Small translucent light circle behind count badges, without a raised button. */
 .workspace #employee-profile-panel .category-tab span{position:relative;isolation:isolate}
 .workspace #employee-profile-panel .category-tab span::before{content:"";position:absolute;inset:-3px;z-index:-1;border-radius:999px;background:radial-gradient(circle,#ffffffa8 20%,#ffffff00 73%);pointer-events:none}
-.workspace #employee-profile-panel .profile-action{width:76px}
-.workspace #employee-profile-panel .profile-more{width:31px;height:31px;display:inline-grid;place-items:center;border:0;border-radius:999px;background:#e3ebf8;color:#294d85;box-shadow:none;transition:background-color .2s ease,color .2s ease}
-.workspace #employee-profile-panel .profile-more svg{width:19px;height:19px}
+.workspace #employee-profile-panel .profile-action,.workspace #employee-profile-panel .profile-table .actions-column{width:60px;min-width:60px;max-width:60px}
+.workspace #employee-profile-panel .profile-table .directory-action-cell,.workspace #employee-profile-panel .profile-table .actions-column{padding-inline:4px}
+.workspace #employee-profile-panel .profile-more{width:24px;height:24px;min-width:24px;min-height:24px;padding:0;display:inline-grid;place-items:center;vertical-align:middle;border:0;border-radius:999px;background:#e3ebf8;color:#294d85;box-shadow:none;transition:background-color .2s ease,color .2s ease}
+.workspace #employee-profile-panel .profile-more svg{width:15px;height:15px;display:block}
 .workspace #employee-profile-panel .profile-more:is(:hover,[aria-expanded=true]){background:#244b9a;color:#fff}
 .workspace #employee-profile-panel .directory-archive-toggle{border:0;background:transparent;color:#536e94;font-size:10px;padding:4px 7px;border-radius:999px}
 .workspace #employee-profile-panel .directory-archive-toggle[hidden]{display:none}
 .workspace #employee-profile-panel .directory-archive-toggle:hover{background:#d8e5f7;color:#244b9a}
-#profile-action-menu{position:fixed;inset:auto;margin:0;padding:5px;width:158px;max-width:calc(100vw - 16px);border:1px solid #f7faff;border-radius:18px;background:#f4f8fd;box-shadow:0 8px 24px #18365b26;opacity:0;transform:translateY(-4px) scale(.98);transition:opacity .18s ease,transform .18s ease,display .18s allow-discrete,overlay .18s allow-discrete}
+#profile-action-menu{position:fixed;inset:auto;margin:0;padding:4px;width:140px;max-width:calc(100vw - 16px);border:1px solid #f7faff;border-radius:14px;background:#f4f8fd;box-shadow:0 8px 24px #18365b26;opacity:0;transform:translateY(-4px) scale(.98);transition:opacity .18s ease,transform .18s ease,display .18s allow-discrete,overlay .18s allow-discrete}
 #profile-action-menu:popover-open{opacity:1;transform:none}
 @starting-style{#profile-action-menu:popover-open{opacity:0;transform:translateY(-4px) scale(.98)}}
-#profile-action-menu button{display:flex;align-items:center;gap:8px;width:100%;padding:8px 10px;border:0;border-radius:999px;background:transparent;color:#244b9a;font:600 12px/1.4 "Segoe UI",system-ui,sans-serif;text-align:left;transition:background-color .16s ease,color .16s ease}
+#profile-action-menu button{display:flex;align-items:center;gap:7px;width:100%;min-height:28px;padding:5px 8px;border:0;border-radius:999px;background:transparent;color:#244b9a;font:600 11px/1.4 "Segoe UI",system-ui,sans-serif;text-align:left;transition:background-color .16s ease,color .16s ease}
 #profile-action-menu button[hidden]{display:none}
-#profile-action-menu button svg{width:15px;height:15px;flex:none}
+#profile-action-menu button svg{width:13px;height:13px;flex:none}
 #profile-action-menu button:is(:hover,:focus-visible){background:#dce8fb}
 #profile-action-menu #profile-menu-delete{color:#b32638}
 #profile-action-menu #profile-menu-delete:is(:hover,:focus-visible){background:#fbe2e7}
