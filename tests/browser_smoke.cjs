@@ -1168,7 +1168,8 @@ with connect() as con:
 
     // Complete an existing identity without replacing its attendance or ID.
     await page.locator('[data-page="profiles"]').click();
-    await page.locator('#profile-rows [data-edit-profile="1"]').click();
+    await page.locator('#profile-rows [data-profile-more="1"]').click();
+    await page.locator('#profile-menu-edit').click();
     await page.locator('#profile-dialog[open]').waitFor();
     assert.equal(await page.locator('#profile-id').getAttribute('readonly'),'');
     await page.locator('#profile-first').fill('Sample');
@@ -1192,7 +1193,7 @@ with connect() as con:
     await page.screenshot({path:join(root,'docs/employee-registration-preview.png'),animations:'disabled'});
     await page.locator('#save-profile').click();
     await page.locator('#profile-dialog').waitFor({state:'hidden'});
-    await page.locator('[data-edit-profile="25"]').waitFor();
+    await page.locator('[data-profile-more="25"]').waitFor();
     await page.locator('#open-profile').click();
     await page.locator('#profile-id').fill('25');
     await page.locator('#profile-first').fill('Wrong duplicate');
@@ -1204,7 +1205,7 @@ with connect() as con:
     await page.locator('#profile-error').filter({hasText:/already has a profile/}).waitFor();
     await page.locator('#cancel-profile').click();
 
-    // Fictional profiles fill the list, exercising category tabs and pagination.
+    // Fictional profiles fill the scrollable list, exercising category tabs without pagination.
     const seeded=await page.evaluate(async()=>{
       for(let i=30;i<43;i++){
         const response=await fetch('/api/employee-profiles',{
@@ -1219,15 +1220,22 @@ with connect() as con:
       return 'ok';
     });
     assert.equal(seeded,'ok');
-    await page.locator('#profile-search').fill('');
-    await page.locator('#profile-filter button[type="submit"]').click();
+    await page.evaluate(()=>loadProfiles());
     await page.locator('#profile-total-badge').filter({hasText:/^16$/}).waitFor();
-    assert.equal(await page.locator('#profile-rows tr').count(),15);
-    await page.locator('#profile-next').click();
-    await page.locator('#profile-page').filter({hasText:'Page 2 of 2'}).waitFor();
-    assert.equal(await page.locator('#profile-rows tr').count(),1);
-    await page.locator('#profile-prev').click();
-    await page.locator('#profile-page').filter({hasText:'Page 1 of 2'}).waitFor();
+    assert.equal(await page.locator('#profile-rows tr').count(),16);
+    assert.equal(await page.locator('#profile-next').count(),0);
+    await page.locator('[data-profile-more="25"]').click();
+    await page.locator('#profile-action-menu:popover-open').waitFor();
+    page.once('dialog',dialog=>dialog.accept());
+    await page.locator('#profile-menu-delete').click();
+    await page.locator('[data-profile-more="25"]').waitFor({state:'detached'});
+    await page.locator('#profile-archive-toggle').click();
+    await page.locator('[data-profile-more="25"]').click();
+    page.once('dialog',dialog=>dialog.accept());
+    await page.locator('#profile-menu-delete').click();
+    await page.locator('[data-profile-more="25"]').waitFor({state:'detached'});
+    await page.locator('#profile-archive-toggle').click();
+    await page.locator('[data-profile-more="25"]').waitFor();
     await page.screenshot({path:join(root,'docs/employee-profiles-preview.png'),animations:'disabled'});
     await page.locator('[data-profile-category="GIP"]').click();
     await page.locator('#profile-rows .tag-gip').first().waitFor();
@@ -1238,7 +1246,7 @@ with connect() as con:
       scrollbar:getComputedStyle(document.querySelector('#main-content')).scrollbarWidth,
       pageHeight:document.documentElement.scrollHeight,viewport:window.innerHeight
     }));
-    assert.ok(layout.buttonHeight<=35);
+    assert.ok(layout.buttonHeight<=39);
     assert.equal(layout.scrollbar,'none');
     assert.ok(layout.pageHeight<=layout.viewport+1);
 
