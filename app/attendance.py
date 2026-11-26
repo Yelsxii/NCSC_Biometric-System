@@ -112,8 +112,7 @@ def save_day_review(employee_code: str, date: str, payload: DayReviewInput, acto
                     raise HTTPException(400, "Time out must be later than time in.")
         old_times = json.loads(previous["approved_times"]) if previous else {}
         approved = old_times if payload.approved_times is None else payload.approved_times
-        if approved != old_times and not payload.remark:
-            raise HTTPException(400, "Enter the HR-approved adjustment reason.")
+        # An adjustment reason is optional; the before/after values and actor remain audited.
         now = dt.datetime.now(dt.timezone(dt.timedelta(hours=8))).strftime("%Y-%m-%d %H:%M:%S")
         if approved != old_times and any(date+" "+clock > now for clock in approved.values()):
             raise HTTPException(400, "Approved times cannot be in the future.")
