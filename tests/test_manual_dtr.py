@@ -589,3 +589,33 @@ def test_stale_blank_row_undertime_recalculated_for_complete_matching_clocks(adm
     assert second['undertime_seconds'] == 3600
     assert second['overtime_seconds'] == 0
     assert second['remarks'] == 'Undertime'
+
+
+def test_edited_regular_time_recalculates_zero_undertime_without_reason(admin):
+    client, headers = admin
+    seed_employee()
+    import_one(client, headers, packet([
+        row(times=['08:01','12:00','12:10','17:00'], total=(8*60-1)/1440, ut=1/1440, ot=0)
+    ]))
+    raw = b'001\t2026-11-06 08:01:46\t1\t9\t1\t0\n001\t2026-11-06 17:00:00\t1\t9\t1\t0\n'
+    assert client.post('/api/imports',headers=headers,files={'file':('fictional.dat',raw)}).status_code==200
+    assert monitor(client)['monitoring']['undertime_seconds'] == 60
+    result = client.put('/api/attendance/001/2026-11-06',headers=headers,json={
+        'version':0,'approved_times':{'pm_out':'17:01:00'}})
+    assert result.status_code == 200, result.text
+    updated = monitor(client)
+    assert updated['display_slots']['pm_out']['happened_at'].endswith('17:01:00')
+    assert updated['monitoring']['total_seconds'] == 28800
+    assert updated['monitoring']['undertime_seconds'] == 0
+    assert updated['monitoring']['overtime_seconds'] == 0
+    assert updated['display_remark'] == 'Complete'
+    assert updated['review']['undertime_minutes'] is None
+    assert updated['source_conflicts'] == []
+    with closing(connect()) as con:
+        assert con.execute("SELECT COUNT(*) FROM punches").fetchone()[0] == 2
+        assert con.execute("SELECT COUNT(*) FROM audit_events WHERE entity='attendance_day'").fetchone()[0] == 1
+    result = client.put('/api/attendance/001/2026-11-06',headers=headers,json={
+        'version':1,'approved_times':{'pm_out':'16:59:00'}})
+    assert result.status_code == 200, result.text
+    assert monitor(client)['monitoring']['undertime_seconds'] == 120
+    assert monitor(client)['display_remark'] == 'Undertime'
