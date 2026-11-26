@@ -8,7 +8,7 @@
   <link rel="stylesheet" href="/static/app.css">
   <link rel="stylesheet" href="/static/workspace.css?v=attendance-71">
   <link rel="stylesheet" href="/static/attendance-detail.css?v=auto-dtr-23">
-  <link rel="stylesheet" href="/static/dtr-preview.css?v=9">
+  <link rel="stylesheet" href="/static/dtr-preview.css?v=10">
   <script src="/static/dtr-preview.js?v=7" defer></script>
   <script src="/static/app.js?v=auto-dtr-27" defer></script>
 </head>
@@ -239,9 +239,9 @@
     </form>
   </dialog>
 
-  <dialog id="dtr-preview-dialog" aria-labelledby="dtr-preview-heading">
+  <dialog id="dtr-preview-dialog" aria-labelledby="dtr-preview-name">
     <div class="export-preview-toolbar">
-      <div class="preview-identity"><h2 id="dtr-preview-heading" tabindex="-1" autofocus>DTR Preview</h2><div class="preview-employee"><strong id="dtr-preview-name"></strong><span class="preview-month"><svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="5" width="18" height="16" rx="3"/><path d="M8 3v4m8-4v4M3 10h18"/></svg><span id="dtr-preview-context"></span></span></div></div>
+      <div class="preview-identity"><h2 id="dtr-preview-name" class="preview-person" tabindex="-1" autofocus></h2><span class="preview-month"><svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="5" width="18" height="16" rx="3"/><path d="M8 3v4m8-4v4M3 10h18"/></svg><span id="dtr-preview-context"></span></span></div>
       <button type="button" id="dtr-preview-back" class="preview-close" title="Close preview" aria-label="Close DTR preview"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg></button>
     </div>
     <div class="dtr-workspace">
