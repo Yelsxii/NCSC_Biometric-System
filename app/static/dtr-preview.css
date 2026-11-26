@@ -39,8 +39,9 @@
   .preview-controls select option{display:flex;align-items:center;gap:8px;box-sizing:border-box;min-height:28px;padding:5px 9px;margin:0 0 3px;border:1px solid transparent;border-radius:7px;background:transparent;color:#536b91;font-size:11.5px;line-height:1.3;font-weight:550;cursor:pointer;transition:background-color .18s ease,border-color .18s ease,color .18s ease,box-shadow .18s ease}
   .preview-controls select option:last-child{margin-bottom:0}
   .preview-controls select option:not(:checked):is(:hover,:focus-visible){background:#f1f5fc;border-color:#e6edf9;color:#244b9a}
-  .preview-controls select option:checked{background:rgba(36,75,154,.94);border-color:#ffffff3b;color:#fff;font-weight:650;box-shadow:inset 0 1px 1px #ffffff40,inset 0 -1px 1px #132e601a,0 2px 5px #244b9a20;backdrop-filter:blur(8px)}
-  .preview-controls select option:checked:is(:hover,:focus-visible){background:rgba(43,85,166,.96);border-color:#ffffff70;box-shadow:inset 0 1px 1px #ffffff55,inset 0 -1px 1px #132e601a,0 3px 7px #244b9a30}
+  /* Navy substrate with a broad translucent glass wash; no bevel or raised rim. */
+  .preview-controls select option:checked{background-color:#20458c;background-image:radial-gradient(ellipse at 18% 0%,#ffffff24 0%,#ffffff08 55%,#ffffff00 85%),linear-gradient(115deg,#ffffff0d,#ffffff03);background-clip:padding-box;border-color:#31599b;color:#fff;font-weight:650;box-shadow:none}
+  .preview-controls select option:checked:is(:hover,:focus-visible){background-color:#2a5098;border-color:#4166a4;box-shadow:none}
   .preview-controls select option:focus-visible{outline:2px solid #7596cc;outline-offset:-2px}
   .preview-controls select option::checkmark{order:1;margin-inline-start:auto;color:inherit;font-weight:700}
 }
