@@ -31,42 +31,33 @@ function dtrClock(event,shortHour=false){
 function dtrAjaClock(event){
   return event?esc(String(event.time||'').slice(0,5)):'';
 }
-function dtrPrintAjaRow(period){
-  const start=period.out?.time,end=period.in?.time;
-  const complete=Boolean(start&&end&&start<end&&!period.review);
-  const label=complete?'AJA '+dtrAjaClock(period.out)+'-'+dtrAjaClock(period.in)
-    :'AJA OUT '+dtrAjaClock(period.out)+' · '+(period.in?.origin==='biometric'?'IN':'END')+' '+dtrAjaClock(period.in)+' (for review)';
-  const note='<td colspan="2" class="print-aja-note">'+label+'</td>';
-  // Allocate the annotation by the documented activity clock interval,
-  // never by the placement of an unrelated regular IN or OUT punch.
-  const am=complete&&end<='12:00:00',pm=complete&&start>='12:00:00';
-  // A continuous cross-noon interval uses one annotation across the first
-  // three columns, leaving the final PM OUT independent. Unknown intervals
-  // retain a full-width review note rather than claiming a coverage period.
-  const cells=am?note+'<td colspan="2"></td>':pm?'<td colspan="2"></td>'+note
-    :complete?'<td colspan="3" class="print-aja-note">'+label+'</td><td class="print-aja-blank"></td>'
-    :'<td colspan="4" class="print-aja-note">'+label+'</td>';
-  return '<tr class="print-aja">'+cells+'</tr>';
+function dtrPrintAjaNotes(day){
+  const notes={am_in:[],am_out:[],pm_in:[],pm_out:[]};
+  if(day.travel_order||day.leave_status)return notes;
+  const slots=day.display_slots||{};
+  for(const p of day.aja_periods||[]){
+    const a=p.out?.time,b=p.in?.time,complete=Boolean(a&&b&&a<b&&!p.review);
+    const cross=complete&&a<'12:00:00'&&b>'12:00:00';
+    const key=cross?'am_in':(complete?b<='12:00:00':(a||b||'00:00:00')<'12:00:00')?'am_in':'pm_in';
+    const hasPair=Boolean(slots[key]&&slots[key.replace('_in','_out')]);
+    const review=!complete||!hasPair||(cross&&!slots.pm_in);
+    const range=(a?dtrAjaClock(p.out):'?')+'-'+(b?dtrAjaClock(p.in):'?');
+    notes[key].push('AJA<br>'+range+(review?'<br>For review':''));
+    // The full interval appears once. Cross-period continuation markers
+    // do not replace clocks or assert that a missing punch was recorded.
+    if(cross){
+      for(const k of ['am_out','pm_in']){
+        if(slots[k])notes[k].push('AJA');
+      }
+    }
+  }
+  return notes;
 }
 function dtrPrintRows(data,category,from=1,to=dtrLastDay(data.month)){
   const gip=category==='GIP',metricsCols=gip?1:2;
   const days=new Map(data.days.map(day=>[Number(day.date.slice(-2)),day]));
   const coveredPM=day=>day?.aja_covered_slots?.includes('pm_in')&&day?.aja_covered_slots?.includes('pm_out')&&day.aja_periods?.length===1;
-  // A verified interval confined to one half-day gets a separate sub-row
-  // beneath that half's actual IN clock. All regular clocks stay in one aligned row.
-  const inlineKey=(day,p)=>{
-    const a=p.out?.time,b=p.in?.time;
-    if(p.review||!a||!b||a>=b)return null;
-    const key=b<='12:00:00'?'am_in':a>='12:00:00'?'pm_in':null;
-    return key&&day.display_slots?.[key]&&day.display_slots?.[key.replace('_in','_out')]?key:null;
-  };
-  const inlinePeriods=(day,key)=>!day.travel_order&&!coveredPM(day)?(day.aja_periods||[]).filter(p=>inlineKey(day,p)===key):[];
-  const extraPeriods=day=>day&&!day.travel_order&&!coveredPM(day)?(day.aja_periods||[]).filter(p=>!inlineKey(day,p)):[];
-  const subrowCount=day=>day?Math.max(inlinePeriods(day,'am_in').length,inlinePeriods(day,'pm_in').length):0;
-  const spanFor=n=>{
-    const day=n>=from&&n<=to?days.get(n):null;
-    return 1+subrowCount(day)+extraPeriods(day).length;
-  };
+  const spanFor=()=>1;
   const reportCell=(n,span)=>{
     if(!gip)return '';
     if(n===16){
@@ -78,7 +69,7 @@ function dtrPrintRows(data,category,from=1,to=dtrLastDay(data.month)){
   return Array.from({length:31},(_,i)=>{
     const n=i+1,day=n>=from&&n<=to?days.get(n):null;
     if(!day)return '<tr><td>'+n+'</td>'+ '<td></td>'.repeat(4+metricsCols)+reportCell(n,1)+'</tr>';
-    const periods=extraPeriods(day);
+    const periods=day.travel_order?[]:(day.aja_periods||[]);
     const slots=day.display_slots||{};
     const hasEntries=day.has_attendance_entries||Object.values(slots).some(Boolean);
     const weekday=new Date(day.date+'T00:00:00Z').getUTCDay();
@@ -86,26 +77,24 @@ function dtrPrintRows(data,category,from=1,to=dtrLastDay(data.month)){
     const note=day.manual_source?.notes?.find(x=>/\b(?:LEAVE|CTO|WORK SUSPENSION)\b/i.test(x));
     const special=day.travel_order?travelLabel(day):
       (!hasEntries&&!periods.length?((day.calendar?.holiday_name?'HOLIDAY':'')||note||(day.is_weekend?(day.day==='Sat'?'SATURDAY':'SUNDAY'):'')):'');
-    const subrows=subrowCount(day),span=periods.length+subrows+1,ut=offday?null:day.monitoring?.undertime_seconds;
+    const span=1,ut=offday?null:day.monitoring?.undertime_seconds;
     // Leave both printed undertime cells empty unless a positive duration exists.
     const showUndertime=Number.isFinite(ut)&&ut>0;
     const total=day.monitoring?.total_seconds;
     const metricCells=gip?'<td rowspan="'+span+'">'+(total==null||(!hasEntries&&!periods.length)?'':esc(durationText(total).slice(0,-3)))+'</td>':
       '<td class="print-undertime" rowspan="'+span+'">'+(!showUndertime?'':Math.floor(ut/3600))+'</td><td class="print-undertime" rowspan="'+span+'">'+(!showUndertime?'':Math.floor(ut%3600/60))+'</td>';
     const coverage=coveredPM(day)?day.aja_periods[0]:null;
+    const notes=coverage?{}:dtrPrintAjaNotes(day);
+    const hasNotes=Object.values(notes).some(items=>items.length);
     const regularCells=coverage
       ? '<td>'+dtrClock(slots.am_in,!gip)+'</td><td>'+dtrClock(slots.am_out,!gip)+'</td><td colspan="2" class="print-aja-coverage">AJA '+dtrAjaClock(coverage.out)+'-'+dtrAjaClock(coverage.in)+'</td>'
-      : ['am_in','am_out','pm_in','pm_out'].map(k=>'<td>'+dtrClock(slots[k],!gip)+'</td>').join('');
-    const annotationRows=Array.from({length:subrows},(_,i)=>{
-      const cells=['am_in','am_out','pm_in','pm_out'].map(k=>{
-        const p=inlinePeriods(day,k)[i];
-        return p?'<td class="print-aja-subcell" data-slot="'+k+'">AJA<br>'+dtrAjaClock(p.out)+'-'+dtrAjaClock(p.in)+'</td>':'<td class="print-aja-blank"></td>';
+      : ['am_in','am_out','pm_in','pm_out'].map(k=>{
+        const annotation=notes[k]||[];
+        return '<td'+(hasNotes?' class="print-aja-clock-cell"':'')+'><span class="print-regular-clock">'+dtrClock(slots[k],!gip)+'</span>'+annotation.map(note=>'<span class="print-aja-inline-note" data-slot="'+k+'">'+note+'</span>').join('')+'</td>';
       }).join('');
-      return '<tr class="print-aja print-aja-subrow">'+cells+'</tr>';
-    }).join('');
     return '<tr'+(offday?' class="print-offday"':'')+'><td rowspan="'+span+'">'+n+'</td>'+
       (special?'<td colspan="4" class="special-day">'+esc(special)+'</td>':regularCells)+
-      metricCells+reportCell(n,span)+'</tr>'+annotationRows+periods.map(dtrPrintAjaRow).join('');
+      metricCells+reportCell(n,span)+'</tr>';
   }).join('');
 }
 function civilDtrCopy(data,category){
@@ -138,7 +127,7 @@ function gipDtrForm(data,period){
 function buildDtrDocument(data,category,period,paperKey,version){
   const paper=dtrPaper[paperKey]||dtrPaper.a4;
   const body=category==='GIP'?gipDtrForm(data,period):civilDtrCopy(data,category)+civilDtrCopy(data,category);
-  return '<!doctype html><html lang="en"><head><meta charset="utf-8"><title>DTR - '+esc(data.display_name||'')+' - '+esc(data.month)+'</title><link rel="stylesheet" href="/static/dtr-preview.css?v=21"><style>@page{size:'+paper.width+' '+paper.height+';margin:'+DTR_NARROW_MM+'mm} :root{--paper-width:'+paper.width+';--paper-height:'+paper.height+';--paper-margin:'+DTR_NARROW_MM+'mm;--content-width:'+(paper.w-2*DTR_NARROW_MM)+'mm;--content-height:'+(paper.h-2*DTR_NARROW_MM)+'mm}</style></head><body class="print-document" data-preview-version="'+version+'"><main class="print-content"><div class="print-layout '+(category==='GIP'?'gip-page':'civil-page')+'">'+body+'</div></main></body></html>';
+  return '<!doctype html><html lang="en"><head><meta charset="utf-8"><title>DTR - '+esc(data.display_name||'')+' - '+esc(data.month)+'</title><link rel="stylesheet" href="/static/dtr-preview.css?v=22"><style>@page{size:'+paper.width+' '+paper.height+';margin:'+DTR_NARROW_MM+'mm} :root{--paper-width:'+paper.width+';--paper-height:'+paper.height+';--paper-margin:'+DTR_NARROW_MM+'mm;--content-width:'+(paper.w-2*DTR_NARROW_MM)+'mm;--content-height:'+(paper.h-2*DTR_NARROW_MM)+'mm}</style></head><body class="print-document" data-preview-version="'+version+'"><main class="print-content"><div class="print-layout '+(category==='GIP'?'gip-page':'civil-page')+'">'+body+'</div></main></body></html>';
 }
 function freshDtrFrame(){
   // Replacing the browsing context avoids accumulating iframe history entries
