@@ -734,3 +734,71 @@ def test_documented_special_order_and_absent_are_not_generic_notes(admin):
         assert day['documented_status']==label
         assert day['display_remark']==label
         assert day['monitoring']['undertime_seconds'] is None
+
+def historical_day(scans):
+    keys = ('am_in','am_out','pm_in','pm_out')
+    mapping = {'0':'am_in','1':'am_out','5':'pm_in','4':'pm_out'}
+    return {'date':'2025-09-03','day':'Wed','is_future':False,'is_weekend':False,
+            'calendar':{'holiday_name':'','version':0},'tone':'entry',
+            'slots':dict.fromkeys(keys),'review':{'undertime_minutes':None,'approved_times':{},
+                'activity_type':'','activity_reference':''},'activities':[],'display_activities':[],
+            'scans':[{'id':i+1,'happened_at':'2025-09-03 '+clock,'work_code':'0',
+                'historical_k14_state':state,'historical_slot':mapping.get(state)}
+                for i,(clock,state) in enumerate(scans)]}
+
+
+def historical_manual(times,plan=None):
+    keys=('am_in','am_out','pm_in','pm_out')
+    return {'name':'Example Employee','sheet':'EXAMPLE_EMPLOYEE','row':7,
+            'data':{'times':dict(zip(keys,times)), 'notes':[],
+                    'reported_total':None,'reported_ut':None,'reported_ot':None},
+            'reconciliation':plan or {}}
+
+
+def test_historical_device_states_resolve_three_punch_day_without_sheet():
+    from app.dtr_sources import resolve_day, present_day
+    day=historical_day([('08:01:37','0'),('12:00:00','1'),('17:03:15','4')])
+    resolve_day(day,None)
+    present_day(day)
+    assert day['display_slots']['pm_in'] is None
+    assert day['display_slots']['pm_out']['happened_at'].endswith('17:03:15')
+    assert day['display_unassigned_count']==0
+    assert day['display_remark']=='Undertime (provisional)'
+    assert len(day['scans'])==3
+
+
+def test_historical_complete_device_states_calculate_hours_without_sheet():
+    from app.dtr_sources import resolve_day
+    day=historical_day([('08:15:37','0'),('12:00:00','1'),('13:00:00','5'),('17:00:05','4')])
+    resolve_day(day,None)
+    assert day['monitoring']['undertime_seconds']==900
+    assert day['monitoring']['remarks']=='Undertime'
+    assert day['display_unassigned_count']==0
+
+
+def test_historical_repeated_nearby_state_follows_named_sheet_without_deleting_scans():
+    from app.dtr_sources import resolve_day
+    day=historical_day([('07:58:10','0'),('08:03:12','0')])
+    resolve_day(day,historical_manual(['08:00:00','12:00:00','13:00:00','17:00:00']))
+    assert day['display_slots']['am_in']['origin']=='manual_sheet'
+    assert day['historical_sheet_fallback_ids']==[1,2]
+    assert day['display_unassigned_count']==0
+    assert len(day['scans'])==2
+
+
+def test_historical_default_state_does_not_invent_lunch_punches():
+    from app.dtr_sources import resolve_day
+    day=historical_day([('08:00:00','0'),('12:00:00','0'),('13:00:00','0'),('17:00:00','0')])
+    resolve_day(day,None)
+    assert day['display_slots']['am_in']['id']==1
+    assert day['display_slots']['pm_in'] is None
+    assert day['display_unassigned_count']==3
+
+
+def test_historical_explicit_confirmed_slot_retains_prior_decision():
+    from app.dtr_sources import resolve_day
+    day=historical_day([('17:00:13','0')])
+    resolve_day(day,historical_manual(['08:00:00','12:00:00','13:00:00','17:00:00'],
+        {'confirmed':{'pm_out':{'id':1,'time':'17:00:13'}}}))
+    assert day['display_slots']['pm_out']['id']==1
+    assert day['display_unassigned_count']==0
