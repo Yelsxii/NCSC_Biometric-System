@@ -850,7 +850,9 @@ with connect() as con:
     assert.equal(await page.locator('#day-review-heading').evaluate(el=>getComputedStyle(el.parentElement).clip),'rect(0px, 0px, 0px, 0px)');
     const closeStyle=await page.locator('#close-day-review').evaluate(el=>{const s=getComputedStyle(el);return {radius:s.borderTopLeftRadius,width:s.width,height:s.height};});
     assert.deepEqual(closeStyle,{radius:'50%',width:'32px',height:'32px'});
-    assert.equal(await page.locator('#review-regular-label').evaluate(el=>getComputedStyle(el,'::after').height),'1px');
+    const sectionDividers=await page.locator('#review-time-section > .review-field-section').evaluateAll(sections=>sections.map(el=>{const s=getComputedStyle(el);return {width:el.getBoundingClientRect().width,border:s.borderTopWidth,color:s.borderTopColor,style:s.borderTopStyle};}));
+    assert.ok(sectionDividers.every(s=>s.border==='1px'&&s.color==='rgb(232, 237, 245)'&&s.style==='solid'&&Math.abs(s.width-sectionDividers[0].width)<1),'Section dividers must share equal widths and subtle borders');
+    assert.equal(await page.locator('#review-regular-label').evaluate(el=>getComputedStyle(el,'::after').content),'none');
     assert.equal(await page.locator('#clock-am-in').inputValue(),'07:30:07');
     await page.locator('[data-clock-pick="am-in"]').click();
     await page.locator('#clock-picker').waitFor();
