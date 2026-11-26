@@ -658,8 +658,11 @@ with connect() as con:
     await page.locator('#month-year-trigger').click();
     await page.locator('#month-year-grid').waitFor({state:'visible'});
     assert.equal(await page.locator('#month-picker-grid').isVisible(),false);
+    assert.equal(await page.locator('#month-year-value').textContent(),'2026');
+    assert.equal(await page.locator('#month-picker-close,#month-picker-current').count(),0);
     assert.equal(await page.locator('#month-year-grid button').count(),12);
     await page.locator('#month-year-prev').click();
+    assert.equal(await page.locator('#month-year-value').textContent(),'2026');
     await page.locator('[data-year-value="2014"]').click();
     assert.equal(await page.locator('#month-year-value').textContent(),'2014');
     assert.equal(await page.locator('#register-month').inputValue(),monthBeforeYearJump);
