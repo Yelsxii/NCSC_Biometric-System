@@ -659,12 +659,16 @@
 .workspace .attendance-sheet .suggested-caption{display:block;font-size:9px;color:#8a6124;line-height:1.2;margin-top:2px}
 #review-historical-suggestions{margin-top:8px;align-self:flex-start}
 
-/* Liquid color fill: expanding, overlapping circles merge into a single solid color.
-   Text and icon stay still; the animation reverses when the pointer leaves. */
+/* Organic, staggered color droplets. Fixed irregular centers; no linear or bottom-up fill. */
 .workspace .attendance-sheet .sheet-personnel #dtr-form-preview{--liquid-base:#244b9a;--liquid-fill:#132e6e;position:relative;isolation:isolate;overflow:hidden;background:var(--liquid-base);color:#fff;box-shadow:none;transform:none;transition:none}
-.workspace .attendance-sheet .sheet-personnel #dtr-form-preview::before{content:"";position:absolute;inset:0;z-index:-1;pointer-events:none;border-radius:inherit;background-image:radial-gradient(circle closest-side,var(--liquid-fill) 97%,transparent 100%),radial-gradient(circle closest-side,var(--liquid-fill) 97%,transparent 100%),radial-gradient(circle closest-side,var(--liquid-fill) 97%,transparent 100%),radial-gradient(circle closest-side,var(--liquid-fill) 97%,transparent 100%),linear-gradient(var(--liquid-fill),var(--liquid-fill));background-position:12% 75%,38% 35%,67% 80%,90% 32%,center bottom;background-repeat:no-repeat;background-size:0% 0%,0% 0%,0% 0%,0% 0%,100% 0%;transition:background-size .78s cubic-bezier(.4,0,.2,1)}
+.workspace .attendance-sheet .sheet-personnel #dtr-form-preview::before{content:"";position:absolute;inset:0;z-index:-1;pointer-events:none;border-radius:inherit;background-image:radial-gradient(circle at 8% 23%,var(--liquid-fill) max(0%,calc(var(--ncsc-fill-a) - .35%)),transparent var(--ncsc-fill-a)),
+    radial-gradient(circle at 26% 81%,var(--liquid-fill) max(0%,calc(var(--ncsc-fill-b) - .35%)),transparent var(--ncsc-fill-b)),
+    radial-gradient(circle at 47% 12%,var(--liquid-fill) max(0%,calc(var(--ncsc-fill-c) - .35%)),transparent var(--ncsc-fill-c)),
+    radial-gradient(circle at 59% 63%,var(--liquid-fill) max(0%,calc(var(--ncsc-fill-d) - .35%)),transparent var(--ncsc-fill-d)),
+    radial-gradient(circle at 79% 37%,var(--liquid-fill) max(0%,calc(var(--ncsc-fill-e) - .35%)),transparent var(--ncsc-fill-e)),
+    radial-gradient(circle at 96% 86%,var(--liquid-fill) max(0%,calc(var(--ncsc-fill-f) - .35%)),transparent var(--ncsc-fill-f));background-repeat:no-repeat;opacity:0;transition:--ncsc-fill-a .94s cubic-bezier(.42,0,.24,1),--ncsc-fill-b .84s cubic-bezier(.42,0,.24,1),--ncsc-fill-c 1.02s cubic-bezier(.42,0,.24,1),--ncsc-fill-d 1.05s cubic-bezier(.42,0,.24,1),--ncsc-fill-e .89s cubic-bezier(.42,0,.24,1),--ncsc-fill-f .96s cubic-bezier(.42,0,.24,1),opacity 0s 1.05s}
 .workspace .attendance-sheet .sheet-personnel #dtr-form-preview:not(:disabled):is(:hover,:focus-visible){background:var(--liquid-base);color:#fff;box-shadow:none;transform:none}
-.workspace .attendance-sheet .sheet-personnel #dtr-form-preview:not(:disabled):is(:hover,:focus-visible)::before{background-size:210% 650%,210% 650%,210% 650%,210% 650%,100% 100%}
+.workspace .attendance-sheet .sheet-personnel #dtr-form-preview:not(:disabled):is(:hover,:focus-visible)::before{--ncsc-fill-a:56%;--ncsc-fill-b:53%;--ncsc-fill-c:64%;--ncsc-fill-d:105%;--ncsc-fill-e:58%;--ncsc-fill-f:53%;opacity:1;transition-delay:.12s,0s,.22s,.28s,.06s,.19s,0s}
 .workspace .attendance-sheet .sheet-personnel #dtr-form-preview svg,.workspace .attendance-sheet .sheet-personnel #dtr-form-preview:not(:disabled):is(:hover,:focus-visible) svg{transform:none;animation:none;transition:none}
 .workspace .attendance-sheet .sheet-personnel #dtr-form-preview:not(:disabled):active{background:var(--liquid-fill);transform:none;box-shadow:none}
 .workspace .attendance-sheet .sheet-personnel #dtr-form-preview:focus-visible{outline:2px solid #7295ce;outline-offset:2px}
