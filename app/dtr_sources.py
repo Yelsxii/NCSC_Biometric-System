@@ -66,6 +66,44 @@ def resolve_day(day, manual):
         same_slots = [slot for slot,value in sheet_times.items() if clock and value and value[:5]==clock[:5]]
         if len(matches)==1 and len(same_slots)==1:
             observed[key] = matches[0]
+    # Old device states are corroborated by the historical vendor audit, but
+    # are not proof that a user selected the correct attendance button.
+    # Keep explicitly reviewed reconciliation dates on their original rules.
+    history = [x for x in ordinary if 'historical_k14_state' in x] if not plan else []
+    historic_sheet_fallback_ids = set()
+    if history:
+        def plausible(key, event):
+            clock = event['happened_at'][11:19]
+            return {'am_in': clock < '12:00:00',
+                    'am_out': clock <= '13:00:00',
+                    'pm_in': clock >= '12:00:00',
+                    'pm_out': clock >= '12:00:00'}[key]
+        for key in KEYS:
+            if key in observed or day['slots'][key] or key in force_sheet:
+                continue
+            used_ids = reserved | {x['id'] for x in observed.values()}
+            matches = [x for x in history if x.get('historical_slot') == key
+                       and not x.get('verified_slot') and x['id'] not in used_ids
+                       and plausible(key, x)]
+            if len(matches) == 1:
+                event = matches[0]
+                # An exact, unique named sheet slot takes precedence over a
+                # potentially stale historical device button selection.
+                named = [k for k,v in sheet_times.items() if v and
+                         v[:5] == event['happened_at'][11:16]]
+                if not named or named == [key]:
+                    observed[key] = event
+            elif len(matches) > 1 and sheet_times.get(key):
+                # Follow the named sheet on ambiguous multiple inputs only
+                # when every candidate is close to that one sheet slot.
+                # Keep the IDs in the audit trail, not deleted from raw data.
+                near_key = lambda e,k: abs(_clock_seconds(e['happened_at'][11:19]) -
+                           _clock_seconds(sheet_times[k])) <= SHEET_MATCH_SECONDS
+                if all(near_key(e,key) and not any(near_key(e,k) for k in KEYS
+                       if k != key and sheet_times.get(k)) for e in matches):
+                    historic_sheet_fallback_ids.update(e['id'] for e in matches)
+    if historic_sheet_fallback_ids:
+        ordinary = [e for e in ordinary if e['id'] not in historic_sheet_fallback_ids]
     # One-to-one near matching; never override verified or reviewed states.
     available = [x for x in ordinary if x['id'] not in reserved and
                  x['id'] not in {e['id'] for e in observed.values()} and not x.get('verified_slot')]
@@ -85,7 +123,7 @@ def resolve_day(day, manual):
     candidates = {}
     # Legacy imports retain their existing placement behavior. Current office
     # K14 punches without verified states must not be guessed from scan order.
-    if not day['is_future'] and distinct and not any(x.get('k14_state_pending') for x in ordinary):
+    if not history and not day['is_future'] and distinct and not any(x.get('k14_state_pending') for x in ordinary):
         if len(ordinary)==4:
             clocks = [x['happened_at'][11:19] for x in ordinary]
             if clocks[0]<'12:00:00' and clocks[1]<='13:00:00' and clocks[2]>='12:00:00':
@@ -144,7 +182,7 @@ def resolve_day(day, manual):
     display_ids = {x['id'] for x in display.values() if x and x.get('id')}
     unplaced_ids = {x['id'] for x in ordinary} - display_ids - superseded_ids
     unplaced = len(unplaced_ids)
-    if unplaced and (source or any(x.get('k14_state_pending') for x in ordinary if x['id'] in unplaced_ids)):
+    if unplaced and (source or history or any(x.get('k14_state_pending') for x in ordinary if x['id'] in unplaced_ids)):
         conflicts.append('unplaced_biometric')
     if source and not day['calendar']['holiday_name'] and not day['calendar']['version']:
         holiday = next((note for note in source['notes'] if 'HOLIDAY' in note.upper()), '')
@@ -222,6 +260,7 @@ def resolve_day(day, manual):
     day['display_unassigned_ids'] = sorted(unplaced_ids)
     day['display_superseded_ids'] = sorted(superseded_ids)
     day['display_ignored_ids'] = sorted(ignored_ids)
+    day['historical_sheet_fallback_ids'] = sorted(historic_sheet_fallback_ids)
     if aja_evidence:
         day['display_activities'].append({'category':'AJA','reference':aja_evidence['purpose']})
     if source:
