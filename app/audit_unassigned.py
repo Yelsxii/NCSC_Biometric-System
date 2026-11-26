@@ -124,11 +124,76 @@ def audit_all():
     return {"read_only":True,"months_checked":len(reports),"months":reports}
 
 
+def audit_history():
+    """Aggregate historical evidence only; never import or change either database."""
+    import os
+    from collections import Counter, defaultdict
+    from app.db import database_path
+    from app.device_access import authorized_ids
+    from app.bionet_roster import open_source
+    load_dotenv()
+    cutoff = "2026-11-24"
+    with closing(sqlite3.connect(database_path().resolve().as_uri()+"?mode=ro", uri=True)) as con:
+        con.row_factory = sqlite3.Row
+        con.execute("PRAGMA query_only=ON")
+        allowed = authorized_ids(con)
+        punches = defaultdict(list)
+        for row in con.execute("SELECT employee_code,happened_at,status_code FROM punches WHERE happened_at<?", (cutoff,)):
+            if row["employee_code"] in allowed:
+                punches[(row["employee_code"],row["happened_at"])].append(str(row["status_code"]))
+        device = defaultdict(set)
+        for row in con.execute("SELECT employee_id,punch_time_local,device_punch_type FROM k14_sync_events WHERE device_ip='192.168.254.201' AND punch_time_local<?", (cutoff,)):
+            if row["employee_id"] in allowed:
+                device[(row["employee_id"],row["punch_time_local"])].add(str(row["device_punch_type"]))
+    vendor = defaultdict(set)
+    vendor_status = "not_configured"
+    raw = os.getenv("BIONET_ROSTER_DB", "").strip()
+    if raw:
+        try:
+            with closing(open_source(raw)) as con:
+                for row in con.execute("SELECT e.emp_pin,p.punch_time,p.terminal_id,p.workstate,p.punch_type,p.workcode FROM att_punches p JOIN hr_employee e ON e.id=p.employee_id WHERE p.punch_time<?", (cutoff,)):
+                    key = (str(row["emp_pin"]),str(row["punch_time"]))
+                    if key[0] in allowed:
+                        vendor[key].add(tuple(str(row[k]) for k in ("terminal_id","workstate","punch_type","workcode")))
+            vendor_status = "read_only_success"
+        except (OSError, ValueError, sqlite3.Error):
+            vendor_status = "unavailable"
+    months = defaultdict(Counter)
+    groups = defaultdict(Counter)
+    daily = Counter()
+    for (code,stamp), records in punches.items():
+        month=stamp[:7]
+        key=(code,stamp)
+        d=device.get(key,set())
+        v=vendor.get(key,set())
+        counts=months[month]
+        counts["website_punches"]+=len(records)
+        counts["distinct_employee_timestamps"]+=1
+        counts["exact_device_matches"]+=bool(d)
+        counts["exact_vendor_matches"]+=bool(v)
+        counts["multiple_website_records"]+=len(records)>1
+        counts["conflicting_device_states"]+=len(d)>1
+        counts["conflicting_vendor_rows"]+=len(v)>1
+        daily[(code,stamp[:10])]+=len(records)
+        if len(v)==1:
+            terminal,state,kind,workcode=next(iter(v))
+            group=(terminal,state,kind,workcode,",".join(sorted(d)) or "unknown",",".join(sorted(set(records))))
+            groups[month][group]+=1
+        elif len(d)==1:
+            groups[month][("no_vendor","unknown","unknown","unknown",next(iter(d)),",".join(sorted(set(records))))]+=1
+    for (_,date),n in daily.items():
+        months[date[:7]]["days_with_"+str(n)+"_punches"]+=1
+    return {"read_only":True,"cutover":cutoff,"vendor_status":vendor_status,
+        "employees_checked":len(allowed),"months":[{"month":month,**counts,
+        "state_comparison":[dict(zip(("terminal","vendor_state","vendor_type","work_code","device_state","website_status","count"),(*key,n))) for key,n in sorted(groups[month].items())]}
+        for month,counts in sorted(months.items())]}
+
+
 if __name__ == "__main__":
     if len(sys.argv) != 2:
-        raise SystemExit("Usage: python -m app.audit_unassigned YYYY-MM|all")
+        raise SystemExit("Usage: python -m app.audit_unassigned YYYY-MM|all|history")
     try:
-        report = audit_all() if sys.argv[1]=="all" else audit_month(sys.argv[1])
+        report = audit_history() if sys.argv[1]=="history" else audit_all() if sys.argv[1]=="all" else audit_month(sys.argv[1])
     except (ValueError, sqlite3.Error) as exc:
         raise SystemExit("Audit could not complete: " + str(exc)) from exc
     print(json.dumps(report, indent=2, ensure_ascii=True))
