@@ -567,3 +567,25 @@ def test_specific_missing_entry_and_worked_offday_pair(admin):
     assert days[6]['monitoring']['total_seconds']==14400
     assert days[6]['monitoring']['undertime_seconds'] is None
     assert days[6]['monitoring']['overtime_seconds'] is None
+
+
+def test_stale_blank_row_undertime_recalculated_for_complete_matching_clocks(admin):
+    client, headers = admin
+    seed_employee()
+    import_one(client, headers, packet([
+        row(times=['07:42','12:03','12:31','17:35'],total=None,ut=8/24,ot=None),
+        row('2026-11-10',times=['08:30','12:00','13:00','16:30'],
+            total=0,ut=8/24,ot=0,number=8),
+    ]))
+    first = monitor(client)['monitoring']
+    assert first['total_seconds'] == 8*3600+53*60
+    assert first['elapsed_seconds'] == 9*3600+25*60
+    assert first['undertime_seconds'] == 0
+    assert first['overtime_seconds'] == 53*60
+    assert first['metrics_origin'] == 'template_recalculated'
+    assert first['remarks'] == 'Overtime'
+    second = monitor(client,9)['monitoring']
+    assert second['total_seconds'] == 7*3600
+    assert second['undertime_seconds'] == 3600
+    assert second['overtime_seconds'] == 0
+    assert second['remarks'] == 'Undertime'
