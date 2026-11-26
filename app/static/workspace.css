@@ -495,7 +495,7 @@
 .workspace .register-month-control{display:flex;flex-direction:column;gap:6px;flex:0 0 auto}
 .workspace .month-trigger{
   display:inline-flex;align-items:center;gap:8px;justify-content:flex-start;
-  min-width:160px;height:34px;min-height:34px;padding:0 10px;
+  min-width:160px;height:38px;min-height:38px;padding:0 10px;
   border:1px solid #e1e8f5;border-radius:8px;background:#f0f4fc;
   color:#203b67;font-size:11px;font-weight:650;white-space:nowrap;
   transition:background-color .28s cubic-bezier(.4,0,.2,1),border-color .28s cubic-bezier(.4,0,.2,1),color .28s cubic-bezier(.4,0,.2,1);
@@ -545,7 +545,7 @@
 /* Coral light follows hover and selection, not the calendar's current month. */
 .workspace .month-picker-grid button::after{
   content:"";position:absolute;bottom:3px;left:50%;transform:translateX(-50%);
-  width:0;height:1px;opacity:0;border-radius:999px;background:#f43f60;
+  width:0;height:2px;opacity:0;border-radius:999px;background:#f43f60;
   pointer-events:none;transition:width .28s cubic-bezier(.4,0,.2,1),opacity .28s cubic-bezier(.4,0,.2,1),background-color .28s cubic-bezier(.4,0,.2,1);
 }
 .workspace .month-picker-grid button:is(:hover,:focus-visible)::after,
@@ -618,7 +618,6 @@
 .workspace #clear-employee-search svg{width:15px;height:15px}
 .workspace #clear-employee-search:hover{background:#e7eefb;color:#244b9a}
 .workspace #clear-employee-search:focus-visible{outline:2px solid #7295ce}
-.workspace #attendance-register-panel #register-month-trigger{height:38px;min-height:38px}
 .workspace #attendance-register-panel #open-attendance-import{
   height:38px;min-height:38px;display:inline-flex;align-items:center;justify-content:center;
   gap:8px;padding:0 13px;border-radius:9px;border:1px solid #cbd9ef;
