@@ -146,8 +146,15 @@ function changeDtrZoom(direction){
   stage.scrollTop=Math.max(0,(stage.scrollTop+stage.clientHeight/2)*ratio-stage.clientHeight/2);
   stage.scrollLeft=Math.max(0,(stage.scrollLeft+stage.clientWidth/2)*ratio-stage.clientWidth/2);
 }
+function assignedDtrCategory(data){
+  const category=data?.employment_type;
+  return typeof category==='string'&&Object.hasOwn(dtrSignatory,category)?category:'';
+}
 function renderDtrPreview(){
-  const frame=freshDtrFrame(),category=$('dtr-preview-template').value,period=$('dtr-preview-period').value,paperKey=$('dtr-preview-paper').value;
+  const frame=freshDtrFrame(),category=assignedDtrCategory(dtrPreviewData),period=$('dtr-preview-period').value,paperKey=$('dtr-preview-paper').value;
+  const categoryDisplay=$('dtr-preview-category');
+  categoryDisplay.textContent=category||'Not Set';
+  categoryDisplay.dataset.category=category;
   const paper=dtrPaper[paperKey]||dtrPaper.a4;
   const version=++dtrPreviewVersion;
   setDtrActionsReady(false);
@@ -158,7 +165,7 @@ function renderDtrPreview(){
   $('dtr-zoom-controls').hidden=true;
   if(!dtrPreviewData||!Object.hasOwn(dtrSignatory,category)){
     frame.hidden=true;$('dtr-paper-canvas').hidden=true;
-    setDtrPreviewNote('Select the verified employee category to choose the correct form.');
+    setDtrPreviewNote('Employee category is not set. Assign the verified category in Employee Profiles before exporting a DTR.');
     return;
   }
   frame.hidden=false;$('dtr-paper-canvas').hidden=false;$('dtr-zoom-controls').hidden=false;
@@ -171,8 +178,6 @@ function openDtrFormPreview(push=true){
   const dialog=$('dtr-preview-dialog');
   if(dialog.open)return;
   dtrPreviewData=data;dtrZoomMode='fit';dtrZoomScale=1;
-  const category=Object.hasOwn(dtrSignatory,data.employment_type)?data.employment_type:'';
-  $('dtr-preview-template').value=category;
   $('dtr-preview-period').value='first';
   $('dtr-preview-name').textContent=data.display_name||'Employee';
   $('dtr-preview-context').textContent=dtrDateLabel(data.month,1).replace(/ 1,/, '');
@@ -201,7 +206,7 @@ function initDtrPreview(){
       else history.replaceState(null,'','#'+(titles[currentPage]?currentPage:'employees'));
     }
   });
-  for(const id of ['dtr-preview-template','dtr-preview-period','dtr-preview-paper'])$(id).addEventListener('change',renderDtrPreview);
+  for(const id of ['dtr-preview-period','dtr-preview-paper'])$(id).addEventListener('change',renderDtrPreview);
   new ResizeObserver(fitDtrPaper).observe($('dtr-paper-canvas').parentElement);
   $('dtr-zoom-in').addEventListener('click',()=>changeDtrZoom(1));
   $('dtr-zoom-out').addEventListener('click',()=>changeDtrZoom(-1));
@@ -289,10 +294,11 @@ async function buildDtrDownloadCanvas(frame,html2pdf,opts,paper){
 async function downloadDtrPdf(){
   if(dtrDownloadBusy||$('dtr-preview-download').disabled||!dtrPreviewData)return;
   const frame=$('dtr-preview-frame'),version=dtrPreviewVersion,data=dtrPreviewData;
-  const category=$('dtr-preview-template').value,period=$('dtr-preview-period').value;
+  const category=assignedDtrCategory(data),period=$('dtr-preview-period').value;
+  if(!category)return;
   const paper=dtrPaper[$('dtr-preview-paper').value]||dtrPaper.a4;
   const button=$('dtr-preview-download');
-  const selectors=['dtr-preview-template','dtr-preview-period','dtr-preview-paper'];
+  const selectors=['dtr-preview-period','dtr-preview-paper'];
   dtrDownloadBusy=true;setDtrActionsReady(false);button.setAttribute('aria-busy','true');
   selectors.forEach(id=>$(id).disabled=true);
   setDtrPreviewNote();
