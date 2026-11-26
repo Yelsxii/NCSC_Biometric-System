@@ -10,7 +10,7 @@
   <link rel="stylesheet" href="/static/attendance-detail.css?v=auto-dtr-24">
   <link rel="stylesheet" href="/static/dtr-preview.css?v=18">
   <script src="/static/dtr-preview.js?v=7" defer></script>
-  <script src="/static/app.js?v=auto-dtr-29" defer></script>
+  <script src="/static/app.js?v=auto-dtr-30" defer></script>
 </head>
 <body>
   <main id="login-view" class="auth-shell" aria-labelledby="login-heading">
@@ -286,7 +286,7 @@
         <div class="profile-form-grid"><label>Biometric ID <span class="required-mark">*</span><input id="profile-id" required maxlength="64" autocomplete="off" placeholder="Existing K14 ID"></label><label>Employee category <span class="required-mark">*</span><select id="profile-type" required><option value="">Select category</option><option value="COS">COS</option><option value="Permanent">Employee · Permanent</option><option value="GIP">GIP</option><option value="OJT">OJT</option></select></label></div>
         <p class="field-hint" id="profile-id-hint">Enter the ID already enrolled on the K14. Keep any leading zeroes.</p>
         <div class="form-section-title"><span>02</span> Verified employee details</div>
-        <div class="profile-form-grid"><label>First name <span class="required-mark">*</span><input id="profile-first" required maxlength="70" autocomplete="given-name"></label><label>Last name <span class="required-mark">*</span><input id="profile-last" required maxlength="70" autocomplete="family-name"></label><label>Middle name<input id="profile-middle" maxlength="60" autocomplete="additional-name"></label><label>Suffix<input id="profile-suffix" maxlength="20" placeholder="Optional"></label><label>Department / unit<input id="profile-department" maxlength="140"></label><label>Position / designation<input id="profile-position" maxlength="140"></label></div>
+        <div class="profile-form-grid"><label>First name <span class="required-mark">*</span><input id="profile-first" required maxlength="70" autocomplete="given-name"></label><label>Last name <span class="required-mark">*</span><input id="profile-last" required maxlength="70" autocomplete="family-name"></label><label>Middle name<input id="profile-middle" maxlength="60" autocomplete="additional-name"></label><label>Suffix<input id="profile-suffix" maxlength="20" placeholder="Optional"></label><label>Department / unit <span class="required-mark">*</span><select id="profile-department" required><option value="">Select department</option><option>Operations Division (OPS)</option><option>Administrative and Finance Section (AFS)</option><option>Office of the Regional Director (ORD)</option></select></label><label>Position / designation<input id="profile-position" maxlength="140"></label></div>
         <div class="form-section-title"><span>03</span> Attendance collection</div>
         <label class="check-card"><input id="profile-sync" type="checkbox" checked><span><strong>Enable automatic attendance collection</strong><small>Authorize this ID for the device collector and website import.</small></span></label>
         <label class="check-line"><input id="profile-confirm" type="checkbox" required><span>I verified that this ID is already enrolled on the K14 and the name matches office records.</span></label>
