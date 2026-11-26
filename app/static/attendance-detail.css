@@ -474,40 +474,41 @@
   .workspace .topbar-heading .back-button:is(:hover,:focus-visible) svg{transform:none}
 }
 
-/* Keep the employee name and month in an independent left-hand stack:
-   the department's height must never determine the gap between them. */
+/* Keep all employee identity metadata together; leave only export on the right. */
 .workspace .topbar-heading{display:flex;align-items:center;gap:10px;flex:1;min-width:0}
 .workspace .topbar-heading .topbar-title{flex:1;min-width:0;max-width:none;overflow-wrap:normal}
 .workspace .attendance-sheet .sheet-header{
-  display:grid;grid-template-columns:minmax(0,1fr) minmax(105px,28%);
-  align-items:stretch;gap:0 12px;flex-shrink:0;
-  padding:0 0 8px;border-bottom:1px solid #edf1f7;
+  display:grid;grid-template-columns:minmax(0,1fr) auto;
+  align-items:stretch;gap:0 16px;flex-shrink:0;
+  padding:0 0 10px;border-bottom:1px solid #edf1f7;
 }
 .workspace .attendance-sheet .sheet-identity{
   display:flex;flex-direction:column;align-items:flex-start;justify-content:flex-start;
-  gap:2px;min-width:0;
+  gap:7px;min-width:0;
 }
-.workspace .attendance-sheet .sheet-name-line{flex:0 0 auto;row-gap:3px}
+.workspace .attendance-sheet .sheet-name-line{flex:0 0 auto;gap:5px 12px;align-items:center}
+.workspace .attendance-sheet .sheet-department{
+  min-width:0;max-width:100%;font-size:11.5px;line-height:1.4;font-weight:550;
+  color:#536b8c;overflow-wrap:anywhere;
+}
+.workspace .attendance-sheet .sheet-category .employment-chip{font-size:11px;font-weight:700;padding:4px 11px}
 .workspace .attendance-sheet .sheet-filters{
   display:flex;flex:0 0 auto;align-items:flex-start;justify-content:flex-start;
   gap:0;padding:0;margin:0;border:0;
 }
 .workspace .attendance-sheet .sheet-personnel{
   display:flex;flex-direction:column;flex-wrap:nowrap;
-  justify-content:space-between;align-items:flex-end;gap:3px;
+  justify-content:flex-end;align-items:flex-end;
   min-width:0;max-width:none;margin:0;text-align:right;
 }
-.workspace .attendance-sheet .sheet-personnel .sheet-meta{
-  flex:0 0 auto;min-width:0;max-width:100%;overflow-wrap:anywhere;
-}
-.workspace .attendance-sheet .sheet-personnel .metadata-label{margin-bottom:2px}
 .workspace .attendance-sheet .sheet-personnel #dtr-form-preview{
-  flex:0 0 auto;margin:0;height:var(--detail-back-size);min-height:var(--detail-back-size);
+  flex:0 0 auto;margin:0;height:38px;min-height:38px;white-space:nowrap;
 }
 @media(max-width:740px){
   .workspace .topbar-heading{gap:7px}
-  .workspace .attendance-sheet .sheet-header{grid-template-columns:minmax(0,1fr) minmax(90px,26%);gap:0 8px;padding-bottom:7px}
-  .workspace .attendance-sheet .sheet-name-line{gap:3px 7px}
+  .workspace .attendance-sheet .sheet-header{gap:0 8px;padding-bottom:8px}
+  .workspace .attendance-sheet .sheet-name-line{gap:4px 7px}
+  .workspace .attendance-sheet .sheet-department{flex-basis:100%;font-size:11px}
   .workspace .attendance-sheet .sheet-personnel #dtr-form-preview{padding-inline:9px;font-size:10px}
 }
 @media(max-width:400px){
@@ -516,7 +517,7 @@
 }
 @media(max-width:360px){
   .workspace .attendance-sheet .sheet-header{grid-template-columns:minmax(0,1fr);row-gap:6px}
-  .workspace .attendance-sheet .sheet-personnel{flex-direction:row;align-items:center;text-align:left}
+  .workspace .attendance-sheet .sheet-personnel{align-items:flex-end}
 }
 
 /* Duration columns retain second-level precision without wrapping.
