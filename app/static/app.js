@@ -169,7 +169,7 @@ async function loadRegister({quiet=false}={}){
 }
 // Presentation only: preserve known abbreviations and Roman regional numbers.
 function displayTitle(value){
-  const acronyms=new Set(['NCSC','AJA','AM','PM','HR','HRD','HRIS','HRMO','AFS','ORD','OPD','IT','ICT','GIP','COS','OJT','DTR','PDO','RO','TO','CSC','DOLE','DSWD','DBM','COA','BAC','GAD']);
+  const acronyms=new Set(['NCSC','AJA','AM','PM','HR','HRD','HRIS','HRMO','AFS','ORD','OPS','OPD','IT','ICT','GIP','COS','OJT','DTR','PDO','RO','TO','CSC','DOLE','DSWD','DBM','COA','BAC','GAD']);
   return String(value??'').replace(/\p{L}+/gu,word=>{
     const upper=word.toUpperCase();
     if(acronyms.has(upper)||/^(?:I|II|III|IV|V|VI|VII|VIII|IX|X|XI|XII|XIII|XIV|XV|XVI|XVII|XVIII)$/.test(upper))return upper;
@@ -315,6 +315,13 @@ async function openProfile(code=null){
       $('profile-id').value=code;$('profile-id').readOnly=true;
       for(const [field,key] of [['first','first_name'],['middle','middle_name'],['last','last_name'],['suffix','suffix'],['type','employment_type'],['department','department'],['position','position']])
         $('profile-'+field).value=data[key]||'';
+      const department=String(data.department||'').trim().toLowerCase();
+      const official=[...$('profile-department').options].find(option=>{
+        if(!option.value)return false;
+        const full=option.value.toLowerCase(),code=full.match(/\(([^)]+)\)$/)?.[1];
+        return department===full||department===code||department===full.replace(/\s*\([^)]+\)$/,'');
+      });
+      $('profile-department').value=official?.value||'';
       $('profile-sync').checked=data.sync_authorized;
       $('profile-heading').textContent=data.profile_complete?'Edit employee profile':'Complete employee profile';
       $('save-profile').textContent=data.profile_complete?'Save changes':'Complete profile';
