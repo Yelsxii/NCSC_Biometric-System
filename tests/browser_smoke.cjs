@@ -750,6 +750,15 @@ with connect() as con:
     assert.ok(!(await printable.locator('.civil-copy').first().locator('.special-day').allTextContents()).includes("All Saints' Day"));
     assert.ok((await printable.locator('.print-offday .print-undertime').allTextContents()).every(v=>v===''));
     assert.deepEqual(await page.evaluate(()=>{
+      const cases=[0,null,900,4500];
+      const days=cases.map((ut,i)=>({date:'2026-11-0'+(i+3),day:['Tue','Wed','Thu','Fri'][i],calendar:{},has_attendance_entries:true,display_slots:{},monitoring:{undertime_seconds:ut}}));
+      return ['COS','Permanent','OJT'].map(category=>{
+        const el=document.createElement('table');
+        el.innerHTML='<tbody>'+dtrPrintRows({month:'2026-11',days},category)+'</tbody>';
+        return Array.from(el.querySelectorAll('.print-undertime'),td=>td.textContent);
+      });
+    }),Array.from({length:3},()=>['','','','','0','15','1','15']),'Printed zero and unavailable undertime stay blank; positive durations remain visible');
+    assert.deepEqual(await page.evaluate(()=>{
       const day={date:'2026-11-07',day:'Sat',is_weekend:true,calendar:{},has_attendance_entries:true,display_slots:{am_in:{happened_at:'2026-11-07T08:00:00'}},monitoring:{undertime_seconds:3600}};
       const el=document.createElement('table');el.innerHTML='<tbody>'+dtrPrintRows({month:'2026-11',days:[day]},'COS')+'</tbody>';
       return Array.from(el.querySelectorAll('.print-offday .print-undertime'),td=>td.textContent);
