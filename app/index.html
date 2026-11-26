@@ -6,7 +6,7 @@
   <meta name="theme-color" content="#142650">
   <title>NCSC | Attendance Records</title>
   <link rel="stylesheet" href="/static/app.css">
-  <link rel="stylesheet" href="/static/workspace.css?v=employees-88">
+  <link rel="stylesheet" href="/static/workspace.css?v=employees-89">
   <link rel="stylesheet" href="/static/attendance-detail.css?v=auto-dtr-39">
   <link rel="stylesheet" href="/static/dtr-preview.css?v=23">
   <script src="/static/dtr-preview.js?v=22" defer></script>
@@ -132,16 +132,16 @@
         <section class="page hidden" data-view="profiles">
           <div class="panel list-panel" id="employee-profile-panel">
             <div class="panel-header"><h2>Employee directory</h2><button class="button primary" id="open-profile" type="button" aria-haspopup="dialog"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.65" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="9" cy="7" r="4"/><path d="M2 21v-2a6 6 0 0 1 6-6h2a6 6 0 0 1 6 6v2m3-11v6m-3-3h6"/></svg>Register employee</button></div>
-            <div class="category-tabs" role="group" aria-label="Employee category">
+            
+            <form class="toolbar profile-toolbar" id="profile-filter" role="search" aria-label="Employee filters">
+              <div class="search-box"><label for="profile-search">Search employees</label><div class="employee-search-field"><svg class="search-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.65" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="10.5" cy="10.5" r="6.5"/><path d="m16 16 4 4"/></svg><input id="profile-search" type="search" maxlength="80" autocomplete="off" placeholder="Search name, ID or department"></div></div>
+              <div class="category-tabs" role="group" aria-label="Employee category">
               <button type="button" class="category-tab active" data-profile-category="All" aria-pressed="true">All employees <span id="profile-total-badge">0</span></button>
               <button type="button" class="category-tab" data-profile-category="COS" aria-pressed="false">COS <span id="profile-cos-badge">0</span></button>
               <button type="button" class="category-tab" data-profile-category="Permanent" aria-pressed="false">Permanent <span id="profile-permanent-badge">0</span></button>
               <button type="button" class="category-tab" data-profile-category="GIP" aria-pressed="false">GIP <span id="profile-gip-badge">0</span></button>
               <button type="button" class="category-tab" data-profile-category="OJT" aria-pressed="false">OJT <span id="profile-ojt-badge">0</span></button>
             </div>
-            <form class="toolbar profile-toolbar" id="profile-filter" role="search" aria-label="Employee filters">
-              <div class="search-box"><label for="profile-search">Search employees</label><div class="employee-search-field"><svg class="search-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.65" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="10.5" cy="10.5" r="6.5"/><path d="m16 16 4 4"/></svg><input id="profile-search" type="search" maxlength="80" autocomplete="off" placeholder="Search by name, biometric ID or department"></div></div>
-              
             </form>
             <div class="registry-summary" id="profile-summary" role="status">Loading employees…</div>
             <div class="table-wrap"><table class="records-table profile-table"><colgroup><col class="profile-name"><col class="profile-id"><col class="profile-category"><col class="profile-department"><col class="profile-action"></colgroup><thead><tr><th>Employee Name</th><th>Biometric ID</th><th>Category</th><th>Department</th><th class="actions-column">Action</th></tr></thead><tbody id="profile-rows"><tr><td colspan="5">Loading employees…</td></tr></tbody></table></div>
