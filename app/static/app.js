@@ -189,12 +189,10 @@ function departmentParts(value){
   return code?{name:official[code],code}:{name:raw?displayTitle(raw):'—',code:''};
 }
 function departmentLabel(value){
-  const {name,code}=departmentParts(value);
-  return name+(code?' ('+code+')':'');
+  return departmentParts(value).name;
 }
 function departmentCell(value){
-  const {name,code}=departmentParts(value);
-  return '<span class="department-display"><span class="department-name">'+esc(name)+'</span>'+(code?'<span class="department-code">'+esc(code)+'</span>':'')+'</span>';
+  return '<span class="department-display"><span class="department-name">'+esc(departmentLabel(value))+'</span></span>';
 }
 function employeeCell(row){
   const name=row.display_name||'Name not synchronized';
