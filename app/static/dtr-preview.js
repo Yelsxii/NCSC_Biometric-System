@@ -49,7 +49,7 @@ function dtrPrintRows(data,category,from=1,to=dtrLastDay(data.month)){
   const days=new Map(data.days.map(day=>[Number(day.date.slice(-2)),day]));
   const coveredPM=day=>day?.aja_covered_slots?.includes('pm_in')&&day?.aja_covered_slots?.includes('pm_out')&&day.aja_periods?.length===1;
   // A verified interval confined to one half-day gets a separate sub-row
-  // beneath that half's actual IN clock. Other regular clocks span those rows.
+  // beneath that half's actual IN clock. All regular clocks stay in one aligned row.
   const inlineKey=(day,p)=>{
     const a=p.out?.time,b=p.in?.time;
     if(p.review||!a||!b||a>=b)return null;
@@ -91,17 +91,11 @@ function dtrPrintRows(data,category,from=1,to=dtrLastDay(data.month)){
     const coverage=coveredPM(day)?day.aja_periods[0]:null;
     const regularCells=coverage
       ? '<td>'+dtrClock(slots.am_in,!gip)+'</td><td>'+dtrClock(slots.am_out,!gip)+'</td><td colspan="2" class="print-aja-coverage">AJA '+dtrAjaClock(coverage.out)+'-'+dtrAjaClock(coverage.in)+'</td>'
-      : ['am_in','am_out','pm_in','pm_out'].map(k=>{
-        const annotations=inlinePeriods(day,k);
-        const span=annotations.length?1:subrows+1;
-        return '<td'+(span>1?' rowspan="'+span+'"':'')+'>'+dtrClock(slots[k],!gip)+'</td>';
-      }).join('');
+      : ['am_in','am_out','pm_in','pm_out'].map(k=>'<td>'+dtrClock(slots[k],!gip)+'</td>').join('');
     const annotationRows=Array.from({length:subrows},(_,i)=>{
-      const cells=['am_in','pm_in'].map(k=>{
-        const annotations=inlinePeriods(day,k);
-        if(!annotations.length)return '';
-        const p=annotations[i];
-        return '<td class="print-aja-subcell" data-slot="'+k+'">'+(p?'AJA<br>'+dtrAjaClock(p.out)+'-'+dtrAjaClock(p.in):'')+'</td>';
+      const cells=['am_in','am_out','pm_in','pm_out'].map(k=>{
+        const p=inlinePeriods(day,k)[i];
+        return p?'<td class="print-aja-subcell" data-slot="'+k+'">AJA<br>'+dtrAjaClock(p.out)+'-'+dtrAjaClock(p.in)+'</td>':'<td class="print-aja-blank"></td>';
       }).join('');
       return '<tr class="print-aja print-aja-subrow">'+cells+'</tr>';
     }).join('');
