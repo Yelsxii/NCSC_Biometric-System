@@ -749,7 +749,7 @@ with connect() as con:
       const morning=make(['07:40:00','12:00:00','13:00:00','17:00:00'],'09:10:00','10:05:00');
       const spanning=make(['07:40:00','12:00:00','13:00:00','17:00:00'],'11:00:00','14:00:00');
       const cells=day=>{const t=document.createElement('table');t.innerHTML='<tbody><tr>'+attendanceTimeCells(day)+'</tr></tbody>';return [...t.querySelectorAll('td')].map(td=>({aja:td.classList.contains('slot-aja'),text:td.textContent,covered:td.classList.contains('slot-aja-covered'),span:td.colSpan}));};
-      const print=day=>{const t=document.createElement('table');t.innerHTML='<tbody>'+dtrPrintRows({month:'2026-11',days:[day]},'COS')+'</tbody>';return {extra:[...t.querySelectorAll('.print-aja td')].map(td=>[td.colSpan,td.textContent]),coverage:[...t.querySelectorAll('.print-aja-coverage')].map(td=>[td.textContent,td.colSpan]),inline:[...t.querySelectorAll('.print-aja-inline')].map(td=>[td.cellIndex,td.textContent,td.nextElementSibling?.textContent]),rows:t.rows.length};};
+      const print=day=>{const t=document.createElement('table');t.innerHTML='<tbody>'+dtrPrintRows({month:'2026-11',days:[day]},'COS')+'</tbody>';return {extra:[...t.querySelectorAll('.print-aja:not(.print-aja-subrow) td')].map(td=>[td.colSpan,td.textContent]),coverage:[...t.querySelectorAll('.print-aja-coverage')].map(td=>[td.textContent,td.colSpan]),inline:[...t.querySelectorAll('.print-aja-subcell')].map(td=>[td.dataset.slot,td.textContent]),regular:[...t.querySelector('.print-aja-subrow')?.previousElementSibling?.cells||[]].slice(1,5).map(td=>[td.textContent,td.rowSpan]),rows:t.rows.length};};
       return {complete:cells(complete),covered:cells(covered),morning:cells(morning),spanning:cells(spanning),completePrint:print(complete),morningPrint:print(morning),spanningPrint:print(spanning),coveredPrint:print(covered)};
     });
     assert.deepEqual(ajaLayouts.complete.map(x=>x.aja),[false,false,true,false]);
@@ -762,10 +762,12 @@ with connect() as con:
     assert.equal(ajaLayouts.covered[2].span,2);
     assert.equal(ajaLayouts.covered[2].text,'AJA COVERAGEUntil 18:00');
     assert.deepEqual(ajaLayouts.completePrint.extra,[]);
-    assert.deepEqual(ajaLayouts.completePrint.inline,[[3,'12:33AJA14:28-14:45','17:40']]);
-    assert.equal(ajaLayouts.completePrint.rows,31);
+    assert.deepEqual(ajaLayouts.completePrint.inline,[['pm_in','AJA14:28-14:45']]);
+    assert.deepEqual(ajaLayouts.completePrint.regular,[['8:40',2],['12:30',2],['12:33',1],['17:40',2]]);
+    assert.equal(ajaLayouts.completePrint.rows,32);
     assert.deepEqual(ajaLayouts.morningPrint.extra,[]);
-    assert.deepEqual(ajaLayouts.morningPrint.inline,[[1,'7:40AJA09:10-10:05','12:00']]);
+    assert.deepEqual(ajaLayouts.morningPrint.inline,[['am_in','AJA09:10-10:05']]);
+    assert.deepEqual(ajaLayouts.morningPrint.regular,[['7:40',1],['12:00',2],['13:00',2],['17:00',2]]);
     assert.deepEqual(ajaLayouts.spanningPrint.extra,[[4,'AJA 11:00-14:00']]);
     assert.deepEqual(ajaLayouts.coveredPrint.extra,[]);
     assert.deepEqual(ajaLayouts.coveredPrint.coverage,[['AJA 08:07-18:00',2]]);
