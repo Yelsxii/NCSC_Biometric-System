@@ -34,7 +34,9 @@ function dtrAjaClock(event){
 function dtrPrintRows(data,category,from=1,to=dtrLastDay(data.month)){
   const gip=category==='GIP',metricsCols=gip?1:2;
   const days=new Map(data.days.map(day=>[Number(day.date.slice(-2)),day]));
-  const spanFor=n=>{const day=n>=from&&n<=to?days.get(n):null;return 1+(day&&!day.travel_order?(day.aja_periods||[]).length:0);};
+  const coveredPM=day=>day?.aja_covered_slots?.includes('pm_in')&&day?.aja_covered_slots?.includes('pm_out')&&day.aja_periods?.length===1;
+  const extraPeriods=day=>day&&!day.travel_order&&!coveredPM(day)?(day.aja_periods||[]):[];
+  const spanFor=n=>1+extraPeriods(n>=from&&n<=to?days.get(n):null).length;
   const reportCell=(n,span)=>{
     if(!gip)return '';
     if(n===16){
@@ -46,7 +48,7 @@ function dtrPrintRows(data,category,from=1,to=dtrLastDay(data.month)){
   return Array.from({length:31},(_,i)=>{
     const n=i+1,day=n>=from&&n<=to?days.get(n):null;
     if(!day)return '<tr><td>'+n+'</td>'+ '<td></td>'.repeat(4+metricsCols)+reportCell(n,1)+'</tr>';
-    const periods=day.travel_order?[]:(day.aja_periods||[]);
+    const periods=extraPeriods(day);
     const slots=day.display_slots||{};
     const hasEntries=day.has_attendance_entries||Object.values(slots).some(Boolean);
     const weekday=new Date(day.date+'T00:00:00Z').getUTCDay();
@@ -60,12 +62,13 @@ function dtrPrintRows(data,category,from=1,to=dtrLastDay(data.month)){
     const total=day.monitoring?.total_seconds;
     const metricCells=gip?'<td rowspan="'+span+'">'+(total==null||(!hasEntries&&!periods.length)?'':esc(durationText(total).slice(0,-3)))+'</td>':
       '<td class="print-undertime" rowspan="'+span+'">'+(!showUndertime?'':Math.floor(ut/3600))+'</td><td class="print-undertime" rowspan="'+span+'">'+(!showUndertime?'':Math.floor(ut%3600/60))+'</td>';
-    const regularCells=day.aja_covered_slots?.includes('pm_in')&&day.aja_covered_slots?.includes('pm_out')
-      ? '<td>'+dtrClock(slots.am_in,!gip)+'</td><td title="AM departure for AJA">'+dtrClock(slots.am_out,!gip)+'</td><td colspan="2" class="special-day">ON AJA</td>'
+    const coverage=coveredPM(day)?day.aja_periods[0]:null;
+    const regularCells=coverage
+      ? '<td>'+dtrClock(slots.am_in,!gip)+'</td><td>'+dtrClock(slots.am_out,!gip)+'</td><td class="print-aja-coverage">AJA<br>'+dtrAjaClock(coverage.out)+'-'+dtrAjaClock(coverage.in)+'</td><td></td>'
       : ['am_in','am_out','pm_in','pm_out'].map(k=>'<td>'+dtrClock(slots[k],!gip)+'</td>').join('');
     return '<tr'+(offday?' class="print-offday"':'')+'><td rowspan="'+span+'">'+n+'</td>'+
       (special?'<td colspan="4" class="special-day">'+esc(special)+'</td>':regularCells)+
-      metricCells+reportCell(n,span)+'</tr>'+periods.map(p=>'<tr class="print-aja"><td colspan="2">AJA OUT '+dtrAjaClock(p.out)+'</td><td colspan="2">AJA '+(p.in?.origin==='biometric'?'IN':'END')+' '+dtrAjaClock(p.in)+'</td></tr>').join('');
+      metricCells+reportCell(n,span)+'</tr>'+periods.map(p=>'<tr class="print-aja"><td colspan="4">'+(p.out&&p.in&&!p.review?'AJA '+dtrAjaClock(p.out)+'-'+dtrAjaClock(p.in):'AJA OUT '+dtrAjaClock(p.out)+' · '+(p.in?.origin==='biometric'?'IN':'END')+' '+dtrAjaClock(p.in)+(p.review?' (for review)':''))+'</td></tr>').join('');
   }).join('');
 }
 function civilDtrCopy(data,category){
