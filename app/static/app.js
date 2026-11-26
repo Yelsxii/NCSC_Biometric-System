@@ -428,7 +428,11 @@ function attendanceTimeCells(day){
     return '<td colspan="4" class="time-slot slot-leave"><span class="leave-status">'+esc(day.leave_status.toUpperCase())+'</span></td>';
   }
   if(day.aja_covered_slots?.includes('pm_in') && day.aja_covered_slots?.includes('pm_out')){
-    return slotCell(day,'am_in')+slotCell(day,'am_out')+'<td colspan="2" class="time-slot slot-aja"><span class="aja-coverage-status" title="Documented AJA covers the afternoon; no office return recorded">AJA</span></td>';
+    const departure=day.display_slots?.am_out;
+    const end=day.aja_periods?.[0]?.in?.time;
+    return slotCell(day,'am_in')+
+      '<td class="time-slot slot-aja slot-aja-departure" data-origin="'+esc(departure?.origin||'')+'" title="Recorded AM OUT coincides with documented AJA departure"><span class="aja-coverage-status">'+esc(departure?.happened_at?.slice(11,19)||'—')+'</span><span class="aja-coverage-caption">AJA OUT</span></td>'+
+      '<td colspan="2" class="time-slot slot-aja"><span class="aja-coverage-status" title="Continuation of morning AJA; no office return recorded">ON AJA</span>'+(end?'<span class="aja-coverage-caption">Continued until '+esc(end.slice(0,5))+'</span>':'')+'</td>';
   }
   const holiday=day.calendar?.holiday_name;
   const calendarLabel=holiday||(day.is_weekend?(day.day==='Sat'?'Saturday':'Sunday'):'');
