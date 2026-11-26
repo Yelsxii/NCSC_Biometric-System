@@ -619,3 +619,44 @@ def test_edited_regular_time_recalculates_zero_undertime_without_reason(admin):
     assert result.status_code == 200, result.text
     assert monitor(client)['monitoring']['undertime_seconds'] == 120
     assert monitor(client)['display_remark'] == 'Undertime'
+
+
+def test_private_reconciliation_uses_confirmed_bio_and_sheet_fallback(admin, tmp_path, monkeypatch):
+    from app.dtr_reconciliation import install
+    client, headers = admin
+    seed_employee(name='Example Employee')
+    raw = b'001\t2026-11-06 08:02:08\t1\t9\t1\t0\n001\t2026-11-09 09:10:00\t1\t9\t1\t0\n001\t2026-11-09 16:05:00\t1\t9\t1\t0\n001\t2026-11-10 17:20:07\t1\t9\t1\t0\n'
+    assert client.post('/api/imports',headers=headers,files={'file':('fictional.dat',raw)}).status_code==200
+    with closing(connect()) as con:
+        ids = {x['happened_at']:x['id'] for x in con.execute('SELECT id,happened_at FROM punches')}
+    def event(date, time):
+        return {'id':ids[date+' '+time], 'time':time}
+    source=tmp_path/'protected-manual.json'
+    source.write_bytes(file_bytes(packet()))
+    monkeypatch.setenv('MANUAL_DTR_SOURCE_PATH',str(source))
+    data=packet([row(),row('2026-11-09',number=8),row('2026-11-10',number=9)])
+    data['reconciliation_version']=1
+    data['people'][0].update(employee_code='001',decisions={
+        '2026-11-06':{'confirmed':{'am_in':event('2026-11-06','08:02:08')}},
+        '2026-11-09':{'force_sheet':['am_in','am_out','pm_in','pm_out'],
+                      'ignored':[event('2026-11-09','09:10:00'),event('2026-11-09','16:05:00')]},
+        '2026-11-10':{'force_sheet':['am_in','am_out','pm_in'],'require_bio':['pm_out']},
+    })
+    private=tmp_path/'reviewed.json'
+    private.write_bytes(file_bytes(data))
+    assert install(private)['database_modified'] is False
+    first=monitor(client)
+    assert first['display_slots']['am_in']['happened_at'].endswith('08:02:08')
+    assert first['display_slots']['am_out']['origin']=='manual_sheet'
+    assert first['display_unassigned_count']==0
+    assert first['monitoring']['undertime_seconds']==120
+    second=monitor(client,8)
+    assert second['display_unassigned_count']==0
+    assert len(second['display_ignored_ids'])==2
+    assert second['display_remark']=='Complete'
+    third=monitor(client,9)
+    assert third['display_slots']['pm_out']['happened_at'].endswith('17:20:07')
+    assert third['display_slots']['pm_out']['origin']=='biometric'
+    with closing(connect()) as con:
+        assert con.execute('SELECT COUNT(*) FROM punches').fetchone()[0]==4
+        assert con.execute('SELECT COUNT(*) FROM attendance_day_reviews').fetchone()[0]==0
