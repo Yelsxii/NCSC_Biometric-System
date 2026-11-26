@@ -189,11 +189,11 @@ def test_biometric_wins_over_sheet_disagreement_without_copying_stale_totals(adm
     assert day['manual_source']['times']['am_in']=='08:00:00'
     assert day['source_differences']==['am_in']
     assert day['source_conflicts']==[]
-    assert day['monitoring']['remarks']=='Needs hour review'
-    assert day['display_remark']=='Hours for review'
-    assert day['monitoring']['total_seconds']==28204
-    assert day['monitoring']['undertime_seconds'] is None
-    assert day['monitoring']['overtime_seconds'] is None
+    assert day['monitoring']['remarks']=='Undertime'
+    assert day['display_remark']=='Undertime'
+    assert day['monitoring']['total_seconds']==28200
+    assert day['monitoring']['undertime_seconds']==600
+    assert day['monitoring']['overtime_seconds']==0
 
 
 def test_reported_overtime_and_undertime_are_copied_not_invented(admin):
@@ -208,15 +208,15 @@ def test_reported_overtime_and_undertime_are_copied_not_invented(admin):
     assert ut['total_seconds']==27000
 
 
-def test_biometric_only_elapsed_is_not_automatic_earned_overtime(admin):
+def test_biometric_only_uses_existing_template_excess_not_payroll_approval(admin):
     client,headers=admin
     seed_employee()
     data=''.join(f'001\t2026-11-06 {t}\t1\t9\t1\t0\n' for t in ['08:00:00','12:00:00','13:00:00','18:00:00']).encode()
     client.post('/api/imports',headers=headers,files={'file':('fictional.dat',data)})
     result=monitor(client)['monitoring']
     assert result['total_seconds']==32400
-    assert result['overtime_seconds'] is None and result['undertime_seconds'] is None
-    assert result['remarks']=='Needs hour review'
+    assert result['overtime_seconds']==3600 and result['undertime_seconds']==0
+    assert result['remarks']=='Overtime'
 
 
 def test_incomplete_and_future_rows_do_not_create_deficit_hours(admin):
@@ -229,8 +229,8 @@ def test_incomplete_and_future_rows_do_not_create_deficit_hours(admin):
     client,headers=admin;seed_employee();import_one(client,headers,packet([incomplete]))
     day=monitor(client)
     assert day['monitoring']['total_seconds'] is None
-    assert day['monitoring']['remarks']=='Incomplete entries'
-    assert day['display_remark']=='Incomplete entries (3)'
+    assert day['monitoring']['remarks']=='Undertime for review'
+    assert day['display_remark']=='Undertime for review'
     assert day['missing_entries']==['AM Out','PM In','PM Out']
 
 
@@ -504,7 +504,7 @@ def test_leave_status_without_punches_and_short_aja_remains_incomplete(admin):
         assert day['monitoring']['undertime_seconds'] is None
     short=monitor(client,8)
     assert short['aja_covered_slots']==[]
-    assert short['display_remark']=='Incomplete entries (2)'
+    assert short['display_remark']=='Undertime for review'
 
 
 def test_empty_aja_placeholder_does_not_color_regular_day(admin):
@@ -585,7 +585,9 @@ def test_specific_missing_entry_and_worked_offday_pair(admin):
         row('2026-11-06',times=['08:00','12:00','13:00',None],total=None,number=7),
         row('2026-11-07',times=['08:00','12:00',None,None],total=None,number=8)]))
     days=client.get('/api/dtr/monitor?employee_code=001&month=2026-11').json()['days']
-    assert days[5]['display_remark']=='Missing PM Out'
+    assert days[5]['display_remark']=='Undertime'
+    assert days[5]['monitoring']['undertime_seconds']==14400
+    assert days[5]['monitoring']['undertime_origin']=='documented_partial'
     assert days[5]['missing_entries']==['PM Out']
     assert days[6]['display_remark']=='Present'
     assert days[6]['monitoring']['total_seconds']==14400
@@ -707,3 +709,28 @@ def test_aja_note_inside_complete_am_pair_stays_morning():
               'notes':['AJA 9:10-10:05']}
     result = sheet_aja_evidence(source)
     assert (result['start'],result['end']) == ('09:10:00','10:05:00')
+
+
+def test_unique_nearby_biometric_precedes_sheet_across_dates(admin):
+    client, headers = admin
+    seed_employee()
+    raw = b'001\t2026-11-06 08:04:37\t1\t9\t1\t0\n'
+    assert client.post('/api/imports',headers=headers,files={'file':('fictional.dat',raw)}).status_code == 200
+    import_one(client,headers,packet())
+    day=monitor(client)
+    assert day['display_slots']['am_in']['happened_at'].endswith('08:04:37')
+    assert day['display_unassigned_count']==0
+    assert day['monitoring']['undertime_seconds']==240
+
+
+def test_documented_special_order_and_absent_are_not_generic_notes(admin):
+    client, headers = admin
+    seed_employee()
+    import_one(client,headers,packet([
+        row(times=['SO NO.: 10, 2026',None,None,None]),
+        row('2026-11-09',times=['ABSENT',None,None,None],number=8)]))
+    for index,label in [(5,'SO NO.: 10, 2026'),(8,'ABSENT')]:
+        day=monitor(client,index)
+        assert day['documented_status']==label
+        assert day['display_remark']==label
+        assert day['monitoring']['undertime_seconds'] is None
