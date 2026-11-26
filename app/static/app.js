@@ -903,12 +903,27 @@ function setAttendanceMonth(id,value){
   trigger.setAttribute('aria-label','Reporting month: '+text);
 }
 function initializeAttendanceMonthPicker(){
-  const dialog=$('attendance-month-picker'),grid=$('month-picker-grid');
-  let target=null,year=0,anchor=null;
+  const dialog=$('attendance-month-picker'),grid=$('month-picker-grid'),yearGrid=$('month-year-grid'),yearTrigger=$('month-year-trigger');
+  const minYear=1900,maxYear=2100,yearsPerPage=12;
+  let target=null,year=0,anchor=null,yearMode=false,yearPage=minYear;
+  const pageFor=value=>minYear+Math.floor((value-minYear)/yearsPerPage)*yearsPerPage;
   function render(){
-    $('month-year-value').textContent=String(year);
-    $('month-year-prev').disabled=year<=1900;
-    $('month-year-next').disabled=year>=2100;
+    $('month-year-value').textContent=yearMode?yearPage+'–'+Math.min(maxYear,yearPage+yearsPerPage-1):String(year);
+    yearTrigger.setAttribute('aria-expanded',String(yearMode));
+    yearTrigger.setAttribute('aria-label',yearMode?'Return to month selection':'Choose year: '+year);
+    $('month-year-prev').setAttribute('aria-label',yearMode?'Previous years':'Previous year');
+    $('month-year-next').setAttribute('aria-label',yearMode?'Next years':'Next year');
+    $('month-year-prev').disabled=yearMode?yearPage<=minYear:year<=minYear;
+    $('month-year-next').disabled=yearMode?yearPage+yearsPerPage>maxYear:year>=maxYear;
+    grid.hidden=yearMode;yearGrid.hidden=!yearMode;
+    if(yearMode){
+      yearGrid.replaceChildren(...Array.from({length:Math.min(yearsPerPage,maxYear-yearPage+1)},(_,index)=>{
+        const value=yearPage+index,b=document.createElement('button');
+        b.type='button';b.textContent=String(value);b.dataset.yearValue=String(value);
+        b.setAttribute('aria-pressed',String(value===year));return b;
+      }));
+      return;
+    }
     const current=currentMonth(),selected=$(target).value;
     grid.replaceChildren(...attendanceMonthNames.map((name,index)=>{
       const value=String(year)+'-'+String(index+1).padStart(2,'0');
@@ -926,6 +941,13 @@ function initializeAttendanceMonthPicker(){
     const top=rect.bottom+height+16<=innerHeight?rect.bottom+8:Math.max(8,rect.top-height-8);
     dialog.style.left=left+'px';dialog.style.top=top+'px';
   }
+  function focusGrid(active){
+    (active.querySelector('[aria-pressed="true"]')||active.firstElementChild)?.focus();
+  }
+  function switchMode(next){
+    yearMode=next;if(next)yearPage=pageFor(year);
+    render();position();focusGrid(next?yearGrid:grid);
+  }
   function choose(value){
     if(!target)return;
     const id=target,previous=$(id).value;
@@ -934,19 +956,28 @@ function initializeAttendanceMonthPicker(){
   }
   document.querySelectorAll('[data-month-target]').forEach(b=>b.addEventListener('click',()=>{
     target=b.dataset.monthTarget;anchor=b;year=Number(($(target).value||currentMonth()).slice(0,4));
-    render();anchor.setAttribute('aria-expanded','true');dialog.showModal();position();
-    (grid.querySelector('[aria-pressed="true"]')||grid.firstElementChild)?.focus();
+    yearMode=false;render();anchor.setAttribute('aria-expanded','true');dialog.showModal();position();
+    focusGrid(grid);
   }));
+  yearTrigger.addEventListener('click',()=>switchMode(!yearMode));
   grid.addEventListener('click',e=>{const b=e.target.closest('[data-month-value]');if(b)choose(b.dataset.monthValue);});
-  grid.addEventListener('keydown',e=>{
-    const buttons=[...grid.querySelectorAll('button')],i=buttons.indexOf(document.activeElement);
+  yearGrid.addEventListener('click',e=>{const b=e.target.closest('[data-year-value]');if(b){year=Number(b.dataset.yearValue);switchMode(false);}});
+  for(const active of [grid,yearGrid])active.addEventListener('keydown',e=>{
+    const buttons=[...active.querySelectorAll('button')],i=buttons.indexOf(document.activeElement);
     const delta={ArrowLeft:-1,ArrowRight:1,ArrowUp:-4,ArrowDown:4}[e.key];
-    if(i>=0&&delta!==undefined){e.preventDefault();buttons[(i+delta+12)%12].focus();}
+    if(i>=0&&delta!==undefined){e.preventDefault();buttons[(i+delta+buttons.length)%buttons.length].focus();}
   });
-  $('month-year-prev').addEventListener('click',()=>{if(year>1900){year--;render();}});
-  $('month-year-next').addEventListener('click',()=>{if(year<2100){year++;render();}});
+  function step(direction){
+    if(yearMode){
+      const next=yearPage+direction*yearsPerPage;
+      if(next>=minYear&&next<=maxYear){yearPage=next;render();position();}
+    }else if(year+direction>=minYear&&year+direction<=maxYear){year+=direction;render();position();}
+  }
+  $('month-year-prev').addEventListener('click',()=>step(-1));
+  $('month-year-next').addEventListener('click',()=>step(1));
   $('month-picker-current').addEventListener('click',()=>choose(currentMonth()));
   $('month-picker-close').addEventListener('click',()=>dialog.close());
+  dialog.addEventListener('cancel',e=>{if(yearMode){e.preventDefault();switchMode(false);}});
   dialog.addEventListener('click',e=>{if(e.target===dialog){const rect=dialog.getBoundingClientRect();if(e.clientX<rect.left||e.clientX>rect.right||e.clientY<rect.top||e.clientY>rect.bottom)dialog.close();}});
   dialog.addEventListener('close',()=>{if(anchor){anchor.setAttribute('aria-expanded','false');if(anchor.getClientRects().length)anchor.focus();}target=null;anchor=null;});
   window.addEventListener('resize',position);
