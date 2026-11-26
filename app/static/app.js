@@ -446,8 +446,8 @@ function attendanceTimeCells(day){
 }
 function manilaClock(){return new Intl.DateTimeFormat('sv-SE',{timeZone:'Asia/Manila',year:'numeric',month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit',second:'2-digit',hourCycle:'h23'}).format(new Date());}
 function embeddedAja(day,key){
-  // Yellow means the regular attendance period includes documented AJA.
-  // A regular clock is not itself a departure/return simply because it is yellow.
+  // Use the IN cell as the period's AJA coverage marker. Keep regular OUT
+  // clocks normal, except an AM OUT that coincides with an AJA departure.
   if(day.travel_order||day.leave_status||day.is_future)return [];
   const slots=day.display_slots||{},clock=slots[key]?.happened_at?.slice(11,19);
   if(!clock)return [];
@@ -459,6 +459,8 @@ function embeddedAja(day,key){
     // Strict overlap excludes a morning pair ending exactly at AJA departure.
     const overlap=start&&end&&start<end&&a<end&&start<b;
     const endpoint=(a<=clock&&clock<=b)||clock.slice(0,5)===a.slice(0,5)||clock.slice(0,5)===b.slice(0,5);
+    if(key==='pm_out')return false;
+    if(key==='am_out')return clock.slice(0,5)===a.slice(0,5);
     return overlap||endpoint;
   });
 }
@@ -476,7 +478,7 @@ function slotCell(day,key){
   const ajaHint=aja.length?'Regular clock retained; attendance period includes AJA '+aja.map(p=>p.out.time.slice(0,5)+'–'+p.in.time.slice(0,5)).join(' · '):'';
   const departure=aja.some(p=>p.out.time.slice(0,5)===event?.happened_at?.slice(11,16));
   return '<td class="time-slot slot-'+(aja.length?'aja slot-aja-inline':tone)+'" data-origin="'+esc(event?origin:'')+'" title="'+esc([hint,ajaHint].filter(Boolean).join(' · '))+'">'+(event?
-    '<span class="time-value">'+esc(event.happened_at.slice(11,19))+'</span>'+(departure?'<span class="aja-coverage-caption">AJA OUT</span>':''):
+    '<span class="time-value">'+esc(event.happened_at.slice(11,19))+'</span>'+(departure?'<span class="aja-coverage-caption">AJA OUT</span>':aja.length?'<span class="aja-coverage-caption">AJA coverage</span>':''):
     '<span class="no-time">—</span>')+'</td>';
 }
 async function loadDetail({quiet=false}={}){
