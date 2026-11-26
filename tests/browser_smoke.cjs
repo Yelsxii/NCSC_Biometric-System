@@ -763,11 +763,12 @@ with connect() as con:
     assert.equal(ajaLayouts.covered[2].text,'AJA COVERAGEUntil 18:00');
     assert.deepEqual(ajaLayouts.completePrint.extra,[]);
     assert.deepEqual(ajaLayouts.completePrint.inline,[['pm_in','AJA14:28-14:45']]);
-    assert.deepEqual(ajaLayouts.completePrint.regular,[['8:40',2],['12:30',2],['12:33',1],['17:40',2]]);
+    assert.deepEqual(ajaLayouts.completePrint.regular,[['8:40',1],['12:30',1],['12:33',1],['17:40',1]]);
     assert.equal(ajaLayouts.completePrint.rows,32);
+    assert.equal(await page.evaluate(()=>{const day={date:'2026-11-12',day:'Thu',calendar:{},has_attendance_entries:true,display_slots:Object.fromEntries(['am_in','am_out','pm_in','pm_out'].map((k,i)=>[k,{happened_at:'2026-11-12 '+['08:40:00','12:30:00','12:33:00','17:40:00'][i]}])),aja_periods:[{out:{time:'14:28:00'},in:{time:'14:45:00'},review:false}],monitoring:{}};const t=document.createElement('table');t.innerHTML='<tbody>'+dtrPrintRows({month:'2026-11',days:[day]},'COS')+'</tbody>';const row=t.querySelector('.print-aja-subrow');return row.cells.length===4&&row.cells[2].dataset.slot==='pm_in'&&row.cells[3].textContent==='';}),true,'AJA note occupies only PM IN in a separate aligned row');
     assert.deepEqual(ajaLayouts.morningPrint.extra,[]);
     assert.deepEqual(ajaLayouts.morningPrint.inline,[['am_in','AJA09:10-10:05']]);
-    assert.deepEqual(ajaLayouts.morningPrint.regular,[['7:40',1],['12:00',2],['13:00',2],['17:00',2]]);
+    assert.deepEqual(ajaLayouts.morningPrint.regular,[['7:40',1],['12:00',1],['13:00',1],['17:00',1]]);
     assert.deepEqual(ajaLayouts.spanningPrint.extra,[[4,'AJA 11:00-14:00']]);
     assert.deepEqual(ajaLayouts.coveredPrint.extra,[]);
     assert.deepEqual(ajaLayouts.coveredPrint.coverage,[['AJA 08:07-18:00',2]]);
