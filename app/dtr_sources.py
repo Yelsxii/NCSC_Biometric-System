@@ -279,7 +279,7 @@ def resolve_day(day, manual):
     remarks = ('Future entry' if future_entry else 'Source difference' if conflicts else
         'Undertime' if undertime is not None and undertime>0 else
         'Overtime' if overtime is not None and overtime>0 else
-        'Present' if complete and offday else
+        'Complete' if complete and offday else
         'Complete' if complete and undertime==0 else
         'Needs hour review' if complete else
         'Upcoming' if day['is_future'] else
