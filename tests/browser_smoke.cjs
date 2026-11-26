@@ -740,6 +740,24 @@ with connect() as con:
     assert.equal(await page.locator('#detail-events').count(),0);
     assert.equal(await page.locator('#detail-id').count(),0);
     assert.equal(await page.locator('#employee-detail table').count(),1);
+    const ajaLayouts=await page.evaluate(()=>{
+      const slots=times=>Object.fromEntries(['am_in','am_out','pm_in','pm_out'].map((key,i)=>[key,times[i]?{happened_at:'2026-11-12 '+times[i],origin:'manual_sheet'}:null]));
+      const make=(times,from,to,covered=[])=>({date:'2026-11-12',day:'Thu',calendar:{},slots:{},tone:'aja',has_attendance_entries:true,
+        display_slots:slots(times),aja_covered_slots:covered,aja_periods:[{out:{time:from,origin:'manual_sheet'},in:{time:to,origin:'manual_sheet'},review:false}],monitoring:{}});
+      const complete=make(['08:40:00','12:30:00','12:33:00','17:40:00'],'14:28:00','14:45:00');
+      const covered=make(['07:40:28','08:07:00',null,null],'08:07:00','18:00:00',['pm_in','pm_out']);
+      const cells=day=>{const t=document.createElement('table');t.innerHTML='<tbody><tr>'+attendanceTimeCells(day)+'</tr></tbody>';return [...t.querySelectorAll('td')].map(td=>({aja:td.classList.contains('slot-aja'),text:td.textContent,covered:td.classList.contains('slot-aja-covered')}));};
+      const print=day=>{const t=document.createElement('table');t.innerHTML='<tbody>'+dtrPrintRows({month:'2026-11',days:[day]},'COS')+'</tbody>';return {extra:[...t.querySelectorAll('.print-aja td')].map(td=>[td.colSpan,td.textContent]),coverage:[...t.querySelectorAll('.print-aja-coverage')].map(td=>[td.textContent,td.nextElementSibling.textContent]),rows:t.rows.length};};
+      return {complete:cells(complete),covered:cells(covered),completePrint:print(complete),coveredPrint:print(covered)};
+    });
+    assert.deepEqual(ajaLayouts.complete.map(x=>x.aja),[false,false,false,false]);
+    assert.equal(ajaLayouts.complete[2].text,'12:33:00');
+    assert.deepEqual(ajaLayouts.covered.map(x=>x.aja),[false,true,true,false]);
+    assert.equal(ajaLayouts.covered[3].covered,true);
+    assert.deepEqual(ajaLayouts.completePrint.extra,[[4,'AJA 14:28-14:45']]);
+    assert.deepEqual(ajaLayouts.coveredPrint.extra,[]);
+    assert.deepEqual(ajaLayouts.coveredPrint.coverage,[['AJA08:07-18:00','']]);
+    assert.equal(ajaLayouts.coveredPrint.rows,31);
     const originalMonth=await page.locator('#detail-month').inputValue();
     await page.locator('#dtr-form-preview').click();
     await page.locator('#dtr-preview-dialog[open]').waitFor();
