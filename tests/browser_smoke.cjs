@@ -359,7 +359,7 @@ uvicorn.run('app.main:app',host='127.0.0.1',port=int(os.environ['QA_PORT']),log_
     await page.waitForFunction(()=>{
       const a=document.querySelector('.kpi-in'),b=document.querySelector('.kpi-out');
       const r1=a.querySelector('svg path').getBoundingClientRect(),r2=b.querySelector('svg path').getBoundingClientRect();
-      return new DOMMatrix(getComputedStyle(a).transform).m11>=1.059
+      return Math.abs(new DOMMatrix(getComputedStyle(a).transform).m11-1.12)<.001
         && Math.abs(r1.width-r2.width)<.1 && Math.abs(r1.height-r2.height)<.1;
     });
     await page.locator('.kpi-all').click();
@@ -386,7 +386,7 @@ uvicorn.run('app.main:app',host='127.0.0.1',port=int(os.environ['QA_PORT']),log_
     await page.waitForFunction(()=>{
       const el=document.querySelector('.kpi-missing');
       const style=getComputedStyle(el),count=getComputedStyle(el.querySelector('strong'));
-      return count.textShadow==='none' && count.color==='rgb(192, 46, 85)' && Math.abs(new DOMMatrix(style.transform).m42)<.1 && new DOMMatrix(style.transform).m11 >= 1.055;
+      return count.textShadow==='none' && count.color==='rgb(192, 46, 85)' && Math.abs(new DOMMatrix(style.transform).m42)<.1 && Math.abs(new DOMMatrix(style.transform).m11-1.06)<.001;
     });
     await hoverKpi.click();
     await page.locator('#employee-search').hover();
@@ -397,25 +397,32 @@ uvicorn.run('app.main:app',host='127.0.0.1',port=int(os.environ['QA_PORT']),log_
         && getComputedStyle(selected.querySelector('strong')).color==='rgb(192, 46, 85)'
         && getComputedStyle(previous.querySelector('strong')).color==='rgb(27, 46, 78)'
         && Math.abs(new DOMMatrix(getComputedStyle(selected).transform).m42)<.1
-        && new DOMMatrix(getComputedStyle(selected).transform).m11 >= 1.055
+        && Math.abs(new DOMMatrix(getComputedStyle(selected).transform).m11-1.12)<.001
         && Math.abs(new DOMMatrix(getComputedStyle(previous).transform).m42)<.1
         && Math.abs(new DOMMatrix(getComputedStyle(previous).transform).m11-1)<.01
         && getComputedStyle(selected.querySelector('strong')).textShadow==='none';
     });
     assert.equal(await page.locator('.live-kpi[aria-pressed=true]').count(),1);
+    const expandedLayout=await page.evaluate(()=>{
+      const selected=document.querySelector('.live-kpi[aria-pressed=true]'),r=selected.getBoundingClientRect();
+      const strip=selected.parentElement.getBoundingClientRect();
+      return {contained:r.top>=strip.top&&r.bottom<=strip.bottom,
+        clearOfNeighbors:[selected.previousElementSibling,selected.nextElementSibling].filter(Boolean).every(el=>{const n=el.getBoundingClientRect();return n.right<=r.left+.5||n.left>=r.right-.5;})};
+    });
+    assert.ok(expandedLayout.contained&&expandedLayout.clearOfNeighbors,'Active KPI has room to expand without clipping or overlapping adjacent cards');
     const centeredZoom=await page.evaluate(()=>{
       const selected=document.querySelector('.kpi-missing').getBoundingClientRect();
       const normal=document.querySelector('.kpi-all').getBoundingClientRect();
       const top=normal.top-selected.top,bottom=selected.bottom-normal.bottom;
       return {top,bottom};
     });
-    assert.ok(centeredZoom.top>1 && centeredZoom.bottom>1 && Math.abs(centeredZoom.top-centeredZoom.bottom)<.2,'Selected KPI expands equally above and below the unselected cards');
+    assert.ok(centeredZoom.top>3 && centeredZoom.bottom>3 && Math.abs(centeredZoom.top-centeredZoom.bottom)<.2,'Selected KPI expands equally above and below the unselected cards');
     await page.locator('.kpi-all').click();
     await page.locator('#employee-search').hover();
     await page.waitForFunction(()=>{
       const all=new DOMMatrix(getComputedStyle(document.querySelector('.kpi-all')).transform);
       const old=new DOMMatrix(getComputedStyle(document.querySelector('.kpi-missing')).transform);
-      return Math.abs(all.m42)<.1 && all.m11>=1.055 && Math.abs(old.m42)<.1 && Math.abs(old.m11-1)<.01;
+      return Math.abs(all.m42)<.1 && Math.abs(all.m11-1.12)<.001 && Math.abs(old.m42)<.1 && Math.abs(old.m11-1)<.01;
     });
     assert.equal(await page.locator('.live-kpi .ring-label').count(),0);
     assert.ok((await page.locator('.kpi-all').getAttribute('aria-label')).includes('employees'));
