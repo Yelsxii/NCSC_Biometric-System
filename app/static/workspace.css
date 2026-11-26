@@ -1037,3 +1037,9 @@ dialog.app-dialog[open]::backdrop,#dtr-preview-dialog[open]::backdrop{
 .workspace #attendance-register-panel .attendance-directory tbody tr:focus-within{background:#dbe7f7}
 .workspace :is(#attendance-register-panel,#employee-profile-panel) :is(.attendance-directory,.profile-table) tbody tr:focus-within .directory-action-cell{background:#dbe7f7}
 @media(prefers-reduced-motion:reduce){.workspace :is(#attendance-register-panel,#employee-profile-panel) :is(.attendance-directory,.profile-table) :is(.department-name,.department-code,.id-cell,.live-last-update.has-update,.live-status){transition:none}}
+
+/* Directory scrolling replaces pagination; keep scrolling affordances consistent. */
+.workspace #employee-profile-panel .table-wrap{scrollbar-width:thin;scrollbar-color:#b8c6dd transparent}
+.workspace #employee-profile-panel .table-wrap::-webkit-scrollbar{display:block;width:6px;height:6px}
+.workspace #employee-profile-panel .table-wrap::-webkit-scrollbar-thumb{background:#b8c6dd;border-radius:999px}
+.workspace #attendance-register-panel .live-status.live-pending{background:transparent;color:#657997;font-weight:500}

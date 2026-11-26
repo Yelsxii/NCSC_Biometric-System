@@ -26,6 +26,8 @@ let selectedName = '';
 let selectedDepartment = '';
 let activeDtr = null;
 let lastEmployeeRows = [];
+let registerReady = false;
+let registerInFlight = null;
 let liveFilter = 'all';
 let registerLiveAsOf = '';
 let toastTimer = null;
@@ -33,12 +35,11 @@ let requestSerial = 0;
 let rosterPreviewOkay = false;
 let usbPreviewOkay = false;
 let connectorReadPending = false;
-const EMPLOYEE_PAGE_SIZE = 15;
-let registerSearchTimer = null;
-let profilePage = 1;
+const PROFILE_BATCH_SIZE = 50;
 let profileCategory = 'All';
 let profileRequest = 0;
-let profileSearchTimer = null;
+let profileRows = null;
+let profileSummary = null;
 let profileFormToken = 0;
 let profileEditing = null;
 let profileVersion = null;
@@ -89,6 +90,8 @@ async function api(path,options={}) {
 function showLogin(){
   stopDeviceRefresh();
   stopAttendanceRefresh();
+  requestSerial++;registerInFlight=null;registerReady=false;lastEmployeeRows=[];registerLiveAsOf='';
+  profileRequest++;profileRows=null;profileSummary=null;
   selectedEmployee=null;activeDtr=null;dayReviewContext=null;detailRequest++;
   document.querySelectorAll('dialog[open]').forEach(dialog=>dialog.close());
   $('login-view').classList.remove('hidden');
@@ -133,6 +136,7 @@ function navigate(page){
     $('employee-detail').classList.add('hidden');
     $('attendance-register-panel').classList.remove('hidden');
     selectedEmployee=null;activeDtr=null;
+    if(registerReady)renderRegister();
     startAttendanceRefresh();
     return loadRegister();
   }
@@ -140,32 +144,53 @@ function navigate(page){
   if (page==='activities') return loadActivities();
   if (page==='staff') {startDeviceRefresh();return loadDevice();}
 }
-function cancelRegisterSearch(){clearTimeout(registerSearchTimer);registerSearchTimer=null;requestSerial++;}
+function cancelRegisterSearch(){requestSerial++;}
 function updateRegisterSearchControl(){$('clear-employee-search').hidden=!$('employee-search').value;}
-function applyRegisterFilters({debounce=false}={}){
-  cancelRegisterSearch();updateRegisterSearchControl();
+function applyRegisterFilters(){
+  updateRegisterSearchControl();
   if(!session||currentPage!=='employees'||selectedEmployee)return;
-  if(debounce){registerSearchTimer=setTimeout(()=>{registerSearchTimer=null;if(session&&currentPage==='employees'&&!selectedEmployee)void loadRegister({quiet:true});},120);}
-  else void loadRegister();
+  if(registerReady)renderRegister();
+}
+function registerDate(){
+  const parts=new Intl.DateTimeFormat('en-CA',{timeZone:'Asia/Manila',year:'numeric',month:'2-digit',day:'2-digit'}).formatToParts(new Date());
+  return ['year','month','day'].map(key=>parts.find(p=>p.type===key).value).join('-');
 }
 async function loadRegister({quiet=false}={}){
   updateRegisterSearchControl();
-  const serial=++requestSerial;
+  if(!session||currentPage!=='employees'||selectedEmployee)return;
+  const account=session;
   const month=$('register-month').value||currentMonth();
-  const q=$('employee-search').value.trim();
-  if(!quiet)$('register-rows').innerHTML='<tr><td colspan="6" class="table-empty">Loading employees…</td></tr>';
-  try {
+  if(registerInFlight&&registerInFlight.account===account&&registerInFlight.serial===requestSerial&&registerInFlight.month===month)return;
+  const serial=++requestSerial;
+  const job={account,serial,month};registerInFlight=job;
+  const valid=()=>serial===requestSerial&&session===account&&currentPage==='employees'&&!selectedEmployee&&month===($('register-month').value||currentMonth());
+  if(registerLiveAsOf&&registerLiveAsOf.slice(0,10)!==registerDate()){
+    lastEmployeeRows=lastEmployeeRows.map(({live,...row})=>row);registerLiveAsOf='';
+    if(registerReady)renderRegister();
+  }
+  try{
+    // Render the inexpensive directory first; today's live computation follows separately.
+    if(!registerReady){
+      $('register-rows').innerHTML='<tr><td colspan="6" class="table-empty">Loading employees…</td></tr>';
+      const directory=await api('/api/employee-register?'+new URLSearchParams({month,live:'false'}));
+      if(!valid())return;
+      lastEmployeeRows=directory.items;registerReady=true;renderRegister();
+    }
+    if(!registerLiveAsOf){
+      $('live-refresh-note').textContent='Updating live status…';$('live-refresh-note').hidden=false;
+    }
     const result=await api('/api/employee-register?'+new URLSearchParams({month,live:'true'}));
-    if (serial!==requestSerial||currentPage!=='employees'||!session||selectedEmployee||q!==$('employee-search').value.trim()||month!==($('register-month').value||currentMonth())) return;
-    lastEmployeeRows=result.items;
+    if(!valid())return;
+    lastEmployeeRows=result.items;registerReady=true;
     registerLiveAsOf=result.live_as_of||'';
-    $('live-refresh-note').hidden=true;
-    renderRegister();
+    $('live-refresh-note').hidden=true;renderRegister();
   }catch(error){
-    if(serial!==requestSerial || currentPage!=='employees' || !session || selectedEmployee)return;
-    $('live-refresh-note').textContent='Attendance refresh failed';
-    $('live-refresh-note').hidden=false;
-    if(!quiet){$('register-rows').innerHTML='<tr><td colspan="6" class="table-empty">Unable to load employee attendance.</td></tr>';toast(error.message,true);}
+    if(!valid())return;
+    $('live-refresh-note').textContent='Attendance refresh failed';$('live-refresh-note').hidden=false;
+    if(!registerReady)$('register-rows').innerHTML='<tr><td colspan="6" class="table-empty">Unable to load employee attendance.</td></tr>';
+    if(!quiet&&!registerReady)toast(error.message,true);
+  }finally{
+    if(registerInFlight===job)registerInFlight=null;
   }
 }
 // Presentation only: preserve known abbreviations and Roman regional numbers.
@@ -229,20 +254,21 @@ function liveTime(stamp){
     return String(h%12||12).padStart(2,'0')+':'+match[2]+':'+match[3]+' '+(h<12?'AM':'PM');
 }
 function liveMatches(row,key){
-    const status=row.live?.status||'review';
+    const status=row.live?.status||'pending';
     return key==='all'||(key==='other'?['review','offday'].includes(status):status===key);
 }
 function renderRegister(){
     const q=$('employee-search').value.trim().toLowerCase();
     const rows=lastEmployeeRows.filter(row=>liveMatches(row,liveFilter)&&(!q||String(row.employee_code).toLowerCase().includes(q)||String(row.display_name||'').toLowerCase().includes(q)));
-    document.querySelectorAll('[data-live-count]').forEach(el=>{setTextIfChanged(el,String(lastEmployeeRows.filter(row=>liveMatches(row,el.dataset.liveCount)).length));});
+    const pending=lastEmployeeRows.some(row=>!row.live);
+    document.querySelectorAll('[data-live-count]').forEach(el=>{setTextIfChanged(el,el.dataset.liveCount!=='all'&&pending?'—':String(lastEmployeeRows.filter(row=>liveMatches(row,el.dataset.liveCount)).length));});
     document.querySelectorAll('[data-live-filter]').forEach(el=>setAttrIfChanged(el,'aria-pressed',String(el.dataset.liveFilter===liveFilter)));
     const other=$('live-other-filter');
     other.classList.toggle('hidden',!lastEmployeeRows.some(row=>liveMatches(row,'other'))&&liveFilter!=='other');
     document.querySelectorAll('.live-kpi').forEach(button=>{
       const total=lastEmployeeRows.length;
       const count=lastEmployeeRows.filter(row=>liveMatches(row,button.dataset.liveFilter)).length;
-      setAttrIfChanged(button,'aria-label',button.querySelector('small').textContent+': '+count+' of '+total+' employees');
+      setAttrIfChanged(button,'aria-label',button.querySelector('small').textContent+': '+(pending&&button.dataset.liveFilter!=='all'?'Updating':count+' of '+total+' employees'));
     });
     
     const total=rows.length;
@@ -252,7 +278,7 @@ function renderRegister(){
       '<td class="employee-name-cell">'+registerNameCell(row)+'</td>'+
       '<td>'+categoryBadge(row.employment_type)+'</td>'+
       '<td>'+departmentCell(row.department)+'</td>'+
-      '<td><span class="live-status live-'+esc(row.live?.status||'review')+'" title="'+esc(row.live?.reason||'Status unavailable')+'">'+esc(displayTitle(row.live?.label||'For review'))+'</span></td>'+
+      '<td><span class="live-status live-'+esc(row.live?.status||'pending')+'" title="'+esc(row.live?.reason||'Live status is being updated')+'">'+esc(displayTitle(row.live?.label||'Updating'))+'</span></td>'+
       '<td class="live-last-update'+(row.live?.last_update?' has-update':'')+'" title="'+esc([row.live?.at?liveTime(row.live.at):'',row.live?.reason||''].filter(Boolean).join(' · '))+'">'+esc(row.live?.last_update||'—')+'</td>'+
       '<td class="directory-action-cell"><button type="button" class="button primary row-action" data-employee="'+esc(row.employee_code)+'" aria-label="View attendance: '+esc(row.display_name||row.employee_code)+'"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M2 12s4-7 10-7 10 7 10 7-4 7-10 7S2 12 2 12Z"/><circle cx="12" cy="12" r="3"/></svg>View attendance</button></td>'+
       '</tr>'
@@ -282,32 +308,44 @@ function updateProfileTabs(){
     node.classList.toggle('active',active);node.setAttribute('aria-pressed',String(active));
   });
 }
-async function loadProfiles(){
-  clearTimeout(profileSearchTimer);profileSearchTimer=null;
-  const serial=++profileRequest;
+function renderProfiles(){
   updateProfileTabs();
-  $('profile-rows').innerHTML='<tr><td colspan="5" class="table-empty">Loading employee profiles…</td></tr>';
-  try{
-    const data=await api('/api/employee-profiles?'+new URLSearchParams({
-      q:$('profile-search').value.trim(),category:profileCategory,status:'All',
-      page:String(profilePage),limit:String(EMPLOYEE_PAGE_SIZE)}));
-    if(serial!==profileRequest || currentPage!=='profiles' || !session)return;
-    const pages=Math.max(1,Math.ceil(data.total/EMPLOYEE_PAGE_SIZE));
-    if(profilePage>pages){profilePage=pages;return loadProfiles();}
-    $('profile-total-badge').textContent=data.summary.total;
-    for(const kind of ['COS','Permanent','GIP','OJT'])
-      $('profile-'+kind.toLowerCase()+'-badge').textContent=data.summary.categories[kind];
-    $('profile-summary').textContent=data.total+' '+(data.total===1?'employee':'employees');
-    $('profile-count').textContent=data.total?('Showing '+((profilePage-1)*EMPLOYEE_PAGE_SIZE+1)+'–'+Math.min(profilePage*EMPLOYEE_PAGE_SIZE,data.total)+' of '+data.total+' employees'):'No matching employees';
-    $('profile-page').textContent='Page '+profilePage+' of '+pages;
-    $('profile-prev').disabled=profilePage===1;$('profile-next').disabled=profilePage===pages;
-    $('profile-rows').innerHTML=data.items.length?data.items.map(row=>
-      '<tr><td class="id-cell">'+esc(row.employee_code)+'</td><td class="employee-name-cell"><div class="register-identity"><span class="name-avatar" aria-hidden="true">'+esc(registerInitials(row.display_name))+'</span><span><strong>'+esc(row.display_name||'Name not synchronized')+'</strong>'+(row.position?'<small>'+esc(displayTitle(row.position))+'</small>':'')+'</span></div></td><td>'+categoryBadge(row.employment_type)+'</td><td>'+departmentCell(row.department)+'</td>'+
+  if(!profileRows||!profileSummary)return;
+  const q=$('profile-search').value.trim().toLowerCase();
+  const rows=profileRows.filter(row=>(profileCategory==='All'||row.employment_type===profileCategory)&&(!q||[row.directory_id,row.display_name,row.department].some(v=>String(v??'').toLowerCase().includes(q))));
+  $('profile-total-badge').textContent=profileSummary.total;
+  for(const kind of ['COS','Permanent','GIP','OJT'])$('profile-'+kind.toLowerCase()+'-badge').textContent=profileSummary.categories[kind]||0;
+  $('profile-summary').textContent=rows.length+' '+(rows.length===1?'employee':'employees');
+  $('profile-count').textContent=rows.length?('Showing '+rows.length+' of '+profileRows.length+' employees'):'No matching employees';
+    setHtmlIfChanged($('profile-rows'),rows.length?rows.map(row=>
+      '<tr><td class="id-cell">'+esc(row.directory_id)+'</td><td class="employee-name-cell"><div class="register-identity"><span class="name-avatar" aria-hidden="true">'+esc(registerInitials(row.display_name))+'</span><span><strong>'+esc(row.display_name||'Name not synchronized')+'</strong>'+(row.position?'<small>'+esc(displayTitle(row.position))+'</small>':'')+'</span></div></td><td>'+categoryBadge(row.employment_type)+'</td><td>'+departmentCell(row.department)+'</td>'+
       '<td class="directory-action-cell">'+(session.role==='admin'?'<button type="button" class="button primary row-action" data-edit-profile="'+esc(row.employee_code)+'" aria-label="'+esc((row.profile_complete?'Edit profile: ':'Complete profile: ')+(row.display_name||row.employee_code))+'">'+ '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.65" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m13.5 6.5 4 4M4 20l4.5-1 11-11a2.8 2.8 0 0 0-4-4l-11 11L4 20z"/></svg>' +(row.profile_complete?'Edit profile':'Complete profile')+'</button>':'—')+'</td></tr>'
-    ).join(''):'<tr><td colspan="5" class="table-empty">No matching employees. Adjust your filters or register an enrolled K14 ID.</td></tr>';
+    ).join(''):'<tr><td colspan="5" class="table-empty">No matching employees.</td></tr>');
+}
+async function loadProfiles(){
+  const serial=++profileRequest,account=session;
+  const valid=()=>serial===profileRequest&&currentPage==='profiles'&&session===account;
+  updateProfileTabs();
+  if(profileRows)renderProfiles();
+  else $('profile-rows').innerHTML='<tr><td colspan="5" class="table-empty">Loading employees…</td></tr>';
+  try{
+    const getPage=page=>api('/api/employee-profiles?'+new URLSearchParams({q:'',category:'All',status:'All',page:String(page),limit:String(PROFILE_BATCH_SIZE)}));
+    const first=await getPage(1);
+    if(!valid())return;
+    const all=[...first.items];
+    const pages=Math.max(1,Math.ceil(first.total/PROFILE_BATCH_SIZE));
+    for(let page=2;page<=pages;page++){
+      const next=await getPage(page);
+      if(!valid())return;
+      all.push(...next.items);
+    }
+    // The endpoint already sorts by name; display numbering is separate from device keys.
+    const unique=[...new Map(all.map(row=>[row.employee_code,row])).values()];
+    profileRows=unique.map((row,index)=>({...row,directory_id:index+1}));
+    profileSummary=first.summary;renderProfiles();
   }catch(error){
-    if(serial!==profileRequest || currentPage!=='profiles' || !session)return;
-    $('profile-rows').innerHTML='<tr><td colspan="5" class="table-empty">Unable to load employee profiles.</td></tr>';
+    if(!valid())return;
+    if(!profileRows)$('profile-rows').innerHTML='<tr><td colspan="5" class="table-empty">Unable to load employees.</td></tr>';
     toast(error.message,true);
   }
 }
@@ -364,7 +402,7 @@ async function saveProfile(event){
     if(session!==account)return;
     $('profile-dialog').close();
     toast(editing?'Employee profile updated.':'Employee profile registered.');
-    if(!editing){profilePage=1;profileCategory='All';$('profile-search').value=code;}
+    if(!editing){profileCategory='All';$('profile-search').value='';}
     if(profileReturn?.page==='employees'){
       const previous=profileReturn;
       await loadRegister();
@@ -1178,29 +1216,20 @@ async function initialize(){
       kpiStrip.scrollLeft+=e.deltaY*(e.deltaMode===1?16:e.deltaMode===2?kpiStrip.clientWidth:1);
     }
   },{passive:false});
-  $('employee-search').addEventListener('input',()=>applyRegisterFilters({debounce:true}));
+  $('employee-search').addEventListener('input',applyRegisterFilters);
   $('clear-employee-search').addEventListener('click',()=>{$('employee-search').value='';applyRegisterFilters();$('employee-search').focus();});
-  $('register-month').addEventListener('change',()=>applyRegisterFilters());
+  $('register-month').addEventListener('change',()=>{applyRegisterFilters();void loadRegister({quiet:true});});
   $('open-profile').addEventListener('click',()=>openProfile());
   $('close-profile').addEventListener('click',()=>$('profile-dialog').close());
   $('cancel-profile').addEventListener('click',()=>$('profile-dialog').close());
   $('profile-dialog').addEventListener('close',()=>profileFormToken++);
   $('profile-form').addEventListener('submit',saveProfile);
-  $('profile-filter').addEventListener('submit',event=>{event.preventDefault();profilePage=1;loadProfiles();});
-  $('profile-search').addEventListener('input',()=>{
-    clearTimeout(profileSearchTimer);
-    ++profileRequest;profilePage=1;
-    const account=session;
-    profileSearchTimer=setTimeout(()=>{
-      profileSearchTimer=null;
-      if(currentPage==='profiles'&&session&&session===account)loadProfiles();
-    },220);
-  });
+  $('profile-filter').addEventListener('submit',event=>{event.preventDefault();renderProfiles();});
+  $('profile-search').addEventListener('input',renderProfiles);
   document.querySelectorAll('[data-profile-category]').forEach(node=>node.addEventListener('click',()=>{
-    profileCategory=node.dataset.profileCategory;profilePage=1;loadProfiles();
+    profileCategory=node.dataset.profileCategory;renderProfiles();
+    $('employee-profile-panel').querySelector('.table-wrap').scrollTop=0;
   }));
-  $('profile-prev').addEventListener('click',()=>{profilePage--;loadProfiles();});
-  $('profile-next').addEventListener('click',()=>{profilePage++;loadProfiles();});
   $('profile-rows').addEventListener('click',event=>{
     const button=event.target.closest('[data-edit-profile]');if(button)openProfile(button.dataset.editProfile);
   });
