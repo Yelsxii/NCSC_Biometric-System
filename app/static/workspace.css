@@ -889,12 +889,15 @@ dialog.app-dialog[open]::backdrop,#dtr-preview-dialog[open]::backdrop{
 }
 
 /* Employee classification: readable, restrained, shared across directory and profiles. */
-.workspace .tag.employment-chip{display:inline-flex;align-items:center;justify-content:center;min-height:23px;padding:4px 11px;border:0;border-radius:999px;font-size:11px;line-height:1.25;font-weight:700;letter-spacing:0;white-space:nowrap;box-shadow:none;background-image:none}
-.workspace .employment-chip.tag-cos{background:#d9e2ff;color:#294ab5}
-.workspace .employment-chip.tag-permanent{background:#cceafa;color:#075985}
-.workspace .employment-chip.tag-gip{background:#eadcff;color:#7040a8}
-.workspace .employment-chip.tag-ojt{background:#ffe4c7;color:#9a4c13}
-.workspace .employment-chip.tag-neutral{background:#e4eaf2;color:#53657f}
+.workspace .tag.employment-chip{display:inline-flex;align-items:center;justify-content:center;min-height:23px;padding:4px 11px;border:0;border-radius:999px;font-size:11px;line-height:1.25;font-weight:700;letter-spacing:0;white-space:nowrap;box-shadow:none;background-image:none;background-color:var(--chip-bg);color:var(--chip-ink);transition:background-color .22s ease,color .22s ease,text-shadow .22s ease}
+.workspace .employment-chip.tag-cos{--chip-bg:#d5dfff;--chip-ink:#2346bc;--chip-active:#bfceff;--chip-active-ink:#1738b3;--chip-glow:#3157ff40}
+.workspace .employment-chip.tag-permanent{--chip-bg:#c4e9ff;--chip-ink:#005b8c;--chip-active:#ade2ff;--chip-active-ink:#004e83;--chip-glow:#008cde40}
+.workspace .employment-chip.tag-gip{--chip-bg:#eadcff;--chip-ink:#7040a8;--chip-active:#dec8ff;--chip-active-ink:#61309b;--chip-glow:#9144df40}
+.workspace .employment-chip.tag-ojt{--chip-bg:#ffe4c7;--chip-ink:#9a4c13;--chip-active:#ffd6a9;--chip-active-ink:#873e09;--chip-glow:#d8752140}
+.workspace .employment-chip.tag-neutral{--chip-bg:#e4eaf2;--chip-ink:#53657f;--chip-active:#d6e0ee;--chip-active-ink:#415775;--chip-glow:transparent}
+/* Preserve the category's own color on the highlighted row; glow text only. */
+.workspace :is(.attendance-directory,.profile-table) tbody tr:is(:hover,:focus-within) .tag.employment-chip{background-color:var(--chip-active);color:var(--chip-active-ink);text-shadow:0 0 7px var(--chip-glow);box-shadow:none}
+@media(prefers-reduced-motion:reduce){.workspace .tag.employment-chip{transition:none}}
 .workspace .department-display{display:flex;flex-wrap:wrap;align-items:center;column-gap:7px;row-gap:3px;min-width:0;line-height:1.4}
 .workspace .department-name{color:#334d73;font-size:11.5px;font-weight:550;overflow-wrap:normal;word-break:normal}
 .workspace .department-code{display:inline-flex;align-items:center;color:#607da5;font-size:10px;line-height:1.25;font-weight:700;letter-spacing:.035em;white-space:nowrap}
