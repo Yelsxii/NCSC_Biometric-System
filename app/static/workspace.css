@@ -445,11 +445,11 @@
   transition:background-color .28s cubic-bezier(.4,0,.2,1),color .28s cubic-bezier(.4,0,.2,1);
 }
 .workspace #attendance-register-panel .employee-name-cell strong{
-  font-size:12px;color:#263b60;font-weight:600;line-height:1.4;min-width:0;
-  transition:color .28s cubic-bezier(.4,0,.2,1);
+  font-size:12px;color:#263b60;font-weight:650;line-height:1.4;min-width:0;
+  transition:color .22s ease,text-shadow .22s ease;
 }
 .workspace #attendance-register-panel .attendance-directory tbody tr:is(:hover,:focus-within) .employee-name-cell strong{
-  color:#1257ba;
+  color:#0755c5;text-shadow:0 0 7px rgba(25,102,231,.22);
 }
 .workspace #attendance-register-panel .attendance-directory tbody tr:is(:hover,:focus-within) .register-identity .name-avatar{
   background-color:#afcdf5;color:#154c99;
