@@ -889,12 +889,12 @@ dialog.app-dialog[open]::backdrop,#dtr-preview-dialog[open]::backdrop{
 }
 
 /* Employee classification: readable, restrained, shared across directory and profiles. */
-.workspace .tag.employment-chip{display:inline-flex;align-items:center;justify-content:center;min-height:23px;padding:4px 10px;border:1px solid transparent;border-radius:999px;font-size:11px;line-height:1.25;font-weight:700;letter-spacing:0;white-space:nowrap}
-.workspace .employment-chip.tag-cos{background:#e8edfc;border-color:#dbe4fa;color:#3c56a2}
-.workspace .employment-chip.tag-permanent{background:#e1eef8;border-color:#d0e3f2;color:#255a85}
-.workspace .employment-chip.tag-gip{background:#f1eafa;border-color:#e6daf5;color:#78539c}
-.workspace .employment-chip.tag-ojt{background:#fceee2;border-color:#f4e0cc;color:#925c34}
-.workspace .employment-chip.tag-neutral{background:#eef1f6;border-color:#e1e6ee;color:#68778f}
+.workspace .tag.employment-chip{display:inline-flex;align-items:center;justify-content:center;min-height:23px;padding:4px 11px;border:0;border-radius:999px;font-size:11px;line-height:1.25;font-weight:700;letter-spacing:0;white-space:nowrap;box-shadow:none;background-image:none}
+.workspace .employment-chip.tag-cos{background:#d9e2ff;color:#294ab5}
+.workspace .employment-chip.tag-permanent{background:#cceafa;color:#075985}
+.workspace .employment-chip.tag-gip{background:#eadcff;color:#7040a8}
+.workspace .employment-chip.tag-ojt{background:#ffe4c7;color:#9a4c13}
+.workspace .employment-chip.tag-neutral{background:#e4eaf2;color:#53657f}
 .workspace .department-display{display:flex;flex-wrap:wrap;align-items:center;column-gap:7px;row-gap:3px;min-width:0;line-height:1.4}
 .workspace .department-name{color:#334d73;font-size:11.5px;font-weight:550;overflow-wrap:normal;word-break:normal}
 .workspace .department-code{display:inline-flex;align-items:center;color:#607da5;font-size:10px;line-height:1.25;font-weight:700;letter-spacing:.035em;white-space:nowrap}
