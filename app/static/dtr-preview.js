@@ -31,6 +31,19 @@ function dtrClock(event,shortHour=false){
 function dtrAjaClock(event){
   return event?esc(String(event.time||'').slice(0,5)):'';
 }
+function dtrPrintAjaRow(period){
+  const start=period.out?.time,end=period.in?.time;
+  const complete=Boolean(start&&end&&start<end&&!period.review);
+  const label=complete?'AJA '+dtrAjaClock(period.out)+'-'+dtrAjaClock(period.in)
+    :'AJA OUT '+dtrAjaClock(period.out)+' · '+(period.in?.origin==='biometric'?'IN':'END')+' '+dtrAjaClock(period.in)+' (for review)';
+  const note='<td colspan="2" class="print-aja-note">'+label+'</td>';
+  // Allocate the annotation by the documented activity clock interval,
+  // never by the placement of an unrelated regular IN or OUT punch.
+  const am=complete&&end<='12:00:00',pm=complete&&start>='12:00:00';
+  const cells=am?note+'<td colspan="2"></td>':pm?'<td colspan="2"></td>'+note
+    :'<td colspan="4" class="print-aja-note">'+label+'</td>';
+  return '<tr class="print-aja">'+cells+'</tr>';
+}
 function dtrPrintRows(data,category,from=1,to=dtrLastDay(data.month)){
   const gip=category==='GIP',metricsCols=gip?1:2;
   const days=new Map(data.days.map(day=>[Number(day.date.slice(-2)),day]));
@@ -68,7 +81,7 @@ function dtrPrintRows(data,category,from=1,to=dtrLastDay(data.month)){
       : ['am_in','am_out','pm_in','pm_out'].map(k=>'<td>'+dtrClock(slots[k],!gip)+'</td>').join('');
     return '<tr'+(offday?' class="print-offday"':'')+'><td rowspan="'+span+'">'+n+'</td>'+
       (special?'<td colspan="4" class="special-day">'+esc(special)+'</td>':regularCells)+
-      metricCells+reportCell(n,span)+'</tr>'+periods.map(p=>'<tr class="print-aja"><td colspan="4">'+(p.out&&p.in&&!p.review?'AJA '+dtrAjaClock(p.out)+'-'+dtrAjaClock(p.in):'AJA OUT '+dtrAjaClock(p.out)+' · '+(p.in?.origin==='biometric'?'IN':'END')+' '+dtrAjaClock(p.in)+(p.review?' (for review)':''))+'</td></tr>').join('');
+      metricCells+reportCell(n,span)+'</tr>'+periods.map(dtrPrintAjaRow).join('');
   }).join('');
 }
 function civilDtrCopy(data,category){
