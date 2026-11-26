@@ -917,7 +917,10 @@ with connect() as con:
       const back=document.querySelector('#back-to-register').getBoundingClientRect();
       const category=document.querySelector('#detail-category').getBoundingClientRect();
       const title=document.querySelector('#section-name').getBoundingClientRect();
-      return {nameLeft:name.left,monthLeft:month.left,backLeft:back.left,backRight:back.right,
+      const department=document.querySelector('#detail-department').getBoundingClientRect();
+      const exportButton=document.querySelector('#dtr-form-preview').getBoundingClientRect();
+      const nameLine=document.querySelector('.sheet-name-line').getBoundingClientRect();
+      return {departmentLeft:department.left,departmentRight:department.right,categoryRight:category.right,exportLeft:exportButton.left,exportBottom:exportButton.bottom,monthBottom:month.bottom,nameLineBottom:nameLine.bottom,nameLeft:name.left,monthLeft:month.left,backLeft:back.left,backRight:back.right,
         categoryLeft:category.left,nameRight:name.right,categoryTop:category.top,nameTop:name.top,
         categoryRadius:getComputedStyle(document.querySelector('#detail-category .tag')).borderTopLeftRadius,
         monthHeight:month.height,backHeight:back.height,backBottom:back.bottom,
@@ -933,7 +936,10 @@ with connect() as con:
     assert.equal(headerAlignment.categoryRadius,'999px');
     assert.ok(headerAlignment.backTop<headerAlignment.titleBottom && headerAlignment.backBottom>headerAlignment.titleTop,'Back arrow and page title share a row');
     assert.ok(Math.abs(headerAlignment.nameLeft-headerAlignment.monthLeft)<=2,'Month aligns to the employee name');
-    assert.ok(headerAlignment.monthTop-headerAlignment.nameBottom<=4,'Month sits directly below employee name');
+    assert.ok(headerAlignment.departmentLeft>=headerAlignment.categoryRight,'Department follows the category in the employee identity');
+    assert.ok(headerAlignment.departmentRight<=headerAlignment.exportLeft,'Department remains in the left identity group');
+    assert.ok(Math.abs(headerAlignment.exportBottom-headerAlignment.monthBottom)<=2,'Export aligns with the reporting month');
+    assert.ok(headerAlignment.monthTop-headerAlignment.nameLineBottom<=8,'Month sits below the grouped employee identity');
     const departmentIndependent=await page.evaluate(()=>{
       const dept=document.querySelector('#detail-department');
       const month=document.querySelector('#detail-month-trigger');
@@ -945,7 +951,7 @@ with connect() as con:
       dept.textContent=original;
       return {before,after};
     });
-    assert.ok(departmentIndependent.before<=3 && Math.abs(departmentIndependent.after-departmentIndependent.before)<=1,'Department height cannot push month away from the name');
+    assert.ok(departmentIndependent.before<=8 && Math.abs(departmentIndependent.after-departmentIndependent.before)<=1,'Month keeps consistent spacing below the identity when department wraps');
     assert.equal(headerAlignment.backBorder,'0px');
     assert.equal(headerAlignment.backBackground,'rgb(220, 231, 246)');
     assert.ok(headerAlignment.nameLabelRemoved,'Redundant employee-name label removed');
@@ -983,9 +989,9 @@ with connect() as con:
         personnelLeft:personnel.left,identityBottom:identity.bottom,personnelBottom:personnel.bottom,
         monthTop:month.top,nameLineBottom:nameLine.bottom,panelRight:panel.right,viewport:innerWidth};
     });
-    assert.ok(Math.abs(compactHeader.identityTop-compactHeader.personnelTop)<=2,'Department must not consume a separate header row at split width');
-    assert.ok(compactHeader.identityRight<=compactHeader.personnelLeft+2,'Name and department cannot overlap');
-    assert.ok(compactHeader.monthTop-compactHeader.nameLineBottom<=3,'Month follows the identity directly even at split width');
+    assert.ok(Math.abs(compactHeader.identityTop-compactHeader.personnelTop)<=2,'Identity and export remain in the same header grid at split width');
+    assert.ok(compactHeader.identityRight<=compactHeader.personnelLeft+2,'Employee identity and export cannot overlap');
+    assert.ok(compactHeader.monthTop-compactHeader.nameLineBottom<=8,'Month follows the identity directly even at split width');
     assert.ok(compactHeader.panelRight<=compactHeader.viewport+1,'Panel must remain inside the window');
     await page.setViewportSize({width:390,height:800});
     const rail = await page.locator('#daily-table-wrap').evaluate(el=>{
