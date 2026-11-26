@@ -849,3 +849,35 @@ def test_historical_sequence_suggestions_respect_sheet_and_official_coverage():
     day['is_weekend']=True
     resolve_day(day,None)
     assert day['historical_suggestions']=={}
+
+def test_closed_day_with_extra_scan_shows_documented_deficit_without_certifying_it():
+    from app.dtr_sources import resolve_day, present_day
+    day=historical_day([('08:15:00','0'),('12:00:00','1'),('13:00:00','5'),
+                        ('14:00:00','0'),('16:30:00','4')])
+    resolve_day(day,None)
+    present_day(day)
+    assert day['display_unassigned_count']==1
+    assert day['display_remark']=='Unassigned scan'
+    assert day['monitoring']['undertime_seconds']==2700
+    assert day['monitoring']['undertime_origin']=='documented_conflict'
+    assert day['monitoring']['overtime_seconds'] is None
+
+
+def test_closed_morning_only_day_shows_documented_deficit():
+    from app.dtr_sources import resolve_day, present_day
+    day=historical_day([('07:30:00','0'),('12:00:00','1')])
+    resolve_day(day,None)
+    present_day(day)
+    assert day['monitoring']['total_seconds']==16200
+    assert day['monitoring']['undertime_seconds']==12600
+    assert day['monitoring']['undertime_origin']=='documented_partial'
+    assert day['missing_entries']==['PM In','PM Out']
+
+
+def test_closed_day_without_complete_pair_does_not_invent_deficit():
+    from app.dtr_sources import resolve_day, present_day
+    day=historical_day([('07:30:00','0'),('17:00:00','4')])
+    resolve_day(day,None)
+    present_day(day)
+    assert day['monitoring']['undertime_seconds'] is None
+    assert day['display_remark']=='Undertime for review'
