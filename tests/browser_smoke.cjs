@@ -937,6 +937,9 @@ with connect() as con:
     assert.ok(headerAlignment.backTop<headerAlignment.titleBottom && headerAlignment.backBottom>headerAlignment.titleTop,'Back arrow and page title share a row');
     assert.ok(Math.abs(headerAlignment.nameLeft-headerAlignment.monthLeft)<=2,'Month aligns to the employee name');
     assert.ok(headerAlignment.departmentLeft>=headerAlignment.categoryRight,'Department follows the category in the employee identity');
+    assert.equal(await page.locator('.sheet-classification > #detail-category').count(),1);
+    assert.equal(await page.locator('.sheet-classification > #detail-department').count(),1);
+    assert.equal(await page.locator('.sheet-classification').evaluate(el=>getComputedStyle(el).borderTopWidth),'0px');
     assert.ok(headerAlignment.departmentRight<=headerAlignment.exportLeft,'Department remains in the left identity group');
     assert.ok(Math.abs(headerAlignment.exportBottom-headerAlignment.monthBottom)<=2,'Export aligns with the reporting month');
     assert.ok(headerAlignment.monthTop-headerAlignment.nameLineBottom<=8,'Month sits below the grouped employee identity');
