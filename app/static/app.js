@@ -469,7 +469,7 @@ async function loadDetail({quiet=false}={}){
     const changed=setHtmlIfChanged($('daily-rows'),data.days.map(day=>{
       const metrics=day.monitoring||{total_seconds:day.daily_total_seconds,undertime_seconds:day.review.undertime_minutes===null?null:day.review.undertime_minutes*60,overtime_seconds:null,remarks:'For review'};
       const calendarLabel=day.calendar.holiday_name||(day.is_weekend?(day.day==='Sat'?'Saturday':'Sunday'):'');
-      const ut=calendarLabel?null:metrics.undertime_seconds;
+      const ut=displayUndertimeSeconds(day);
       const status=metrics.remarks;
       const visibleStatus=day.travel_order
         ? (day.display_remark||(['Source difference','Future entry'].includes(status)?'Review':'Travel Order'))
@@ -558,6 +558,13 @@ function applyClockPicker(clear=false){
   input.setCustomValidity('');closeClockPicker();updateApprovalReason();
   $('day-review-error').classList.add('hidden');input.focus();
 }
+// The table and editor share effective undertime, not merely the stored override.
+function displayUndertimeSeconds(day){
+  if(day.is_weekend||day.calendar.holiday_name||day.travel_order)return null;
+  if(day.monitoring)return day.monitoring.undertime_seconds??null;
+  const reviewed=day.review.undertime_minutes;
+  return reviewed==null?null:reviewed*60;
+}
 function openDayReview(date){
   const day=activeDtr?.days.find(x=>x.date===date);
   if(!day || !session)return;
@@ -581,9 +588,11 @@ function openDayReview(date){
   $('review-aja-hint').textContent=periods.length>1?'Multiple AJA periods — review separately.':'';
   $('review-aja-hint').classList.toggle('hidden',periods.length<=1);
   const offday=day.is_weekend||Boolean(day.calendar.holiday_name);
-  const minutes=offday?null:day.review.undertime_minutes;
+  const seconds=displayUndertimeSeconds(day);
+  const minutes=seconds==null?null:Math.floor(seconds/60);
   $('review-ut-hours').value=minutes===null?'':Math.floor(minutes/60);
   $('review-ut-minutes').value=minutes===null?'':minutes%60;
+  dayReviewContext.initialUndertime={hours:$('review-ut-hours').value,minutes:$('review-ut-minutes').value};
   const fullTravel=day.travel_order===true;
   const editRef=fullTravel;
   $('review-reference').value=fullTravel?(day.travel_reference||''):'';
@@ -622,8 +631,9 @@ async function saveDayReview(event){
     payload.approved_times=approved;
   }
   const h=$('review-ut-hours').value,m=$('review-ut-minutes').value;
-  // Preserve any historical reviewed value on off-days; it is not applied to monitoring.
-  payload.undertime_minutes=context.day.is_weekend||context.day.calendar.holiday_name
+  // Display source-derived values without silently converting them into overrides.
+  const undertimeUnchanged=h===context.initialUndertime.hours&&m===context.initialUndertime.minutes;
+  payload.undertime_minutes=context.day.is_weekend||context.day.calendar.holiday_name||context.day.travel_order||undertimeUnchanged
     ?context.day.review.undertime_minutes
     :h===''&&m===''?null:Number(h||0)*60+Number(m||0);
   payload.activity_type=context.day.review.activity_type;
