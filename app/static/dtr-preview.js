@@ -48,8 +48,8 @@ function dtrPrintRows(data,category,from=1,to=dtrLastDay(data.month)){
   const gip=category==='GIP',metricsCols=gip?1:2;
   const days=new Map(data.days.map(day=>[Number(day.date.slice(-2)),day]));
   const coveredPM=day=>day?.aja_covered_slots?.includes('pm_in')&&day?.aja_covered_slots?.includes('pm_out')&&day.aja_periods?.length===1;
-  // A verified interval confined to one half-day belongs beneath that
-  // half's actual IN clock. The regular OUT cell must never be merged.
+  // A verified interval confined to one half-day gets a separate sub-row
+  // beneath that half's actual IN clock. Other regular clocks span those rows.
   const inlineKey=(day,p)=>{
     const a=p.out?.time,b=p.in?.time;
     if(p.review||!a||!b||a>=b)return null;
@@ -58,7 +58,11 @@ function dtrPrintRows(data,category,from=1,to=dtrLastDay(data.month)){
   };
   const inlinePeriods=(day,key)=>!day.travel_order&&!coveredPM(day)?(day.aja_periods||[]).filter(p=>inlineKey(day,p)===key):[];
   const extraPeriods=day=>day&&!day.travel_order&&!coveredPM(day)?(day.aja_periods||[]).filter(p=>!inlineKey(day,p)):[];
-  const spanFor=n=>1+extraPeriods(n>=from&&n<=to?days.get(n):null).length;
+  const subrowCount=day=>day?Math.max(inlinePeriods(day,'am_in').length,inlinePeriods(day,'pm_in').length):0;
+  const spanFor=n=>{
+    const day=n>=from&&n<=to?days.get(n):null;
+    return 1+subrowCount(day)+extraPeriods(day).length;
+  };
   const reportCell=(n,span)=>{
     if(!gip)return '';
     if(n===16){
@@ -78,7 +82,7 @@ function dtrPrintRows(data,category,from=1,to=dtrLastDay(data.month)){
     const note=day.manual_source?.notes?.find(x=>/\b(?:LEAVE|CTO|WORK SUSPENSION)\b/i.test(x));
     const special=day.travel_order?travelLabel(day):
       (!hasEntries&&!periods.length?((day.calendar?.holiday_name?'HOLIDAY':'')||note||(day.is_weekend?(day.day==='Sat'?'SATURDAY':'SUNDAY'):'')):'');
-    const span=periods.length+1,ut=offday?null:day.monitoring?.undertime_seconds;
+    const subrows=subrowCount(day),span=periods.length+subrows+1,ut=offday?null:day.monitoring?.undertime_seconds;
     // Leave both printed undertime cells empty unless a positive duration exists.
     const showUndertime=Number.isFinite(ut)&&ut>0;
     const total=day.monitoring?.total_seconds;
@@ -89,11 +93,21 @@ function dtrPrintRows(data,category,from=1,to=dtrLastDay(data.month)){
       ? '<td>'+dtrClock(slots.am_in,!gip)+'</td><td>'+dtrClock(slots.am_out,!gip)+'</td><td colspan="2" class="print-aja-coverage">AJA '+dtrAjaClock(coverage.out)+'-'+dtrAjaClock(coverage.in)+'</td>'
       : ['am_in','am_out','pm_in','pm_out'].map(k=>{
         const annotations=inlinePeriods(day,k);
-        return '<td'+(annotations.length?' class="print-aja-inline"':'')+'>'+dtrClock(slots[k],!gip)+annotations.map(p=>'<span class="print-aja-inline-note">AJA<br>'+dtrAjaClock(p.out)+'-'+dtrAjaClock(p.in)+'</span>').join('')+'</td>';
+        const span=annotations.length?1:subrows+1;
+        return '<td'+(span>1?' rowspan="'+span+'"':'')+'>'+dtrClock(slots[k],!gip)+'</td>';
       }).join('');
+    const annotationRows=Array.from({length:subrows},(_,i)=>{
+      const cells=['am_in','pm_in'].map(k=>{
+        const annotations=inlinePeriods(day,k);
+        if(!annotations.length)return '';
+        const p=annotations[i];
+        return '<td class="print-aja-subcell" data-slot="'+k+'">'+(p?'AJA<br>'+dtrAjaClock(p.out)+'-'+dtrAjaClock(p.in):'')+'</td>';
+      }).join('');
+      return '<tr class="print-aja print-aja-subrow">'+cells+'</tr>';
+    }).join('');
     return '<tr'+(offday?' class="print-offday"':'')+'><td rowspan="'+span+'">'+n+'</td>'+
       (special?'<td colspan="4" class="special-day">'+esc(special)+'</td>':regularCells)+
-      metricCells+reportCell(n,span)+'</tr>'+periods.map(dtrPrintAjaRow).join('');
+      metricCells+reportCell(n,span)+'</tr>'+annotationRows+periods.map(dtrPrintAjaRow).join('');
   }).join('');
 }
 function civilDtrCopy(data,category){
@@ -126,7 +140,7 @@ function gipDtrForm(data,period){
 function buildDtrDocument(data,category,period,paperKey,version){
   const paper=dtrPaper[paperKey]||dtrPaper.a4;
   const body=category==='GIP'?gipDtrForm(data,period):civilDtrCopy(data,category)+civilDtrCopy(data,category);
-  return '<!doctype html><html lang="en"><head><meta charset="utf-8"><title>DTR - '+esc(data.display_name||'')+' - '+esc(data.month)+'</title><link rel="stylesheet" href="/static/dtr-preview.css?v=20"><style>@page{size:'+paper.width+' '+paper.height+';margin:'+DTR_NARROW_MM+'mm} :root{--paper-width:'+paper.width+';--paper-height:'+paper.height+';--paper-margin:'+DTR_NARROW_MM+'mm;--content-width:'+(paper.w-2*DTR_NARROW_MM)+'mm;--content-height:'+(paper.h-2*DTR_NARROW_MM)+'mm}</style></head><body class="print-document" data-preview-version="'+version+'"><main class="print-content"><div class="print-layout '+(category==='GIP'?'gip-page':'civil-page')+'">'+body+'</div></main></body></html>';
+  return '<!doctype html><html lang="en"><head><meta charset="utf-8"><title>DTR - '+esc(data.display_name||'')+' - '+esc(data.month)+'</title><link rel="stylesheet" href="/static/dtr-preview.css?v=21"><style>@page{size:'+paper.width+' '+paper.height+';margin:'+DTR_NARROW_MM+'mm} :root{--paper-width:'+paper.width+';--paper-height:'+paper.height+';--paper-margin:'+DTR_NARROW_MM+'mm;--content-width:'+(paper.w-2*DTR_NARROW_MM)+'mm;--content-height:'+(paper.h-2*DTR_NARROW_MM)+'mm}</style></head><body class="print-document" data-preview-version="'+version+'"><main class="print-content"><div class="print-layout '+(category==='GIP'?'gip-page':'civil-page')+'">'+body+'</div></main></body></html>';
 }
 function freshDtrFrame(){
   // Replacing the browsing context avoids accumulating iframe history entries
