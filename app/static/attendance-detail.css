@@ -641,3 +641,9 @@
 .workspace .attendance-sheet .dtr-grid .aja-coverage-status{color:#84590f}
 .workspace .attendance-sheet .day-leave .dtr-date{box-shadow:inset 3px 0 #94adc3;background:#eff4f8}
 .workspace .attendance-sheet .remark-leave{background:#dbe6ef;color:#45627b;--remark-active:#496d89}
+
+/* Distinguish actual morning departure from subsequent official coverage. */
+.workspace .attendance-sheet .dtr-grid .aja-coverage-caption{
+  display:block;font-size:9px;line-height:1.15;font-weight:600;color:#84590f;margin-top:2px;
+}
+.workspace .attendance-sheet .dtr-grid .slot-aja-departure .aja-coverage-status{font-variant-numeric:tabular-nums}
