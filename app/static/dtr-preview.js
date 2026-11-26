@@ -55,9 +55,11 @@ function dtrPrintRows(data,category,from=1,to=dtrLastDay(data.month)){
     const special=day.travel_order?travelLabel(day):
       (!hasEntries&&!periods.length?((day.calendar?.holiday_name?'HOLIDAY':'')||note||(day.is_weekend?(day.day==='Sat'?'SATURDAY':'SUNDAY'):'')):'');
     const span=periods.length+1,ut=offday?null:day.monitoring?.undertime_seconds;
+    // Leave both printed undertime cells empty unless a positive duration exists.
+    const showUndertime=Number.isFinite(ut)&&ut>0;
     const total=day.monitoring?.total_seconds;
     const metricCells=gip?'<td rowspan="'+span+'">'+(total==null||(!hasEntries&&!periods.length)?'':esc(durationText(total).slice(0,-3)))+'</td>':
-      '<td class="print-undertime" rowspan="'+span+'">'+(offday||ut==null?'':Math.floor(ut/3600))+'</td><td class="print-undertime" rowspan="'+span+'">'+(offday||ut==null?'':Math.floor(ut%3600/60))+'</td>';
+      '<td class="print-undertime" rowspan="'+span+'">'+(!showUndertime?'':Math.floor(ut/3600))+'</td><td class="print-undertime" rowspan="'+span+'">'+(!showUndertime?'':Math.floor(ut%3600/60))+'</td>';
     return '<tr'+(offday?' class="print-offday"':'')+'><td rowspan="'+span+'">'+n+'</td>'+
       (special?'<td colspan="4" class="special-day">'+esc(special)+'</td>':['am_in','am_out','pm_in','pm_out'].map(k=>'<td>'+dtrClock(slots[k],!gip)+'</td>').join(''))+
       metricCells+reportCell(n,span)+'</tr>'+periods.map(p=>'<tr class="print-aja"><td colspan="2">AJA OUT '+dtrAjaClock(p.out)+'</td><td colspan="2">AJA '+(p.in?.origin==='biometric'?'IN':'END')+' '+dtrAjaClock(p.in)+'</td></tr>').join('');
