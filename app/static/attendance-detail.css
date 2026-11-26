@@ -291,6 +291,28 @@
 }
 .workspace .attendance-sheet .remark-pending{background:#e0e7f0;color:#4b5f7a}
 .workspace .attendance-sheet .remark-progress{background:#d5e9f8;color:#285c86}
+/* Match the employment chips: a flat, vivid fill and bright text on row highlight. */
+.workspace .attendance-sheet .monitor-remark{
+  --remark-active:#536b89;
+  transition:background-color .22s ease,color .22s ease,text-shadow .22s ease;
+  box-shadow:none;
+}
+.workspace .attendance-sheet .remark-complete{--remark-active:#23784e}
+.workspace .attendance-sheet :is(.remark-undertime,.remark-missing){--remark-active:#c12e55}
+.workspace .attendance-sheet .remark-overtime{--remark-active:#3458cd}
+.workspace .attendance-sheet .remark-conflict{--remark-active:#94600d}
+.workspace .attendance-sheet :is(.remark-holiday,.remark-progress){--remark-active:#0874aa}
+.workspace .attendance-sheet .remark-travel{--remark-active:#8050b5}
+.workspace .attendance-sheet .remark-aja{--remark-active:#93610e}
+.workspace .attendance-sheet .remark-weekend{--remark-active:#596e89}
+.workspace .attendance-sheet .remark-pending{--remark-active:#526987}
+.workspace .attendance-sheet .dtr-grid tbody tr:is(:hover,:focus-within) .monitor-remark{
+  background-color:var(--remark-active);color:#fff;
+  text-shadow:0 0 4px #ffffff38;box-shadow:none;border:0;
+}
+@media(prefers-reduced-motion:reduce){
+  .workspace .attendance-sheet .monitor-remark{transition:none}
+}
 .workspace .attendance-sheet .dtr-grid .travel-status{overflow-wrap:anywhere}
 /* Full-width calendar labels follow the flat merged Travel Order cell. */
 .workspace .attendance-sheet .dtr-grid .slot-calendar[colspan="4"]{text-align:center;vertical-align:middle}
