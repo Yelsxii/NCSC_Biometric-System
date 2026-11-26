@@ -850,7 +850,7 @@
 .workspace #attendance-register-panel .live-status{display:inline-block;border-radius:6px;padding:4px 7px;font-size:10px;font-weight:650;background:#e9edf4;color:#536985;line-height:1.25}
 .workspace #attendance-register-panel .live-in{background:#e3f4eb;color:#23694e}
 .workspace #attendance-register-panel .live-out{background:#e6eefc;color:#345d9d}
-.workspace #attendance-register-panel .live-missing{background:#fbe7ed;color:#a83e5b}
+.workspace #attendance-register-panel .live-status.live-missing{background:none;padding:0;border:0;border-radius:0;box-shadow:none;color:#d32640;font-size:11px;font-weight:650}
 .workspace #attendance-register-panel .live-aja{background:#fff1d6;color:#805d18}
 .workspace #attendance-register-panel .live-travel{background:#eee6fa;color:#68459c}
 .workspace #attendance-register-panel .live-review{background:#f4eddf;color:#805d18}
@@ -887,3 +887,15 @@ dialog.app-dialog[open]::backdrop,#dtr-preview-dialog[open]::backdrop{
     animation:none;
   }
 }
+
+/* Employee classification: readable, restrained, shared across directory and profiles. */
+.workspace .tag.employment-chip{display:inline-flex;align-items:center;justify-content:center;min-height:23px;padding:4px 10px;border:1px solid transparent;border-radius:999px;font-size:11px;line-height:1.25;font-weight:700;letter-spacing:0;white-space:nowrap}
+.workspace .employment-chip.tag-cos{background:#e8edfc;border-color:#dbe4fa;color:#3c56a2}
+.workspace .employment-chip.tag-permanent{background:#e1eef8;border-color:#d0e3f2;color:#255a85}
+.workspace .employment-chip.tag-gip{background:#f1eafa;border-color:#e6daf5;color:#78539c}
+.workspace .employment-chip.tag-ojt{background:#fceee2;border-color:#f4e0cc;color:#925c34}
+.workspace .employment-chip.tag-neutral{background:#eef1f6;border-color:#e1e6ee;color:#68778f}
+.workspace .department-display{display:flex;flex-wrap:wrap;align-items:center;column-gap:7px;row-gap:3px;min-width:0;line-height:1.4}
+.workspace .department-name{color:#334d73;font-size:11.5px;font-weight:550;overflow-wrap:normal;word-break:normal}
+.workspace .department-code{display:inline-flex;align-items:center;color:#607da5;font-size:10px;line-height:1.25;font-weight:700;letter-spacing:.035em;white-space:nowrap}
+.workspace .attendance-directory td,.workspace .profile-table td{vertical-align:middle}
