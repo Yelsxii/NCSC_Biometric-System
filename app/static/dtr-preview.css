@@ -164,9 +164,11 @@ body.print-document{box-sizing:border-box;margin:0;padding:var(--paper-margin);w
 .gip-checked>div{width:36%;border-bottom:.2mm solid #000;margin:4mm auto 0}
 @media print{html:has(body.print-document){background:white;overflow:visible}body.print-document{width:var(--content-width);min-height:0;padding:0;margin:0;overflow:visible;print-color-adjust:exact;-webkit-print-color-adjust:exact}.print-content{break-inside:avoid}.print-document tr{break-inside:avoid}}
 
-/* Dedicated AJA sub-row, aligned to the affected IN column only. */
-.print-document .print-aja-subrow .print-aja-subcell{
-  font:400 6.5pt/1.05 Arial,sans-serif;
-  height:auto;padding:.3mm .2mm;text-align:center;vertical-align:middle;
-  white-space:normal;overflow-wrap:normal;
+/* All actual clocks share the same top baseline on an AJA date.
+   Notes remain inside the existing cell, without extra table rows. */
+.print-document .print-aja-clock-cell{vertical-align:top}
+.print-document .print-regular-clock{display:block}
+.print-document .print-aja-inline-note{
+  display:block;font:400 6.5pt/1.1 Arial,sans-serif;
+  margin-top:.35mm;white-space:normal;overflow-wrap:normal;
 }
