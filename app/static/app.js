@@ -524,15 +524,6 @@ function clockAdjustments(context){
   }
   return approved;
 }
-function updateApprovalReason(){
-  if(!dayReviewContext)return;
-  const changes=clockAdjustments(dayReviewContext);
-  const before=dayReviewContext.day.review.approved_times||{};
-  const changed=changes!==null&&REVIEW_CLOCKS.some(k=>changes[k]!==before[k]);
-  const show=session?.role==='admin'&&!dayReviewContext.day.travel_order&&changed;
-  $('review-reason-field').classList.toggle('hidden',!show);
-  $('review-remark').required=show;
-}
 function closeClockPicker(){
   if(pickerTarget)document.querySelector('[data-clock-pick="'+pickerTarget+'"]')?.setAttribute('aria-expanded','false');
   pickerTarget=null;$('clock-picker').classList.add('hidden');
@@ -557,7 +548,7 @@ function applyClockPicker(clear=false){
   }
   const input=$('clock-'+pickerTarget);
   input.value=clear?'':values.map(v=>v.padStart(2,'0')).join(':');
-  input.setCustomValidity('');closeClockPicker();updateApprovalReason();
+  input.setCustomValidity('');closeClockPicker();
   $('day-review-error').classList.add('hidden');input.focus();
 }
 // The table and editor share effective undertime, not merely the stored override.
@@ -603,8 +594,6 @@ function openDayReview(date){
   $('review-reference').disabled=!editable||!editRef;
   $('review-reference').required=editable&&editRef;
   $('review-reference').title=fullTravel?(day.travel_source_references||[]).join(' · '):'';
-  $('review-remark').value='';$('review-remark').disabled=!editable;
-  $('review-reason-field').classList.add('hidden');$('review-remark').required=false;
   for(const id of ['review-ut-hours','review-ut-minutes']){
     $(id).disabled=!editable||offday;
     $(id).title=offday?'Not applicable on weekends and holidays':'';
@@ -621,22 +610,23 @@ async function saveDayReview(event){
   if(!context || context.account!==session || session.role!=='admin')return;
   const payload={version:context.day.review.version};
   for(const key of REVIEW_CLOCKS.slice(0,4))payload[key]=context.day.slots[key]?.id||null;
-  let changed=false;
+  let regularChanged=false;
   if(!context.day.travel_order){
     const approved=clockAdjustments(context);
     if(approved===null){
       $('day-review-error').textContent='Use HH:MM or HH:MM:SS (24-hour time).';$('day-review-error').classList.remove('hidden');return;
     }
     const before=context.day.review.approved_times||{};
-    changed=REVIEW_CLOCKS.some(k=>approved[k]!==before[k]);
+    regularChanged=REVIEW_CLOCKS.slice(0,4).some(k=>approved[k]!==before[k]);
     for(const key of REVIEW_CLOCKS.slice(0,4))if(approved[key]&&approved[key]!==before[key])payload[key]=null;
     payload.approved_times=approved;
   }
   const h=$('review-ut-hours').value,m=$('review-ut-minutes').value;
   // Display source-derived values without silently converting them into overrides.
   const undertimeUnchanged=h===context.initialUndertime.hours&&m===context.initialUndertime.minutes;
-  payload.undertime_minutes=context.day.is_weekend||context.day.calendar.holiday_name||context.day.travel_order||undertimeUnchanged
+  payload.undertime_minutes=context.day.is_weekend||context.day.calendar.holiday_name||context.day.travel_order
     ?context.day.review.undertime_minutes
+    :undertimeUnchanged?(regularChanged?null:context.day.review.undertime_minutes)
     :h===''&&m===''?null:Number(h||0)*60+Number(m||0);
   payload.activity_type=context.day.review.activity_type;
   payload.activity_reference=context.day.review.activity_reference;
@@ -644,7 +634,7 @@ async function saveDayReview(event){
     payload.activity_type='Travel Order';
     payload.activity_reference=$('review-reference').value.trim();
   }
-  payload.remark=changed?$('review-remark').value.trim():context.day.review.remark;
+  payload.remark=context.day.review.remark;
   $('save-day-review').disabled=true;$('day-review-error').classList.add('hidden');
   try{
     await api('/api/attendance/'+encodeURIComponent(context.code)+'/'+context.day.date,{method:'PUT',body:JSON.stringify(payload)});
@@ -1167,8 +1157,8 @@ async function initialize(){
   document.querySelectorAll('[data-clock-pick]').forEach(button=>button.addEventListener('click',()=>openClockPicker(button.dataset.clockPick)));
   REVIEW_CLOCKS.forEach(key=>{
     const input=clockInput(key);
-    input.addEventListener('input',()=>{input.setCustomValidity('');updateApprovalReason();});
-    input.addEventListener('blur',()=>{const value=normalizedClock(input.value);if(value!==null)input.value=value;updateApprovalReason();});
+    input.addEventListener('input',()=>{input.setCustomValidity('');});
+    input.addEventListener('blur',()=>{const value=normalizedClock(input.value);if(value!==null)input.value=value;});
   });
   document.querySelectorAll('[data-clock-step]').forEach(button=>button.addEventListener('click',()=>{
     const part=button.dataset.clockStep,node=$('picker-'+part),limit=part==='hour'?24:60;
