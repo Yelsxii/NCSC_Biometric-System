@@ -632,6 +632,8 @@ with connect() as con:
     });
     assert.equal(dailySeed,200);
     await page.locator('[data-page="employees"]').click();
+    const readMonthTriggerStyle=async selector=>page.locator(selector).evaluate(el=>{const s=getComputedStyle(el);return {height:s.height,background:s.backgroundColor,border:s.borderTopWidth,radius:s.borderTopLeftRadius,color:s.color,fontSize:s.fontSize,fontWeight:s.fontWeight,padding:s.padding,gap:s.gap};});
+    const registerMonthStyle=await readMonthTriggerStyle('#register-month-trigger');
     await page.locator('#register-month-trigger').click();
     await page.locator('#attendance-month-picker[open]').waitFor();
     const desktopPicker=await page.locator('#attendance-month-picker').boundingBox();
@@ -644,7 +646,7 @@ with connect() as con:
     await page.waitForFunction(()=>[...document.querySelectorAll('#month-picker-grid button[aria-pressed="false"]')].every(el=>getComputedStyle(el,'::after').opacity==='0'));
     const hoverMonth=page.locator('#month-picker-grid button[aria-pressed="false"]').first();
     await hoverMonth.hover();
-    await page.waitForFunction(()=>{const el=document.querySelector('#month-picker-grid button:hover:not([aria-pressed="true"])');if(!el)return false;const accent=getComputedStyle(el,'::after');return accent.width==='16px'&&accent.height==='1px'&&accent.opacity==='1';});
+    await page.waitForFunction(()=>{const el=document.querySelector('#month-picker-grid button:hover:not([aria-pressed="true"])');if(!el)return false;const accent=getComputedStyle(el,'::after');return accent.width==='16px'&&accent.height==='2px'&&accent.opacity==='1';});
     await page.locator('#month-picker-title').hover();
     await page.waitForFunction(()=>[...document.querySelectorAll('#month-picker-grid button[aria-pressed="false"]')].every(el=>getComputedStyle(el,'::after').opacity==='0'));
     await page.setViewportSize({width:1440,height:900});
@@ -660,11 +662,13 @@ with connect() as con:
     await page.locator('[data-employee="1"]').last().click();
     await page.locator('#employee-detail:not(.hidden)').waitFor();
     await page.locator('#detail-name').filter({hasText:'Sample One'}).waitFor();
+    await page.locator('#section-name').hover();
+    assert.deepEqual(await readMonthTriggerStyle('#detail-month-trigger'),registerMonthStyle,'Both reporting month triggers must share the same visual styling');
     await page.locator('#detail-month-trigger').click();
     await page.locator('#attendance-month-picker[open]').waitFor();
     assert.equal(await page.locator('[data-month-value="2026-11"]').getAttribute('aria-pressed'),'true');
     await page.locator('#month-picker-title').hover();
-    await page.waitForFunction(()=>{const el=document.querySelector('#month-picker-grid button[aria-pressed="true"]');if(!el)return false;const accent=getComputedStyle(el,'::after');return accent.width==='16px'&&accent.height==='1px'&&accent.opacity==='1';});
+    await page.waitForFunction(()=>{const el=document.querySelector('#month-picker-grid button[aria-pressed="true"]');if(!el)return false;const accent=getComputedStyle(el,'::after');return accent.width==='16px'&&accent.height==='2px'&&accent.opacity==='1';});
     assert.equal(await page.locator('#month-picker-grid button.is-current:not([aria-pressed=true])').evaluateAll(nodes=>nodes.every(el=>getComputedStyle(el,'::after').opacity==='0'&&getComputedStyle(el).backgroundColor==='rgb(246, 248, 252)')),true);
     await page.keyboard.press('Escape');
     await page.locator('#attendance-month-picker').waitFor({state:'hidden'});
