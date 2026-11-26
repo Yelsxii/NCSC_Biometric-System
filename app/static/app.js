@@ -54,7 +54,7 @@ let deviceStatusController = null;
 let workCodeRows = [];
 const titles = {
   employees:'Employee Attendance',
-  profiles:'Employee profiles',
+  profiles:'Employees',
   activities:'AJA / Travel Orders',
   staff:'Users & Work Codes'
 };
@@ -300,10 +300,10 @@ async function loadProfiles(){
     $('profile-page').textContent='Page '+profilePage+' of '+pages;
     $('profile-prev').disabled=profilePage===1;$('profile-next').disabled=profilePage===pages;
     $('profile-rows').innerHTML=data.items.length?data.items.map(row=>
-      '<tr><td class="id-cell">'+esc(row.employee_code)+'</td><td>'+employeeCell(row)+'</td><td>'+categoryBadge(row.employment_type)+'</td><td>'+departmentCell(row.department)+'</td>'+
+      '<tr><td class="employee-name-cell"><div class="register-identity"><span class="name-avatar" aria-hidden="true">'+esc(registerInitials(row.display_name))+'</span><span><strong>'+esc(row.display_name||'Name not synchronized')+'</strong>'+(row.position?'<small>'+esc(displayTitle(row.position))+'</small>':'')+'</span></div></td><td class="id-cell">'+esc(row.employee_code)+'</td><td>'+categoryBadge(row.employment_type)+'</td><td>'+departmentCell(row.department)+'</td>'+
       '<td><span class="tag '+(row.sync_authorized?'tag-success':'tag-paused')+'"><span class="tag-dot"></span>'+(row.sync_authorized?'Enabled':'Paused')+'</span></td>'+
-      '<td><span class="tag '+(row.profile_complete?'tag-neutral':'tag-paused')+'">'+(row.profile_complete?'Registered':'Needs details')+'</span></td>'+
-      '<td>'+(session.role==='admin'?'<button type="button" class="text-link" data-edit-profile="'+esc(row.employee_code)+'">'+(row.profile_complete?'Edit profile':'Complete profile')+'</button>':'—')+'</td></tr>'
+      '<td><span class="tag '+(row.profile_complete?'tag-success':'tag-paused')+'">'+(row.profile_complete?'Registered':'Needs details')+'</span></td>'+
+      '<td class="directory-action-cell">'+(session.role==='admin'?'<button type="button" class="button primary row-action" data-edit-profile="'+esc(row.employee_code)+'" aria-label="'+esc((row.profile_complete?'Edit profile: ':'Complete profile: ')+(row.display_name||row.employee_code))+'">'+ '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.65" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m13.5 6.5 4 4M4 20l4.5-1 11-11a2.8 2.8 0 0 0-4-4l-11 11L4 20z"/></svg>' +(row.profile_complete?'Edit profile':'Complete profile')+'</button>':'—')+'</td></tr>'
     ).join(''):'<tr><td colspan="7" class="table-empty">No matching employees. Adjust your filters or register an enrolled K14 ID.</td></tr>';
   }catch(error){
     if(serial!==profileRequest)return;

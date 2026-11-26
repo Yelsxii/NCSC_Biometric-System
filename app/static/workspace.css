@@ -908,3 +908,196 @@ dialog.app-dialog[open]::backdrop,#dtr-preview-dialog[open]::backdrop{
 .workspace .department-name{color:#334d73;font-size:11.5px;font-weight:550;overflow-wrap:normal;word-break:normal}
 .workspace .department-code{display:inline-flex;align-items:center;color:#607da5;font-size:10px;line-height:1.25;font-weight:700;letter-spacing:.035em;white-space:nowrap}
 .workspace .attendance-directory td,.workspace .profile-table td{vertical-align:middle}
+
+
+/* Employees — scoped reuse of the approved attendance glass language. */
+.workspace .content-shell .page #employee-profile-panel{background:#eaf1fa;border-color:#f7faffaa;box-shadow:inset 0 1px 0 #ffffffb0,0 5px 18px #45689b15;-webkit-backdrop-filter:none;backdrop-filter:none}
+.workspace #employee-profile-panel .live-overview{flex:0 0 auto;min-width:0;padding:8px 9px 3px;border:1px solid #ffffffa8;border-radius:10px;background:#edf3fb;box-shadow:inset 0 1px 1px #ffffff80,0 3px 9px #456aa00e;margin-bottom:10px}
+.workspace #employee-profile-panel .live-overview-head{display:flex;align-items:center;gap:9px;margin:0 2px 5px;min-width:0;flex-wrap:wrap}
+.workspace #employee-profile-panel .live-overview-head>strong{font-size:12px;color:#20375f;font-weight:650}
+.workspace #employee-profile-panel #live-refresh-note{margin-left:auto;font-size:9px;color:#a83e5b}
+.workspace #employee-profile-panel .live-other{border:0;border-radius:6px;background:#e8edf5;color:#526888;padding:3px 6px;font-size:9px}
+.workspace #employee-profile-panel .live-other[aria-pressed=true]{background:#d4e0f4;color:#234b8b}
+.workspace #employee-profile-panel .live-kpi-strip{display:grid;grid-template-columns:repeat(6,minmax(124px,1fr));gap:clamp(16px,1.5%,28px);padding:13px clamp(14px,1.3%,24px);overflow-x:auto;overflow-y:hidden;scrollbar-width:none;-ms-overflow-style:none;scroll-snap-type:x proximity;overscroll-behavior-inline:contain}
+.workspace #employee-profile-panel .live-kpi-strip::-webkit-scrollbar{display:none;width:0;height:0}
+/* Thin luminous glass edges rather than a raised, stacked card base. */
+.workspace #employee-profile-panel .live-kpi{
+  --status-color:#527eb9;--count-bright:#2866be;
+  position:relative;isolation:isolate;overflow:hidden;display:grid;
+  grid-template-columns:36px minmax(0,1fr);align-items:center;gap:8px;min-width:0;
+  height:66px;min-height:66px;text-align:left;padding:7px 10px 7px 8px;
+  border:1px solid transparent;border-radius:11px;color:#243d65;
+  background:linear-gradient(145deg,#ffffff76,#f9fcff35 54%,#ffffff26);
+  -webkit-backdrop-filter:none;backdrop-filter:none;
+  box-shadow:inset 0 1px 0 #ffffff8a,inset 0 -1px 0 #ffffff28,0 3px 9px #31578b15;
+  scroll-snap-align:start;transform-origin:center center;transform:scale(1);
+  transition:transform .34s cubic-bezier(.4,0,.2,1)
+}
+/* Two nested, borderless glass surfaces: clear outer glass and a softly
+   frosted inner pane. Scattered light is confined to the icon tile. */
+.workspace #employee-profile-panel .live-kpi .kpi-icon{
+  position:relative;isolation:isolate;overflow:hidden;display:grid;place-items:center;
+  width:36px;height:36px;border-radius:10px;border:0;
+  /* Contrast comes from transmitted tint, not a white stroke or bevel. */
+  background-color:rgba(110,139,178,.10);background-image:none;
+  -webkit-backdrop-filter:none;backdrop-filter:none;
+  box-shadow:0 2px 5px #31578b14;
+  color:var(--status-color);transition:color .28s cubic-bezier(.4,0,.2,1)
+}
+.workspace #employee-profile-panel .live-kpi .kpi-icon::before{
+  content:"";position:absolute;inset:2px;z-index:-2;pointer-events:none;border-radius:8px;
+  background:
+    radial-gradient(circle at 15% 20%,color-mix(in srgb,var(--status-color) 17%,transparent) 0%,transparent 58%),
+    radial-gradient(circle at 85% 25%,color-mix(in srgb,var(--status-color) 12%,transparent) 0%,transparent 55%),
+    radial-gradient(circle at 64% 82%,color-mix(in srgb,var(--status-color) 24%,transparent) 0%,transparent 65%),
+    radial-gradient(circle at 25% 72%,#ffffff65 0%,transparent 58%),
+    radial-gradient(circle at 53% 36%,#ffffff45 0%,transparent 55%);
+  filter:blur(4px);opacity:.72;transition:opacity .32s cubic-bezier(.4,0,.2,1)
+}
+.workspace #employee-profile-panel .live-kpi .kpi-icon::after{
+  content:"";position:absolute;inset:1.5px;z-index:-1;pointer-events:none;border-radius:8px;
+  border:0;background:#ffffff38;
+  /* Radial light below is already blurred; avoid another backdrop pass. */
+  -webkit-backdrop-filter:none;backdrop-filter:none;
+  box-shadow:none
+}
+.workspace #employee-profile-panel .live-kpi .kpi-icon svg{
+  width:24px;height:24px;stroke-width:1.9;opacity:1;
+  filter:drop-shadow(0 0 2px color-mix(in srgb,var(--status-color) 40%,transparent));
+  transition:none
+}
+/* Both attendance doorway paths are exact mirrors (9 x 16 SVG units).
+   Counterbalance hover and selected zoom so the two glyphs remain equal in size. */
+@media(prefers-reduced-motion:no-preference){
+  .workspace #employee-profile-panel .live-kpi:is(.kpi-in,.kpi-out) .kpi-icon svg{
+    transform-origin:center;transform:scale(1);
+    transition:transform .34s cubic-bezier(.4,0,.2,1)
+  }
+  .workspace #employee-profile-panel .live-kpi:is(.kpi-in,.kpi-out):not([aria-pressed=true]):is(:hover,:focus-visible) .kpi-icon svg{
+    transform:scale(.9433962264)
+  }
+  .workspace #employee-profile-panel .live-kpi:is(.kpi-in,.kpi-out)[aria-pressed=true] .kpi-icon svg{
+    transform:scale(.8928571429)
+  }
+}
+.workspace #employee-profile-panel .live-kpi .kpi-text{display:flex;flex-direction:column;align-items:flex-start;justify-content:center;gap:4px;min-width:0}
+.workspace #employee-profile-panel .live-kpi small{font-size:10px;font-weight:600;color:#4e607d;line-height:1.15;white-space:nowrap}
+.workspace #employee-profile-panel .live-kpi strong{font-size:22px;font-weight:700;line-height:1;color:#1b2e4e;letter-spacing:-.025em;font-variant-numeric:tabular-nums;text-shadow:none;transition:color .3s cubic-bezier(.4,0,.2,1)}
+/* The selected card remains neutral: only the icon and count carry status color. */
+.workspace #employee-profile-panel .live-kpi::before{
+  content:"";position:absolute;inset:0;border-radius:inherit;z-index:-1;pointer-events:none;
+  background:#ffffff1c;opacity:0;transition:opacity .30s cubic-bezier(.4,0,.2,1);
+}
+.workspace #employee-profile-panel .live-kpi[aria-pressed=true]{z-index:3;transform:scale(1.12)}
+.workspace #employee-profile-panel .live-kpi:is([aria-pressed=true],:hover,:focus-visible)::before{opacity:1}
+.workspace #employee-profile-panel .live-kpi:is([aria-pressed=true],:hover,:focus-visible) .kpi-icon{
+  color:var(--status-color)
+}
+.workspace #employee-profile-panel .live-kpi:is([aria-pressed=true],:hover,:focus-visible) .kpi-icon::before{opacity:.92}
+.workspace #employee-profile-panel .live-kpi:is([aria-pressed=true],:hover,:focus-visible) strong{color:var(--count-bright);text-shadow:none}
+.workspace #employee-profile-panel .live-kpi:not([aria-pressed=true]):is(:hover,:focus-visible){z-index:2;transform:scale(1.06)}
+.workspace #employee-profile-panel .live-kpi:focus-visible{outline:2px solid #315a96;outline-offset:-3px}
+.workspace #employee-profile-panel .live-kpi.kpi-in{--status-color:#367e67;--count-bright:#16805c}
+.workspace #employee-profile-panel .live-kpi.kpi-out{--status-color:#426da9;--count-bright:#246bb6}
+.workspace #employee-profile-panel .live-kpi.kpi-missing{--status-color:#ac4962;--count-bright:#c02e55}
+.workspace #employee-profile-panel .live-kpi.kpi-aja{--status-color:#956e20;--count-bright:#a36a0c}
+.workspace #employee-profile-panel .live-kpi.kpi-travel{--status-color:#625b99;--count-bright:#7050b9}
+@media(prefers-reduced-motion:reduce){.workspace #employee-profile-panel .live-kpi,.workspace #employee-profile-panel .live-kpi::before,.workspace #employee-profile-panel .live-kpi *,.workspace #employee-profile-panel .live-kpi .kpi-icon::before{transition:none}.workspace #employee-profile-panel .live-kpi:is([aria-pressed=true],:hover,:focus-visible){transform:none}}
+.workspace #employee-profile-panel .profile-table th{
+  /* Quiet slate-blue glass: separation through tint and soft depth,
+     not a saturated gradient or hard dividing line. The opaque surface
+     keeps the sticky header readable when records scroll beneath it. */
+  width:auto;text-align:left;color:#3a5275;font-size:11px;font-weight:600;
+  letter-spacing:.01em;
+  background-color:#dfe8f3;
+  background-image:none;
+  border-bottom:1px solid transparent;
+  box-shadow:0 2px 3px #304d7510;
+}
+.workspace #employee-profile-panel .profile-table td{overflow-wrap:anywhere}
+.workspace #employee-profile-panel .register-identity{
+  display:flex;align-items:center;gap:9px;min-width:0;
+}
+.workspace #employee-profile-panel .register-identity .name-avatar{
+  /* A flat pastel badge, distinct from the surrounding glass table. */
+  display:grid;place-items:center;flex:0 0 29px;width:29px;height:29px;
+  border:0;border-radius:9px;background-color:#dbe8fa;background-image:none;
+  color:#365b8e;font-size:10px;font-weight:700;letter-spacing:.02em;
+  box-shadow:none;
+  transition:background-color .28s cubic-bezier(.4,0,.2,1),color .28s cubic-bezier(.4,0,.2,1);
+}
+.workspace #employee-profile-panel .employee-name-cell strong{
+  font-size:12px;color:#263b60;font-weight:650;line-height:1.4;min-width:0;
+  transition:color .22s ease,text-shadow .22s ease;
+}
+.workspace #employee-profile-panel .profile-table tbody tr:is(:hover,:focus-within) .employee-name-cell strong{
+  color:#0755c5;text-shadow:0 0 7px rgba(25,102,231,.22);
+}
+.workspace #employee-profile-panel .profile-table tbody tr:is(:hover,:focus-within) .register-identity .name-avatar{
+  background-color:#afcdf5;color:#154c99;
+}
+@media(max-width:740px){
+  .workspace #employee-profile-panel .register-identity{gap:7px}
+  .workspace #employee-profile-panel .register-identity .name-avatar{width:26px;height:26px;flex-basis:26px;font-size:9.5px}
+}
+@media(prefers-reduced-motion:reduce){
+  .workspace #employee-profile-panel .register-identity .name-avatar,
+  .workspace #employee-profile-panel .employee-name-cell strong{transition:none}
+}
+.workspace #employee-profile-panel .profile-table .actions-column{
+  position:sticky;right:0;z-index:4;text-align:center;
+  box-shadow:0 2px 3px #304d7510,-3px 0 8px #263b600d;
+}
+.workspace #employee-profile-panel .directory-action-cell{
+  position:sticky;right:0;z-index:2;text-align:center;background:#fff;
+  box-shadow:-3px 0 8px #263b601c;padding:6px 8px;transition:background-color .22s cubic-bezier(.4,0,.2,1);
+}
+.workspace #employee-profile-panel .profile-table tbody tr:hover{background:#dbe7f7}
+.workspace #employee-profile-panel .profile-table tbody tr:hover .directory-action-cell{background:#dbe7f7}
+.workspace #employee-profile-panel .directory-action-cell .row-action{
+  display:inline-flex;align-items:center;justify-content:center;gap:5px;
+  height:30px;min-height:30px;padding:0 9px;border:0;
+  background:#244b9a;color:#fff;font-size:10.5px;font-weight:650;
+  text-decoration:none!important;border-radius:6px;box-shadow:0 2px 5px #244b9a26;
+  transition:transform .32s cubic-bezier(.4,0,.2,1),background-color .28s cubic-bezier(.4,0,.2,1),color .28s cubic-bezier(.4,0,.2,1);
+}
+.workspace #employee-profile-panel .directory-action-cell .row-action svg{width:13px;height:13px;flex:none}
+.workspace #employee-profile-panel .directory-action-cell .row-action:hover,
+.workspace #employee-profile-panel .directory-action-cell .row-action:focus-visible{
+  background:#17356e;color:#fff;text-decoration:none!important;
+  transform:translateY(-1px);box-shadow:0 4px 10px #244b9a40;
+}
+.workspace #employee-profile-panel .directory-action-cell .row-action:active{transform:translateY(0)}
+.workspace .content-shell .page #employee-profile-panel{background:#eaf1fa;border-color:#f7faffaa;box-shadow:inset 0 1px 0 #ffffffb0,0 5px 18px #45689b15;backdrop-filter:none}
+.workspace #employee-profile-panel .live-kpi-strip{grid-template-columns:repeat(5,minmax(115px,1fr))}
+.workspace #employee-profile-panel .live-kpi.profile-kpi-cos{--status-color:#4366be;--count-bright:#2346bc}
+.workspace #employee-profile-panel .live-kpi.profile-kpi-permanent{--status-color:#2379a6;--count-bright:#005b8c}
+.workspace #employee-profile-panel .live-kpi.profile-kpi-gip{--status-color:#8050b5;--count-bright:#7040a8}
+.workspace #employee-profile-panel .live-kpi.profile-kpi-ojt{--status-color:#ad571c;--count-bright:#9a4c13}
+.workspace #employee-profile-panel .registry-summary{margin-left:auto;padding:0;color:#536c90;font-size:11px}
+.workspace #employee-profile-panel .profile-toolbar{gap:12px;margin:0 0 16px;align-items:flex-end;flex-wrap:wrap}
+.workspace #employee-profile-panel .profile-toolbar label{font-size:11px;color:#657997;font-weight:550}
+.workspace #employee-profile-panel .search-box{display:flex;flex-direction:column;gap:6px;flex:1 1 240px;min-width:160px;max-width:none}
+.workspace #employee-profile-panel .employee-search-field{position:relative;display:flex;align-items:center;min-width:0}
+.workspace #employee-profile-panel .search-icon{position:absolute;left:12px;width:17px;height:17px;color:#6f86ae;pointer-events:none}
+.workspace #employee-profile-panel #profile-search,.workspace #employee-profile-panel #profile-status{height:38px;min-height:38px;border:1px solid #e0e7f3;border-radius:9px;color:#203b67;background:#f6f8fc;font-size:12px}
+.workspace #employee-profile-panel #profile-search{width:100%;min-width:0;padding:0 12px 0 37px}
+.workspace #employee-profile-panel :is(#profile-search,#profile-status):focus{border-color:#7295ce;background:#fff;box-shadow:0 0 0 3px #244b9a12}
+.workspace #employee-profile-panel .profile-toolbar .button{height:38px;min-height:38px;border-radius:9px;font-size:11px;font-weight:650;gap:7px}
+.workspace #employee-profile-panel .profile-toolbar .button svg{width:16px;height:16px;flex:none}
+.workspace #employee-profile-panel .profile-filter-button{color:#244b9a;background:#f1f5fc;border-color:#cbd9ef}
+.workspace #employee-profile-panel #open-profile{background:#244b9a;border-color:#244b9a;color:#fff}
+.workspace #employee-profile-panel #open-profile:not(:disabled):hover{background:#17356e;border-color:#17356e}
+.workspace #employee-profile-panel .profile-table{width:100%;min-width:860px;table-layout:fixed;font-size:11.5px}
+.workspace #employee-profile-panel .profile-table td{height:44px;padding:7px 10px;vertical-align:middle}
+.workspace #employee-profile-panel .profile-table th{height:34px;padding:9px 10px}
+.workspace #employee-profile-panel .profile-name{width:26%}.workspace #employee-profile-panel .profile-id{width:10%}.workspace #employee-profile-panel .profile-category{width:12%}.workspace #employee-profile-panel .profile-department{width:19%}.workspace #employee-profile-panel .profile-collection{width:10%}.workspace #employee-profile-panel .profile-state{width:12%}.workspace #employee-profile-panel .profile-action{width:132px}
+.workspace #employee-profile-panel .profile-table tbody tr:nth-child(even){background:#f7f9fc}
+.workspace #employee-profile-panel .profile-table tbody tr:is(:hover,:focus-within){background:#dbe7f7}
+.workspace #employee-profile-panel .employee-name-cell small{font-size:10px;color:#657997;line-height:1.3}
+.workspace #employee-profile-panel .profile-table .tag:not(.employment-chip){font-size:10px;border-radius:6px;padding:5px 7px;letter-spacing:0}
+.workspace #employee-profile-panel .profile-table .tag-success{color:#23694e;background:#e3f4eb}
+.workspace #employee-profile-panel .profile-table .tag-paused{color:#a83e5b;background:#fae6ec}
+.workspace #employee-profile-panel .list-footer{border-color:transparent;color:#607a9e;font-size:10px}
+.workspace #employee-profile-panel .pagination button{background:#f1f5fc;border-color:#d3dfee;color:#31598e}
+@media(max-width:740px){.workspace #employee-profile-panel .live-kpi-strip{grid-template-columns:repeat(5,minmax(115px,1fr));gap:14px}.workspace #employee-profile-panel .live-kpi{height:62px;min-height:62px}.workspace #employee-profile-panel .profile-toolbar .search-box{flex-basis:100%}.workspace #employee-profile-panel .profile-toolbar .button{flex:1}.workspace #employee-profile-panel .profile-action{width:128px}}
