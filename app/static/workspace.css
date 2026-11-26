@@ -854,7 +854,10 @@
 .workspace #attendance-register-panel .live-aja{background:#fff1d6;color:#805d18}
 .workspace #attendance-register-panel .live-travel{background:#eee6fa;color:#68459c}
 .workspace #attendance-register-panel .live-review{background:#f4eddf;color:#805d18}
-.workspace #attendance-register-panel .live-last-update{font-variant-numeric:tabular-nums;white-space:nowrap;font-size:11px}
+.workspace #attendance-register-panel .live-last-update{font-variant-numeric:tabular-nums;white-space:nowrap;font-size:11px;color:#788ba6}
+.workspace #attendance-register-panel .live-last-update.has-update{color:#31588e;font-weight:650;transition:color .22s ease}
+.workspace #attendance-register-panel .attendance-directory tbody tr:is(:hover,:focus-within) .live-last-update.has-update{color:#0755c5}
+@media(prefers-reduced-motion:reduce){.workspace #attendance-register-panel .live-last-update.has-update{transition:none}}
 @media(max-width:740px){
 .workspace #attendance-register-panel .live-overview{padding:7px 6px 2px}
 .workspace #attendance-register-panel .live-kpi-strip{grid-template-columns:repeat(6,minmax(116px,1fr));gap:9px}
