@@ -850,12 +850,16 @@ with connect() as con:
     assert.equal(await page.locator('#day-review-heading').evaluate(el=>getComputedStyle(el.parentElement).clip),'rect(0px, 0px, 0px, 0px)');
     const closeStyle=await page.locator('#close-day-review').evaluate(el=>{const s=getComputedStyle(el);return {radius:s.borderTopLeftRadius,width:s.width,height:s.height};});
     assert.deepEqual(closeStyle,{radius:'50%',width:'32px',height:'32px'});
-    const sectionDividers=await page.locator('#review-time-section > .review-field-section').evaluateAll(sections=>sections.map(el=>{const s=getComputedStyle(el);return {width:el.getBoundingClientRect().width,border:s.borderTopWidth,color:s.borderTopColor,style:s.borderTopStyle};}));
-    assert.ok(sectionDividers.every(s=>s.border==='1px'&&s.color==='rgb(232, 237, 245)'&&s.style==='solid'&&Math.abs(s.width-sectionDividers[0].width)<1),'Section dividers must share equal widths and subtle borders');
+    const sectionSpacing=await page.locator('#review-time-section > .review-field-section').evaluateAll(sections=>sections.map(el=>{const s=getComputedStyle(el);return {border:s.borderTopWidth,paddingTop:s.paddingTop};}));
+    assert.ok(sectionSpacing.every(s=>s.border==='0px'&&s.paddingTop==='10px'),'Sections retain spacing without divider lines');
     assert.equal(await page.locator('#review-regular-label').evaluate(el=>getComputedStyle(el,'::after').content),'none');
     assert.equal(await page.locator('#clock-am-in').inputValue(),'07:30:07');
     await page.locator('[data-clock-pick="am-in"]').click();
     await page.locator('#clock-picker').waitFor();
+    const editorActionStyles=await page.evaluate(()=>['clock-picker-clear','clock-picker-apply','cancel-day-review','save-day-review'].map(id=>{const s=getComputedStyle(document.getElementById(id));return {height:s.height,minHeight:s.minHeight,padding:s.padding,borderRadius:s.borderTopLeftRadius,fontSize:s.fontSize,fontWeight:s.fontWeight,background:s.backgroundColor,color:s.color};}));
+    assert.deepEqual(editorActionStyles[0],editorActionStyles[2],'Clear and Cancel must use identical action styles');
+    assert.deepEqual(editorActionStyles[1],editorActionStyles[3],'Apply and Save must use identical action styles');
+    assert.equal(editorActionStyles[0].height,editorActionStyles[1].height,'Picker action buttons must have equal heights');
     await page.locator('#picker-minute').fill('31');
     assert.equal(await page.locator('[data-clock-minute], .clock-picker-quick').count(),0);
     await page.locator('#clock-picker-apply').click();
