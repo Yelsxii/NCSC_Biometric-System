@@ -21,6 +21,13 @@
 .preview-actions{display:flex;flex-direction:column;gap:9px;min-width:0}
 .preview-controls label{display:flex;flex-direction:column;gap:7px;min-width:0;color:#526b8c;font-size:11px;font-weight:650}
 .preview-controls [hidden]{display:none!important}
+.preview-category-field{display:flex;flex-direction:column;gap:7px;min-width:0;color:#526b8c;font-size:11px;font-weight:650}
+.preview-category-value{display:flex;align-items:center;min-height:38px;box-sizing:border-box;padding:0 13px;border:0;border-radius:9px;background:#e4eaf2;color:#53657f;font-size:12px;font-weight:700}
+.preview-category-value[data-category="COS"]{background:#d5dfff;color:#2346bc}
+.preview-category-value[data-category="Permanent"]{background:#c4e9ff;color:#005b8c}
+.preview-category-value[data-category="GIP"]{background:#eadcff;color:#7040a8}
+.preview-category-value[data-category="OJT"]{background:#ffe4c7;color:#9a4c13}
+@media(max-width:760px){.preview-fields .preview-category-field{flex:1 1 130px}}
 /* Match the attendance month picker while retaining native select semantics. */
 .preview-controls select{appearance:none;display:block;box-sizing:border-box;width:100%;min-width:0;height:38px;min-height:38px;border:1px solid #e1e8f5;border-radius:9px;background:#f0f4fc url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23536e9e' stroke-width='1.8' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m7 10 5 5 5-5'/%3E%3C/svg%3E") no-repeat right 13px center/16px;color:#203b67;padding:0 38px 0 13px;font-size:12px;font-weight:650;cursor:pointer;transition:background-color .2s ease,border-color .2s ease,box-shadow .2s ease}
 .preview-controls select:not(:disabled):hover{background-color:#e6eefc;border-color:#a7bce1}
