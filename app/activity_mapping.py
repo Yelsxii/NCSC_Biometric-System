@@ -100,6 +100,25 @@ def sheet_aja_evidence(source):
         match = re.search(r"\bAJA\b.*?(\d{1,2}:[0-5]\d(?::[0-5]\d)?\s*(?:AM|PM)?)\s*[-–—−]\s*(\d{1,2}:[0-5]\d(?::[0-5]\d)?\s*(?:AM|PM)?)", note, re.I)
         if match:
             a,b = _sheet_clock(match[1]),_sheet_clock(match[2])
+            # A bare 1–11 hour can be AM or PM. Use the named regular
+            # attendance pair only if exactly one interpretation fits.
+            def alternatives(raw, clock):
+                if not clock:
+                    return []
+                hour = int(clock[:2])
+                if re.search(r"[AP]M\s*$", raw, re.I) or not 1 <= hour <= 11:
+                    return [clock]
+                return [clock, f"{hour+12:02d}"+clock[2:]]
+            times = source.get("times") or {}
+            windows = [(times.get(k+"_in"), times.get(k+"_out")) for k in ("am","pm")]
+            candidates = {(x,y) for x in alternatives(match[1],a)
+                          for y in alternatives(match[2],b)
+                          if x<y and any(lo and hi and lo<=x<y<=hi for lo,hi in windows)}
+            if len(candidates)==1:
+                a,b = next(iter(candidates))
+            elif len(candidates)>1:
+                # Do not guess when both halves of a day support the note.
+                continue
             if a and b and a<b:
                 start,end = start or a,end or b
                 break
