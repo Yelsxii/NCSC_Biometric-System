@@ -554,7 +554,7 @@ def test_worked_holiday_and_weekend_use_attendance_result_in_remarks(admin):
         row('2026-11-07',times=['08:00','12:00','13:00','18:00'],total=9/24,ot=1/24,number=6)]))
     days=client.get('/api/dtr/monitor?employee_code=001&month=2026-11').json()['days']
     assert days[1]['calendar']['holiday_name']=="All Souls' Day"
-    assert days[1]['display_remark']=='Present'
+    assert days[1]['display_remark']=='Complete'
     assert days[6]['is_weekend'] and days[6]['display_remark']=='Overtime'
     assert days[1]['monitoring']['undertime_seconds'] is None
     assert days[6]['monitoring']['undertime_seconds'] is None
@@ -574,7 +574,7 @@ def test_short_worked_offdays_do_not_charge_undertime(admin):
         assert day['monitoring']['total_seconds']==21600
         assert day['monitoring']['undertime_seconds'] is None
         assert day['monitoring']['overtime_seconds']==0
-        assert day['display_remark']=='Present'
+        assert day['display_remark']=='Complete'
         assert all(day['display_slots'].values())
 
 
@@ -589,7 +589,7 @@ def test_specific_missing_entry_and_worked_offday_pair(admin):
     assert days[5]['monitoring']['undertime_seconds']==14400
     assert days[5]['monitoring']['undertime_origin']=='documented_partial'
     assert days[5]['missing_entries']==['PM Out']
-    assert days[6]['display_remark']=='Present'
+    assert days[6]['display_remark']=='Complete'
     assert days[6]['monitoring']['total_seconds']==14400
     assert days[6]['monitoring']['undertime_seconds'] is None
     assert days[6]['monitoring']['overtime_seconds'] is None
