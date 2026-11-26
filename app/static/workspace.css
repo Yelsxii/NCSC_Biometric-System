@@ -1045,18 +1045,18 @@ dialog.app-dialog[open]::backdrop,#dtr-preview-dialog[open]::backdrop{
 .workspace #employee-profile-panel .table-wrap::-webkit-scrollbar-thumb{background:#b8c6dd;border-radius:999px}
 .workspace #attendance-register-panel .live-status.live-pending{background:transparent;color:#657997;font-weight:500}
 
-/* Separate action roles: blue-teal creates/imports, navy edits/views.
-   Calendar controls use a clean neutral surface with confident blue ink. */
-.workspace{--record-create-bg:#087589;--record-create-hover:#065c70;--record-create-ink:#fff}
+/* Separate action roles within the existing NCSC blue palette.
+   Royal blue creates/imports, deep navy edits/views; crisp calendar control. */
+.workspace{--record-create-bg:var(--app-blue);--record-create-hover:var(--app-blue-dark);--record-create-ink:#fff}
 .workspace #attendance-register-panel #register-month-trigger,
 .workspace .attendance-sheet #detail-month-trigger{
-  background:#fff;color:#174780;border-color:transparent;box-shadow:none;border-radius:9px;
+  background:#f8faff;color:#203b67;border-color:#c4d3ec;box-shadow:none;border-radius:9px;
 }
 .workspace #attendance-register-panel #register-month-trigger svg,
 .workspace .attendance-sheet #detail-month-trigger svg{color:#2258a4}
 .workspace #attendance-register-panel #register-month-trigger:is(:hover,[aria-expanded=true]),
 .workspace .attendance-sheet #detail-month-trigger:is(:hover,[aria-expanded=true]){
-  background:#cddff7;color:#133b76;border-color:transparent;box-shadow:none;
+  background:#e2ebfc;color:#173b80;border-color:#a3b9df;box-shadow:none;
 }
 .workspace #attendance-register-panel #open-attendance-import,
 .workspace #employee-profile-panel #open-profile,
