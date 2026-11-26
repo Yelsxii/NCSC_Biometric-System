@@ -85,12 +85,11 @@ function dtrPrintRows(data,category,from=1,to=dtrLastDay(data.month)){
       '<td class="print-undertime" rowspan="'+span+'">'+(!showUndertime?'':Math.floor(ut/3600))+'</td><td class="print-undertime" rowspan="'+span+'">'+(!showUndertime?'':Math.floor(ut%3600/60))+'</td>';
     const coverage=coveredPM(day)?day.aja_periods[0]:null;
     const notes=coverage?{}:dtrPrintAjaNotes(day);
-    const hasNotes=Object.values(notes).some(items=>items.length);
     const regularCells=coverage
       ? '<td>'+dtrClock(slots.am_in,!gip)+'</td><td>'+dtrClock(slots.am_out,!gip)+'</td><td colspan="2" class="print-aja-coverage">AJA '+dtrAjaClock(coverage.out)+'-'+dtrAjaClock(coverage.in)+'</td>'
       : ['am_in','am_out','pm_in','pm_out'].map(k=>{
         const annotation=notes[k]||[];
-        return '<td'+(hasNotes?' class="print-aja-clock-cell"':'')+'><span class="print-regular-clock">'+dtrClock(slots[k],!gip)+'</span>'+annotation.map(note=>'<span class="print-aja-inline-note" data-slot="'+k+'">'+note+'</span>').join('')+'</td>';
+        return '<td'+(annotation.length?' class="print-aja-clock-cell"':'')+'><span class="print-regular-clock">'+dtrClock(slots[k],!gip)+'</span>'+annotation.map(note=>'<span class="print-aja-inline-note" data-slot="'+k+'">'+note+'</span>').join('')+'</td>';
       }).join('');
     return '<tr'+(offday?' class="print-offday"':'')+'><td rowspan="'+span+'">'+n+'</td>'+
       (special?'<td colspan="4" class="special-day">'+esc(special)+'</td>':regularCells)+
@@ -127,7 +126,7 @@ function gipDtrForm(data,period){
 function buildDtrDocument(data,category,period,paperKey,version){
   const paper=dtrPaper[paperKey]||dtrPaper.a4;
   const body=category==='GIP'?gipDtrForm(data,period):civilDtrCopy(data,category)+civilDtrCopy(data,category);
-  return '<!doctype html><html lang="en"><head><meta charset="utf-8"><title>DTR - '+esc(data.display_name||'')+' - '+esc(data.month)+'</title><link rel="stylesheet" href="/static/dtr-preview.css?v=22"><style>@page{size:'+paper.width+' '+paper.height+';margin:'+DTR_NARROW_MM+'mm} :root{--paper-width:'+paper.width+';--paper-height:'+paper.height+';--paper-margin:'+DTR_NARROW_MM+'mm;--content-width:'+(paper.w-2*DTR_NARROW_MM)+'mm;--content-height:'+(paper.h-2*DTR_NARROW_MM)+'mm}</style></head><body class="print-document" data-preview-version="'+version+'"><main class="print-content"><div class="print-layout '+(category==='GIP'?'gip-page':'civil-page')+'">'+body+'</div></main></body></html>';
+  return '<!doctype html><html lang="en"><head><meta charset="utf-8"><title>DTR - '+esc(data.display_name||'')+' - '+esc(data.month)+'</title><link rel="stylesheet" href="/static/dtr-preview.css?v=23"><style>@page{size:'+paper.width+' '+paper.height+';margin:'+DTR_NARROW_MM+'mm} :root{--paper-width:'+paper.width+';--paper-height:'+paper.height+';--paper-margin:'+DTR_NARROW_MM+'mm;--content-width:'+(paper.w-2*DTR_NARROW_MM)+'mm;--content-height:'+(paper.h-2*DTR_NARROW_MM)+'mm}</style></head><body class="print-document" data-preview-version="'+version+'"><main class="print-content"><div class="print-layout '+(category==='GIP'?'gip-page':'civil-page')+'">'+body+'</div></main></body></html>';
 }
 function freshDtrFrame(){
   // Replacing the browsing context avoids accumulating iframe history entries
