@@ -592,3 +592,36 @@
 #day-review-dialog :is(#review-ut-hours,#review-ut-minutes){font-variant-numeric:tabular-nums;font-weight:650}
 #day-review-dialog #review-aja-hint{line-height:1.4}
 #day-review-dialog form{max-height:min(90dvh,calc(100dvh - 48px))}
+
+/* Compact, separated attendance sections and the DTR preview close treatment. */
+#day-review-dialog .review-minimal-head{position:relative;justify-content:flex-end;align-items:center;padding:8px 16px 0;border-bottom:0}
+#day-review-dialog .review-minimal-head .sr-only{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0}
+#day-review-dialog .review-close{
+  display:grid;place-items:center;width:32px;height:32px;min-width:32px;min-height:32px;
+  padding:0;border-radius:50%;background:linear-gradient(145deg,#fff1f3df,#f8dce5cf);
+  color:#b42d4e;box-shadow:inset 0 1px 1px #fff9,0 3px 10px #b42d4e12;
+  backdrop-filter:blur(12px);cursor:pointer;
+  transition:background .18s ease,color .18s ease,box-shadow .18s ease,transform .18s ease;
+}
+#day-review-dialog .review-close:is(:hover,:focus-visible){background:linear-gradient(145deg,#ffe9ee,#f5c5d2);color:#96233e;box-shadow:inset 0 1px 1px #fffc,0 5px 14px #b42d4e26;transform:translateY(-1px)}
+#day-review-dialog .review-close:active{transform:scale(.96)}
+#day-review-dialog .review-close:focus-visible{outline:2px solid #b4233b;outline-offset:2px}
+#day-review-dialog .review-close svg{pointer-events:none}
+#day-review-dialog .app-dialog-body{padding-top:3px}
+#day-review-dialog .review-field-section{min-width:0;margin:0;padding:0 0 10px}
+#day-review-dialog .review-field-section:last-child{padding-bottom:0}
+#day-review-dialog .review-field-section .form-section-title{display:flex;align-items:center;gap:10px;margin:0 0 7px;font-size:11.5px;font-weight:700;line-height:1.4;color:#385780}
+#day-review-dialog .review-field-section .form-section-title::after{content:"";height:1px;flex:1 1 auto;background:#dfe7f3}
+#day-review-dialog .clock-field label,#day-review-dialog .profile-form-grid label{color:#52688a;font-weight:650}
+#day-review-dialog .clock-control input,#day-review-dialog :is(#review-ut-hours,#review-ut-minutes){color:#243e68;font-size:12px;font-weight:700}
+#day-review-dialog .clock-control input::placeholder,#day-review-dialog :is(#review-ut-hours,#review-ut-minutes)::placeholder{color:#8698b3;font-weight:550}
+#day-review-dialog :is(#review-ut-hours,#review-ut-minutes):disabled{color:#8b9ab3}
+#day-review-dialog .app-dialog-footer{gap:9px;background:#f8faff}
+#day-review-dialog .app-dialog-footer .button{height:33px;min-height:33px;padding:0 14px;border-radius:8px;font-size:11px;font-weight:650;box-shadow:none;transition:background-color .22s ease,color .22s ease,transform .22s ease,box-shadow .22s ease}
+#day-review-dialog .app-dialog-footer .button.outline{background:#eaf0fa;color:#31588e}
+#day-review-dialog .app-dialog-footer .button.outline:is(:hover,:focus-visible):not(:disabled){background:#dbe7fa;color:#244b9a;transform:translateY(-1px)}
+#day-review-dialog .app-dialog-footer .button.primary{background:#244b9a;color:#fff}
+#day-review-dialog .app-dialog-footer .button.primary:is(:hover,:focus-visible):not(:disabled){background:#173b83;color:#fff;transform:translateY(-1px);box-shadow:0 3px 8px #244b9a22}
+#day-review-dialog .app-dialog-footer .button:not(:disabled):active{transform:scale(.98)}
+#day-review-dialog .app-dialog-footer .button:focus-visible{outline:2px solid #7095d1;outline-offset:2px}
+@media(prefers-reduced-motion:reduce){#day-review-dialog .review-close,#day-review-dialog .app-dialog-footer .button{transition:none;transform:none!important}}
