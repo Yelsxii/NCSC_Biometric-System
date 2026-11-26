@@ -252,7 +252,41 @@ def present_day(day):
     labels = dict(zip(KEYS, ("AM In", "AM Out", "PM In", "PM Out")))
     slots = day["display_slots"]
     offday = day["is_weekend"] or bool(day["calendar"]["holiday_name"])
-    missing = [labels[k] for k in KEYS if not slots[k]]
+    # A recorded full-day leave is a documented status, not missing punches.
+    # Never hide actual scans, future dates, calendar days or conflicting entries.
+    leave = next((n for n in source.get("notes", []) if re.search(r"\b(?:LEAVE|CTO|WORK SUSPENSION)\b", n, re.I)), "")
+    day["leave_status"] = (leave if leave and not has_entries and not day["travel_order"]
+                           and not offday and not day["is_future"] and not day.get("source_conflicts") else "")
+    if day["leave_status"]:
+        day["tone"] = "leave"
+        metrics.update(remarks=leave, total_seconds=None, undertime_seconds=None,
+                       overtime_seconds=None, undertime_origin="not_applicable", metrics_origin="leave")
+        status = leave
+
+    # A documented AJA spanning the remainder of the working day can explain
+    # absent PM punches when the employee departed directly from the office.
+    # The recorded endpoint is an activity END, not a fabricated office return.
+    # Do not infer payable hours, overtime, or an activity end from a missing scan.
+    day["aja_covered_slots"] = []
+    periods = day.get("aja_periods", [])
+    now = dt.datetime.now(dt.timezone(dt.timedelta(hours=8))).strftime("%Y-%m-%d %H:%M:%S")
+    if (status == "Incomplete entries" and not offday and not day["is_future"]
+            and not day["travel_order"] and not day.get("source_conflicts")
+            and not metrics.get("aja_review") and slots["am_in"] and slots["am_out"]
+            and not slots["pm_in"] and not slots["pm_out"] and len(periods) == 1):
+        period = periods[0]
+        departure, end = period.get("out"), period.get("in")
+        am_in, am_out = slots["am_in"]["happened_at"][11:19], slots["am_out"]["happened_at"][11:19]
+        if (not period.get("review") and departure and end
+                and departure.get("origin") in ("manual_sheet", "biometric", "hr_approved")
+                and end.get("origin") in ("manual_sheet", "biometric", "hr_approved")
+                and am_in < am_out and am_out[:5] == departure["time"][:5]
+                and departure["time"] <= "12:00:00" and end["time"] >= "17:00:00"
+                and day["date"] + " " + end["time"] <= now):
+            day["aja_covered_slots"] = ["pm_in", "pm_out"]
+            metrics.update(remarks="AJA", metrics_origin="aja_coverage")
+            status = "AJA"
+    missing = [labels[k] for k in KEYS if not slots[k] and k not in day["aja_covered_slots"]]
     if offday:
         missing = [labels[k] for a,b in (("am_in","am_out"),("pm_in","pm_out"))
                    if bool(slots[a]) != bool(slots[b]) for k in (a,b) if not slots[k]]
@@ -276,7 +310,9 @@ def present_day(day):
         issues.append("Hours for review")
     if status == "Manual DTR note" and has_entries:
         issues.append("DTR note for review")
-    if not issues and day["travel_order"]:
+    if not issues and day["leave_status"]:
+        text = day["leave_status"]
+    elif not issues and day["travel_order"]:
         text = "Travel Order"
     elif issues:
         text = issues[0] if len(issues)==1 else f"Review ({len(issues)} issues)"
