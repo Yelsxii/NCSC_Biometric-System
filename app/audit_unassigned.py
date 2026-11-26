@@ -138,7 +138,15 @@ def audit_all(details=False):
                 code=person["employee_code"]
                 alias=aliases.setdefault(code, "employee-%02d" % (len(aliases)+1))
                 for d in person["days"]:
-                    cases.append({"employee":alias,"date":d["date"],"remarks":d["remarks"],
+                    status=d["remarks"] or ""
+                    safe_statuses={"Unassigned scan","Undertime for review","Undertime (provisional)",
+                        "Invalid time sequence","Incomplete entries","Missing AM In","Missing AM Out",
+                        "Missing PM In","Missing PM Out","DTR note for review","Travel Order conflict",
+                        "Incomplete AJA","Hours for review","Review","In progress","Undertime",
+                        "Overtime","Complete","No entry","Future entry"}
+                    if status not in safe_statuses:
+                        status="Other review status"
+                    cases.append({"employee":alias,"date":d["date"],"remarks":status,
                         "issues":d["issues"],"missing":d["missing_entries"],
                         "conflicts":d["source_conflicts"],
                         "sheet_times":d["sheet_times"],
@@ -146,6 +154,7 @@ def audit_all(details=False):
                         "unassigned_reasons":[s["reason"] for s in d["unassigned_scans"]],
                         "undertime_seconds":d["undertime_seconds"],"undertime_origin":d["undertime_origin"],
                         "source_note_count":len(d["source_notes"])})
+            summary["remarks"]=dict(Counter(case["remarks"] for case in cases))
             summary["cases"]=cases
         reports.append(summary)
     return {"read_only":True,"months_checked":len(reports),"months":reports}
