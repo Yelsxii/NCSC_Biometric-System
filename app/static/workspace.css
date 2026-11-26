@@ -1022,3 +1022,18 @@ dialog.app-dialog[open]::backdrop,#dtr-preview-dialog[open]::backdrop{
 
 /* Keep the leftmost device-linked employee identifier compact and readable. */
 .workspace #employee-profile-panel .profile-table .id-cell{font-weight:650;color:#334d73;font-variant-numeric:tabular-nums;white-space:nowrap}
+
+/* Shared directory row emphasis: highlight every meaningful detail, not only the name. */
+.workspace :is(#attendance-register-panel,#employee-profile-panel) :is(.attendance-directory,.profile-table) :is(.department-name,.department-code,.id-cell,.live-last-update.has-update){transition:color .22s ease,text-shadow .22s ease}
+.workspace :is(#attendance-register-panel,#employee-profile-panel) :is(.attendance-directory,.profile-table) tbody tr:is(:hover,:focus-within) :is(.department-name,.department-code,.id-cell,.live-last-update.has-update){color:#0755c5;text-shadow:0 0 7px rgba(25,102,231,.16)}
+/* Preserve the semantic status colors rather than making every status blue. */
+.workspace #attendance-register-panel .attendance-directory .live-status{transition:background-color .22s ease,color .22s ease,text-shadow .22s ease}
+.workspace #attendance-register-panel .attendance-directory tbody tr:is(:hover,:focus-within) .live-status.live-in{background:#23694e;color:#fff}
+.workspace #attendance-register-panel .attendance-directory tbody tr:is(:hover,:focus-within) .live-status.live-out{background:#345d9d;color:#fff}
+.workspace #attendance-register-panel .attendance-directory tbody tr:is(:hover,:focus-within) .live-status.live-aja{background:#805d18;color:#fff}
+.workspace #attendance-register-panel .attendance-directory tbody tr:is(:hover,:focus-within) .live-status.live-travel{background:#68459c;color:#fff}
+.workspace #attendance-register-panel .attendance-directory tbody tr:is(:hover,:focus-within) .live-status.live-review{background:#805d18;color:#fff}
+.workspace #attendance-register-panel .attendance-directory tbody tr:is(:hover,:focus-within) .live-status.live-missing{color:#b71834;text-shadow:0 0 5px #d3264020}
+.workspace #attendance-register-panel .attendance-directory tbody tr:focus-within{background:#dbe7f7}
+.workspace :is(#attendance-register-panel,#employee-profile-panel) :is(.attendance-directory,.profile-table) tbody tr:focus-within .directory-action-cell{background:#dbe7f7}
+@media(prefers-reduced-motion:reduce){.workspace :is(#attendance-register-panel,#employee-profile-panel) :is(.attendance-directory,.profile-table) :is(.department-name,.department-code,.id-cell,.live-last-update.has-update,.live-status){transition:none}}
