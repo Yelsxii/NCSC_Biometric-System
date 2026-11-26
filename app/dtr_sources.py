@@ -24,6 +24,43 @@ def _documented_status(notes):
     return ''
 
 
+def historical_sequence_suggestions(day, manual, display):
+    """Suggest original scans for missing slots; never change certified display.
+
+    Four ordered ordinary punches with at least two corroborating state
+    selections are useful review candidates, not proof of direction.
+    """
+    if (day['is_future'] or day['is_weekend'] or day['calendar']['holiday_name']
+            or day.get('activities') or day.get('display_activities')
+            or day.get('review', {}).get('version')
+            or day.get('review', {}).get('approved_times')
+            or any(day['slots'].values())
+            or (manual and (manual.get('reconciliation') or
+                any(manual['data'].get('times', {}).values()) or manual['data'].get('notes')
+                or sheet_aja_evidence(manual['data'])))):
+        return {}
+    events = sorted(day['scans'], key=lambda x: x['happened_at'])
+    if len(events) != 4 or any(
+            'historical_k14_state' not in e or not e.get('historical_slot')
+            or e.get('verified_slot') or e.get('work_code_pending') or e.get('work_code_conflict')
+            or e.get('activity_type') in OFFICIAL or e.get('work_code') not in (None, '', '0')
+            for e in events):
+        return {}
+    clocks = [e['happened_at'][11:19] for e in events]
+    if clocks != sorted(set(clocks)):
+        return {}
+    if not (clocks[0] < '12:00:00' and '12:00:00' <= clocks[1] <= '13:00:00'
+            and '12:00:00' <= clocks[2] <= '15:00:00' and clocks[3] >= '16:00:00'):
+        return {}
+    if sum(e.get('historical_slot') == key for key, e in zip(KEYS, events)) < 2:
+        return {}
+    if any(display[key] and display[key].get('id') != e['id'] for key, e in zip(KEYS, events)):
+        return {}
+    return {key: {'id': e['id'], 'time': e['happened_at'][11:19],
+                  'device_slot': e['historical_slot']}
+            for key, e in zip(KEYS, events) if not display[key]}
+
+
 def resolve_day(day, manual):
     source = manual['data'] if manual else None
     sheet_times = source['times'] if source else {}
@@ -177,6 +214,7 @@ def resolve_day(day, manual):
         else:
             display[key] = None
     day['display_slots'] = display
+    day['historical_suggestions'] = historical_sequence_suggestions(day, manual, display)
     day['source_conflicts'] = conflicts
     day['source_differences'] = differences
     display_ids = {x['id'] for x in display.values() if x and x.get('id')}
