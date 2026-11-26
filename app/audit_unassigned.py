@@ -47,6 +47,8 @@ def audit_month(month, include_review=False):
             reason = "Multiple scans claim the same verified attendance slot."
         elif slot:
             reason = "Verified slot was not selected by the resolver; inspect the displayed and reviewed slot."
+        elif scan.get("historical_slot"):
+            reason = "Historical device state was available but not uniquely assignable; inspect repeated states, named sheet slots and clock sequence."
         elif not matching_sheet_slots:
             reason = "No verified AM/PM slot and no matching manual DTR minute."
         elif len(matching_sheet_slots) > 1:
@@ -54,7 +56,7 @@ def audit_month(month, include_review=False):
         else:
             reason = "Manual DTR minute matches but resolver did not select this scan; inspect competing or reviewed entries."
         return {"time": stamp, "punch_id": scan["id"], "verified_slot": slot,
-                "device_state": scan.get("k14_punch_type"), "status_code": scan.get("status_code"),
+                "device_state": scan.get("k14_punch_type", scan.get("historical_k14_state")), "historical_slot": scan.get("historical_slot"), "status_code": scan.get("status_code"),
                 "work_code": scan.get("work_code"), "matching_sheet_slots": matching_sheet_slots,
                 "other_same_minute": [s["happened_at"][11:19] for s in same_minute],
                 "other_same_slot": [s["happened_at"][11:19] for s in same_slot],
