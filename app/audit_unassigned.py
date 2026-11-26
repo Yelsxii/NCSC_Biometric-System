@@ -12,7 +12,7 @@ from unittest.mock import patch
 from dotenv import load_dotenv
 
 
-def audit_month(month):
+def audit_month(month, include_review=False):
     load_dotenv()
     from app import attendance, main
     from app.db import database_path
@@ -71,12 +71,19 @@ def audit_month(month):
             for day in days:
                 ids = set(day.get("display_unassigned_ids", []))
                 issues = day.get("remark_issues", [])
-                if not ids and "Unassigned scan" not in issues and day.get("display_remark") != "Unassigned scan":
+                status = day.get("display_remark", "")
+                metrics = day.get("monitoring", {})
+                needs_review = bool(issues or day.get("missing_entries") or "review" in status.lower() or metrics.get("undertime_origin") == "documented_partial")
+                if not ids and "Unassigned scan" not in issues and status != "Unassigned scan" and not (include_review and needs_review):
                     continue
                 flagged.append({
                     "date": day["date"],
                     "remarks": day.get("display_remark"),
                     "issues": issues,
+                    "missing_entries": day.get("missing_entries", []),
+                    "source_notes": (day.get("manual_source") or {}).get("notes", []),
+                    "undertime_seconds": metrics.get("undertime_seconds"),
+                    "undertime_origin": metrics.get("undertime_origin"),
                     "source_conflicts": day.get("source_conflicts", []),
                     "displayed_slots": {key: {"time": item["happened_at"][11:19], "origin": item.get("origin")}
                                         if item else None for key, item in day["display_slots"].items()},
@@ -93,11 +100,35 @@ def audit_month(month):
             "employees": results}
 
 
+def audit_all():
+    """Summaries of every month containing a local biometric or imported DTR row."""
+    load_dotenv()
+    from app.db import database_path
+    from app.dtr_reconciliation import reconciliation_path, _decode
+    with closing(sqlite3.connect(database_path().resolve().as_uri()+"?mode=ro",uri=True)) as con:
+        months = {r[0] for r in con.execute("SELECT DISTINCT substr(happened_at,1,7) FROM punches UNION SELECT DISTINCT substr(attendance_date,1,7) FROM manual_dtr_entries UNION SELECT DISTINCT substr(attendance_date,1,7) FROM attendance_day_reviews")}
+    path = reconciliation_path()
+    if path and path.is_file():
+        for _, entries in _decode(path.read_bytes()).values():
+            months.update(date[:7] for date in entries)
+    reports=[]
+    from collections import Counter
+    for month in sorted(m for m in months if m and m<=dt.datetime.now(dt.timezone(dt.timedelta(hours=8))).strftime("%Y-%m")):
+        report=audit_month(month, include_review=True)
+        days=[d for employee in report["employees"] for d in employee["days"]]
+        counts=Counter(d["remarks"] for d in days)
+        reports.append({"month":month,"employees_checked":report["employees_checked"],
+            "days_to_review":len(days),"unassigned_scans":sum(d["unassigned_count"] for d in days),
+            "provisional_undertime_days":sum(d.get("undertime_origin")=="documented_partial" for d in days),
+            "remarks":dict(counts)})
+    return {"read_only":True,"months_checked":len(reports),"months":reports}
+
+
 if __name__ == "__main__":
     if len(sys.argv) != 2:
-        raise SystemExit("Usage: python -m app.audit_unassigned YYYY-MM")
+        raise SystemExit("Usage: python -m app.audit_unassigned YYYY-MM|all")
     try:
-        report = audit_month(sys.argv[1])
+        report = audit_all() if sys.argv[1]=="all" else audit_month(sys.argv[1])
     except (ValueError, sqlite3.Error) as exc:
         raise SystemExit("Audit could not complete: " + str(exc)) from exc
     print(json.dumps(report, indent=2, ensure_ascii=True))
