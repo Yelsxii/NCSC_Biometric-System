@@ -653,3 +653,8 @@
   font-size:9px;line-height:1.2;white-space:normal;overflow-wrap:normal;
 }
 .workspace .attendance-sheet .dtr-grid .slot-aja-inline .time-value{color:#223a66}
+/* Suggested historical scan is not an approved attendance entry. */
+.workspace .attendance-sheet .dtr-grid .time-slot.slot-suggested{background:#fff0d9!important}
+.workspace .attendance-sheet .dtr-grid .slot-suggested .time-value{color:#7b551f}
+.workspace .attendance-sheet .suggested-caption{display:block;font-size:9px;color:#8a6124;line-height:1.2;margin-top:2px}
+#review-historical-suggestions{margin-top:8px;align-self:flex-start}
