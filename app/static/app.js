@@ -428,11 +428,10 @@ function attendanceTimeCells(day){
     return '<td colspan="4" class="time-slot slot-leave"><span class="leave-status">'+esc(day.leave_status.toUpperCase())+'</span></td>';
   }
   if(day.aja_covered_slots?.includes('pm_in') && day.aja_covered_slots?.includes('pm_out')){
-    const departure=day.display_slots?.am_out;
-    const end=day.aja_periods?.[0]?.in?.time;
-    return slotCell(day,'am_in')+
-      '<td class="time-slot slot-aja slot-aja-departure" data-origin="'+esc(departure?.origin||'')+'" title="Recorded AM OUT coincides with documented AJA departure"><span class="aja-coverage-status">'+esc(departure?.happened_at?.slice(11,19)||'—')+'</span><span class="aja-coverage-caption">AJA OUT</span></td>'+
-      '<td colspan="2" class="time-slot slot-aja"><span class="aja-coverage-status" title="Continuation of morning AJA; no office return recorded">ON AJA</span>'+(end?'<span class="aja-coverage-caption">Continued until '+esc(end.slice(0,5))+'</span>':'')+'</td>';
+    const period=day.aja_periods?.[0], start=period?.out?.time, end=period?.in?.time;
+    return slotCell(day,'am_in')+slotCell(day,'am_out')+
+      '<td class="time-slot slot-aja" title="Documented AJA coverage in place of PM entry; no office return recorded"><span class="aja-coverage-status">AJA</span>'+(start&&end?'<span class="aja-coverage-caption">'+esc(start.slice(0,5))+'–'+esc(end.slice(0,5))+'</span>':'')+'</td>'+
+      '<td class="time-slot slot-neutral slot-aja-covered" title="Covered by documented AJA; no PM OUT punch required"><span class="empty-cell">—</span></td>';
   }
   const holiday=day.calendar?.holiday_name;
   const calendarLabel=holiday||(day.is_weekend?(day.day==='Sat'?'Saturday':'Sunday'):'');
@@ -448,13 +447,12 @@ function attendanceTimeCells(day){
 }
 function manilaClock(){return new Intl.DateTimeFormat('sv-SE',{timeZone:'Asia/Manila',year:'numeric',month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit',second:'2-digit',hourCycle:'h23'}).format(new Date());}
 function embeddedAja(day,key){
-  // Anchor an interval inside its matching AM or PM attendance pair,
-  // never substitute activity departure/return for the regular punch.
-  if(!['am_in','pm_in'].includes(key)||day.travel_order||day.leave_status||day.aja_covered_slots?.length)return [];
-  const prefix=key.slice(0,2),slots=day.display_slots||{};
-  const start=slots[prefix+'_in']?.happened_at?.slice(11,19),end=slots[prefix+'_out']?.happened_at?.slice(11,19);
-  if(!start||!end)return [];
-  return (day.aja_periods||[]).filter(p=>!p.review&&p.out?.time&&p.in?.time&&start<=p.out.time&&p.out.time<p.in.time&&p.in.time<=end);
+  // A real attendance clock receives AJA styling only when the clock itself
+  // falls within a documented interval, not simply within the same half-day.
+  if(day.travel_order||day.leave_status)return [];
+  const clock=day.display_slots?.[key]?.happened_at?.slice(11,19);
+  if(!clock)return [];
+  return (day.aja_periods||[]).filter(p=>!p.review&&p.out?.time&&p.in?.time&&p.out.time<p.in.time&&p.out.time<=clock&&clock<=p.in.time);
 }
 function slotCell(day,key){
   const event=day.display_slots?day.display_slots[key]:(day.slots[key]||provisionalOrdinarySlots(day)?.[key]);
@@ -469,7 +467,7 @@ function slotCell(day,key){
   const aja=embeddedAja(day,key);
   const ajaHint=aja.map(p=>'AJA '+p.out.time.slice(0,5)+'–'+p.in.time.slice(0,5)).join(' · ');
   return '<td class="time-slot slot-'+(aja.length?'aja slot-aja-inline':tone)+'" data-origin="'+esc(event?origin:'')+'" title="'+esc([hint,ajaHint].filter(Boolean).join(' · '))+'">'+(event?
-    '<span class="time-value">'+esc(event.happened_at.slice(11,19))+'</span>'+aja.map(p=>'<span class="aja-coverage-caption">AJA '+esc(p.out.time.slice(0,5))+'–'+esc(p.in.time.slice(0,5))+'</span>').join(''):
+    '<span class="time-value">'+esc(event.happened_at.slice(11,19))+'</span>'+(aja.length?'<span class="aja-coverage-caption">'+(aja.some(p=>p.out.time===event.happened_at.slice(11,19))?'AJA OUT':'AJA')+'</span>':''):
     '<span class="no-time">—</span>')+'</td>';
 }
 async function loadDetail({quiet=false}={}){
