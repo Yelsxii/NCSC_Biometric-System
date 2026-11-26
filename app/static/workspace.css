@@ -853,3 +853,26 @@
 .workspace #attendance-register-panel .live-kpi .kpi-icon svg{width:22px;height:22px}
 .workspace #attendance-register-panel .directory-action{width:140px}
 }
+
+/* Shared entrance motion for full-size application dialogs. Keep their
+   normal dimensions stable so DTR paper fitting and form layout are unchanged. */
+dialog.app-dialog[open],#dtr-preview-dialog[open]{
+  animation:ncsc-modal-enter 340ms cubic-bezier(.22,.75,.25,1) both;
+}
+dialog.app-dialog[open]::backdrop,#dtr-preview-dialog[open]::backdrop{
+  animation:ncsc-modal-backdrop-enter 300ms ease-out both;
+}
+@keyframes ncsc-modal-enter{
+  from{opacity:0;transform:translateY(10px)}
+  to{opacity:1;transform:none}
+}
+@keyframes ncsc-modal-backdrop-enter{
+  from{opacity:0}
+  to{opacity:1}
+}
+@media(prefers-reduced-motion:reduce){
+  dialog.app-dialog[open],#dtr-preview-dialog[open],
+  dialog.app-dialog[open]::backdrop,#dtr-preview-dialog[open]::backdrop{
+    animation:none;
+  }
+}
