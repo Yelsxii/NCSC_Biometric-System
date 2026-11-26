@@ -47,6 +47,7 @@ def resolve_day(day, manual):
             observed[key]=event
             used.add(event['id'])
     display, conflicts, differences = {}, [], []
+    superseded_ids = set()
     for key in KEYS:
         reviewed = day['slots'][key]
         if reviewed and (reviewed.get('activity_type') in OFFICIAL or reviewed.get('work_code_conflict')):
@@ -55,6 +56,9 @@ def resolve_day(day, manual):
         event = reviewed or observed.get(key)
         approved = day['review'].get('approved_times',{}).get(key)
         if approved:
+            # An approved replacement supersedes only its identified original slot.
+            if event:
+                superseded_ids.add(event['id'])
             display[key] = {'id':None,'happened_at':day['date']+' '+approved,'work_code':'',
                 'origin':'hr_approved','placement':'approved_adjustment'}
         elif event:
@@ -72,8 +76,9 @@ def resolve_day(day, manual):
     day['source_conflicts'] = conflicts
     day['source_differences'] = differences
     display_ids = {x['id'] for x in display.values() if x and x.get('id')}
-    unplaced = len([x for x in ordinary if x['id'] not in display_ids])
-    if unplaced and (source or any(x.get('k14_state_pending') for x in ordinary if x['id'] not in display_ids)):
+    unplaced_ids = {x['id'] for x in ordinary} - display_ids - superseded_ids
+    unplaced = len(unplaced_ids)
+    if unplaced and (source or any(x.get('k14_state_pending') for x in ordinary if x['id'] in unplaced_ids)):
         conflicts.append('unplaced_biometric')
     if source and not day['calendar']['holiday_name'] and not day['calendar']['version']:
         holiday = next((note for note in source['notes'] if 'HOLIDAY' in note.upper()), '')
@@ -109,24 +114,27 @@ def resolve_day(day, manual):
     # Match the existing manual DTR template (G:J/K, eight-hour daily target).
     # A stale snapshot may contain the blank-row formula's eight-hour deficit
     # even though all four named clock fields have since been populated.
-    # Reconcile only complete, matching source rows; do not infer a schedule
-    # for unmatched biometric-only days or grant additional activity credits.
+    # Complete, conflict-free approved regular adjustments also use this rule.
+    # Do not infer a schedule for unreviewed unmatched biometric-only days.
     source_ut = source['reported_ut'] if comparable else None
     overtime = source['reported_ot'] if comparable else None
     recalculated = False
-    if comparable and not offday:
-        clocks = {key: dt.time.fromisoformat(sheet_times[key]) for key in KEYS}
-        sec = {key: clock.hour*3600 + clock.minute*60 + clock.second for key, clock in clocks.items()}
+    adjusted = bool(complete and all(display.values()) and not conflicts and
+                    any(display[k]['origin']=='hr_approved' for k in KEYS))
+    if (comparable or adjusted) and not offday:
+        clocks = {key: dt.time.fromisoformat(sheet_times[key] if comparable else display[key]['happened_at'][11:19]) for key in KEYS}
+        # The worksheet uses minute-precision slots; keep original seconds in evidence.
+        sec = {key: clock.hour*3600 + clock.minute*60 + (clock.second if comparable else 0) for key, clock in clocks.items()}
         credited = (max(0, min(sec['am_out'], 12*3600) - max(sec['am_in'], 7*3600))
                     + max(0, sec['pm_out'] - max(sec['pm_in'], 13*3600)))
         expected_ut = max(8*3600 - credited, 0)
         expected_ot = max(credited - 8*3600, 0)
-        recalculated = (source['reported_total'], source_ut, overtime) != (credited, expected_ut, expected_ot)
+        recalculated = adjusted or (source['reported_total'], source_ut, overtime) != (credited, expected_ut, expected_ot)
         total, source_ut, overtime = credited, expected_ut, expected_ot
     reviewed_ut = day['review']['undertime_minutes']
     # No required hours on weekends or holidays. Keep source/review evidence intact,
     # but do not charge or display undertime for these calendar days.
-    undertime = None if future_entry or offday else reviewed_ut*60 if reviewed_ut is not None else source_ut
+    undertime = None if future_entry or offday or not any(display.values()) else reviewed_ut*60 if reviewed_ut is not None else source_ut
     remarks = ('Future entry' if future_entry else 'Source difference' if conflicts else
         'Undertime' if undertime is not None and undertime>0 else
         'Overtime' if overtime is not None and overtime>0 else
@@ -162,7 +170,7 @@ def resolve_day(day, manual):
             conflicts.append('travel_with_regular_entries')
         day['monitoring'].update(total_seconds=None, elapsed_seconds=None,
             undertime_seconds=None, overtime_seconds=None, complete=False,
-            metrics_origin='travel_order', conflicts=len(conflicts),
+            metrics_origin='travel_order', undertime_origin='not_applicable', conflicts=len(conflicts),
             remarks='Future entry' if future_entry else 'Source difference' if conflicts else 'Travel Order')
     if not travel and remarks in ('No entry','Weekend') and source and source['notes']:
         kinds = {x['category'] for x in day['display_activities']}
