@@ -7,7 +7,7 @@
   <title>NCSC | Attendance Records</title>
   <link rel="stylesheet" href="/static/app.css">
   <link rel="stylesheet" href="/static/workspace.css?v=attendance-82">
-  <link rel="stylesheet" href="/static/attendance-detail.css?v=auto-dtr-31">
+  <link rel="stylesheet" href="/static/attendance-detail.css?v=auto-dtr-32">
   <link rel="stylesheet" href="/static/dtr-preview.css?v=18">
   <script src="/static/dtr-preview.js?v=7" defer></script>
   <script src="/static/app.js?v=auto-dtr-33" defer></script>
@@ -204,22 +204,26 @@
     </div>
   </div>
 
-  <dialog id="day-review-dialog" class="app-dialog day-review-dialog" aria-labelledby="day-review-heading">
+  <dialog id="day-review-dialog" class="app-dialog day-review-dialog" aria-labelledby="day-review-heading" aria-describedby="day-review-context">
     <form id="day-review-form">
-      <div class="app-dialog-head"><div><h2 id="day-review-heading">Edit attendance</h2><p id="day-review-context"></p></div><button type="button" class="modal-x" id="close-day-review" aria-label="Close attendance editor">×</button></div>
+      <div class="app-dialog-head review-minimal-head"><div class="sr-only"><h2 id="day-review-heading">Edit attendance</h2><p id="day-review-context"></p></div><button type="button" class="modal-x review-close" id="close-day-review" aria-label="Close attendance editor"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg></button></div>
       <div class="app-dialog-body">
         <p id="review-travel-info" class="travel-status hidden"></p>
         <div id="review-time-section">
-        <h3 class="form-section-title">Regular attendance</h3>
+        <section class="review-field-section" aria-labelledby="review-regular-label">
+        <h3 id="review-regular-label" class="form-section-title">Regular attendance</h3>
         <div class="profile-form-grid approved-clock-grid">
           <div class="clock-field"><label for="clock-am-in">AM IN</label><div class="clock-control"><input id="clock-am-in" type="text" inputmode="numeric" autocomplete="off" spellcheck="false" maxlength="8" placeholder="HH:MM:SS" aria-label="AM IN (24-hour time)"><button type="button" class="clock-pick" data-clock-pick="am-in" aria-label="Choose AM IN time" aria-expanded="false" aria-controls="clock-picker"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><circle cx="12" cy="12" r="8"/><path d="M12 7v5l3 2"/></svg></button></div></div><div class="clock-field"><label for="clock-am-out">AM OUT</label><div class="clock-control"><input id="clock-am-out" type="text" inputmode="numeric" autocomplete="off" spellcheck="false" maxlength="8" placeholder="HH:MM:SS" aria-label="AM OUT (24-hour time)"><button type="button" class="clock-pick" data-clock-pick="am-out" aria-label="Choose AM OUT time" aria-expanded="false" aria-controls="clock-picker"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><circle cx="12" cy="12" r="8"/><path d="M12 7v5l3 2"/></svg></button></div></div>
           <div class="clock-field"><label for="clock-pm-in">PM IN</label><div class="clock-control"><input id="clock-pm-in" type="text" inputmode="numeric" autocomplete="off" spellcheck="false" maxlength="8" placeholder="HH:MM:SS" aria-label="PM IN (24-hour time)"><button type="button" class="clock-pick" data-clock-pick="pm-in" aria-label="Choose PM IN time" aria-expanded="false" aria-controls="clock-picker"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><circle cx="12" cy="12" r="8"/><path d="M12 7v5l3 2"/></svg></button></div></div><div class="clock-field"><label for="clock-pm-out">PM OUT</label><div class="clock-control"><input id="clock-pm-out" type="text" inputmode="numeric" autocomplete="off" spellcheck="false" maxlength="8" placeholder="HH:MM:SS" aria-label="PM OUT (24-hour time)"><button type="button" class="clock-pick" data-clock-pick="pm-out" aria-label="Choose PM OUT time" aria-expanded="false" aria-controls="clock-picker"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><circle cx="12" cy="12" r="8"/><path d="M12 7v5l3 2"/></svg></button></div></div>
         </div>
-        <h3 class="form-section-title">AJA</h3>
+        </section>
+        <section class="review-field-section" aria-labelledby="review-aja-label">
+        <h3 id="review-aja-label" class="form-section-title">AJA</h3>
         <div class="profile-form-grid approved-clock-grid">
           <div class="clock-field"><label for="clock-aja-out">AJA OUT</label><div class="clock-control"><input id="clock-aja-out" type="text" inputmode="numeric" autocomplete="off" spellcheck="false" maxlength="8" placeholder="HH:MM:SS" aria-label="AJA OUT (24-hour time)"><button type="button" class="clock-pick" data-clock-pick="aja-out" aria-label="Choose AJA OUT time" aria-expanded="false" aria-controls="clock-picker"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><circle cx="12" cy="12" r="8"/><path d="M12 7v5l3 2"/></svg></button></div></div><div class="clock-field"><label for="clock-aja-in">AJA IN / End</label><div class="clock-control"><input id="clock-aja-in" type="text" inputmode="numeric" autocomplete="off" spellcheck="false" maxlength="8" placeholder="HH:MM:SS" aria-label="AJA IN / End (24-hour time)"><button type="button" class="clock-pick" data-clock-pick="aja-in" aria-label="Choose AJA IN / End time" aria-expanded="false" aria-controls="clock-picker"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><circle cx="12" cy="12" r="8"/><path d="M12 7v5l3 2"/></svg></button></div></div>
         </div>
         <p id="review-aja-hint" class="field-hint hidden"></p>
+        </section>
         <section class="clock-picker hidden" id="clock-picker" aria-label="Choose time">
           <div class="clock-picker-head"><strong id="clock-picker-title">Choose time</strong><span>24-hour</span><button type="button" id="clock-picker-close" aria-label="Close time picker">×</button></div>
           <div class="clock-picker-parts">
@@ -227,8 +231,10 @@
           </div>
           <div class="clock-picker-actions"><button type="button" id="clock-picker-clear">Clear</button><button type="button" class="button primary" id="clock-picker-apply">Apply</button></div>
         </section>
-        <h3 class="form-section-title">Undertime</h3>
+        <section class="review-field-section" aria-labelledby="review-undertime-label">
+        <h3 id="review-undertime-label" class="form-section-title">Undertime</h3>
         <div class="profile-form-grid"><label>Hours<input id="review-ut-hours" type="number" min="0" max="24" step="1" placeholder="—"></label><label>Minutes<input id="review-ut-minutes" type="number" min="0" max="59" step="1" placeholder="—"></label></div>
+        </section>
         </div>
         <label id="review-travel-reference" class="hidden">Travel Order number / reference<input id="review-reference" maxlength="140" placeholder="e.g. RO 1 2026-11-2"></label>
         <label id="review-reason-field" class="review-remark-label hidden">Approval reason<input id="review-remark" maxlength="300" placeholder="Reason for adjustment"></label>
