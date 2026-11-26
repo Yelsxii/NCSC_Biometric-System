@@ -40,7 +40,11 @@ function dtrPrintAjaRow(period){
   // Allocate the annotation by the documented activity clock interval,
   // never by the placement of an unrelated regular IN or OUT punch.
   const am=complete&&end<='12:00:00',pm=complete&&start>='12:00:00';
+  // A continuous cross-noon interval uses one annotation across the first
+  // three columns, leaving the final PM OUT independent. Unknown intervals
+  // retain a full-width review note rather than claiming a coverage period.
   const cells=am?note+'<td colspan="2"></td>':pm?'<td colspan="2"></td>'+note
+    :complete?'<td colspan="3" class="print-aja-note">'+label+'</td><td class="print-aja-blank"></td>'
     :'<td colspan="4" class="print-aja-note">'+label+'</td>';
   return '<tr class="print-aja">'+cells+'</tr>';
 }
