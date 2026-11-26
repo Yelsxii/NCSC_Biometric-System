@@ -22,7 +22,7 @@ class ProfileFields(BaseModel):
     last_name: str = Field(min_length=1, max_length=70)
     suffix: str = Field(default="", max_length=20)
     employment_type: Literal["COS", "Permanent", "GIP", "OJT"]
-    department: str = Field(default="", max_length=140)
+    department: str = Field(min_length=1, max_length=140)
     position: str = Field(default="", max_length=140)
     sync_authorized: bool = True
     device_enrollment_confirmed: Literal[True]
