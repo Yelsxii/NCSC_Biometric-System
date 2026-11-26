@@ -153,7 +153,11 @@ def test_restarts_do_not_reenable_a_paused_original_pilot_id(admin):
 
 def test_device_roster_cannot_fill_over_a_verified_profile_department(admin):
     client, headers = admin
-    client.post('/api/employee-profiles', json=profile('7',department=''), headers=headers)
+    assert client.post('/api/employee-profiles', json=profile('7',department=''), headers=headers).status_code == 422
+    assert client.post('/api/employee-profiles', json=profile('7'), headers=headers).status_code == 201
+    # An older verified profile may still have a blank department.
+    with closing(connect()) as con, con:
+        con.execute("UPDATE employees SET department='' WHERE employee_code='7'")
     roster = b'employee_code,display_name,department\n7,Example A. Employee,Device department\n'
     result = client.post('/api/employees/import', files={'file':('names.csv',roster)}, headers=headers)
     assert result.json()['counts']['conflict'] == 1
