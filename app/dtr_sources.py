@@ -106,11 +106,27 @@ def resolve_day(day, manual):
             conflicts.append('order')
     comparable = bool(complete and all(display.values()) and source and not conflicts and not differences and all(sheet_times.get(k) and display[k]['origin']!='hr_approved' and display[k]['happened_at'][11:16]==sheet_times[k][:5] for k in KEYS))
     total = source['reported_total'] if comparable and source['reported_total'] is not None else elapsed
+    # Match the existing manual DTR template (G:J/K, eight-hour daily target).
+    # A stale snapshot may contain the blank-row formula's eight-hour deficit
+    # even though all four named clock fields have since been populated.
+    # Reconcile only complete, matching source rows; do not infer a schedule
+    # for unmatched biometric-only days or grant additional activity credits.
+    source_ut = source['reported_ut'] if comparable else None
+    overtime = source['reported_ot'] if comparable else None
+    recalculated = False
+    if comparable and not offday:
+        clocks = {key: dt.time.fromisoformat(sheet_times[key]) for key in KEYS}
+        sec = {key: clock.hour*3600 + clock.minute*60 + clock.second for key, clock in clocks.items()}
+        credited = (max(0, min(sec['am_out'], 12*3600) - max(sec['am_in'], 7*3600))
+                    + max(0, sec['pm_out'] - max(sec['pm_in'], 13*3600)))
+        expected_ut = max(8*3600 - credited, 0)
+        expected_ot = max(credited - 8*3600, 0)
+        recalculated = (source['reported_total'], source_ut, overtime) != (credited, expected_ut, expected_ot)
+        total, source_ut, overtime = credited, expected_ut, expected_ot
     reviewed_ut = day['review']['undertime_minutes']
     # No required hours on weekends or holidays. Keep source/review evidence intact,
     # but do not charge or display undertime for these calendar days.
-    undertime = None if future_entry or offday else reviewed_ut*60 if reviewed_ut is not None else source['reported_ut'] if comparable else None
-    overtime = source['reported_ot'] if comparable else None
+    undertime = None if future_entry or offday else reviewed_ut*60 if reviewed_ut is not None else source_ut
     remarks = ('Future entry' if future_entry else 'Source difference' if conflicts else
         'Undertime' if undertime is not None and undertime>0 else
         'Overtime' if overtime is not None and overtime>0 else
@@ -123,7 +139,8 @@ def resolve_day(day, manual):
         'Holiday' if day['calendar']['holiday_name'] else
         'Weekend' if day['is_weekend'] else 'No entry')
     day['monitoring'] = {'total_seconds':total,'elapsed_seconds':elapsed,'undertime_seconds':undertime,'overtime_seconds':overtime,
-        'remarks':remarks,'metrics_origin':'manual_sheet' if comparable else 'reviewed' if reviewed_ut is not None else 'elapsed_only',
+        'remarks':remarks,'metrics_origin':'template_recalculated' if recalculated else 'manual_sheet' if comparable else 'reviewed' if reviewed_ut is not None else 'elapsed_only',
+        'undertime_origin':'not_applicable' if future_entry or offday else 'reviewed' if reviewed_ut is not None else 'template_recalculated' if recalculated else 'manual_sheet' if comparable else 'unverified',
         'complete':bool(complete),'conflicts':len(conflicts)}
     aja_evidence = sheet_aja_evidence(source)
     day['manual_source'] = {'name':manual['name'],'sheet':manual['sheet'],'row':manual['row'],'times':sheet_times,
