@@ -908,7 +908,7 @@ function initializeAttendanceMonthPicker(){
   let target=null,year=0,anchor=null,yearMode=false,yearPage=minYear;
   const pageFor=value=>minYear+Math.floor((value-minYear)/yearsPerPage)*yearsPerPage;
   function render(){
-    $('month-year-value').textContent=yearMode?yearPage+'–'+Math.min(maxYear,yearPage+yearsPerPage-1):String(year);
+    $('month-year-value').textContent=String(year);
     yearTrigger.setAttribute('aria-expanded',String(yearMode));
     yearTrigger.setAttribute('aria-label',yearMode?'Return to month selection':'Choose year: '+year);
     $('month-year-prev').setAttribute('aria-label',yearMode?'Previous years':'Previous year');
@@ -975,8 +975,6 @@ function initializeAttendanceMonthPicker(){
   }
   $('month-year-prev').addEventListener('click',()=>step(-1));
   $('month-year-next').addEventListener('click',()=>step(1));
-  $('month-picker-current').addEventListener('click',()=>choose(currentMonth()));
-  $('month-picker-close').addEventListener('click',()=>dialog.close());
   dialog.addEventListener('cancel',e=>{if(yearMode){e.preventDefault();switchMode(false);}});
   dialog.addEventListener('click',e=>{if(e.target===dialog){const rect=dialog.getBoundingClientRect();if(e.clientX<rect.left||e.clientX>rect.right||e.clientY<rect.top||e.clientY>rect.bottom)dialog.close();}});
   dialog.addEventListener('close',()=>{if(anchor){anchor.setAttribute('aria-expanded','false');if(anchor.getClientRects().length)anchor.focus();}target=null;anchor=null;});
