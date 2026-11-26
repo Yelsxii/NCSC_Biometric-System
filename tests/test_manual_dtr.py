@@ -585,7 +585,7 @@ def test_specific_missing_entry_and_worked_offday_pair(admin):
         row('2026-11-06',times=['08:00','12:00','13:00',None],total=None,number=7),
         row('2026-11-07',times=['08:00','12:00',None,None],total=None,number=8)]))
     days=client.get('/api/dtr/monitor?employee_code=001&month=2026-11').json()['days']
-    assert days[5]['display_remark']=='Undertime'
+    assert days[5]['display_remark']=='Undertime (provisional)'
     assert days[5]['monitoring']['undertime_seconds']==14400
     assert days[5]['monitoring']['undertime_origin']=='documented_partial'
     assert days[5]['missing_entries']==['PM Out']
