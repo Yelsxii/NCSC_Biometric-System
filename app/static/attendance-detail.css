@@ -647,3 +647,9 @@
   display:block;font-size:9px;line-height:1.15;font-weight:600;color:#84590f;margin-top:2px;
 }
 .workspace .attendance-sheet .dtr-grid .slot-aja-departure .aja-coverage-status{font-variant-numeric:tabular-nums}
+
+/* In-period AJA note, not a replacement time or a departure punch. */
+.workspace .attendance-sheet .dtr-grid .slot-aja-inline .aja-coverage-caption{
+  font-size:9px;line-height:1.2;white-space:normal;overflow-wrap:normal;
+}
+.workspace .attendance-sheet .dtr-grid .slot-aja-inline .time-value{color:#223a66}
