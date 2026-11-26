@@ -507,6 +507,7 @@ async function loadDetail({quiet=false}={}){
       const metrics=day.monitoring||{total_seconds:day.daily_total_seconds,undertime_seconds:day.review.undertime_minutes===null?null:day.review.undertime_minutes*60,overtime_seconds:null,remarks:'For review'};
       const calendarLabel=day.calendar.holiday_name||(day.is_weekend?(day.day==='Sat'?'Saturday':'Sunday'):'');
       const ut=displayUndertimeSeconds(day);
+      const estimatedUt=['documented_partial','documented_conflict'].includes(metrics.undertime_origin);
       const utTone=ut==null?'duration-muted':ut>0?'duration-positive':'duration-muted';
       const otTone=metrics.overtime_seconds>0?'duration-positive':'duration-muted';
       const status=metrics.remarks;
@@ -518,7 +519,7 @@ async function loadDetail({quiet=false}={}){
       const rawHint=day.scans.filter(x=>!assignedIds.has(x.id)&&!['AJA','Travel Order','Fieldwork','Official Business'].includes(x.activity_type)).map(x=>x.happened_at.slice(11,19)+(x.k14_punch_type!=null?' · State '+x.k14_punch_type:'')).join(' | ');
       const sourceLabels={am_in:'AM In',am_out:'AM Out',pm_in:'PM In',pm_out:'PM Out'};
       const differences=(day.source_differences||[]).map(key=>sourceLabels[key]||key);
-      const detail=[status,...(day.remark_issues||[]),
+      const detail=[estimatedUt?'Undertime based on recorded hours; verify before final DTR':status,...(day.remark_issues||[]),
         (day.missing_entries||[]).length?'Missing: '+day.missing_entries.join(', '):'',
         differences.length?'Biometric preferred over sheet: '+differences.join(', '):'',
         day.calendar.holiday_name,day.is_weekend?(day.day==='Sat'?'Saturday':'Sunday'):'',day.review.remark,
@@ -527,11 +528,11 @@ async function loadDetail({quiet=false}={}){
       return '<tr class="day-row day-'+esc(day.tone)+'" data-date="'+esc(day.date)+'">'+
         '<td class="dtr-date'+(day.is_weekend&&!day.calendar.holiday_name?' calendar-weekend':'')+'"'+(calendarLabel?' title="'+esc(calendarLabel)+'"':'')+'><strong>'+esc(day.date.slice(8))+'</strong><span>'+esc(day.day)+'</span></td>'+
         attendanceTimeCells(day)+
-        '<td class="daily-total-value" title="'+esc(metrics.metrics_origin==='documented_partial'?'Documented complete pairs only; missing punches not credited':metrics.metrics_origin==='template_recalculated'?'Recalculated using the existing DTR template and resolved attendance times':metrics.metrics_origin==='manual_sheet'?'Manual DTR calculated result':'Elapsed AM + PM time; '+(metrics.total_seconds??'unknown')+' seconds')+'">'+durationText(metrics.total_seconds)+'</td>'+
-        '<td class="undertime-value '+utTone+'" title="'+esc(day.leave_status?'Not applicable on recorded leave':day.aja_covered_slots?.length&&ut==null?'AJA coverage recorded; hours not automatically credited':calendarLabel?'Not applicable on weekends and holidays':ut==null?'For review':metrics.undertime_origin==='documented_partial'?'Provisional deficit of documented hours; verify missing punches before payroll':metrics.undertime_origin==='reviewed'?'Saved HR undertime override':metrics.undertime_origin==='template_recalculated'?'Recalculated from resolved DTR time entries':'Available DTR undertime')+'">'+(ut==null?'—':Math.floor(ut/3600))+'</td>'+
-        '<td class="undertime-value '+utTone+'">'+(ut==null?'—':String(Math.floor(ut%3600/60)).padStart(2,'0'))+'</td>'+
+        '<td class="daily-total-value" title="'+esc(estimatedUt?'Documented complete pairs only; missing or unmatched punches need verification':metrics.metrics_origin==='template_recalculated'?'Recalculated using the existing DTR template and resolved attendance times':metrics.metrics_origin==='manual_sheet'?'Manual DTR calculated result':'Elapsed AM + PM time; '+(metrics.total_seconds??'unknown')+' seconds')+'">'+durationText(metrics.total_seconds)+'</td>'+
+        '<td class="undertime-value '+utTone+'" title="'+esc(day.leave_status?'Not applicable on recorded leave':day.aja_covered_slots?.length&&ut==null?'AJA coverage recorded; hours not automatically credited':calendarLabel?'Not applicable on weekends and holidays':ut==null?'For review':estimatedUt?'Based on recorded hours; verify missing or unmatched punches before payroll':metrics.undertime_origin==='reviewed'?'Saved HR undertime override':metrics.undertime_origin==='template_recalculated'?'Recalculated from resolved DTR time entries':'Available DTR undertime')+'">'+(ut==null?'—':Math.floor(ut/3600))+'</td>'+
+        '<td class="undertime-value '+utTone+'">'+(ut==null?'—':String(Math.floor(ut%3600/60)).padStart(2,'0')+(estimatedUt?'*':''))+'</td>'+
         '<td class="overtime-value '+otTone+'" title="'+esc(metrics.metrics_origin==='template_recalculated'?'Recalculated DTR excess hours; not payroll overtime approval':'Manual DTR overtime result')+'">'+durationText(metrics.overtime_seconds)+'</td>'+
-        activityScanCell(day)+'<td class="day-activities">'+(visibleStatus?'<span title="'+esc(detail)+'" class="monitor-remark remark-'+kind+'">'+esc(visibleStatus)+'</span>':'<span class="empty-cell">—</span>')+'</td>'+
+        activityScanCell(day)+'<td class="day-activities">'+(visibleStatus?'<span title="'+esc(detail)+'" class="monitor-remark remark-'+kind+'">'+esc(visibleStatus==='Undertime (provisional)'?'Undertime*':visibleStatus)+(estimatedUt&&visibleStatus!=='Undertime (provisional)'&&ut!=null?' *':'')+'</span>':'<span class="empty-cell">—</span>')+'</td>'+
         '<td class="day-action"><button type="button" class="button outline edit-day" data-edit-day="'+esc(day.date)+'" aria-label="'+(session.role==='admin'?'Edit':'View')+' attendance for '+esc(day.date)+'">'+editIcon()+(session.role==='admin'?'Edit':'View')+'</button></td></tr>';
     }).join(''));
     if(changed)$('daily-table-wrap').scrollTop=scroll;
