@@ -758,7 +758,7 @@
 .workspace #attendance-register-panel #live-refresh-note{margin-left:auto;font-size:9px;color:#a83e5b}
 .workspace #attendance-register-panel .live-other{border:0;border-radius:6px;background:#e8edf5;color:#526888;padding:3px 6px;font-size:9px}
 .workspace #attendance-register-panel .live-other[aria-pressed=true]{background:#d4e0f4;color:#234b8b}
-.workspace #attendance-register-panel .live-kpi-strip{display:grid;grid-template-columns:repeat(6,minmax(124px,1fr));gap:10px;padding:11px 8px;overflow-x:auto;overflow-y:hidden;scrollbar-width:none;-ms-overflow-style:none;scroll-snap-type:x proximity;overscroll-behavior-inline:contain}
+.workspace #attendance-register-panel .live-kpi-strip{display:grid;grid-template-columns:repeat(6,minmax(124px,1fr));gap:clamp(16px,1.5%,28px);padding:13px clamp(14px,1.3%,24px);overflow-x:auto;overflow-y:hidden;scrollbar-width:none;-ms-overflow-style:none;scroll-snap-type:x proximity;overscroll-behavior-inline:contain}
 .workspace #attendance-register-panel .live-kpi-strip::-webkit-scrollbar{display:none;width:0;height:0}
 /* Thin luminous glass edges rather than a raised, stacked card base. */
 .workspace #attendance-register-panel .live-kpi{
@@ -807,14 +807,17 @@
   transition:none
 }
 /* Both attendance doorway paths are exact mirrors (9 x 16 SVG units).
-   Counterbalance the card's 1.06 zoom so the two glyphs remain equal in size. */
+   Counterbalance hover and selected zoom so the two glyphs remain equal in size. */
 @media(prefers-reduced-motion:no-preference){
   .workspace #attendance-register-panel .live-kpi:is(.kpi-in,.kpi-out) .kpi-icon svg{
     transform-origin:center;transform:scale(1);
     transition:transform .34s cubic-bezier(.4,0,.2,1)
   }
-  .workspace #attendance-register-panel .live-kpi:is(.kpi-in,.kpi-out):is([aria-pressed=true],:hover,:focus-visible) .kpi-icon svg{
+  .workspace #attendance-register-panel .live-kpi:is(.kpi-in,.kpi-out):not([aria-pressed=true]):is(:hover,:focus-visible) .kpi-icon svg{
     transform:scale(.9433962264)
+  }
+  .workspace #attendance-register-panel .live-kpi:is(.kpi-in,.kpi-out)[aria-pressed=true] .kpi-icon svg{
+    transform:scale(.8928571429)
   }
 }
 .workspace #attendance-register-panel .live-kpi .kpi-text{display:flex;flex-direction:column;align-items:flex-start;justify-content:center;gap:4px;min-width:0}
@@ -825,14 +828,14 @@
   content:"";position:absolute;inset:0;border-radius:inherit;z-index:-1;pointer-events:none;
   background:#ffffff1c;opacity:0;transition:opacity .30s cubic-bezier(.4,0,.2,1);
 }
-.workspace #attendance-register-panel .live-kpi[aria-pressed=true]{z-index:1;transform:scale(1.06)}
+.workspace #attendance-register-panel .live-kpi[aria-pressed=true]{z-index:3;transform:scale(1.12)}
 .workspace #attendance-register-panel .live-kpi:is([aria-pressed=true],:hover,:focus-visible)::before{opacity:1}
 .workspace #attendance-register-panel .live-kpi:is([aria-pressed=true],:hover,:focus-visible) .kpi-icon{
   color:var(--status-color)
 }
 .workspace #attendance-register-panel .live-kpi:is([aria-pressed=true],:hover,:focus-visible) .kpi-icon::before{opacity:.92}
 .workspace #attendance-register-panel .live-kpi:is([aria-pressed=true],:hover,:focus-visible) strong{color:var(--count-bright);text-shadow:none}
-.workspace #attendance-register-panel .live-kpi:is(:hover,:focus-visible){z-index:2;transform:scale(1.06)}
+.workspace #attendance-register-panel .live-kpi:not([aria-pressed=true]):is(:hover,:focus-visible){z-index:2;transform:scale(1.06)}
 .workspace #attendance-register-panel .live-kpi:focus-visible{outline:2px solid #315a96;outline-offset:-3px}
 .workspace #attendance-register-panel .live-kpi.kpi-in{--status-color:#367e67;--count-bright:#16805c}
 .workspace #attendance-register-panel .live-kpi.kpi-out{--status-color:#426da9;--count-bright:#246bb6}
@@ -860,7 +863,7 @@
 @media(prefers-reduced-motion:reduce){.workspace #attendance-register-panel .live-last-update.has-update{transition:none}}
 @media(max-width:740px){
 .workspace #attendance-register-panel .live-overview{padding:7px 6px 2px}
-.workspace #attendance-register-panel .live-kpi-strip{grid-template-columns:repeat(6,minmax(116px,1fr));gap:9px}
+.workspace #attendance-register-panel .live-kpi-strip{grid-template-columns:repeat(6,minmax(116px,1fr));gap:14px}
 .workspace #attendance-register-panel .live-kpi{height:62px;min-height:62px;grid-template-columns:32px minmax(0,1fr);gap:6px;padding:6px 8px 6px 7px}
 .workspace #attendance-register-panel .live-kpi strong{font-size:20px}
 .workspace #attendance-register-panel .live-kpi .kpi-icon{width:32px;height:32px;border-radius:9px}
