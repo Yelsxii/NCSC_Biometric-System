@@ -201,8 +201,10 @@ uvicorn.run('app.main:app',host='127.0.0.1',port=int(os.environ['QA_PORT']),log_
       const style=getComputedStyle(el);
       return {background:style.backgroundColor,gradient:style.backgroundImage,blur:style.backdropFilter};
     });
-    assert.match(lightGlass.background,/^rgba\(242, 246, 252, 0\.4[56]\d*\)$/);
-    assert.ok(lightGlass.gradient.includes('linear-gradient'));
+    assert.equal(lightGlass.background,'rgb(234, 241, 250)');
+    assert.equal(lightGlass.gradient,'none','Attendance surface must not show diagonal gradients');
+    const overviewSurface=await page.locator('#attendance-register-panel .live-overview').evaluate(el=>{const s=getComputedStyle(el);return [s.backgroundColor,s.backgroundImage];});
+    assert.deepEqual(overviewSurface,['rgb(237, 243, 251)','none'],'Overview retains a uniform soft blue surface');
     assert.equal(lightGlass.blur,'none','Static glass panel avoids full-panel backdrop sampling');
     const pairedFrame=await page.locator('.content-shell').evaluate(el=>{
       const rect=el.getBoundingClientRect(),style=getComputedStyle(el);
