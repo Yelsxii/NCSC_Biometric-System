@@ -36,13 +36,15 @@
   .preview-controls select::picker(select){margin-block:5px;min-width:anchor-size(width);padding:5px;border:1px solid #e2e9f4;border-radius:10px;background:#fff;color:#203b67;box-shadow:0 8px 24px #14284e24;max-height:min(300px,50dvh);overflow:auto}
   .preview-controls select:open::picker(select){animation:dtr-picker-slide-in .24s cubic-bezier(.2,.75,.25,1) both;transform-origin:top center}
   @keyframes dtr-picker-slide-in{from{opacity:0;transform:translateY(-8px)}to{opacity:1;transform:translateY(0)}}
-  .preview-controls select option{display:flex;align-items:center;gap:8px;box-sizing:border-box;min-height:28px;padding:5px 9px;margin:0 0 3px;border-radius:6px;background:transparent;color:#536b91;font-size:11.5px;line-height:1.3;font-weight:550;cursor:pointer}
+  .preview-controls select option{display:flex;align-items:center;gap:8px;box-sizing:border-box;min-height:28px;padding:5px 9px;margin:0 0 3px;border:1px solid transparent;border-radius:7px;background:transparent;color:#536b91;font-size:11.5px;line-height:1.3;font-weight:550;cursor:pointer;transition:background-color .18s ease,border-color .18s ease,color .18s ease}
   .preview-controls select option:last-child{margin-bottom:0}
-  .preview-controls select option:is(:hover,:focus-visible){background:#e7effc;color:#244b9a}
-  .preview-controls select option:checked{background:#244b9a;color:#fff;font-weight:650}
-  .preview-controls select option::checkmark{order:1;margin-inline-start:auto;color:inherit}
+  .preview-controls select option:not(:checked):is(:hover,:focus-visible){background:#f1f5fc;border-color:#e6edf9;color:#244b9a}
+  .preview-controls select option:checked{background:#e4edfc;border-color:#d2e0f6;color:#244b9a;font-weight:650}
+  .preview-controls select option:checked:is(:hover,:focus-visible){background:#dbe8fb;border-color:#c4d7f4}
+  .preview-controls select option:focus-visible{outline:2px solid #7596cc;outline-offset:-2px}
+  .preview-controls select option::checkmark{order:1;margin-inline-start:auto;color:#244b9a;font-weight:700}
 }
-@media(prefers-reduced-motion:reduce){.preview-controls select,.preview-controls select::picker-icon{transition:none}.preview-controls select:open::picker(select){animation:none}}
+@media(prefers-reduced-motion:reduce){.preview-controls select,.preview-controls select::picker-icon,.preview-controls select option{transition:none}.preview-controls select:open::picker(select){animation:none}}
 #dtr-preview-print,.preview-download{display:inline-flex;align-items:center;justify-content:center;gap:8px;width:100%;height:38px;min-height:38px;border-radius:10px;padding:8px 12px;font-size:12px;font-weight:650;cursor:pointer;transition:background-color .22s ease,color .22s ease,box-shadow .22s ease,transform .22s ease}
 #dtr-preview-print{background:#e2ebfa;color:#284e96;border:0}
 #dtr-preview-print:not(:disabled):is(:hover,:focus-visible){background:#d3e3fa;color:#17438c;transform:translateY(-1px)}
