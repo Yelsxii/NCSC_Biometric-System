@@ -762,7 +762,7 @@
 .workspace #attendance-register-panel .live-kpi-strip::-webkit-scrollbar{display:none;width:0;height:0}
 /* Thin luminous glass edges rather than a raised, stacked card base. */
 .workspace #attendance-register-panel .live-kpi{
-  --status-color:#527eb9;--count-bright:#2866be;
+  --status-color:#527eb9;--count-bright:#2866be;--card-start:#254bb2;--card-end:#327ca5;
   position:relative;isolation:isolate;overflow:hidden;display:grid;
   grid-template-columns:minmax(0,1fr) 42px;align-items:center;gap:7px;min-width:0;
   height:72px;min-height:72px;text-align:left;padding:7px 12px 7px 10px;
@@ -824,13 +824,23 @@
  .workspace #attendance-register-panel .live-kpi .kpi-text{grid-column:1;grid-row:1;display:flex;flex-direction:column;align-items:flex-start;justify-content:center;gap:4px;min-width:0}
 .workspace #attendance-register-panel  .live-kpi small{font-size:12px;font-weight:600;color:#4e607d;line-height:1.15;white-space:nowrap}
 .workspace #attendance-register-panel  .live-kpi strong{font-size:27px;font-weight:700;line-height:1;color:#1b2e4e;letter-spacing:-.025em;font-variant-numeric:tabular-nums;text-shadow:none;transition:color .3s cubic-bezier(.4,0,.2,1)}
-/* The selected card remains neutral: only the icon and count carry status color. */
+/* Selected-card color is a separate fading glass layer with broad curved bands.
+   Unselected cards preserve their original neutral glass appearance. */
 .workspace #attendance-register-panel .live-kpi::before{
   content:"";position:absolute;inset:0;border-radius:inherit;z-index:-1;pointer-events:none;
-  background:#ffffff1c;opacity:0;transition:opacity .30s cubic-bezier(.4,0,.2,1);
+  background:
+    radial-gradient(ellipse 81% 178% at 94% -20%,#ffffff20 0 55%,#ffffff00 56%),
+    radial-gradient(ellipse 105% 215% at 95% -27%,#ffffff14 0 58%,#ffffff00 59%),
+    linear-gradient(120deg,var(--card-start) 0%,var(--card-end) 100%);
+  opacity:0;transform:scale(1.035);transition:opacity .52s cubic-bezier(.4,0,.2,1),transform .68s cubic-bezier(.22,1,.36,1);
+}
+.workspace #attendance-register-panel .live-kpi::after{
+  content:"";position:absolute;inset:0;border-radius:inherit;z-index:-2;pointer-events:none;
+  background:#ffffff1c;opacity:0;transition:opacity .30s ease;
 }
 .workspace #attendance-register-panel .live-kpi[aria-pressed=true]{z-index:3;transform:scale(1.12)}
-.workspace #attendance-register-panel .live-kpi:is([aria-pressed=true],:hover,:focus-visible)::before{opacity:1}
+.workspace #attendance-register-panel .live-kpi[aria-pressed=true]::before{opacity:1;transform:scale(1)}
+.workspace #attendance-register-panel .live-kpi:not([aria-pressed=true]):is(:hover,:focus-visible)::after{opacity:1}
 .workspace #attendance-register-panel .live-kpi:is([aria-pressed=true],:hover,:focus-visible) .kpi-icon{
   color:var(--status-color)
 }
@@ -838,11 +848,19 @@
 .workspace #attendance-register-panel .live-kpi:is([aria-pressed=true],:hover,:focus-visible) strong{color:var(--count-bright);text-shadow:none}
 .workspace #attendance-register-panel .live-kpi:not([aria-pressed=true]):is(:hover,:focus-visible){z-index:2;transform:scale(1.06)}
 .workspace #attendance-register-panel .live-kpi:focus-visible{outline:2px solid #315a96;outline-offset:-3px}
-.workspace #attendance-register-panel .live-kpi.kpi-in{--status-color:#367e67;--count-bright:#16805c}
-.workspace #attendance-register-panel .live-kpi.kpi-out{--status-color:#426da9;--count-bright:#246bb6}
-.workspace #attendance-register-panel .live-kpi.kpi-missing{--status-color:#ac4962;--count-bright:#c02e55}
-.workspace #attendance-register-panel .live-kpi.kpi-aja{--status-color:#956e20;--count-bright:#a36a0c}
-.workspace #attendance-register-panel .live-kpi.kpi-travel{--status-color:#625b99;--count-bright:#7050b9}
+.workspace #attendance-register-panel .live-kpi.kpi-in{--status-color:#367e67;--count-bright:#16805c;--card-start:#185d49;--card-end:#267e72}
+.workspace #attendance-register-panel .live-kpi.kpi-out{--status-color:#426da9;--count-bright:#246bb6;--card-start:#254b91;--card-end:#306da1}
+.workspace #attendance-register-panel .live-kpi.kpi-missing{--status-color:#ac4962;--count-bright:#c02e55;--card-start:#923252;--card-end:#b64b60}
+.workspace #attendance-register-panel .live-kpi.kpi-aja{--status-color:#956e20;--count-bright:#a36a0c;--card-start:#805518;--card-end:#9b6b29}
+.workspace #attendance-register-panel .live-kpi.kpi-travel{--status-color:#625b99;--count-bright:#7050b9;--card-start:#51418c;--card-end:#7861aa}
+.workspace #attendance-register-panel .live-kpi small{transition:color .36s ease}
+.workspace #attendance-register-panel .live-kpi .kpi-icon{transition:color .36s ease,background-color .42s ease,box-shadow .42s ease}
+.workspace #attendance-register-panel .live-kpi[aria-pressed=true] small,
+.workspace #attendance-register-panel .live-kpi[aria-pressed=true] strong{color:#fff;text-shadow:0 1px 2px #162e4b22}
+.workspace #attendance-register-panel .live-kpi[aria-pressed=true] .kpi-icon{color:#fff;background-color:#ffffff24;box-shadow:none}
+.workspace #attendance-register-panel .live-kpi[aria-pressed=true] .kpi-icon::before{opacity:.18}
+.workspace #attendance-register-panel .live-kpi[aria-pressed=true] .kpi-icon svg{filter:none}
+@media(prefers-reduced-motion:reduce){.workspace #attendance-register-panel .live-kpi::after{transition:none}.workspace #attendance-register-panel .live-kpi::before{transform:none}}
 @media(prefers-reduced-motion:reduce){.workspace #attendance-register-panel .live-kpi,.workspace #attendance-register-panel .live-kpi::before,.workspace #attendance-register-panel .live-kpi *,.workspace #attendance-register-panel .live-kpi .kpi-icon::before{transition:none}.workspace #attendance-register-panel .live-kpi:is([aria-pressed=true],:hover,:focus-visible){transform:none}}
 .workspace #attendance-register-panel .attendance-directory{min-width:850px}
 .workspace #attendance-register-panel .directory-name{width:29%}
