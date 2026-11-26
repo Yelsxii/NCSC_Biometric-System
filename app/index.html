@@ -8,7 +8,7 @@
   <link rel="stylesheet" href="/static/app.css">
   <link rel="stylesheet" href="/static/workspace.css?v=attendance-71">
   <link rel="stylesheet" href="/static/attendance-detail.css?v=auto-dtr-23">
-  <link rel="stylesheet" href="/static/dtr-preview.css?v=8">
+  <link rel="stylesheet" href="/static/dtr-preview.css?v=9">
   <script src="/static/dtr-preview.js?v=7" defer></script>
   <script src="/static/app.js?v=auto-dtr-27" defer></script>
 </head>
@@ -242,7 +242,22 @@
   <dialog id="dtr-preview-dialog" aria-labelledby="dtr-preview-heading">
     <div class="export-preview-toolbar">
       <div class="preview-identity"><h2 id="dtr-preview-heading" tabindex="-1" autofocus>DTR Preview</h2><div class="preview-employee"><strong id="dtr-preview-name"></strong><span class="preview-month"><svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="5" width="18" height="16" rx="3"/><path d="M8 3v4m8-4v4M3 10h18"/></svg><span id="dtr-preview-context"></span></span></div></div>
-      <div class="preview-controls">
+      <button type="button" id="dtr-preview-back" class="preview-close" title="Close preview" aria-label="Close DTR preview"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg></button>
+    </div>
+    <div class="dtr-workspace">
+      <div class="dtr-document-area">
+        <div class="export-preview-note" id="dtr-preview-note" role="status" hidden></div>
+        <div class="export-preview-stage"><div id="dtr-paper-canvas" hidden><iframe id="dtr-preview-frame" title="Printable daily time record" scrolling="no" hidden></iframe></div></div>
+        <div class="preview-zoom-bar" id="dtr-zoom-controls" role="group" aria-label="Paper preview zoom" hidden>
+          <button type="button" id="dtr-zoom-out" title="Zoom out" aria-label="Zoom out"><svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" aria-hidden="true"><path d="M5 12h14"/></svg></button>
+          <output id="dtr-zoom-value" aria-live="polite">100%</output>
+          <button type="button" id="dtr-zoom-in" title="Zoom in" aria-label="Zoom in"><svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" aria-hidden="true"><path d="M5 12h14M12 5v14"/></svg></button>
+          <span class="zoom-divider" aria-hidden="true"></span>
+          <button type="button" id="dtr-zoom-fit" title="Fit page to preview" aria-label="Fit page to preview" aria-pressed="true"><svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M8 4H4v4m12-4h4v4M4 16v4h4m12-4v4h-4"/><rect x="9" y="7" width="6" height="10" rx="1"/></svg><span>Fit Page</span></button>
+        </div>
+      </div>
+      <aside class="preview-controls" aria-labelledby="dtr-settings-heading">
+        <h3 id="dtr-settings-heading">Document settings</h3>
         <div class="preview-fields">
         <label>Template<select id="dtr-preview-template"><option value="">Select Category</option><option value="Permanent">Permanent</option><option value="COS">COS</option><option value="OJT">OJT</option><option value="GIP">GIP</option></select></label>
         <label id="dtr-preview-period-control" hidden>Period<select id="dtr-preview-period"><option value="first">1–15</option><option value="second">16–End</option><option value="month">Full Month</option></select></label>
@@ -250,22 +265,10 @@
         </div>
         <div class="preview-actions">
         <button type="button" id="dtr-preview-print" class="button primary" disabled><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 9V3h12v6M6 17H4a2 2 0 0 1-2-2v-4a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v4a2 2 0 0 1-2 2h-2M6 14h12v7H6z"/></svg>Print</button>
-        <button type="button" id="dtr-preview-download" class="preview-download" title="Download PDF" aria-label="Download DTR as PDF" disabled><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3v12m-4-4 4 4 4-4M5 16v4h14v-4"/></svg></button>
+        <button type="button" id="dtr-preview-download" class="preview-download" title="Download PDF" aria-label="Download DTR as PDF" disabled><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3v12m-4-4 4 4 4-4M5 16v4h14v-4"/></svg>Download PDF</button>
         </div>
-      </div>
-      <div class="preview-close-slot">
-      <button type="button" id="dtr-preview-back" class="preview-close" title="Close preview" aria-label="Close DTR preview"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg></button>
-      </div>
+      </aside>
     </div>
-    <div class="export-preview-note" id="dtr-preview-note" role="status" hidden></div>
-    <div class="preview-zoom-bar" id="dtr-zoom-controls" role="group" aria-label="Paper preview zoom" hidden>
-      <button type="button" id="dtr-zoom-out" title="Zoom out" aria-label="Zoom out"><svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" aria-hidden="true"><path d="M5 12h14"/></svg></button>
-      <output id="dtr-zoom-value" aria-live="polite">100%</output>
-      <button type="button" id="dtr-zoom-in" title="Zoom in" aria-label="Zoom in"><svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" aria-hidden="true"><path d="M5 12h14M12 5v14"/></svg></button>
-      <span class="zoom-divider" aria-hidden="true"></span>
-      <button type="button" id="dtr-zoom-fit" title="Fit page to preview" aria-label="Fit page to preview" aria-pressed="true"><svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M8 4H4v4m12-4h4v4M4 16v4h4m12-4v4h-4"/><rect x="9" y="7" width="6" height="10" rx="1"/></svg><span>Fit Page</span></button>
-    </div>
-    <div class="export-preview-stage"><div id="dtr-paper-canvas" hidden><iframe id="dtr-preview-frame" title="Printable daily time record" scrolling="no" hidden></iframe></div></div>
   </dialog>
 
   <dialog id="calendar-dialog" class="app-dialog edit-dialog" aria-labelledby="calendar-heading">
