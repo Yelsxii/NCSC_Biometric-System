@@ -447,7 +447,7 @@ function attendanceTimeCells(day){
 function manilaClock(){return new Intl.DateTimeFormat('sv-SE',{timeZone:'Asia/Manila',year:'numeric',month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit',second:'2-digit',hourCycle:'h23'}).format(new Date());}
 function embeddedAja(day,key){
   // Use the IN cell as the period's AJA coverage marker. Keep regular OUT
-  // clocks normal, except an AM OUT that coincides with an AJA departure.
+  // clocks normal, except an AM OUT at departure or covered by a cross-noon AJA.
   if(day.travel_order||day.leave_status||day.is_future)return [];
   const slots=day.display_slots||{},clock=slots[key]?.happened_at?.slice(11,19);
   if(!clock)return [];
@@ -460,7 +460,7 @@ function embeddedAja(day,key){
     const overlap=start&&end&&start<end&&a<end&&start<b;
     const endpoint=(a<=clock&&clock<=b)||clock.slice(0,5)===a.slice(0,5)||clock.slice(0,5)===b.slice(0,5);
     if(key==='pm_out')return false;
-    if(key==='am_out')return clock.slice(0,5)===a.slice(0,5);
+    if(key==='am_out')return clock.slice(0,5)===a.slice(0,5)||(a<'12:00:00'&&b>'12:00:00'&&a<=clock&&clock<=b);
     return overlap||endpoint;
   });
 }
