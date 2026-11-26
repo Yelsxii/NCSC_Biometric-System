@@ -64,7 +64,7 @@ function dtrPrintRows(data,category,from=1,to=dtrLastDay(data.month)){
       '<td class="print-undertime" rowspan="'+span+'">'+(!showUndertime?'':Math.floor(ut/3600))+'</td><td class="print-undertime" rowspan="'+span+'">'+(!showUndertime?'':Math.floor(ut%3600/60))+'</td>';
     const coverage=coveredPM(day)?day.aja_periods[0]:null;
     const regularCells=coverage
-      ? '<td>'+dtrClock(slots.am_in,!gip)+'</td><td>'+dtrClock(slots.am_out,!gip)+'</td><td class="print-aja-coverage">AJA<br>'+dtrAjaClock(coverage.out)+'-'+dtrAjaClock(coverage.in)+'</td><td></td>'
+      ? '<td>'+dtrClock(slots.am_in,!gip)+'</td><td>'+dtrClock(slots.am_out,!gip)+'</td><td colspan="2" class="print-aja-coverage">AJA '+dtrAjaClock(coverage.out)+'-'+dtrAjaClock(coverage.in)+'</td>'
       : ['am_in','am_out','pm_in','pm_out'].map(k=>'<td>'+dtrClock(slots[k],!gip)+'</td>').join('');
     return '<tr'+(offday?' class="print-offday"':'')+'><td rowspan="'+span+'">'+n+'</td>'+
       (special?'<td colspan="4" class="special-day">'+esc(special)+'</td>':regularCells)+
