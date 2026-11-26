@@ -6,7 +6,7 @@
   <meta name="theme-color" content="#142650">
   <title>NCSC | Attendance Records</title>
   <link rel="stylesheet" href="/static/app.css">
-  <link rel="stylesheet" href="/static/workspace.css?v=employees-96">
+  <link rel="stylesheet" href="/static/workspace.css?v=employees-97">
   <link rel="stylesheet" href="/static/attendance-detail.css?v=auto-dtr-39">
   <link rel="stylesheet" href="/static/dtr-preview.css?v=23">
   <script src="/static/dtr-preview.js?v=22" defer></script>
@@ -96,7 +96,7 @@
             <form id="employee-filter" class="toolbar" role="search" aria-label="Employee attendance filters">
               <div class="search-box"><label for="employee-search">Search employees</label><div class="employee-search-field"><svg class="search-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><circle cx="10.5" cy="10.5" r="6.5"/><path d="m16 16 4 4"/></svg><input id="employee-search" type="search" placeholder="Search by employee name" autocomplete="off" maxlength="80"><button id="clear-employee-search" type="button" aria-label="Clear search" title="Clear search" hidden><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><path d="m7 7 10 10M17 7 7 17"/></svg></button></div></div>
               <div class="register-month-control"><label id="register-month-label" for="register-month-trigger">Reporting month</label><input id="register-month" type="month" hidden tabindex="-1" aria-hidden="true"><button type="button" class="month-trigger" id="register-month-trigger" data-month-target="register-month" aria-haspopup="dialog" aria-controls="attendance-month-picker" aria-expanded="false"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="5" width="18" height="16" rx="3"/><path d="M8 3v4m8-4v4M3 10h18"/></svg><span class="month-trigger-value">Select month</span><svg class="month-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><path d="m7 10 5 5 5-5"/></svg></button></div>
-              <button id="open-attendance-import" class="button outline import-button" type="button" aria-haspopup="dialog">
+              <button id="open-attendance-import" class="button outline import-button record-create-action" type="button" aria-haspopup="dialog">
                 <svg class="inline-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 16V3M7 8l5-5 5 5"/><path d="M4 16v3a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-3"/></svg>
                 Import attendance
               </button>
@@ -131,7 +131,7 @@
 
         <section class="page hidden" data-view="profiles">
           <div class="panel list-panel" id="employee-profile-panel">
-            <div class="panel-header"><h2>Employee directory</h2><button class="button primary" id="open-profile" type="button" aria-haspopup="dialog"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.65" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="9" cy="7" r="4"/><path d="M2 21v-2a6 6 0 0 1 6-6h2a6 6 0 0 1 6 6v2m3-11v6m-3-3h6"/></svg>Register employee</button></div>
+            <div class="panel-header"><h2>Employee directory</h2><button class="button primary record-create-action" id="open-profile" type="button" aria-haspopup="dialog"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.65" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="9" cy="7" r="4"/><path d="M2 21v-2a6 6 0 0 1 6-6h2a6 6 0 0 1 6 6v2m3-11v6m-3-3h6"/></svg>Register employee</button></div>
             
             <form class="toolbar profile-toolbar" id="profile-filter" role="search" aria-label="Employee filters">
               <div class="search-box"><label for="profile-search">Search employees</label><div class="employee-search-field"><svg class="search-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.65" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="10.5" cy="10.5" r="6.5"/><path d="m16 16 4 4"/></svg><input id="profile-search" type="search" maxlength="80" autocomplete="off" placeholder="Search name, ID or department"></div></div>
@@ -166,7 +166,7 @@
         <section class="page hidden" data-view="staff">
           <div class="panel records-panel">
             <div class="panel-header"><h2>Device user synchronization</h2>
-              <button type="button" class="button outline import-button" id="open-user-import" aria-haspopup="dialog">
+              <button type="button" class="button outline import-button record-create-action" id="open-user-import" aria-haspopup="dialog">
                 <svg class="inline-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 16V3M7 8l5-5 5 5"/><path d="M4 16v3a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-3"/></svg>
                 Import device users
               </button>
