@@ -154,6 +154,8 @@ def resolve_day(day, manual):
     day['manual_source'] = {'name':manual['name'],'sheet':manual['sheet'],'row':manual['row'],'times':sheet_times,
         'notes':source['notes'],'aja':aja_evidence} if manual else None
     day['display_unassigned_count'] = unplaced
+    day['display_unassigned_ids'] = sorted(unplaced_ids)
+    day['display_superseded_ids'] = sorted(superseded_ids)
     if aja_evidence:
         day['display_activities'].append({'category':'AJA','reference':aja_evidence['purpose']})
     if source:
