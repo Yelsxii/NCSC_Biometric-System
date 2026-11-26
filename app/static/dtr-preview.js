@@ -60,8 +60,11 @@ function dtrPrintRows(data,category,from=1,to=dtrLastDay(data.month)){
     const total=day.monitoring?.total_seconds;
     const metricCells=gip?'<td rowspan="'+span+'">'+(total==null||(!hasEntries&&!periods.length)?'':esc(durationText(total).slice(0,-3)))+'</td>':
       '<td class="print-undertime" rowspan="'+span+'">'+(!showUndertime?'':Math.floor(ut/3600))+'</td><td class="print-undertime" rowspan="'+span+'">'+(!showUndertime?'':Math.floor(ut%3600/60))+'</td>';
+    const regularCells=day.aja_covered_slots?.includes('pm_in')&&day.aja_covered_slots?.includes('pm_out')
+      ? ['am_in','am_out'].map(k=>'<td>'+dtrClock(slots[k],!gip)+'</td>').join('')+'<td colspan="2" class="special-day">AJA</td>'
+      : ['am_in','am_out','pm_in','pm_out'].map(k=>'<td>'+dtrClock(slots[k],!gip)+'</td>').join('');
     return '<tr'+(offday?' class="print-offday"':'')+'><td rowspan="'+span+'">'+n+'</td>'+
-      (special?'<td colspan="4" class="special-day">'+esc(special)+'</td>':['am_in','am_out','pm_in','pm_out'].map(k=>'<td>'+dtrClock(slots[k],!gip)+'</td>').join(''))+
+      (special?'<td colspan="4" class="special-day">'+esc(special)+'</td>':regularCells)+
       metricCells+reportCell(n,span)+'</tr>'+periods.map(p=>'<tr class="print-aja"><td colspan="2">AJA OUT '+dtrAjaClock(p.out)+'</td><td colspan="2">AJA '+(p.in?.origin==='biometric'?'IN':'END')+' '+dtrAjaClock(p.in)+'</td></tr>').join('');
   }).join('');
 }
