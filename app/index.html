@@ -10,7 +10,7 @@
   <link rel="stylesheet" href="/static/attendance-detail.css?v=auto-dtr-38">
   <link rel="stylesheet" href="/static/dtr-preview.css?v=19">
   <script src="/static/dtr-preview.js?v=13" defer></script>
-  <script src="/static/app.js?v=auto-dtr-43" defer></script>
+  <script src="/static/app.js?v=auto-dtr-44" defer></script>
 </head>
 <body>
   <main id="login-view" class="auth-shell" aria-labelledby="login-heading">
@@ -119,7 +119,7 @@
                 </div>
               </div>
               <div class="sheet-toolbar">
-                <div class="attendance-legend" aria-label="Attendance colors"><span class="legend-missing">No entry / incomplete</span><span class="legend-entry">Entry</span><span class="legend-holiday">Holiday</span><span class="legend-aja" title="Regular attendance period includes documented AJA, or missing entries are covered by AJA">AJA coverage</span><span class="legend-travel">Travel Order</span><span class="legend-leave">Leave</span></div>
+                <div class="attendance-legend" aria-label="Attendance colors"><span class="legend-missing">No entry / incomplete</span><span class="legend-entry">Entry</span><span class="legend-holiday">Holiday</span><span class="legend-aja" title="IN marks the period with documented AJA; regular OUT remains unchanged except a documented AM departure or missing slots covered by AJA">AJA coverage</span><span class="legend-travel">Travel Order</span><span class="legend-leave">Leave</span></div>
               </div>
               <div class="table-wrap" id="daily-table-wrap"><table class="records-table dtr-grid" aria-label="Monthly employee attendance">
                 <colgroup><col class="dtr-col-date"><col class="dtr-col-clock"><col class="dtr-col-clock"><col class="dtr-col-clock"><col class="dtr-col-clock"><col class="dtr-col-total"><col class="dtr-col-ut"><col class="dtr-col-ut"><col class="dtr-col-ot"><col class="dtr-col-aja"><col class="dtr-col-aja"><col class="dtr-col-remarks"><col class="dtr-col-action"></colgroup><thead><tr><th rowspan="2" scope="col">Date</th><th colspan="2" scope="colgroup">A.M.</th><th colspan="2" scope="colgroup">P.M.</th><th rowspan="2" scope="col" class="daily-total" title="Hours:minutes:seconds">Total hours</th><th colspan="2" scope="colgroup">Undertime</th><th rowspan="2" scope="col" class="overtime-total" title="Hours:minutes:seconds">Overtime earned</th><th colspan="2" scope="colgroup" class="aja-column">AJA</th><th rowspan="2" scope="col">Remarks</th><th rowspan="2" scope="col" class="actions-column">Action</th></tr><tr><th scope="col">Time in</th><th scope="col">Time out</th><th scope="col">Time in</th><th scope="col">Time out</th><th scope="col">Hours</th><th scope="col">Minutes</th><th scope="col">Out</th><th scope="col">In / End</th></tr></thead>
