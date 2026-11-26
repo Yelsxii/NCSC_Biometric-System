@@ -476,8 +476,17 @@
 .workspace .attendance-sheet .dtr-date strong{color:#304b72;font-weight:650}
 .workspace .attendance-sheet .dtr-date span{color:#657c9b;font-size:9px;font-weight:550}
 .workspace .attendance-sheet .daily-total-value{color:#304e77;font-weight:650}
-.workspace .attendance-sheet .overtime-value{color:#3b6193;font-weight:600}
-.workspace .attendance-sheet .undertime-value{color:#80556b;font-weight:550}
+/* Make earned and missing time distinct without adding containers. */
+.workspace .attendance-sheet :is(.overtime-value,.undertime-value){
+  font-size:11.5px;font-weight:650;font-variant-numeric:tabular-nums;
+  transition:color .22s ease,text-shadow .22s ease;
+}
+.workspace .attendance-sheet .overtime-value.duration-positive{color:#087449;font-weight:700}
+.workspace .attendance-sheet .undertime-value.duration-positive{color:#d32640;font-weight:700}
+.workspace .attendance-sheet :is(.overtime-value,.undertime-value).duration-muted{color:#788ba6;font-weight:500}
+.workspace .attendance-sheet .dtr-grid tbody tr:is(:hover,:focus-within) .overtime-value.duration-positive{color:#00663d;text-shadow:0 0 5px #00864a24}
+.workspace .attendance-sheet .dtr-grid tbody tr:is(:hover,:focus-within) .undertime-value.duration-positive{color:#c01c36;text-shadow:0 0 5px #e22d4824}
+@media(prefers-reduced-motion:reduce){.workspace .attendance-sheet :is(.overtime-value,.undertime-value){transition:none}}
 @media(max-width:740px){
   .workspace .attendance-sheet .sheet-identity{gap:6px}
   .workspace .topbar-heading .back-button{width:28px;min-width:28px;height:28px;min-height:28px;flex-basis:28px}
