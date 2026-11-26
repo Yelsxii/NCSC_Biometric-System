@@ -734,7 +734,28 @@ with connect() as con:
     const originalMonth=await page.locator('#detail-month').inputValue();
     await page.locator('#dtr-form-preview').click();
     await page.locator('#dtr-preview-dialog[open]').waitFor();
-    await page.locator('#dtr-preview-template').selectOption('COS');
+    assert.equal(await page.locator('#dtr-preview-template').count(),0,'The category must not be selectable');
+    const actualCategory=await page.evaluate(()=>assignedDtrCategory(activeDtr));
+    assert.equal(await page.locator('#dtr-preview-category').textContent(),actualCategory||'Not Set');
+    if(!actualCategory){
+      assert.ok(await page.locator('#dtr-preview-print').isDisabled());
+      assert.ok(await page.locator('#dtr-preview-download').isDisabled());
+      assert.ok(await page.locator('#dtr-preview-note').isVisible());
+    }
+    await page.locator('#dtr-preview-back').click();
+    await page.locator('#dtr-preview-dialog').waitFor({state:'hidden'});
+    // Use synthetic category assignments in this browser test only; no HR records are changed.
+    const openAssignedCategory=async category=>{
+      await page.evaluate(category=>{
+        const original=activeDtr;
+        try{activeDtr={...original,employment_type:category};openDtrFormPreview();}
+        finally{activeDtr=original;}
+      },category);
+      await page.locator('#dtr-preview-dialog[open]').waitFor();
+      assert.equal(await page.locator('#dtr-preview-category').textContent(),category);
+      assert.equal(await page.locator('#dtr-preview-category').getAttribute('data-category'),category);
+    };
+    await openAssignedCategory('COS');
     await page.locator('#dtr-preview-print:not(:disabled)').waitFor();
     const printable=page.frameLocator('#dtr-preview-frame');
     assert.equal(await printable.locator('.civil-copy').count(),2);
@@ -818,9 +839,13 @@ with connect() as con:
       return form.top>paper.top+8 && Math.abs((form.top-paper.top)-(paper.bottom-form.bottom))<3;
     }),'Form is vertically centered inside the narrow page margins');
     assert.equal(await printable.locator('.signatory-role').first().textContent(),'REGIONAL DIRECTOR');
-    await page.locator('#dtr-preview-template').selectOption('OJT');
+    await page.locator('#dtr-preview-back').click();
+    await page.locator('#dtr-preview-dialog').waitFor({state:'hidden'});
+    await openAssignedCategory('OJT');
     await printable.locator('.signatory-role').first().filter({hasText:'INTERNSHIP SUPERVISOR'}).waitFor();
-    await page.locator('#dtr-preview-template').selectOption('GIP');
+    await page.locator('#dtr-preview-back').click();
+    await page.locator('#dtr-preview-dialog').waitFor({state:'hidden'});
+    await openAssignedCategory('GIP');
     await printable.locator('.gip-form').waitFor();
     await page.locator('#dtr-preview-print:not(:disabled)').waitFor();
     assert.equal(await printable.locator('.civil-copy').count(),0);
