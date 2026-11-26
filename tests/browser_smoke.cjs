@@ -927,9 +927,9 @@ with connect() as con:
     assert.equal(await page.locator('[data-clock-minute], .clock-picker-quick').count(),0);
     await page.locator('#clock-picker-apply').click();
     assert.equal(await page.locator('#clock-am-in').inputValue(),'07:31:07');
-    assert.equal(await page.locator('#review-reason-field').isVisible(),true);
+    assert.equal(await page.locator('#review-reason-field').count(),0,'Time corrections do not require a reason field');
     await page.locator('#clock-am-in').fill('07:30:07');
-    assert.equal(await page.locator('#review-reason-field').isVisible(),false);
+    assert.equal(await page.locator('#review-reason-field').count(),0);
     assert.equal(await page.locator('#review-ut-hours').inputValue(),'');
     assert.equal(await page.locator('#review-ut-minutes').inputValue(),'');
     assert.ok(await page.locator('#review-ut-hours').isDisabled());
@@ -1005,6 +1005,17 @@ with connect() as con:
     assert.deepEqual(await page.evaluate(()=>[durationText(28815),durationText(65),durationText(0),durationText(null),durationText(90061)]),['08:00:15','00:01:05','00:00:00','—','25:01:01']);
     assert.equal((await page.locator('#dtr-form-preview').innerText()).trim(),'Export DTR');
     assert.equal(await page.locator('[data-date="2026-11-10"] .monitor-remark').textContent(),'Undertime');
+    const corrected=page.locator('[data-date="2026-11-10"]');
+    await corrected.locator('[data-edit-day]').click();
+    await page.locator('#day-review-dialog[open]').waitFor();
+    await page.locator('#clock-pm-out').fill('17:30:00');
+    assert.equal(await page.locator('#review-reason-field').count(),0);
+    await page.locator('#save-day-review').click();
+    await page.locator('#day-review-dialog').waitFor({state:'hidden'});
+    await corrected.locator('.remark-complete').waitFor();
+    assert.deepEqual(await corrected.locator('.undertime-value.duration-muted').allTextContents(),['0','00']);
+    assert.equal(await corrected.locator('.daily-total-value').textContent(),'08:00:00');
+    assert.equal(await corrected.locator('.monitor-remark').textContent(),'Complete');
     const headerAlignment=await page.evaluate(()=>{
       const name=document.querySelector('#detail-name').getBoundingClientRect();
       const month=document.querySelector('#detail-month-trigger').getBoundingClientRect();
