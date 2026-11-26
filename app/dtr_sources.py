@@ -185,10 +185,6 @@ def resolve_day(day, manual):
     source_ut = source['reported_ut'] if comparable else None
     overtime = source['reported_ot'] if comparable else None
     recalculated = False
-    adjusted = bool(complete and all(display.values()) and not conflicts and
-                    any(display[k]['origin']=='hr_approved' for k in KEYS))
-    reconciled = bool(complete and all(display.values()) and source and not conflicts and
-                      (plan or differences or any(display[k]['origin']=='reviewed' for k in KEYS)))
     calculable = bool(complete and all(display.values()) and not conflicts and not offday)
     if calculable:
         clocks = {key: dt.time.fromisoformat(sheet_times[key] if comparable else display[key]['happened_at'][11:19]) for key in KEYS}
@@ -342,7 +338,7 @@ def present_day(day):
             deficit = max(0,8*3600-seconds)
             metrics.update(total_seconds=seconds, undertime_seconds=deficit,
                            overtime_seconds=None, metrics_origin="documented_partial",
-                           undertime_origin="documented_partial", remarks="Undertime" if deficit else "Undertime for review")
+                           undertime_origin="documented_partial", remarks="Undertime (provisional)" if deficit else "Undertime for review")
             status=metrics["remarks"]
         else:
             status="Undertime for review"
@@ -405,5 +401,5 @@ def present_day(day):
         if text == "DTR note for review":
             issues.append(text)
     day["remark_issues"] = issues
-    day["missing_entries"] = missing if has_entries and not day["travel_order"] and status in ("Incomplete entries","Undertime","Undertime for review") and text!="In progress" else []
+    day["missing_entries"] = missing if has_entries and not day["travel_order"] and status in ("Incomplete entries","Undertime","Undertime (provisional)","Undertime for review") and text!="In progress" else []
     day["display_remark"] = text
