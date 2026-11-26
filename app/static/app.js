@@ -178,7 +178,23 @@ function displayTitle(value){
 }
 function categoryBadge(value){
   const kind={COS:'cos',Permanent:'permanent',GIP:'gip',OJT:'ojt'}[value];
-  return '<span class="tag tag-'+(kind||'neutral')+'">'+esc(value||'Not Set')+'</span>';
+  return '<span class="tag employment-chip tag-'+(kind||'neutral')+'">'+esc(value||'Not Set')+'</span>';
+}
+function departmentParts(value){
+  const raw=String(value||'').trim();
+  const official={OPS:'Operations Division',AFS:'Administrative and Finance Section',ORD:'Office of the Regional Director'};
+  const suffix=raw.match(/\s*\((OPS|AFS|ORD)\)\s*$/i);
+  const key=(suffix?.[1]||raw).toUpperCase();
+  const code=Object.keys(official).find(k=>k===key||official[k].toLowerCase()===raw.toLowerCase());
+  return code?{name:official[code],code}:{name:raw?displayTitle(raw):'—',code:''};
+}
+function departmentLabel(value){
+  const {name,code}=departmentParts(value);
+  return name+(code?' ('+code+')':'');
+}
+function departmentCell(value){
+  const {name,code}=departmentParts(value);
+  return '<span class="department-display"><span class="department-name">'+esc(name)+'</span>'+(code?'<span class="department-code">'+esc(code)+'</span>':'')+'</span>';
 }
 function employeeCell(row){
   const name=row.display_name||'Name not synchronized';
@@ -236,7 +252,7 @@ function renderRegister(){
       '<tr>'+
       '<td class="employee-name-cell">'+registerNameCell(row)+'</td>'+
       '<td>'+categoryBadge(row.employment_type)+'</td>'+
-      '<td>'+esc(displayTitle(row.department||'—'))+'</td>'+
+      '<td>'+departmentCell(row.department)+'</td>'+
       '<td><span class="live-status live-'+esc(row.live?.status||'review')+'" title="'+esc(row.live?.reason||'Status unavailable')+'">'+esc(displayTitle(row.live?.label||'For review'))+'</span></td>'+
       '<td class="live-last-update">'+esc(liveTime(row.live?.at))+'</td>'+
       '<td class="directory-action-cell"><button type="button" class="button primary row-action" data-employee="'+esc(row.employee_code)+'" aria-label="View attendance: '+esc(row.display_name||row.employee_code)+'"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M2 12s4-7 10-7 10 7 10 7-4 7-10 7S2 12 2 12Z"/><circle cx="12" cy="12" r="3"/></svg>View attendance</button></td>'+
@@ -251,7 +267,7 @@ async function openEmployee(code){
   selectedName=row?.display_name||'Name not synchronized';
   selectedDepartment=row?.department||'';
   $('detail-name').textContent=selectedName;
-  $('detail-department').textContent=displayTitle(selectedDepartment||'—');
+  $('detail-department').textContent=departmentLabel(selectedDepartment);
   $('detail-category').innerHTML=categoryBadge(row?.employment_type);
   setAttendanceMonth('detail-month',$('register-month').value);
   $('employee-detail').classList.remove('hidden');
@@ -286,7 +302,7 @@ async function loadProfiles(){
     $('profile-page').textContent='Page '+profilePage+' of '+pages;
     $('profile-prev').disabled=profilePage===1;$('profile-next').disabled=profilePage===pages;
     $('profile-rows').innerHTML=data.items.length?data.items.map(row=>
-      '<tr><td class="id-cell">'+esc(row.employee_code)+'</td><td>'+employeeCell(row)+'</td><td>'+categoryBadge(row.employment_type)+'</td><td>'+esc(displayTitle(row.department||'—'))+'</td>'+
+      '<tr><td class="id-cell">'+esc(row.employee_code)+'</td><td>'+employeeCell(row)+'</td><td>'+categoryBadge(row.employment_type)+'</td><td>'+departmentCell(row.department)+'</td>'+
       '<td><span class="tag '+(row.sync_authorized?'tag-success':'tag-paused')+'"><span class="tag-dot"></span>'+(row.sync_authorized?'Enabled':'Paused')+'</span></td>'+
       '<td><span class="tag '+(row.profile_complete?'tag-neutral':'tag-paused')+'">'+(row.profile_complete?'Registered':'Needs details')+'</span></td>'+
       '<td>'+(session.role==='admin'?'<button type="button" class="text-link" data-edit-profile="'+esc(row.employee_code)+'">'+(row.profile_complete?'Edit profile':'Complete profile')+'</button>':'—')+'</td></tr>'
@@ -449,7 +465,7 @@ async function loadDetail({quiet=false}={}){
     selectedName=data.display_name||'Name not synchronized';
     setTextIfChanged($('detail-name'),selectedName);
     setAttrIfChanged($('detail-name'),'title',data.name_source==='device'?'Name synchronized from K14 device; HR profile is separate':'Employee attendance');
-    setTextIfChanged($('detail-department'),displayTitle(data.department||'—'));
+    setTextIfChanged($('detail-department'),departmentLabel(data.department));
     setHtmlIfChanged($('detail-category'),categoryBadge(data.employment_type));
     const scroll=$('daily-table-wrap').scrollTop;
     const changed=setHtmlIfChanged($('daily-rows'),data.days.map(day=>{
