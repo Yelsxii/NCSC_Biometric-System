@@ -764,7 +764,7 @@
 .workspace #attendance-register-panel .live-kpi{
   --status-color:#527eb9;--count-bright:#2866be;
   position:relative;isolation:isolate;overflow:hidden;display:grid;
-  grid-template-columns:36px minmax(0,1fr);align-items:center;gap:8px;min-width:0;
+  grid-template-columns:minmax(0,1fr) 36px;align-items:center;gap:8px;min-width:0;
   height:66px;min-height:66px;text-align:left;padding:7px 10px 7px 8px;
   border:1px solid transparent;border-radius:11px;color:#243d65;
   background:linear-gradient(145deg,#ffffff76,#f9fcff35 54%,#ffffff26);
@@ -775,7 +775,8 @@
 }
 /* Two nested, borderless glass surfaces: clear outer glass and a softly
    frosted inner pane. Scattered light is confined to the icon tile. */
-.workspace #attendance-register-panel .live-kpi .kpi-icon{
+ .workspace #attendance-register-panel .live-kpi .kpi-icon{
+  grid-column:2;grid-row:1;justify-self:end;
   position:relative;isolation:isolate;overflow:hidden;display:grid;place-items:center;
   width:36px;height:36px;border-radius:10px;border:0;
   /* Contrast comes from transmitted tint, not a white stroke or bevel. */
@@ -820,7 +821,7 @@
     transform:scale(.8928571429)
   }
 }
-.workspace #attendance-register-panel .live-kpi .kpi-text{display:flex;flex-direction:column;align-items:flex-start;justify-content:center;gap:4px;min-width:0}
+ .workspace #attendance-register-panel .live-kpi .kpi-text{grid-column:1;grid-row:1;display:flex;flex-direction:column;align-items:flex-start;justify-content:center;gap:4px;min-width:0}
 .workspace #attendance-register-panel .live-kpi small{font-size:10px;font-weight:600;color:#4e607d;line-height:1.15;white-space:nowrap}
 .workspace #attendance-register-panel .live-kpi strong{font-size:22px;font-weight:700;line-height:1;color:#1b2e4e;letter-spacing:-.025em;font-variant-numeric:tabular-nums;text-shadow:none;transition:color .3s cubic-bezier(.4,0,.2,1)}
 /* The selected card remains neutral: only the icon and count carry status color. */
@@ -864,7 +865,7 @@
 @media(max-width:740px){
 .workspace #attendance-register-panel .live-overview{padding:7px 6px 2px}
 .workspace #attendance-register-panel .live-kpi-strip{grid-template-columns:repeat(6,minmax(116px,1fr));gap:14px}
-.workspace #attendance-register-panel .live-kpi{height:62px;min-height:62px;grid-template-columns:32px minmax(0,1fr);gap:6px;padding:6px 8px 6px 7px}
+.workspace #attendance-register-panel .live-kpi{height:62px;min-height:62px;grid-template-columns:minmax(0,1fr) 32px;gap:6px;padding:6px 8px 6px 7px}
 .workspace #attendance-register-panel .live-kpi strong{font-size:20px}
 .workspace #attendance-register-panel .live-kpi .kpi-icon{width:32px;height:32px;border-radius:9px}
 .workspace #attendance-register-panel .live-kpi .kpi-icon svg{width:22px;height:22px}
@@ -1121,7 +1122,7 @@ dialog.app-dialog[open]::backdrop,#dtr-preview-dialog[open]::backdrop{
     radial-gradient(circle at 79% 37%,var(--liquid-fill) max(0%,calc(var(--ncsc-fill-e) - .35%)),transparent var(--ncsc-fill-e)),
     radial-gradient(circle at 96% 86%,var(--liquid-fill) max(0%,calc(var(--ncsc-fill-f) - .35%)),transparent var(--ncsc-fill-f));background-repeat:no-repeat;opacity:0;transition:--ncsc-fill-a 0s linear .42s,--ncsc-fill-b 0s linear .42s,--ncsc-fill-c 0s linear .42s,--ncsc-fill-d 0s linear .42s,--ncsc-fill-e 0s linear .42s,--ncsc-fill-f 0s linear .42s,opacity .4s ease-out}
 .workspace :is(#attendance-register-panel,#employee-profile-panel,[data-view=staff]) .button.record-create-action:is(#open-attendance-import,#open-profile,#open-user-import):not(:disabled):is(:hover,:focus-visible){background:var(--liquid-base);color:#fff;box-shadow:none;transform:none}
-.workspace :is(#attendance-register-panel,#employee-profile-panel,[data-view=staff]) .button.record-create-action:is(#open-attendance-import,#open-profile,#open-user-import):not(:disabled):is(:hover,:focus-visible)::before{--ncsc-fill-a:56%;--ncsc-fill-b:53%;--ncsc-fill-c:64%;--ncsc-fill-d:105%;--ncsc-fill-e:58%;--ncsc-fill-f:53%;opacity:1;transition:--ncsc-fill-a .94s cubic-bezier(.42,0,.24,1),--ncsc-fill-b .84s cubic-bezier(.42,0,.24,1),--ncsc-fill-c 1.02s cubic-bezier(.42,0,.24,1),--ncsc-fill-d 1.05s cubic-bezier(.42,0,.24,1),--ncsc-fill-e .89s cubic-bezier(.42,0,.24,1),--ncsc-fill-f .96s cubic-bezier(.42,0,.24,1),opacity 0s;transition-delay:.12s,0s,.22s,.28s,.06s,.19s,0s}
+.workspace :is(#attendance-register-panel,#employee-profile-panel,[data-view=staff]) .button.record-create-action:is(#open-attendance-import,#open-profile,#open-user-import):not(:disabled):is(:hover,:focus-visible)::before{--ncsc-fill-a:56%;--ncsc-fill-b:53%;--ncsc-fill-c:64%;--ncsc-fill-d:105%;--ncsc-fill-e:58%;--ncsc-fill-f:53%;opacity:1;transition:--ncsc-fill-a .80s cubic-bezier(.42,0,.24,1),--ncsc-fill-b .72s cubic-bezier(.42,0,.24,1),--ncsc-fill-c .87s cubic-bezier(.42,0,.24,1),--ncsc-fill-d .89s cubic-bezier(.42,0,.24,1),--ncsc-fill-e .76s cubic-bezier(.42,0,.24,1),--ncsc-fill-f .82s cubic-bezier(.42,0,.24,1),opacity 0s;transition-delay:.10s,0s,.19s,.24s,.05s,.16s,0s}
 .workspace :is(#attendance-register-panel,#employee-profile-panel,[data-view=staff]) .button.record-create-action:is(#open-attendance-import,#open-profile,#open-user-import) svg,.workspace :is(#attendance-register-panel,#employee-profile-panel,[data-view=staff]) .button.record-create-action:is(#open-attendance-import,#open-profile,#open-user-import):not(:disabled):is(:hover,:focus-visible) svg{transform:none;animation:none;transition:none}
 .workspace :is(#attendance-register-panel,#employee-profile-panel,[data-view=staff]) .button.record-create-action:is(#open-attendance-import,#open-profile,#open-user-import):not(:disabled):active{background:var(--liquid-fill);transform:none;box-shadow:none}
 .workspace :is(#attendance-register-panel,#employee-profile-panel,[data-view=staff]) .button.record-create-action:is(#open-attendance-import,#open-profile,#open-user-import):focus-visible{outline:2px solid #7295ce;outline-offset:2px}
