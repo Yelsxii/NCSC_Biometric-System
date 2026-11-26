@@ -75,11 +75,11 @@ function dtrPrintRows(data,category,from=1,to=dtrLastDay(data.month)){
     const weekday=new Date(day.date+'T00:00:00Z').getUTCDay();
     const offday=day.is_weekend||weekday===0||weekday===6||Boolean(day.calendar?.holiday_name);
     const note=day.manual_source?.notes?.find(x=>/\b(?:LEAVE|CTO|WORK SUSPENSION)\b/i.test(x));
-    const special=day.travel_order?travelLabel(day):
+    const special=day.travel_order?travelLabel(day):day.documented_status?day.documented_status:
       (!hasEntries&&!periods.length?((day.calendar?.holiday_name?'HOLIDAY':'')||note||(day.is_weekend?(day.day==='Sat'?'SATURDAY':'SUNDAY'):'')):'');
     const span=1,ut=offday?null:day.monitoring?.undertime_seconds;
     // Leave both printed undertime cells empty unless a positive duration exists.
-    const showUndertime=Number.isFinite(ut)&&ut>0;
+    const showUndertime=Number.isFinite(ut)&&ut>0&&day.monitoring?.undertime_origin!=='documented_partial';
     const total=day.monitoring?.total_seconds;
     const metricCells=gip?'<td rowspan="'+span+'">'+(total==null||(!hasEntries&&!periods.length)?'':esc(durationText(total).slice(0,-3)))+'</td>':
       '<td class="print-undertime" rowspan="'+span+'">'+(!showUndertime?'':Math.floor(ut/3600))+'</td><td class="print-undertime" rowspan="'+span+'">'+(!showUndertime?'':Math.floor(ut%3600/60))+'</td>';
