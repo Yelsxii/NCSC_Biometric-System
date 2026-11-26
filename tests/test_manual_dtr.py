@@ -684,3 +684,26 @@ def test_private_reconciliation_uses_confirmed_bio_and_sheet_fallback(admin, tmp
     with closing(connect()) as con:
         assert con.execute('SELECT COUNT(*) FROM punches').fetchone()[0]==4
         assert con.execute('SELECT COUNT(*) FROM attendance_day_reviews').fetchone()[0]==0
+
+
+def test_aja_note_inside_complete_pm_pair_keeps_regular_clocks(admin):
+    client, headers = admin
+    seed_employee()
+    import_one(client, headers, packet([
+        row(times=['08:40','12:30','12:33 (AJA 2:28-2:45)','17:40']),
+    ]))
+    day = monitor(client)
+    assert day['display_slots']['pm_in']['happened_at'].endswith('12:33:00')
+    assert day['display_slots']['pm_out']['happened_at'].endswith('17:40:00')
+    assert day['aja_periods'][0]['out']['time'] == '14:28:00'
+    assert day['aja_periods'][0]['in']['time'] == '14:45:00'
+    assert day['display_remark'] == 'Complete'
+    assert day['monitoring']['undertime_seconds'] == 0
+
+
+def test_aja_note_inside_complete_am_pair_stays_morning():
+    from app.activity_mapping import sheet_aja_evidence
+    source = {'times':{'am_in':'07:30:00','am_out':'12:00:00','pm_in':'13:00:00','pm_out':'17:30:00'},
+              'notes':['AJA 9:10-10:05']}
+    result = sheet_aja_evidence(source)
+    assert (result['start'],result['end']) == ('09:10:00','10:05:00')
