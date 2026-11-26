@@ -610,23 +610,32 @@ def _monitor_days(employee_code: str, start: dt.date, end: dt.date):
             "WHERE p.employee_code=? AND p.happened_at>=? AND p.happened_at<? ORDER BY p.happened_at,p.id LIMIT 10001",
             (employee_code,start.isoformat(),end.isoformat()),
         )]
-        # Only the office device's verified configuration from the test date.
-        # Preserve raw connector fields separately from USB verification/work codes.
+        # Historical audit confirmed agreement between the local K14 state and
+        # vendor state. Keep old states as evidence, not unconditional slot choices:
+        # the employee may have left the terminal in its default state.
+        from app.device_access import authorized_ids
+        allowed = authorized_ids(con)
         links = {row["punch_id"]: dict(row) for row in con.execute(
-            """SELECT punch_id, MIN(device_punch_type) AS state_min,
+            """SELECT punch_id, punch_time_local, MIN(device_punch_type) AS state_min,
                       MAX(device_punch_type) AS state_max
                FROM k14_sync_events
                WHERE employee_id=? AND device_ip='192.168.254.201'
                  AND punch_time_local>=? AND punch_time_local<?
-                 AND punch_time_local>='2026-11-24'
-               GROUP BY punch_id""",
+               GROUP BY punch_id,punch_time_local""",
             (employee_code,start.isoformat(),end.isoformat()))}
         for scan in scans:
             link = links.get(scan["id"])
-            if link:
+            if not link or link["punch_time_local"] != scan["happened_at"]:
+                continue
+            state = link["state_min"] if link["state_min"]==link["state_max"] else None
+            slot = {"0":"am_in", "1":"am_out", "4":"pm_out", "5":"pm_in"}.get(state)
+            if scan["happened_at"] >= "2026-11-24":
                 scan["k14_state_pending"] = True
-                scan["k14_punch_type"] = link["state_min"] if link["state_min"]==link["state_max"] else None
-                scan["verified_slot"] = {"0":"am_in", "1":"am_out", "4":"pm_out", "5":"pm_in"}.get(scan["k14_punch_type"])
+                scan["k14_punch_type"] = state
+                scan["verified_slot"] = slot
+            elif employee_code in allowed:
+                scan["historical_k14_state"] = state
+                scan["historical_slot"] = slot
         apply_evidence(con, scans)
         reconcile_workcodes(con, scans)
         employee = con.execute(
