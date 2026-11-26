@@ -481,6 +481,30 @@ def test_legacy_aja_note_recovers_times_without_regular_slot_reassignment(admin)
     assert day['aja_periods'][0]['out']=={'time':'08:07:00','origin':'manual_sheet'}
     assert day['aja_periods'][0]['in']=={'time':'18:00:00','origin':'manual_sheet'}
     assert not day['aja_periods'][0]['review']
+    assert day['aja_covered_slots']==['pm_in','pm_out']
+    assert day['display_slots']['pm_out'] is None
+    assert day['display_remark']=='AJA'
+    assert day['missing_entries']==[]
+    assert day['monitoring']['undertime_seconds'] is None
+
+
+def test_leave_status_without_punches_and_short_aja_remains_incomplete(admin):
+    client,headers=admin
+    seed_employee()
+    import_one(client,headers,packet([
+        row(times=['WELLNESS LEAVE',None,None,None]),
+        row('2026-11-09',times=['07:30','08:10','AJA 08:10-15:00',None],number=8),
+        row('2026-11-10',times=['SICK LEAVE',None,None,None],number=9),
+    ]))
+    for index, label in [(5,'WELLNESS LEAVE'),(9,'SICK LEAVE')]:
+        day=monitor(client,index)
+        assert day['leave_status']==label
+        assert day['display_remark']==label
+        assert day['tone']=='leave'
+        assert day['monitoring']['undertime_seconds'] is None
+    short=monitor(client,8)
+    assert short['aja_covered_slots']==[]
+    assert short['display_remark']=='Incomplete entries (2)'
 
 
 def test_empty_aja_placeholder_does_not_color_regular_day(admin):
