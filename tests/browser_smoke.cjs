@@ -749,7 +749,7 @@ with connect() as con:
       const morning=make(['07:40:00','12:00:00','13:00:00','17:00:00'],'09:01:00','10:51:00');
       const spanning=make(['07:40:00','12:00:00','13:00:00','17:00:00'],'10:21:00','13:02:00');
       const cells=day=>{const t=document.createElement('table');t.innerHTML='<tbody><tr>'+attendanceTimeCells(day)+'</tr></tbody>';return [...t.querySelectorAll('td')].map(td=>({aja:td.classList.contains('slot-aja'),text:td.textContent,covered:td.classList.contains('slot-aja-covered'),span:td.colSpan}));};
-      const print=day=>{const t=document.createElement('table');t.innerHTML='<tbody>'+dtrPrintRows({month:'2026-11',days:[day]},'COS')+'</tbody>';return {extra:[...t.querySelectorAll('.print-aja')].map(tr=>tr.textContent),coverage:[...t.querySelectorAll('.print-aja-coverage')].map(td=>[td.textContent,td.colSpan]),inline:[...t.querySelectorAll('.print-aja-inline-note')].map(td=>[td.dataset.slot,td.textContent]),regular:[...t.querySelectorAll('.print-aja-clock-cell .print-regular-clock')].map(el=>[el.textContent,el.parentElement.rowSpan]),rows:t.rows.length};};
+      const print=day=>{const t=document.createElement('table');t.innerHTML='<tbody>'+dtrPrintRows({month:'2026-11',days:[day]},'COS')+'</tbody>';return {extra:[...t.querySelectorAll('.print-aja')].map(tr=>tr.textContent),coverage:[...t.querySelectorAll('.print-aja-coverage')].map(td=>[td.textContent,td.colSpan]),inline:[...t.querySelectorAll('.print-aja-inline-note')].map(td=>[td.dataset.slot,td.textContent]),regular:[...(t.querySelector('.print-aja-inline-note')?.closest('tr')?.querySelectorAll('.print-regular-clock')||[])].map(el=>[el.textContent,el.parentElement.rowSpan]),topAligned:[...(t.querySelector('.print-aja-inline-note')?.closest('tr')?.querySelectorAll('.print-regular-clock')||[])].map(el=>el.parentElement.classList.contains('print-aja-clock-cell')),rows:t.rows.length};};
       return {complete:cells(complete),covered:cells(covered),morning:cells(morning),spanning:cells(spanning),completePrint:print(complete),morningPrint:print(morning),spanningPrint:print(spanning),coveredPrint:print(covered)};
     });
     assert.deepEqual(ajaLayouts.complete.map(x=>x.aja),[false,false,true,false]);
@@ -766,6 +766,9 @@ with connect() as con:
     assert.deepEqual(ajaLayouts.completePrint.inline,[['pm_in','AJA14:28-14:45']]);
     assert.deepEqual(ajaLayouts.completePrint.regular,[['8:40',1],['12:30',1],['12:33',1],['17:40',1]]);
     assert.equal(ajaLayouts.completePrint.rows,31);
+    assert.deepEqual(ajaLayouts.completePrint.topAligned,[false,false,true,false]);
+    assert.deepEqual(ajaLayouts.morningPrint.topAligned,[true,false,false,false]);
+    assert.deepEqual(ajaLayouts.spanningPrint.topAligned,[true,true,true,false]);
     assert.deepEqual(ajaLayouts.morningPrint.extra,[]);
     assert.deepEqual(ajaLayouts.morningPrint.inline,[['am_in','AJA09:01-10:51']]);
     assert.deepEqual(ajaLayouts.morningPrint.regular,[['7:40',1],['12:00',1],['13:00',1],['17:00',1]]);
