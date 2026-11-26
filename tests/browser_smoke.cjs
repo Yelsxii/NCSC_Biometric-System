@@ -750,7 +750,7 @@ with connect() as con:
       const spanning=make(['07:40:00','12:00:00','13:00:00','17:00:00'],'11:00:00','14:00:00');
       const cells=day=>{const t=document.createElement('table');t.innerHTML='<tbody><tr>'+attendanceTimeCells(day)+'</tr></tbody>';return [...t.querySelectorAll('td')].map(td=>({aja:td.classList.contains('slot-aja'),text:td.textContent,covered:td.classList.contains('slot-aja-covered'),span:td.colSpan}));};
       const print=day=>{const t=document.createElement('table');t.innerHTML='<tbody>'+dtrPrintRows({month:'2026-11',days:[day]},'COS')+'</tbody>';return {extra:[...t.querySelectorAll('.print-aja td')].map(td=>[td.colSpan,td.textContent]),coverage:[...t.querySelectorAll('.print-aja-coverage')].map(td=>[td.textContent,td.colSpan]),rows:t.rows.length};};
-      return {complete:cells(complete),covered:cells(covered),morning:cells(morning),spanning:cells(spanning),completePrint:print(complete),coveredPrint:print(covered)};
+      return {complete:cells(complete),covered:cells(covered),morning:cells(morning),spanning:cells(spanning),completePrint:print(complete),morningPrint:print(morning),spanningPrint:print(spanning),coveredPrint:print(covered)};
     });
     assert.deepEqual(ajaLayouts.complete.map(x=>x.aja),[false,false,true,false]);
     assert.deepEqual(ajaLayouts.morning.map(x=>x.aja),[true,false,false,false]);
@@ -761,7 +761,9 @@ with connect() as con:
     assert.equal(ajaLayouts.covered[2].covered,true);
     assert.equal(ajaLayouts.covered[2].span,2);
     assert.equal(ajaLayouts.covered[2].text,'AJA COVERAGEUntil 18:00');
-    assert.deepEqual(ajaLayouts.completePrint.extra,[[4,'AJA 14:28-14:45']]);
+    assert.deepEqual(ajaLayouts.completePrint.extra,[[2,''],[2,'AJA 14:28-14:45']]);
+    assert.deepEqual(ajaLayouts.morningPrint.extra,[[2,'AJA 09:10-10:05'],[2,'']]);
+    assert.deepEqual(ajaLayouts.spanningPrint.extra,[[4,'AJA 11:00-14:00']]);
     assert.deepEqual(ajaLayouts.coveredPrint.extra,[]);
     assert.deepEqual(ajaLayouts.coveredPrint.coverage,[['AJA 08:07-18:00',2]]);
     assert.equal(ajaLayouts.coveredPrint.rows,31);
