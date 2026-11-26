@@ -594,7 +594,7 @@
 #day-review-dialog form{max-height:min(90dvh,calc(100dvh - 48px))}
 
 /* Compact, separated attendance sections and the DTR preview close treatment. */
-#day-review-dialog .review-minimal-head{position:relative;justify-content:flex-end;align-items:center;padding:8px 16px 0;border-bottom:0}
+#day-review-dialog .review-minimal-head{position:relative;justify-content:flex-end;align-items:center;padding:10px 16px 8px;border-bottom:0}
 #day-review-dialog .review-minimal-head .sr-only{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0}
 #day-review-dialog .review-close{
   display:grid;place-items:center;width:32px;height:32px;min-width:32px;min-height:32px;
@@ -607,11 +607,10 @@
 #day-review-dialog .review-close:active{transform:scale(.96)}
 #day-review-dialog .review-close:focus-visible{outline:2px solid #b4233b;outline-offset:2px}
 #day-review-dialog .review-close svg{pointer-events:none}
-#day-review-dialog .app-dialog-body{padding-top:3px}
-#day-review-dialog .review-field-section{min-width:0;margin:0;padding:0 0 10px}
+#day-review-dialog .app-dialog-body{padding-top:0}
+#day-review-dialog .review-field-section{min-width:0;margin:0;padding:9px 0;border-top:1px solid #e8edf5}
 #day-review-dialog .review-field-section:last-child{padding-bottom:0}
-#day-review-dialog .review-field-section .form-section-title{display:flex;align-items:center;gap:10px;margin:0 0 7px;font-size:11.5px;font-weight:700;line-height:1.4;color:#385780}
-#day-review-dialog .review-field-section .form-section-title::after{content:"";height:1px;flex:1 1 auto;background:#dfe7f3}
+#day-review-dialog .review-field-section .form-section-title{display:block;margin:0 0 7px;font-size:11.5px;font-weight:700;line-height:1.4;color:#385780}
 #day-review-dialog .clock-field label,#day-review-dialog .profile-form-grid label{color:#52688a;font-weight:650}
 #day-review-dialog .clock-control input,#day-review-dialog :is(#review-ut-hours,#review-ut-minutes){color:#243e68;font-size:12px;font-weight:700}
 #day-review-dialog .clock-control input::placeholder,#day-review-dialog :is(#review-ut-hours,#review-ut-minutes)::placeholder{color:#8698b3;font-weight:550}
