@@ -399,9 +399,18 @@ def present_day(day):
         metrics.update(remarks=status, total_seconds=None, undertime_seconds=None,
                        overtime_seconds=None, undertime_origin="not_applicable")
     closed = day["date"] + " 17:00:00" <= now
-    if (closed and status == "Incomplete entries" and not offday and
-            not day["travel_order"] and not day.get("source_conflicts") and
-            not periods and not metrics.get("aja_review")):
+    # Show a documented-hours estimate when an extra unassigned ordinary scan
+    # is the only conflict and all four chosen regular clocks form valid pairs.
+    # This is monitoring evidence, not approval of a payroll deduction.
+    extra_scan_only = (status == "Source difference" and
+                       set(day.get("source_conflicts", [])) == {"unplaced_biometric"} and
+                       metrics.get("complete") and all(slots.values()) and
+                       not source.get("notes"))
+    partial = status == "Incomplete entries" and not day.get("source_conflicts")
+    if (closed and (partial or extra_scan_only) and not offday and
+            not day["travel_order"] and not day["leave_status"] and
+            not day["documented_status"] and not periods and not metrics.get("aja_review")
+            and day["review"]["undertime_minutes"] is None):
         seconds = 0
         pairs = 0
         for a,b,lo,hi in (("am_in","am_out",7*3600,12*3600),("pm_in","pm_out",13*3600,24*3600)):
@@ -413,10 +422,13 @@ def present_day(day):
                     seconds += max(0,min(end,hi)-max(start,lo))
         if pairs:
             deficit = max(0,8*3600-seconds)
+            origin = "documented_conflict" if extra_scan_only else "documented_partial"
             metrics.update(total_seconds=seconds, undertime_seconds=deficit,
-                           overtime_seconds=None, metrics_origin="documented_partial",
-                           undertime_origin="documented_partial", remarks="Undertime (provisional)" if deficit else "Undertime for review")
-            status=metrics["remarks"]
+                           overtime_seconds=None, metrics_origin=origin,
+                           undertime_origin=origin)
+            if not extra_scan_only:
+                metrics["remarks"] = "Undertime (provisional)" if deficit else "Undertime for review"
+                status = metrics["remarks"]
         else:
             status="Undertime for review"
             metrics["remarks"]=status
