@@ -447,6 +447,15 @@ function attendanceTimeCells(day){
   return ['am_in','am_out','pm_in','pm_out'].map(key=>slotCell(day,key)).join('');
 }
 function manilaClock(){return new Intl.DateTimeFormat('sv-SE',{timeZone:'Asia/Manila',year:'numeric',month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit',second:'2-digit',hourCycle:'h23'}).format(new Date());}
+function embeddedAja(day,key){
+  // Anchor an interval inside its matching AM or PM attendance pair,
+  // never substitute activity departure/return for the regular punch.
+  if(!['am_in','pm_in'].includes(key)||day.travel_order||day.leave_status||day.aja_covered_slots?.length)return [];
+  const prefix=key.slice(0,2),slots=day.display_slots||{};
+  const start=slots[prefix+'_in']?.happened_at?.slice(11,19),end=slots[prefix+'_out']?.happened_at?.slice(11,19);
+  if(!start||!end)return [];
+  return (day.aja_periods||[]).filter(p=>!p.review&&p.out?.time&&p.in?.time&&start<=p.out.time&&p.out.time<p.in.time&&p.in.time<=end);
+}
 function slotCell(day,key){
   const event=day.display_slots?day.display_slots[key]:(day.slots[key]||provisionalOrdinarySlots(day)?.[key]);
   const origin=event?.origin||(day.slots[key]?'reviewed':'biometric');
@@ -457,8 +466,10 @@ function slotCell(day,key){
   const hint=event?event.happened_at.slice(11)+' · '+(origin==='manual_sheet'?'Manual DTR source':origin==='reviewed'?'Reviewed selection':origin==='hr_approved'?'HR-approved adjustment':'Original biometric time; observed AM/PM placement')+
     (event.verified_slot?' · Device state: '+event.verified_slot.replace('_',' ').toUpperCase():'')+
     (event.work_code_conflict?' · Work code conflict':event.work_code_pending?' · Work code awaiting synchronization':event.work_code!==undefined&&event.work_code!==''?' · Work code '+event.work_code:event.k14_state_pending?' · Work code not yet available':''):'No entry';
-  return '<td class="time-slot slot-'+tone+'" data-origin="'+esc(event?origin:'')+'" title="'+esc(hint)+'">'+(event?
-    '<span class="time-value">'+esc(event.happened_at.slice(11,19))+'</span>':
+  const aja=embeddedAja(day,key);
+  const ajaHint=aja.map(p=>'AJA '+p.out.time.slice(0,5)+'–'+p.in.time.slice(0,5)).join(' · ');
+  return '<td class="time-slot slot-'+(aja.length?'aja slot-aja-inline':tone)+'" data-origin="'+esc(event?origin:'')+'" title="'+esc([hint,ajaHint].filter(Boolean).join(' · '))+'">'+(event?
+    '<span class="time-value">'+esc(event.happened_at.slice(11,19))+'</span>'+aja.map(p=>'<span class="aja-coverage-caption">AJA '+esc(p.out.time.slice(0,5))+'–'+esc(p.in.time.slice(0,5))+'</span>').join(''):
     '<span class="no-time">—</span>')+'</td>';
 }
 async function loadDetail({quiet=false}={}){
