@@ -38,6 +38,7 @@ let registerSearchTimer = null;
 let profilePage = 1;
 let profileCategory = 'All';
 let profileRequest = 0;
+let profileSearchTimer = null;
 let profileFormToken = 0;
 let profileEditing = null;
 let profileVersion = null;
@@ -282,12 +283,13 @@ function updateProfileTabs(){
   });
 }
 async function loadProfiles(){
+  clearTimeout(profileSearchTimer);profileSearchTimer=null;
   const serial=++profileRequest;
   updateProfileTabs();
-  $('profile-rows').innerHTML='<tr><td colspan="7" class="table-empty">Loading employee profiles…</td></tr>';
+  $('profile-rows').innerHTML='<tr><td colspan="5" class="table-empty">Loading employee profiles…</td></tr>';
   try{
     const data=await api('/api/employee-profiles?'+new URLSearchParams({
-      q:$('profile-search').value.trim(),category:profileCategory,status:$('profile-status').value,
+      q:$('profile-search').value.trim(),category:profileCategory,status:'All',
       page:String(profilePage),limit:String(EMPLOYEE_PAGE_SIZE)}));
     if(serial!==profileRequest || currentPage!=='profiles' || !session)return;
     const pages=Math.max(1,Math.ceil(data.total/EMPLOYEE_PAGE_SIZE));
@@ -295,19 +297,17 @@ async function loadProfiles(){
     $('profile-total-badge').textContent=data.summary.total;
     for(const kind of ['COS','Permanent','GIP','OJT'])
       $('profile-'+kind.toLowerCase()+'-badge').textContent=data.summary.categories[kind];
-    $('profile-summary').textContent=data.summary.total+' employees · '+data.summary.registered+' verified profiles · '+data.summary.needs_details+' need details';
+    $('profile-summary').textContent=data.total+' '+(data.total===1?'employee':'employees');
     $('profile-count').textContent=data.total?('Showing '+((profilePage-1)*EMPLOYEE_PAGE_SIZE+1)+'–'+Math.min(profilePage*EMPLOYEE_PAGE_SIZE,data.total)+' of '+data.total+' employees'):'No matching employees';
     $('profile-page').textContent='Page '+profilePage+' of '+pages;
     $('profile-prev').disabled=profilePage===1;$('profile-next').disabled=profilePage===pages;
     $('profile-rows').innerHTML=data.items.length?data.items.map(row=>
       '<tr><td class="employee-name-cell"><div class="register-identity"><span class="name-avatar" aria-hidden="true">'+esc(registerInitials(row.display_name))+'</span><span><strong>'+esc(row.display_name||'Name not synchronized')+'</strong>'+(row.position?'<small>'+esc(displayTitle(row.position))+'</small>':'')+'</span></div></td><td class="id-cell">'+esc(row.employee_code)+'</td><td>'+categoryBadge(row.employment_type)+'</td><td>'+departmentCell(row.department)+'</td>'+
-      '<td><span class="tag '+(row.sync_authorized?'tag-success':'tag-paused')+'"><span class="tag-dot"></span>'+(row.sync_authorized?'Enabled':'Paused')+'</span></td>'+
-      '<td><span class="tag '+(row.profile_complete?'tag-success':'tag-paused')+'">'+(row.profile_complete?'Registered':'Needs details')+'</span></td>'+
       '<td class="directory-action-cell">'+(session.role==='admin'?'<button type="button" class="button primary row-action" data-edit-profile="'+esc(row.employee_code)+'" aria-label="'+esc((row.profile_complete?'Edit profile: ':'Complete profile: ')+(row.display_name||row.employee_code))+'">'+ '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.65" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m13.5 6.5 4 4M4 20l4.5-1 11-11a2.8 2.8 0 0 0-4-4l-11 11L4 20z"/></svg>' +(row.profile_complete?'Edit profile':'Complete profile')+'</button>':'—')+'</td></tr>'
-    ).join(''):'<tr><td colspan="7" class="table-empty">No matching employees. Adjust your filters or register an enrolled K14 ID.</td></tr>';
+    ).join(''):'<tr><td colspan="5" class="table-empty">No matching employees. Adjust your filters or register an enrolled K14 ID.</td></tr>';
   }catch(error){
-    if(serial!==profileRequest)return;
-    $('profile-rows').innerHTML='<tr><td colspan="7" class="table-empty">Unable to load employee profiles.</td></tr>';
+    if(serial!==profileRequest || currentPage!=='profiles' || !session)return;
+    $('profile-rows').innerHTML='<tr><td colspan="5" class="table-empty">Unable to load employee profiles.</td></tr>';
     toast(error.message,true);
   }
 }
@@ -364,7 +364,7 @@ async function saveProfile(event){
     if(session!==account)return;
     $('profile-dialog').close();
     toast(editing?'Employee profile updated.':'Employee profile registered.');
-    if(!editing){profilePage=1;profileCategory='All';$('profile-search').value=code;$('profile-status').value='All';}
+    if(!editing){profilePage=1;profileCategory='All';$('profile-search').value=code;}
     if(profileReturn?.page==='employees'){
       const previous=profileReturn;
       await loadRegister();
@@ -1187,6 +1187,15 @@ async function initialize(){
   $('profile-dialog').addEventListener('close',()=>profileFormToken++);
   $('profile-form').addEventListener('submit',saveProfile);
   $('profile-filter').addEventListener('submit',event=>{event.preventDefault();profilePage=1;loadProfiles();});
+  $('profile-search').addEventListener('input',()=>{
+    clearTimeout(profileSearchTimer);
+    ++profileRequest;profilePage=1;
+    const account=session;
+    profileSearchTimer=setTimeout(()=>{
+      profileSearchTimer=null;
+      if(currentPage==='profiles'&&session&&session===account)loadProfiles();
+    },220);
+  });
   document.querySelectorAll('[data-profile-category]').forEach(node=>node.addEventListener('click',()=>{
     profileCategory=node.dataset.profileCategory;profilePage=1;loadProfiles();
   }));
