@@ -430,8 +430,7 @@ function attendanceTimeCells(day){
   if(day.aja_covered_slots?.includes('pm_in') && day.aja_covered_slots?.includes('pm_out')){
     const period=day.aja_periods?.[0], start=period?.out?.time, end=period?.in?.time;
     return slotCell(day,'am_in')+slotCell(day,'am_out')+
-      '<td class="time-slot slot-aja" title="Documented AJA coverage in place of PM entry; no office return recorded"><span class="aja-coverage-status">AJA</span>'+(start&&end?'<span class="aja-coverage-caption">'+esc(start.slice(0,5))+'–'+esc(end.slice(0,5))+'</span>':'')+'</td>'+
-      '<td class="time-slot slot-neutral slot-aja-covered" title="Covered by documented AJA; no PM OUT punch required"><span class="empty-cell">—</span></td>';
+      '<td colspan="2" class="time-slot slot-aja slot-aja-covered" title="Documented AJA covers both PM slots; no office return recorded"><span class="aja-coverage-status">AJA COVERAGE</span>'+(start&&end?'<span class="aja-coverage-caption">Until '+esc(end.slice(0,5))+'</span>':'')+'</td>';
   }
   const holiday=day.calendar?.holiday_name;
   const calendarLabel=holiday||(day.is_weekend?(day.day==='Sat'?'Saturday':'Sunday'):'');
@@ -447,12 +446,21 @@ function attendanceTimeCells(day){
 }
 function manilaClock(){return new Intl.DateTimeFormat('sv-SE',{timeZone:'Asia/Manila',year:'numeric',month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit',second:'2-digit',hourCycle:'h23'}).format(new Date());}
 function embeddedAja(day,key){
-  // A real attendance clock receives AJA styling only when the clock itself
-  // falls within a documented interval, not simply within the same half-day.
-  if(day.travel_order||day.leave_status)return [];
-  const clock=day.display_slots?.[key]?.happened_at?.slice(11,19);
+  // Yellow means the regular attendance period includes documented AJA.
+  // A regular clock is not itself a departure/return simply because it is yellow.
+  if(day.travel_order||day.leave_status||day.is_future)return [];
+  const slots=day.display_slots||{},clock=slots[key]?.happened_at?.slice(11,19);
   if(!clock)return [];
-  return (day.aja_periods||[]).filter(p=>!p.review&&p.out?.time&&p.in?.time&&p.out.time<p.in.time&&p.out.time<=clock&&clock<=p.in.time);
+  const prefix=key.slice(0,2), start=slots[prefix+'_in']?.happened_at?.slice(11,19),end=slots[prefix+'_out']?.happened_at?.slice(11,19);
+  const now=manilaClock();
+  return (day.aja_periods||[]).filter(p=>{
+    if(p.review||!p.out?.time||!p.in?.time||p.out.time>=p.in.time||day.date+' '+p.in.time>now)return false;
+    const a=p.out.time,b=p.in.time;
+    // Strict overlap excludes a morning pair ending exactly at AJA departure.
+    const overlap=start&&end&&start<end&&a<end&&start<b;
+    const endpoint=(a<=clock&&clock<=b)||clock.slice(0,5)===a.slice(0,5)||clock.slice(0,5)===b.slice(0,5);
+    return overlap||endpoint;
+  });
 }
 function slotCell(day,key){
   const event=day.display_slots?day.display_slots[key]:(day.slots[key]||provisionalOrdinarySlots(day)?.[key]);
@@ -465,9 +473,10 @@ function slotCell(day,key){
     (event.verified_slot?' · Device state: '+event.verified_slot.replace('_',' ').toUpperCase():'')+
     (event.work_code_conflict?' · Work code conflict':event.work_code_pending?' · Work code awaiting synchronization':event.work_code!==undefined&&event.work_code!==''?' · Work code '+event.work_code:event.k14_state_pending?' · Work code not yet available':''):'No entry';
   const aja=embeddedAja(day,key);
-  const ajaHint=aja.map(p=>'AJA '+p.out.time.slice(0,5)+'–'+p.in.time.slice(0,5)).join(' · ');
+  const ajaHint=aja.length?'Regular clock retained; attendance period includes AJA '+aja.map(p=>p.out.time.slice(0,5)+'–'+p.in.time.slice(0,5)).join(' · '):'';
+  const departure=aja.some(p=>p.out.time.slice(0,5)===event?.happened_at?.slice(11,16));
   return '<td class="time-slot slot-'+(aja.length?'aja slot-aja-inline':tone)+'" data-origin="'+esc(event?origin:'')+'" title="'+esc([hint,ajaHint].filter(Boolean).join(' · '))+'">'+(event?
-    '<span class="time-value">'+esc(event.happened_at.slice(11,19))+'</span>'+(aja.length?'<span class="aja-coverage-caption">'+(aja.some(p=>p.out.time===event.happened_at.slice(11,19))?'AJA OUT':'AJA')+'</span>':''):
+    '<span class="time-value">'+esc(event.happened_at.slice(11,19))+'</span>'+(departure?'<span class="aja-coverage-caption">AJA OUT</span>':''):
     '<span class="no-time">—</span>')+'</td>';
 }
 async function loadDetail({quiet=false}={}){
