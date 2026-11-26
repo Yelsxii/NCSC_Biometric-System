@@ -163,3 +163,11 @@ body.print-document{box-sizing:border-box;margin:0;padding:var(--paper-margin);w
 .gip-checked{padding:.5mm 1mm}
 .gip-checked>div{width:36%;border-bottom:.2mm solid #000;margin:4mm auto 0}
 @media print{html:has(body.print-document){background:white;overflow:visible}body.print-document{width:var(--content-width);min-height:0;padding:0;margin:0;overflow:visible;print-color-adjust:exact;-webkit-print-color-adjust:exact}.print-content{break-inside:avoid}.print-document tr{break-inside:avoid}}
+
+/* AJA annotation stays inside the corresponding regular IN column.
+   Keep the clock and activity note distinguishable, even on narrow paper. */
+.print-document .print-aja-inline-note{
+  display:block;font:400 6pt/1.05 Arial,sans-serif;
+  margin-top:.35mm;white-space:normal;overflow-wrap:normal;
+}
+.print-document .print-aja-inline{vertical-align:middle}
