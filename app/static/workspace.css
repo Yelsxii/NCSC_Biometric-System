@@ -1003,17 +1003,18 @@ dialog.app-dialog[open]::backdrop,#dtr-preview-dialog[open]::backdrop{
 .workspace #employee-profile-panel .panel-header{margin:0 0 15px;gap:12px;flex-wrap:wrap}
 .workspace #employee-profile-panel .panel-header h2{color:#20375f;font-size:15px;font-weight:700;letter-spacing:0}
 .workspace #employee-profile-panel .category-tabs{display:flex;align-items:center;justify-content:flex-end;gap:7px;padding:0;margin:0 0 3.5px auto;border:0;overflow:visible;flex:0 0 auto;max-width:100%;flex-wrap:wrap}
-.workspace #employee-profile-panel .category-tab{height:31px;flex:none;gap:7px;padding:0 9px 0 12px;color:#415c80;font-size:11.5px;font-weight:600;border:0;border-radius:8px;background:#e0e8f3;box-shadow:none;transition:background-color .18s ease,color .18s ease}
-.workspace #employee-profile-panel .category-tab span{display:grid;place-items:center;font-size:10.5px;font-weight:650;font-variant-numeric:tabular-nums;min-width:21px;height:20px;padding:0 5px;border-radius:5px;background:#d0ddf0;color:#31588c;box-shadow:none;transition:background-color .18s ease,color .18s ease}
-.workspace #employee-profile-panel .category-tab[data-profile-category="COS"] span{background:#d6e0fc;color:#304db2}
-.workspace #employee-profile-panel .category-tab[data-profile-category="Permanent"] span{background:#d0e8f8;color:#12658d}
-.workspace #employee-profile-panel .category-tab[data-profile-category="GIP"] span{background:#e7dcf6;color:#7040a8}
-.workspace #employee-profile-panel .category-tab[data-profile-category="OJT"] span{background:#f7e2d1;color:#91480f}
-.workspace #employee-profile-panel .category-tab:not(.active):is(:hover,:focus-visible){background:#c7d7ee;color:#173b70;box-shadow:none}
-.workspace #employee-profile-panel .category-tab:not(.active):is(:hover,:focus-visible) span{filter:saturate(1.15)}
-.workspace #employee-profile-panel .category-tab.active{color:#1f4e95;background:#c0d3f2;box-shadow:none;font-weight:650}
-.workspace #employee-profile-panel .category-tab.active:hover{background:#b8cdef}
-.workspace #employee-profile-panel .category-tab.active span{background:#a9c3ed;color:#183e7b;box-shadow:none}
+/* Flat capsule filters: crisp contrast without borders, shadows or depth. */
+.workspace #employee-profile-panel .category-tab{--filter-accent:#2458b4;--filter-count:#dce9ff;--filter-hover:#d3e3fb;height:31px;flex:none;gap:7px;padding:0 8px 0 12px;color:#344f76;font-size:11.5px;font-weight:650;border:0;border-radius:999px;background:#f5f8fd;box-shadow:none;transition:background-color .2s ease,color .2s ease}
+.workspace #employee-profile-panel .category-tab span{display:grid;place-items:center;font-size:10.5px;font-weight:700;font-variant-numeric:tabular-nums;min-width:20px;height:20px;padding:0 5px;border-radius:999px;background:var(--filter-count);color:var(--filter-accent);box-shadow:none;transition:background-color .2s ease,color .2s ease}
+.workspace #employee-profile-panel .category-tab[data-profile-category="COS"]{--filter-accent:#3554c1;--filter-count:#e0e5ff;--filter-hover:#d7e0ff}
+.workspace #employee-profile-panel .category-tab[data-profile-category="Permanent"]{--filter-accent:#0874a4;--filter-count:#d4f0ff;--filter-hover:#d0eaf9}
+.workspace #employee-profile-panel .category-tab[data-profile-category="GIP"]{--filter-accent:#7842b6;--filter-count:#efe1ff;--filter-hover:#e8dafa}
+.workspace #employee-profile-panel .category-tab[data-profile-category="OJT"]{--filter-accent:#a35113;--filter-count:#ffead7;--filter-hover:#fce4ce}
+.workspace #employee-profile-panel .category-tab:not(.active):is(:hover,:focus-visible){background:var(--filter-hover);color:var(--filter-accent);box-shadow:none}
+.workspace #employee-profile-panel .category-tab:not(.active):is(:hover,:focus-visible) span{background:var(--filter-accent);color:#fff}
+.workspace #employee-profile-panel .category-tab.active{color:#fff;background:#3263bd;box-shadow:none;font-weight:650}
+.workspace #employee-profile-panel .category-tab.active:hover{background:#2855a7}
+.workspace #employee-profile-panel .category-tab.active span{background:#f0f5ff;color:#244b9a;box-shadow:none}
 .workspace #employee-profile-panel .category-tab:focus-visible{outline:2px solid #7295ce;outline-offset:2px}
 .workspace #employee-profile-panel #open-profile{height:38px;min-height:38px;border-radius:9px;font-size:11px;font-weight:650;gap:7px;flex-shrink:0}
 .workspace #employee-profile-panel #open-profile svg{width:16px;height:16px;flex:none}
