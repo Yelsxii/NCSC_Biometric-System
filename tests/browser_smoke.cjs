@@ -752,10 +752,11 @@ with connect() as con:
       const print=day=>{const t=document.createElement('table');t.innerHTML='<tbody>'+dtrPrintRows({month:'2026-11',days:[day]},'COS')+'</tbody>';return {extra:[...t.querySelectorAll('.print-aja td')].map(td=>[td.colSpan,td.textContent]),coverage:[...t.querySelectorAll('.print-aja-coverage')].map(td=>[td.textContent,td.colSpan]),rows:t.rows.length};};
       return {complete:cells(complete),covered:cells(covered),morning:cells(morning),spanning:cells(spanning),completePrint:print(complete),coveredPrint:print(covered)};
     });
-    assert.deepEqual(ajaLayouts.complete.map(x=>x.aja),[false,false,true,true]);
-    assert.deepEqual(ajaLayouts.morning.map(x=>x.aja),[true,true,false,false]);
-    assert.deepEqual(ajaLayouts.spanning.map(x=>x.aja),[true,true,true,true]);
-    assert.equal(ajaLayouts.complete[2].text,'12:33:00');
+    assert.deepEqual(ajaLayouts.complete.map(x=>x.aja),[false,false,true,false]);
+    assert.deepEqual(ajaLayouts.morning.map(x=>x.aja),[true,false,false,false]);
+    assert.deepEqual(ajaLayouts.spanning.map(x=>x.aja),[true,false,true,false]);
+    assert.equal(ajaLayouts.complete[2].text,'12:33:00AJA coverage');
+    assert.equal(ajaLayouts.complete[3].text,'17:40:00');
     assert.deepEqual(ajaLayouts.covered.map(x=>x.aja),[false,true,true]);
     assert.equal(ajaLayouts.covered[2].covered,true);
     assert.equal(ajaLayouts.covered[2].span,2);
