@@ -802,3 +802,50 @@ def test_historical_explicit_confirmed_slot_retains_prior_decision():
         {'confirmed':{'pm_out':{'id':1,'time':'17:00:13'}}}))
     assert day['display_slots']['pm_out']['id']==1
     assert day['display_unassigned_count']==0
+
+def test_historical_sequence_suggestion_preserves_unconfirmed_raw_scan():
+    from app.dtr_sources import resolve_day
+    day=historical_day([('07:02:08','0'),('12:15:09','0'),('12:43:22','5'),('17:55:54','4')])
+    resolve_day(day,None)
+    assert day['historical_suggestions']=={'am_out':{'id':2,'time':'12:15:09','device_slot':'am_in'}}
+    assert day['display_slots']['am_out'] is None
+    assert day['display_unassigned_count']==1
+    assert day['monitoring']['undertime_seconds'] is None
+    # Explicit reviewer selection uses the real punch, not a synthetic clock.
+    day['slots']['am_out']=day['scans'][1]
+    day['review']['version']=1
+    resolve_day(day,None)
+    assert day['historical_suggestions']=={}
+    assert day['display_slots']['am_out']['id']==2
+    assert day['display_slots']['am_out']['origin']=='reviewed'
+    assert day['display_unassigned_count']==0
+    assert len(day['scans'])==4
+
+
+def test_historical_sequence_suggestions_require_anchored_chronology():
+    from app.dtr_sources import resolve_day
+    for scans in [
+        [('08:00:00','0'),('12:00:00','0'),('13:00:00','0'),('17:00:00','0')],
+        [('08:00:00','0'),('12:00:00','1'),('17:00:00','4')],
+        [('08:00:00','0'),('12:00:00','1'),('12:00:00','5'),('17:00:00','4')],
+        [('08:00:00','0'),('12:00:00','1'),('13:00:00','0'),('14:00:00','4')],
+    ]:
+        day=historical_day(scans)
+        resolve_day(day,None)
+        assert day['historical_suggestions']=={}
+
+
+def test_historical_sequence_suggestions_respect_sheet_and_official_coverage():
+    from app.dtr_sources import resolve_day
+    scans=[('07:02:08','0'),('12:15:09','0'),('12:43:22','5'),('17:55:54','4')]
+    day=historical_day(scans)
+    resolve_day(day,historical_manual(['07:02:00','12:15:00','12:43:00','17:55:00']))
+    assert day['historical_suggestions']=={}
+    day=historical_day(scans)
+    day['activities']=[{'category':'AJA','reference':'Example activity'}]
+    resolve_day(day,None)
+    assert day['historical_suggestions']=={}
+    day=historical_day(scans)
+    day['is_weekend']=True
+    resolve_day(day,None)
+    assert day['historical_suggestions']=={}
