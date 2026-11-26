@@ -6,6 +6,22 @@ from app.activity_mapping import sheet_aja_evidence, is_aja_note
 
 KEYS = ('am_in','am_out','pm_in','pm_out')
 OFFICIAL = ('AJA','Travel Order','Fieldwork','Official Business')
+# Conservative reconciliation tolerance for unverified scans: ten minutes.
+SHEET_MATCH_SECONDS = 600
+
+
+def _clock_seconds(value):
+    t = dt.time.fromisoformat(value)
+    return t.hour*3600 + t.minute*60 + t.second
+
+
+def _documented_status(notes):
+    for note in notes:
+        if re.match(r'^\s*(?:S\.?\s*O\.?\s*(?:NO\.?|NUMBER)\b|SPECIAL\s+ORDER\b)', note, re.I):
+            return note.strip()
+        if re.fullmatch(r'\s*ABSENT\s*', note, re.I):
+            return 'ABSENT'
+    return ''
 
 
 def resolve_day(day, manual):
@@ -50,6 +66,21 @@ def resolve_day(day, manual):
         same_slots = [slot for slot,value in sheet_times.items() if clock and value and value[:5]==clock[:5]]
         if len(matches)==1 and len(same_slots)==1:
             observed[key] = matches[0]
+    # One-to-one near matching; never override verified or reviewed states.
+    available = [x for x in ordinary if x['id'] not in reserved and
+                 x['id'] not in {e['id'] for e in observed.values()} and not x.get('verified_slot')]
+    eligible = [k for k in KEYS if k not in observed and not day['slots'][k]
+                and k not in force_sheet and sheet_times.get(k)]
+    near = {k:[x for x in available if abs(_clock_seconds(x['happened_at'][11:19])-
+            _clock_seconds(sheet_times[k]))<=SHEET_MATCH_SECONDS] for k in eligible}
+    for key, matches in near.items():
+        if len(matches)==1:
+            event=matches[0]
+            possible=[k for k in KEYS if sheet_times.get(k) and
+                      abs(_clock_seconds(event['happened_at'][11:19])-
+                          _clock_seconds(sheet_times[k]))<=SHEET_MATCH_SECONDS]
+            if possible==[key]:
+                observed[key]=event
     distinct = len({x['happened_at'][11:16] for x in ordinary})==len(ordinary)
     candidates = {}
     # Legacy imports retain their existing placement behavior. Current office
@@ -150,7 +181,7 @@ def resolve_day(day, manual):
     # A stale snapshot may contain the blank-row formula's eight-hour deficit
     # even though all four named clock fields have since been populated.
     # Complete, conflict-free approved regular adjustments also use this rule.
-    # Do not infer a schedule for unreviewed unmatched biometric-only days.
+    # Use the existing worksheet rule for all complete, conflict-free days.
     source_ut = source['reported_ut'] if comparable else None
     overtime = source['reported_ot'] if comparable else None
     recalculated = False
@@ -158,7 +189,8 @@ def resolve_day(day, manual):
                     any(display[k]['origin']=='hr_approved' for k in KEYS))
     reconciled = bool(complete and all(display.values()) and source and not conflicts and
                       (plan or differences or any(display[k]['origin']=='reviewed' for k in KEYS)))
-    if (comparable or adjusted or reconciled) and not offday:
+    calculable = bool(complete and all(display.values()) and not conflicts and not offday)
+    if calculable:
         clocks = {key: dt.time.fromisoformat(sheet_times[key] if comparable else display[key]['happened_at'][11:19]) for key in KEYS}
         # The worksheet uses minute-precision slots; keep original seconds in evidence.
         sec = {key: clock.hour*3600 + clock.minute*60 + (clock.second if comparable else 0) for key, clock in clocks.items()}
@@ -166,7 +198,7 @@ def resolve_day(day, manual):
                     + max(0, sec['pm_out'] - max(sec['pm_in'], 13*3600)))
         expected_ut = max(8*3600 - credited, 0)
         expected_ot = max(credited - 8*3600, 0)
-        recalculated = adjusted or reconciled or (source['reported_total'], source_ut, overtime) != (credited, expected_ut, expected_ot)
+        recalculated = not comparable or (source['reported_total'], source_ut, overtime) != (credited, expected_ut, expected_ot)
         total, source_ut, overtime = credited, expected_ut, expected_ot
     reviewed_ut = day['review']['undertime_minutes']
     # No required hours on weekends or holidays. Keep source/review evidence intact,
@@ -286,6 +318,35 @@ def present_day(day):
             day["aja_covered_slots"] = ["pm_in", "pm_out"]
             metrics.update(remarks="AJA", metrics_origin="aja_coverage")
             status = "AJA"
+    # Closed days: calculate the deficit of documented complete regular pairs,
+    # not presumed actual absence. Never invent a missing endpoint or AJA credit.
+    day["documented_status"] = _documented_status(source.get("notes", [])) if not has_entries and not offday and not day["is_future"] and not day["travel_order"] else ""
+    if day["documented_status"]:
+        status = day["documented_status"]
+        metrics.update(remarks=status, total_seconds=None, undertime_seconds=None,
+                       overtime_seconds=None, undertime_origin="not_applicable")
+    closed = day["date"] + " 17:00:00" <= now
+    if (closed and status == "Incomplete entries" and not offday and
+            not day["travel_order"] and not day.get("source_conflicts") and
+            not periods and not metrics.get("aja_review")):
+        seconds = 0
+        pairs = 0
+        for a,b,lo,hi in (("am_in","am_out",7*3600,12*3600),("pm_in","pm_out",13*3600,24*3600)):
+            if slots[a] and slots[b]:
+                start = _clock_seconds(slots[a]["happened_at"][11:19])//60*60
+                end = _clock_seconds(slots[b]["happened_at"][11:19])//60*60
+                if start < end:
+                    pairs += 1
+                    seconds += max(0,min(end,hi)-max(start,lo))
+        if pairs:
+            deficit = max(0,8*3600-seconds)
+            metrics.update(total_seconds=seconds, undertime_seconds=deficit,
+                           overtime_seconds=None, metrics_origin="documented_partial",
+                           undertime_origin="documented_partial", remarks="Undertime" if deficit else "Undertime for review")
+            status=metrics["remarks"]
+        else:
+            status="Undertime for review"
+            metrics["remarks"]=status
     missing = [labels[k] for k in KEYS if not slots[k] and k not in day["aja_covered_slots"]]
     if offday:
         missing = [labels[k] for a,b in (("am_in","am_out"),("pm_in","pm_out"))
@@ -314,6 +375,8 @@ def present_day(day):
         text = day["leave_status"]
     elif not issues and day["travel_order"]:
         text = "Travel Order"
+    elif not issues and day["documented_status"]:
+        text = day["documented_status"]
     elif issues:
         text = issues[0] if len(issues)==1 else f"Review ({len(issues)} issues)"
     elif has_entries:
@@ -322,12 +385,10 @@ def present_day(day):
         if status == "Incomplete entries":
             if ongoing:
                 text = "In progress"
-            elif len(missing)==1:
-                text = "Missing " + missing[0]
-            elif missing:
-                text = f"Incomplete entries ({len(missing)})"
+            elif offday:
+                text = "Missing " + missing[0] if len(missing)==1 else "Incomplete entries"
             else:
-                text = "Incomplete entries"
+                text = "Undertime for review"
         elif status in ("Holiday","Weekend","No entry","Upcoming"):
             text = "Unassigned scan"
             issues.append(text)
@@ -344,5 +405,5 @@ def present_day(day):
         if text == "DTR note for review":
             issues.append(text)
     day["remark_issues"] = issues
-    day["missing_entries"] = missing if has_entries and not day["travel_order"] and status=="Incomplete entries" and text!="In progress" else []
+    day["missing_entries"] = missing if has_entries and not day["travel_order"] and status in ("Incomplete entries","Undertime","Undertime for review") and text!="In progress" else []
     day["display_remark"] = text
