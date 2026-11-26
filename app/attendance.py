@@ -189,6 +189,13 @@ def decorate_days(employee_code: str, days: list[dict]) -> None:
             "SELECT * FROM manual_dtr_entries WHERE employee_code=? AND attendance_date BETWEEN ? AND ?",
             (employee_code, days[0]["date"], days[-1]["date"]),
         )}
+    # Explicit, locally installed source corrections are read-through evidence.
+    # Keep the previously imported sheet and HR review records unchanged.
+    from app.dtr_reconciliation import local_reconciliation
+    with closing(connect()) as con:
+        person = con.execute("SELECT display_name FROM employees WHERE employee_code=?", (employee_code,)).fetchone()
+    if person:
+        manual.update(local_reconciliation(employee_code, person["display_name"]))
     # Manila uses UTC+08:00; do not depend on an optional Windows tzdata package.
     today = dt.datetime.now(dt.timezone(dt.timedelta(hours=8))).date().isoformat()
     for day in days:
