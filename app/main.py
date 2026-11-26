@@ -32,7 +32,7 @@ from app.security import check_password
 from app.reports import preview_k14_report
 from app.registry import parse_staff, clean
 from app.lan import status as lan_status, tcp_probe
-from app.profiles import RegistrationInput, ProfileUpdateInput, get_profile, list_profiles, save_profile
+from app.profiles import RegistrationInput, ProfileUpdateInput, get_profile, list_profiles, save_profile, set_directory_archived
 from app.attendance import DayReviewInput, CalendarInput, decorate_days, save_day_review, save_calendar
 from app.activity_mapping import activity_pairs, dtr_aja_periods
 from app.dtr_sources import present_day
@@ -184,8 +184,10 @@ class WorkCodeInput(BaseModel):
 
 @app.get("/api/employee-profiles")
 def employee_profiles(q: str = "", category: str = "All", status: str = "All", page: int = 1,
-                      limit: int = 15, user: dict = Depends(current_user)):
-    return list_profiles(q.strip(), category, status, page, limit)
+                      limit: int = 15, archived: bool = False, user: dict = Depends(current_user)):
+    if archived and user["role"] != "admin":
+        raise HTTPException(403, "Administrator access required.")
+    return list_profiles(q.strip(), category, status, page, limit, archived)
 
 
 @app.get("/api/employee-profiles/{employee_code}")
@@ -204,6 +206,18 @@ def update_employee_profile(employee_code: str, payload: ProfileUpdateInput, req
                             user: dict = Depends(require_admin)):
     require_csrf(request)
     return save_profile(employee_code, payload, user["id"], creating=False)
+
+
+@app.delete("/api/employee-profiles/{employee_code}")
+def archive_employee_profile(employee_code: str, request: Request, user: dict = Depends(require_admin)):
+    require_csrf(request)
+    return set_directory_archived(employee_code, True, user["id"])
+
+
+@app.post("/api/employee-profiles/{employee_code}/restore")
+def restore_employee_profile(employee_code: str, request: Request, user: dict = Depends(require_admin)):
+    require_csrf(request)
+    return set_directory_archived(employee_code, False, user["id"])
 
 
 @app.get("/")

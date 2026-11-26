@@ -39,6 +39,10 @@ const PROFILE_BATCH_SIZE = 50;
 let profileCategory = 'All';
 let profileRequest = 0;
 let profileRows = null;
+let profileArchived = false;
+let profileMenuTrigger = null;
+let profileMenuRow = null;
+let profileArchiveBusy = false;
 let profileSummary = null;
 let profileFormToken = 0;
 let profileEditing = null;
@@ -88,6 +92,7 @@ async function api(path,options={}) {
   return data;
 }
 function showLogin(){
+  closeProfileMenu();profileArchived=false;profileArchiveBusy=false;
   stopDeviceRefresh();
   stopAttendanceRefresh();
   requestSerial++;registerInFlight=null;registerReady=false;lastEmployeeRows=[];registerLiveAsOf='';
@@ -110,6 +115,7 @@ function showApp(){
   $('open-attendance-import').disabled=!canWrite;
   $('open-user-import').disabled=!canWrite;
   $('open-profile').disabled=!canWrite;
+  $('profile-archive-toggle').hidden=!canWrite;
   setAttendanceMonth('register-month',currentMonth());
   setAttendanceMonth('detail-month',currentMonth());
   $('activity-month').value=currentMonth();
@@ -117,6 +123,7 @@ function showApp(){
 }
 function navigate(page){
   if (!session || !titles[page]) return;
+  closeProfileMenu();
   cancelRegisterSearch();
   stopDeviceRefresh();
   stopAttendanceRefresh();
@@ -309,7 +316,10 @@ function updateProfileTabs(){
   });
 }
 function renderProfiles(){
+  closeProfileMenu();
   updateProfileTabs();
+  $('profile-archive-toggle').setAttribute('aria-pressed',String(profileArchived));
+  $('profile-archive-toggle').textContent=profileArchived?'Back to employees':'Archived employees';
   if(!profileRows||!profileSummary)return;
   const q=$('profile-search').value.trim().toLowerCase();
   const rows=profileRows.filter(row=>(profileCategory==='All'||row.employment_type===profileCategory)&&(!q||[row.directory_id,row.display_name,row.department].some(v=>String(v??'').toLowerCase().includes(q))));
@@ -319,17 +329,17 @@ function renderProfiles(){
   $('profile-count').textContent=rows.length?('Showing '+rows.length+' of '+profileRows.length+' employees'):'No matching employees';
     setHtmlIfChanged($('profile-rows'),rows.length?rows.map(row=>
       '<tr><td class="id-cell">'+esc(row.directory_id)+'</td><td class="employee-name-cell"><div class="register-identity"><span class="name-avatar" aria-hidden="true">'+esc(registerInitials(row.display_name))+'</span><span><strong>'+esc(row.display_name||'Name not synchronized')+'</strong>'+(row.position?'<small>'+esc(displayTitle(row.position))+'</small>':'')+'</span></div></td><td>'+categoryBadge(row.employment_type)+'</td><td>'+departmentCell(row.department)+'</td>'+
-      '<td class="directory-action-cell">'+(session.role==='admin'?'<button type="button" class="button primary row-action" data-edit-profile="'+esc(row.employee_code)+'" aria-label="'+esc((row.profile_complete?'Edit profile: ':'Complete profile: ')+(row.display_name||row.employee_code))+'">'+ '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.65" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m13.5 6.5 4 4M4 20l4.5-1 11-11a2.8 2.8 0 0 0-4-4l-11 11L4 20z"/></svg>' +(row.profile_complete?'Edit profile':'Complete profile')+'</button>':'—')+'</td></tr>'
+      '<td class="directory-action-cell">'+(session.role==='admin'?'<button type="button" class="profile-more" data-profile-more="'+esc(row.employee_code)+'" aria-haspopup="true" aria-expanded="false" aria-controls="profile-action-menu" aria-label="Actions for '+esc(row.display_name||row.employee_code)+'"><svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><circle cx="5" cy="12" r="1.8"/><circle cx="12" cy="12" r="1.8"/><circle cx="19" cy="12" r="1.8"/></svg></button>':'—')+'</td></tr>'
     ).join(''):'<tr><td colspan="5" class="table-empty">No matching employees.</td></tr>');
 }
 async function loadProfiles(){
-  const serial=++profileRequest,account=session;
-  const valid=()=>serial===profileRequest&&currentPage==='profiles'&&session===account;
+  const serial=++profileRequest,account=session,archived=profileArchived;
+  const valid=()=>serial===profileRequest&&currentPage==='profiles'&&session===account&&archived===profileArchived;
   updateProfileTabs();
   if(profileRows)renderProfiles();
   else $('profile-rows').innerHTML='<tr><td colspan="5" class="table-empty">Loading employees…</td></tr>';
   try{
-    const getPage=page=>api('/api/employee-profiles?'+new URLSearchParams({q:'',category:'All',status:'All',page:String(page),limit:String(PROFILE_BATCH_SIZE)}));
+    const getPage=page=>api('/api/employee-profiles?'+new URLSearchParams({q:'',category:'All',status:'All',archived:String(archived),page:String(page),limit:String(PROFILE_BATCH_SIZE)}));
     const first=await getPage(1);
     if(!valid())return;
     const all=[...first.items];
@@ -348,6 +358,49 @@ async function loadProfiles(){
     if(!profileRows)$('profile-rows').innerHTML='<tr><td colspan="5" class="table-empty">Unable to load employees.</td></tr>';
     toast(error.message,true);
   }
+}
+function closeProfileMenu(restoreFocus=false){
+  const menu=$('profile-action-menu');
+  if(menu?.matches(':popover-open'))menu.hidePopover();
+  if(profileMenuTrigger){
+    profileMenuTrigger.setAttribute('aria-expanded','false');
+    if(restoreFocus&&profileMenuTrigger.isConnected)profileMenuTrigger.focus({preventScroll:true});
+  }
+  profileMenuTrigger=null;profileMenuRow=null;
+}
+function openProfileMenu(trigger){
+  if(session?.role!=='admin'||profileArchiveBusy)return;
+  if(profileMenuTrigger===trigger){closeProfileMenu(true);return;}
+  closeProfileMenu();
+  const row=profileRows?.find(item=>item.employee_code===trigger.dataset.profileMore);
+  if(!row)return;
+  const menu=$('profile-action-menu'),edit=$('profile-menu-edit'),remove=$('profile-menu-delete');
+  profileMenuTrigger=trigger;profileMenuRow=row;
+  edit.hidden=profileArchived;
+  edit.querySelector('span').textContent=row.profile_complete?'Edit profile':'Complete profile';
+  remove.querySelector('span').textContent=profileArchived?'Restore':'Delete';
+  remove.classList.toggle('restore-action',profileArchived);
+  menu.showPopover();
+  const rect=trigger.getBoundingClientRect(),w=menu.offsetWidth,h=menu.offsetHeight;
+  menu.style.left=Math.max(8,Math.min(window.innerWidth-w-8,rect.right-w))+'px';
+  menu.style.top=Math.max(8,rect.bottom+h+8<=window.innerHeight?rect.bottom+6:rect.top-h-6)+'px';
+  trigger.setAttribute('aria-expanded','true');
+  (profileArchived?remove:edit).focus({preventScroll:true});
+}
+async function changeProfileArchive(){
+  const row=profileMenuRow,archived=profileArchived,account=session;
+  if(!row||account?.role!=='admin'||profileArchiveBusy)return;
+  closeProfileMenu(true);
+  if(!window.confirm((archived?'Restore ':'Remove ')+(row.display_name||row.employee_code)+(archived?' to the Employees directory?':' from the active Employees directory? You can restore it later. Attendance history and biometric collection settings will remain unchanged.')))return;
+  profileArchiveBusy=true;
+  try{
+    await api('/api/employee-profiles/'+encodeURIComponent(row.employee_code)+(archived?'/restore':''),{method:archived?'POST':'DELETE'});
+    if(session!==account)return;
+    profileRows=null;profileSummary=null;
+    if(currentPage==='profiles')await loadProfiles();
+    toast(archived?'Employee restored.':'Employee removed from the directory.');
+  }catch(error){if(session===account)toast(error.message,true);}
+  finally{profileArchiveBusy=false;}
 }
 async function openProfile(code=null){
   if(session?.role!=='admin')return;
@@ -402,7 +455,7 @@ async function saveProfile(event){
     if(session!==account)return;
     $('profile-dialog').close();
     toast(editing?'Employee profile updated.':'Employee profile registered.');
-    if(!editing){profileCategory='All';$('profile-search').value='';}
+    if(!editing){profileCategory='All';profileArchived=false;profileRows=null;profileSummary=null;$('profile-search').value='';}
     if(profileReturn?.page==='employees'){
       const previous=profileReturn;
       await loadRegister();
@@ -1231,8 +1284,23 @@ async function initialize(){
     $('employee-profile-panel').querySelector('.table-wrap').scrollTop=0;
   }));
   $('profile-rows').addEventListener('click',event=>{
-    const button=event.target.closest('[data-edit-profile]');if(button)openProfile(button.dataset.editProfile);
+    const button=event.target.closest('[data-profile-more]');if(button)openProfileMenu(button);
   });
+  $('profile-menu-edit').addEventListener('click',()=>{const code=profileMenuRow?.employee_code;closeProfileMenu();if(code)openProfile(code);});
+  $('profile-menu-delete').addEventListener('click',changeProfileArchive);
+  $('profile-archive-toggle').addEventListener('click',()=>{
+    if(session?.role!=='admin'||profileArchiveBusy)return;
+    closeProfileMenu();profileArchived=!profileArchived;profileRows=null;profileSummary=null;profileCategory='All';$('profile-search').value='';loadProfiles();
+  });
+  document.addEventListener('pointerdown',event=>{if(profileMenuTrigger&&!event.target.closest('#profile-action-menu,[data-profile-more]'))closeProfileMenu();});
+  document.addEventListener('keydown',event=>{
+    if(!profileMenuTrigger)return;
+    if(event.key==='Escape'){event.preventDefault();closeProfileMenu(true);}
+    else if(event.key==='ArrowDown'||event.key==='ArrowUp'){event.preventDefault();const items=[...$('profile-action-menu').querySelectorAll('button:not([hidden])')];items[(items.indexOf(document.activeElement)+(event.key==='ArrowDown'?1:items.length-1)+items.length)%items.length]?.focus();}
+    else if(event.key==='Tab')closeProfileMenu();
+  });
+  window.addEventListener('resize',()=>closeProfileMenu());
+  document.addEventListener('scroll',()=>closeProfileMenu(),true);
   $('register-rows').addEventListener('click',e=>{
     const row=e.target.closest('[data-employee]');if(row)openEmployee(row.dataset.employee);
   });

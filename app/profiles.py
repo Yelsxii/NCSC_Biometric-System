@@ -79,7 +79,7 @@ def get_profile(code: str) -> dict:
     return result
 
 
-def list_profiles(q: str, category: str, status: str, page: int, limit: int) -> dict:
+def list_profiles(q: str, category: str, status: str, page: int, limit: int, archived: bool = False) -> dict:
     if len(q) > 80 or any(ord(x) < 32 for x in q):
         raise HTTPException(400, "Invalid employee search.")
     if category not in ("All", *EMPLOYMENT_TYPES) or status not in ("All", "Registered", "Needs details"):
@@ -87,13 +87,15 @@ def list_profiles(q: str, category: str, status: str, page: int, limit: int) -> 
     if page < 1 or page > 100000 or not 1 <= limit <= 50:
         raise HTTPException(400, "Invalid employee page.")
     with closing(connect()) as con:
-        total = con.execute("SELECT COUNT(*) FROM employees").fetchone()[0]
-        complete = con.execute("SELECT COUNT(*) FROM employee_profiles").fetchone()[0]
+        archive_filter = "EXISTS" if archived else "NOT EXISTS"
+        scope = f"{archive_filter} (SELECT 1 FROM employee_directory_archive ar WHERE ar.employee_code=e.employee_code)"
+        total = con.execute("SELECT COUNT(*) FROM employees e WHERE " + scope).fetchone()[0]
+        complete = con.execute("SELECT COUNT(*) FROM employee_profiles e WHERE " + scope).fetchone()[0]
         category_counts = {kind: 0 for kind in EMPLOYMENT_TYPES}
-        category_counts.update(dict(con.execute("SELECT employment_type,COUNT(*) FROM employee_profiles GROUP BY employment_type")))
+        category_counts.update(dict(con.execute("SELECT employment_type,COUNT(*) FROM employee_profiles e WHERE " + scope + " GROUP BY employment_type")))
         args = (q, q, q, q, category, category, status, status, status)
-        filtered = PROFILE_SELECT + """
-        WHERE (?='' OR instr(lower(e.employee_code),lower(?))>0
+        filtered = PROFILE_SELECT + " WHERE " + scope + """
+          AND (?='' OR instr(lower(e.employee_code),lower(?))>0
                OR instr(lower(e.display_name),lower(?))>0 OR instr(lower(e.department),lower(?))>0)
           AND (?='All' OR p.employment_type=?)
           AND (?='All' OR (?='Registered' AND p.employee_code IS NOT NULL)
@@ -150,3 +152,22 @@ def save_profile(code: str, payload: ProfileFields, actor: int, creating: bool) 
         con.execute("INSERT INTO audit_events(actor_id,action,entity,entity_id,details) VALUES(?,?,?,0,?)",
                     (actor, "registered" if creating else "updated", "employee_profile", json.dumps(details, ensure_ascii=False)))
     return get_profile(code)
+
+
+
+def set_directory_archived(code: str, archived: bool, actor: int) -> dict:
+    """Hide or restore a directory entry without deleting employee or attendance data."""
+    if not ID_PATTERN.fullmatch(code):
+        raise HTTPException(400, "Invalid K14 ID.")
+    with closing(connect()) as con, con:
+        con.execute("BEGIN IMMEDIATE")
+        if not con.execute("SELECT 1 FROM employees WHERE employee_code=?", (code,)).fetchone():
+            raise HTTPException(404, "Employee record not found.")
+        if archived:
+            changed = con.execute("INSERT OR IGNORE INTO employee_directory_archive(employee_code,archived_by) VALUES(?,?)", (code,actor)).rowcount
+        else:
+            changed = con.execute("DELETE FROM employee_directory_archive WHERE employee_code=?", (code,)).rowcount
+        if changed:
+            con.execute("INSERT INTO audit_events(actor_id,action,entity,entity_id,details) VALUES(?,?,?,0,?)",
+                        (actor,"archived" if archived else "restored","employee_directory",json.dumps({"employee_code":code})))
+    return {"ok": True, "archived": archived}

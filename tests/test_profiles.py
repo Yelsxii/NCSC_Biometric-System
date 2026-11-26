@@ -163,3 +163,24 @@ def test_device_roster_cannot_fill_over_a_verified_profile_department(admin):
     assert result.json()['counts']['conflict'] == 1
     actual = client.get('/api/employee-profiles/7').json()
     assert actual['department'] == '' and actual['name_source'] == 'profile'
+
+
+
+def test_directory_archive_is_reversible_and_preserves_attendance(admin):
+    client, headers = admin
+    raw = b"7\t2026-11-02 08:00:00\t1\t2\t5\t0\n"
+    assert client.post('/api/imports', files={'file':('sample.dat',raw)}, headers=headers).status_code == 200
+    assert client.post('/api/employee-profiles', json=profile('7'), headers=headers).status_code == 201
+    with closing(connect()) as con:
+        before = [tuple(r) for r in con.execute('SELECT * FROM punches')]
+    assert client.delete('/api/employee-profiles/7', headers=headers).status_code == 200
+    assert client.get('/api/employee-profiles').json()['total'] == 0
+    assert client.get('/api/employee-profiles?archived=true').json()['items'][0]['employee_code'] == '7'
+    assert client.get('/api/employee-profiles/7').json()['profile_complete']
+    assert client.get('/api/employee-register?month=2026-11').json()['items'][0]['employee_code'] == '7'
+    assert client.post('/api/employee-profiles/7/restore', headers=headers).status_code == 200
+    assert client.get('/api/employee-profiles').json()['total'] == 1
+    assert client.get('/api/employee-profiles?archived=true').json()['total'] == 0
+    with closing(connect()) as con:
+        assert [tuple(r) for r in con.execute('SELECT * FROM punches')] == before
+        assert '7' in authorized_ids(con)

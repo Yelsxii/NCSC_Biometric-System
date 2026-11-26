@@ -1075,3 +1075,26 @@ dialog.app-dialog[open]::backdrop,#dtr-preview-dialog[open]::backdrop{
 .workspace #open-user-import:not(:disabled):is(:hover,:focus-visible) .inline-icon{transform:none}
 .workspace .record-create-action:disabled{opacity:.5;cursor:not-allowed}
 @media(prefers-reduced-motion:reduce){.workspace .record-create-action{transition:none}}
+
+/* Small translucent light circle behind count badges, without a raised button. */
+.workspace #employee-profile-panel .category-tab span{position:relative;isolation:isolate}
+.workspace #employee-profile-panel .category-tab span::before{content:"";position:absolute;inset:-3px;z-index:-1;border-radius:999px;background:radial-gradient(circle,#ffffffa8 20%,#ffffff00 73%);pointer-events:none}
+.workspace #employee-profile-panel .profile-action{width:76px}
+.workspace #employee-profile-panel .profile-more{width:31px;height:31px;display:inline-grid;place-items:center;border:0;border-radius:999px;background:#e3ebf8;color:#294d85;box-shadow:none;transition:background-color .2s ease,color .2s ease}
+.workspace #employee-profile-panel .profile-more svg{width:19px;height:19px}
+.workspace #employee-profile-panel .profile-more:is(:hover,[aria-expanded=true]){background:#244b9a;color:#fff}
+.workspace #employee-profile-panel .directory-archive-toggle{border:0;background:transparent;color:#536e94;font-size:10px;padding:4px 7px;border-radius:999px}
+.workspace #employee-profile-panel .directory-archive-toggle[hidden]{display:none}
+.workspace #employee-profile-panel .directory-archive-toggle:hover{background:#d8e5f7;color:#244b9a}
+#profile-action-menu{position:fixed;inset:auto;margin:0;padding:5px;width:158px;max-width:calc(100vw - 16px);border:1px solid #f7faff;border-radius:18px;background:#f4f8fd;box-shadow:0 8px 24px #18365b26;opacity:0;transform:translateY(-4px) scale(.98);transition:opacity .18s ease,transform .18s ease,display .18s allow-discrete,overlay .18s allow-discrete}
+#profile-action-menu:popover-open{opacity:1;transform:none}
+@starting-style{#profile-action-menu:popover-open{opacity:0;transform:translateY(-4px) scale(.98)}}
+#profile-action-menu button{display:flex;align-items:center;gap:8px;width:100%;padding:8px 10px;border:0;border-radius:999px;background:transparent;color:#244b9a;font:600 12px/1.4 "Segoe UI",system-ui,sans-serif;text-align:left;transition:background-color .16s ease,color .16s ease}
+#profile-action-menu button[hidden]{display:none}
+#profile-action-menu button svg{width:15px;height:15px;flex:none}
+#profile-action-menu button:is(:hover,:focus-visible){background:#dce8fb}
+#profile-action-menu #profile-menu-delete{color:#b32638}
+#profile-action-menu #profile-menu-delete:is(:hover,:focus-visible){background:#fbe2e7}
+#profile-action-menu #profile-menu-delete.restore-action{color:#244b9a}
+#profile-action-menu #profile-menu-delete.restore-action:is(:hover,:focus-visible){background:#dce8fb}
+@media(prefers-reduced-motion:reduce){#profile-action-menu,#profile-action-menu button,.workspace #employee-profile-panel .profile-more{transition:none}}

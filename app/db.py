@@ -121,6 +121,11 @@ CREATE TABLE IF NOT EXISTS employee_profiles (
  registered_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
  updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
+CREATE TABLE IF NOT EXISTS employee_directory_archive (
+ employee_code TEXT PRIMARY KEY REFERENCES employees(employee_code),
+ archived_by INTEGER NOT NULL REFERENCES users(id),
+ archived_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
 CREATE TABLE IF NOT EXISTS k14_authorizations (
  employee_code TEXT PRIMARY KEY,
  sync_authorized INTEGER NOT NULL DEFAULT 0 CHECK(sync_authorized IN (0,1)),
