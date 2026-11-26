@@ -469,6 +469,10 @@ function embeddedAja(day,key){
 }
 function slotCell(day,key){
   const event=day.display_slots?day.display_slots[key]:(day.slots[key]||provisionalOrdinarySlots(day)?.[key]);
+  const suggestion=day.historical_suggestions?.[key];
+  if(!event&&suggestion){
+    return '<td class="time-slot slot-suggested" title="'+esc('Original biometric scan '+suggestion.time+'; device state '+suggestion.device_slot.replace('_',' ').toUpperCase()+'; proposed placement only. HR confirmation required.')+'"><span class="time-value">'+esc(suggestion.time)+'</span><span class="suggested-caption">Suggested</span></td>';
+  }
   const origin=event?.origin||(day.slots[key]?'reviewed':'biometric');
   const tone=day.tone==='holiday'?'holiday':
     event?(day.monitoring?.remarks==='Future entry'&&event.happened_at>manilaClock()?'neutral':origin==='manual_sheet'?'sheet':(origin==='reviewed'||origin==='hr_approved')?'entry':'provisional'):
@@ -611,6 +615,10 @@ function openDayReview(date){
     input.disabled=!editable||(isAja&&periods.length>1);
     document.querySelector('[data-clock-pick="'+key.replaceAll('_','-')+'"]').disabled=input.disabled;
   }
+  const suggested=Object.entries(day.historical_suggestions||{});
+  $('review-historical-suggestions').classList.toggle('hidden',!editable||!suggested.length);
+  $('review-historical-suggestions').disabled=!editable||!suggested.length;
+  $('review-historical-suggestions').textContent='Use suggested biometric '+(suggested.length===1?'entry':'entries');
   $('review-aja-hint').textContent=periods.length>1?'Multiple AJA periods — review separately.':'';
   $('review-aja-hint').classList.toggle('hidden',periods.length<=1);
   const offday=day.is_weekend||Boolean(day.calendar.holiday_name);
@@ -637,6 +645,18 @@ function openDayReview(date){
   $('review-travel-info').textContent=fullTravel?'Travel Order · Full day':'';
   $('day-review-dialog').showModal();
 }
+function useHistoricalSuggestions(){
+  const context=dayReviewContext;
+  if(!context||context.account!==session||session.role!=='admin')return;
+  context.acceptedHistorical={};
+  for(const [key,suggestion] of Object.entries(context.day.historical_suggestions||{})){
+    const input=clockInput(key);
+    if(input.disabled||input.value)continue;
+    input.value=suggestion.time;
+    context.acceptedHistorical[key]=suggestion;
+  }
+  $('review-historical-suggestions').disabled=true;
+}
 async function saveDayReview(event){
   event.preventDefault();
   const context=dayReviewContext;
@@ -652,6 +672,16 @@ async function saveDayReview(event){
     const before=context.day.review.approved_times||{};
     regularChanged=REVIEW_CLOCKS.slice(0,4).some(k=>approved[k]!==before[k]);
     for(const key of REVIEW_CLOCKS.slice(0,4))if(approved[key]&&approved[key]!==before[key])payload[key]=null;
+    // Explicitly accepted suggestions save the original punch ID, not a
+    // fabricated manual timestamp. A subsequently edited clock remains a
+    // normal HR adjustment, and cancelling the dialog writes nothing.
+    for(const [key,suggestion] of Object.entries(context.acceptedHistorical||{})){
+      if(normalizedClock(clockInput(key).value)===suggestion.time){
+        payload[key]=suggestion.id;
+        delete approved[key];
+        regularChanged=true;
+      }
+    }
     payload.approved_times=approved;
   }
   const h=$('review-ut-hours').value,m=$('review-ut-minutes').value;
@@ -1184,6 +1214,7 @@ async function initialize(){
     const button=event.target.closest('[data-edit-day]');if(button)openDayReview(button.dataset.editDay);
   });
   $('day-review-form').addEventListener('submit',saveDayReview);
+  $('review-historical-suggestions').addEventListener('click',useHistoricalSuggestions);
   $('close-day-review').addEventListener('click',()=>$('day-review-dialog').close());
   $('cancel-day-review').addEventListener('click',()=>$('day-review-dialog').close());
   $('day-review-dialog').addEventListener('close',()=>{closeClockPicker();dayReviewContext=null;});
