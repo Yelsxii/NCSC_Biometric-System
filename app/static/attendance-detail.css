@@ -574,3 +574,21 @@
   .workspace .attendance-sheet .sheet-personnel #dtr-form-preview{padding-inline:7px;gap:4px;font-size:10px}
   .workspace .attendance-sheet .sheet-personnel #dtr-form-preview svg{width:13px;height:13px}
 }
+
+/* Compact attendance editor: remove inherited input top margins inside the
+   clock controls so the actual field height matches its visual height. */
+#day-review-dialog .app-dialog-head{padding:10px 16px}
+#day-review-dialog .app-dialog-head p{margin-top:3px;line-height:1.4}
+#day-review-dialog .app-dialog-body{padding:10px 16px 12px}
+#day-review-dialog .app-dialog-footer{padding:9px 16px}
+#day-review-dialog .form-section-title{margin:8px 0 5px}
+#day-review-dialog #review-time-section>.form-section-title:first-child{margin-top:0}
+#day-review-dialog .profile-form-grid{gap:6px 10px}
+#day-review-dialog .clock-field{gap:3px}
+#day-review-dialog .clock-control input{height:30px;min-height:30px;margin:0;padding:3px 8px;border:0;background:transparent}
+#day-review-dialog .clock-control{min-height:32px;box-sizing:border-box}
+#day-review-dialog .clock-pick{height:30px;min-height:30px;flex-basis:30px;width:30px}
+#day-review-dialog :is(#review-ut-hours,#review-ut-minutes,#review-reference,#review-remark){height:32px;min-height:32px;margin-top:4px;padding:4px 8px}
+#day-review-dialog :is(#review-ut-hours,#review-ut-minutes){font-variant-numeric:tabular-nums;font-weight:650}
+#day-review-dialog #review-aja-hint{line-height:1.4}
+#day-review-dialog form{max-height:min(90dvh,calc(100dvh - 48px))}
