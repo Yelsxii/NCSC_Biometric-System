@@ -31,12 +31,12 @@ def audit_month(month, include_review=False):
 
     def describe(scan, day):
         stamp = scan["happened_at"][11:19]
-        slot = scan.get("verified_slot")
+        slot = scan.get("verified_slot") or scan.get("historical_slot")
         raw = day["scans"]
         same_minute = [s for s in raw if s["id"] != scan["id"] and
                        s["happened_at"][11:16] == stamp[:5]]
         same_slot = [s for s in raw if s["id"] != scan["id"] and slot and
-                     s.get("verified_slot") == slot and
+                     (s.get("verified_slot") or s.get("historical_slot")) == slot and
                      s.get("activity_type") not in ("AJA", "Travel Order", "Fieldwork", "Official Business")]
         source_times = (day.get("manual_source") or {}).get("times", {})
         matching_sheet_slots = [key for key, value in source_times.items()
@@ -45,7 +45,7 @@ def audit_month(month, include_review=False):
             reason = "Another scan in the same minute; possible duplicate (not automatically confirmed)."
         elif same_slot:
             reason = "Multiple scans claim the same verified attendance slot."
-        elif slot:
+        elif scan.get("verified_slot"):
             reason = "Verified slot was not selected by the resolver; inspect the displayed and reviewed slot."
         elif scan.get("historical_slot"):
             reason = "Historical device state was available but not uniquely assignable; inspect repeated states, named sheet slots and clock sequence."
@@ -55,7 +55,7 @@ def audit_month(month, include_review=False):
             reason = "Scan minute matches multiple manual DTR slots."
         else:
             reason = "Manual DTR minute matches but resolver did not select this scan; inspect competing or reviewed entries."
-        return {"time": stamp, "punch_id": scan["id"], "verified_slot": slot,
+        return {"time": stamp, "punch_id": scan["id"], "verified_slot": scan.get("verified_slot"),
                 "device_state": scan.get("k14_punch_type", scan.get("historical_k14_state")), "historical_slot": scan.get("historical_slot"), "status_code": scan.get("status_code"),
                 "work_code": scan.get("work_code"), "matching_sheet_slots": matching_sheet_slots,
                 "other_same_minute": [s["happened_at"][11:19] for s in same_minute],
@@ -89,6 +89,12 @@ def audit_month(month, include_review=False):
                     "source_conflicts": day.get("source_conflicts", []),
                     "displayed_slots": {key: {"time": item["happened_at"][11:19], "origin": item.get("origin")}
                                         if item else None for key, item in day["display_slots"].items()},
+                    "sheet_times": (day.get("manual_source") or {}).get("times", {}),
+                    "raw_scans": [{"time": s["happened_at"][11:19],
+                                   "device_state": s.get("k14_punch_type", s.get("historical_k14_state")),
+                                   "slot": s.get("verified_slot") or s.get("historical_slot"),
+                                   "work_code": s.get("work_code"),
+                                   "unassigned": s["id"] in ids} for s in day["scans"]],
                     "raw_scan_count": len(day["scans"]),
                     "unassigned_count": len(ids),
                     "unassigned_scans": [describe(scan, day) for scan in day["scans"] if scan["id"] in ids],
@@ -102,7 +108,7 @@ def audit_month(month, include_review=False):
             "employees": results}
 
 
-def audit_all():
+def audit_all(details=False):
     """Summaries of every month containing a local biometric or imported DTR row."""
     load_dotenv()
     from app.db import database_path
@@ -114,15 +120,34 @@ def audit_all():
         for _, entries in _decode(path.read_bytes()).values():
             months.update(date[:7] for date in entries)
     reports=[]
+    aliases={}
     from collections import Counter
     for month in sorted(m for m in months if m and m<=dt.datetime.now(dt.timezone(dt.timedelta(hours=8))).strftime("%Y-%m")):
         report=audit_month(month, include_review=True)
         days=[d for employee in report["employees"] for d in employee["days"]]
         counts=Counter(d["remarks"] for d in days)
-        reports.append({"month":month,"employees_checked":report["employees_checked"],
+        summary={"month":month,"employees_checked":report["employees_checked"],
             "days_to_review":len(days),"unassigned_scans":sum(d["unassigned_count"] for d in days),
             "provisional_undertime_days":sum(d.get("undertime_origin")=="documented_partial" for d in days),
-            "remarks":dict(counts)})
+            "remarks":dict(counts)}
+        if details:
+            # Compact de-identified evidence: no names, employee codes, punch
+            # IDs, free-text notes, or source file paths in the shareable report.
+            cases=[]
+            for person in report["employees"]:
+                code=person["employee_code"]
+                alias=aliases.setdefault(code, "employee-%02d" % (len(aliases)+1))
+                for d in person["days"]:
+                    cases.append({"employee":alias,"date":d["date"],"remarks":d["remarks"],
+                        "issues":d["issues"],"missing":d["missing_entries"],
+                        "conflicts":d["source_conflicts"],
+                        "sheet_times":d["sheet_times"],
+                        "displayed_slots":d["displayed_slots"],"raw_scans":d["raw_scans"],
+                        "unassigned_reasons":[s["reason"] for s in d["unassigned_scans"]],
+                        "undertime_seconds":d["undertime_seconds"],"undertime_origin":d["undertime_origin"],
+                        "source_note_count":len(d["source_notes"])})
+            summary["cases"]=cases
+        reports.append(summary)
     return {"read_only":True,"months_checked":len(reports),"months":reports}
 
 
@@ -193,9 +218,9 @@ def audit_history():
 
 if __name__ == "__main__":
     if len(sys.argv) != 2:
-        raise SystemExit("Usage: python -m app.audit_unassigned YYYY-MM|all|history")
+        raise SystemExit("Usage: python -m app.audit_unassigned YYYY-MM|all|history|details")
     try:
-        report = audit_history() if sys.argv[1]=="history" else audit_all() if sys.argv[1]=="all" else audit_month(sys.argv[1])
+        report = audit_history() if sys.argv[1]=="history" else audit_all(details=sys.argv[1]=="details") if sys.argv[1] in ("all","details") else audit_month(sys.argv[1])
     except (ValueError, sqlite3.Error) as exc:
         raise SystemExit("Audit could not complete: " + str(exc)) from exc
     print(json.dumps(report, indent=2, ensure_ascii=True))
