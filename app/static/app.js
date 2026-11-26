@@ -852,6 +852,9 @@ async function processUsb(previewOnly){
   if (!file){toast('Select a USB attendance file first.',true);return;}
   if (file.size>2*1024*1024){toast('File is larger than 2 MB.',true);return;}
   if (!previewOnly && !usbPreviewOkay){toast('Preview the file before importing.',true);return;}
+  const busyDialog=$('attendance-import-dialog');
+  if(busyDialog.getAttribute('aria-busy')==='true')return;
+  busyDialog.setAttribute('aria-busy','true');
   try{
     const result=await api(previewOnly?'/api/imports/preview':'/api/imports',
       {method:'POST',body:uploadBody(file)});
@@ -871,12 +874,16 @@ async function processUsb(previewOnly){
       toast('Attendance import completed.');loadRegister();
     }
   }catch(error){toast(error.message,true);}
+  finally{busyDialog.removeAttribute('aria-busy');}
 }
 async function processRoster(previewOnly){
   const file=$('roster-file').files[0];
   if (!file){toast('Select a staff file first.',true);return;}
   if (file.name.toLowerCase().includes('fp10')){toast('Do not upload fingerprint templates.',true);return;}
   if (!previewOnly && !rosterPreviewOkay){toast('Preview the staff file first.',true);return;}
+  const busyDialog=$('user-import-dialog');
+  if(busyDialog.getAttribute('aria-busy')==='true')return;
+  busyDialog.setAttribute('aria-busy','true');
   try{
     const result=await api(previewOnly?'/api/employees/import/preview':'/api/employees/import',
       {method:'POST',body:uploadBody(file)});
@@ -889,6 +896,7 @@ async function processRoster(previewOnly){
       ' · Conflicts '+result.counts.conflict+' (not overwritten)';
     if(!previewOnly){rosterPreviewOkay=false;toast('Device user names synchronized from file.');}
   }catch(error){toast(error.message,true);}
+  finally{busyDialog.removeAttribute('aria-busy');}
 }
 function updateCodeDirectionVisibility(){
   const permitted=['AJA','Travel Order'].includes($('code-activity').value);
@@ -909,6 +917,9 @@ function openCodeEditor(device,code){
 async function saveCode(event){
   event.preventDefault();
   const device=$('code-device').value,code=$('code-number').value;
+  const busyDialog=$('code-dialog');
+  if(busyDialog.getAttribute('aria-busy')==='true')return;
+  busyDialog.setAttribute('aria-busy','true');
   try{
     await api('/api/work-codes/'+encodeURIComponent(device)+'/'+encodeURIComponent(code),{
       method:'PUT',body:JSON.stringify({
@@ -920,6 +931,7 @@ async function saveCode(event){
     $('code-dialog').close();toast('IN/OUT code mapping saved locally. K14 device unchanged.');loadDevice();
     if(selectedEmployee && currentPage==='employees')void loadDetail({quiet:true});
   }catch(error){toast(error.message,true);}
+  finally{busyDialog.removeAttribute('aria-busy');}
 }
 const attendanceMonthNames=Array.from({length:12},(_,i)=>new Intl.DateTimeFormat('en-US',{month:'short',timeZone:'UTC'}).format(new Date(Date.UTC(2020,i,1))));
 const attendanceMonthFull=new Intl.DateTimeFormat('en-US',{month:'long',year:'numeric',timeZone:'UTC'});
@@ -1007,12 +1019,44 @@ function initializeAttendanceMonthPicker(){
   $('month-year-prev').addEventListener('click',()=>step(-1));
   $('month-year-next').addEventListener('click',()=>step(1));
   dialog.addEventListener('cancel',e=>{if(yearMode){e.preventDefault();switchMode(false);}});
-  dialog.addEventListener('click',e=>{if(e.target===dialog){const rect=dialog.getBoundingClientRect();if(e.clientX<rect.left||e.clientX>rect.right||e.clientY<rect.top||e.clientY>rect.bottom)dialog.close();}});
   dialog.addEventListener('close',()=>{if(anchor){anchor.setAttribute('aria-expanded','false');if(anchor.getClientRects().length)anchor.focus();}target=null;anchor=null;});
   window.addEventListener('resize',position);
 }
+// A deliberate backdrop click dismisses a modal, never a click on its padding
+// or a selection/drag that began inside it.
+function initializeModalDismissal(){
+  function outside(dialog,event){
+    if(event.target!==dialog)return false;
+    const r=dialog.getBoundingClientRect();
+    return event.clientX<r.left||event.clientX>=r.right||event.clientY<r.top||event.clientY>=r.bottom;
+  }
+  document.querySelectorAll('dialog').forEach(dialog=>{
+    let start=null,endOutside=false;
+    const reset=()=>{start=null;endOutside=false;};
+    dialog.addEventListener('pointerdown',event=>{
+      reset();
+      if(event.isPrimary&&event.button===0&&outside(dialog,event))
+        start={id:event.pointerId,x:event.clientX,y:event.clientY};
+    });
+    dialog.addEventListener('pointerup',event=>{
+      endOutside=!!start&&event.pointerId===start.id&&outside(dialog,event)&&
+        Math.hypot(event.clientX-start.x,event.clientY-start.y)<=10;
+    });
+    dialog.addEventListener('pointercancel',reset);
+    dialog.addEventListener('close',reset);
+    dialog.addEventListener('click',event=>{
+      const dismiss=dialog.open&&start&&endOutside&&outside(dialog,event);
+      reset();
+      if(!dismiss)return;
+      if(dialog.matches('[aria-busy="true"]')||dialog.querySelector('[aria-busy="true"],#save-profile:disabled,#save-day-review:disabled,#save-calendar:disabled'))return;
+      if(dialog.id==='dtr-preview-dialog')closeDtrPreview();
+      else dialog.close();
+    });
+  });
+}
 async function initialize(){
   initializeAttendanceMonthPicker();
+  initializeModalDismissal();
   document.addEventListener('visibilitychange',()=>{
     if(!document.hidden)updateWorkspaceClock();
     if(document.hidden){
