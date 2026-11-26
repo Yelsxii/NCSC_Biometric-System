@@ -487,11 +487,21 @@
   gap:7px;min-width:0;
 }
 .workspace .attendance-sheet .sheet-name-line{flex:0 0 auto;gap:5px 12px;align-items:center}
-.workspace .attendance-sheet .sheet-department{
-  min-width:0;max-width:100%;font-size:11.5px;line-height:1.4;font-weight:550;
-  color:#536b8c;overflow-wrap:anywhere;
+/* One flat capsule: the existing category pill overlays the department surface. */
+.workspace .attendance-sheet .sheet-classification{
+  display:inline-flex;align-items:center;gap:9px;max-width:100%;min-width:0;
+  padding:0 12px 0 0;border:0;border-radius:999px;
+  background:#e8eef8;box-shadow:none;
 }
-.workspace .attendance-sheet .sheet-category .employment-chip{font-size:11px;font-weight:700;padding:4px 11px}
+.workspace .attendance-sheet .sheet-classification .sheet-category{flex:none}
+.workspace .attendance-sheet .sheet-department{
+  min-width:0;max-width:100%;font-size:11.5px;line-height:1.4;font-weight:600;
+  color:#405a80;overflow-wrap:anywhere;padding:4px 0;
+}
+.workspace .attendance-sheet .sheet-classification .employment-chip{
+  font-size:11px;font-weight:700;min-height:25px;padding:5px 12px;
+  border:0;box-shadow:none;
+}
 .workspace .attendance-sheet .sheet-filters{
   display:flex;flex:0 0 auto;align-items:flex-start;justify-content:flex-start;
   gap:0;padding:0;margin:0;border:0;
@@ -508,7 +518,8 @@
   .workspace .topbar-heading{gap:7px}
   .workspace .attendance-sheet .sheet-header{gap:0 8px;padding-bottom:8px}
   .workspace .attendance-sheet .sheet-name-line{gap:4px 7px}
-  .workspace .attendance-sheet .sheet-department{flex-basis:100%;font-size:11px}
+  .workspace .attendance-sheet .sheet-classification{gap:7px;padding-right:10px}
+  .workspace .attendance-sheet .sheet-department{font-size:11px}
   .workspace .attendance-sheet .sheet-personnel #dtr-form-preview{padding-inline:9px;font-size:10px}
 }
 @media(max-width:400px){
