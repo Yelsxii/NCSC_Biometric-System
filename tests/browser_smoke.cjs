@@ -1021,6 +1021,7 @@ with connect() as con:
     await page.locator('#profile-first').fill('Sample');
     await page.locator('#profile-last').fill('One');
     await page.locator('#profile-type').selectOption('Permanent');
+    await page.locator('#profile-department').selectOption('Operations Division (OPS)');
     await page.locator('#profile-position').fill('Records Analyst');
     await page.locator('#profile-confirm').check();
     await page.locator('#save-profile').click();
@@ -1033,7 +1034,7 @@ with connect() as con:
     await page.locator('#profile-first').fill('Example');
     await page.locator('#profile-last').fill('Employee');
     await page.locator('#profile-type').selectOption('COS');
-    await page.locator('#profile-department').fill('Sample Office');
+    await page.locator('#profile-department').selectOption('Administrative and Finance Section (AFS)');
     await page.locator('#profile-confirm').check();
     await page.screenshot({path:join(root,'docs/employee-registration-preview.png'),animations:'disabled'});
     await page.locator('#save-profile').click();
@@ -1044,6 +1045,7 @@ with connect() as con:
     await page.locator('#profile-first').fill('Wrong duplicate');
     await page.locator('#profile-last').fill('Name');
     await page.locator('#profile-type').selectOption('COS');
+    await page.locator('#profile-department').selectOption('Administrative and Finance Section (AFS)');
     await page.locator('#profile-confirm').check();
     await page.locator('#save-profile').click();
     await page.locator('#profile-error').filter({hasText:/already has a profile/}).waitFor();
