@@ -953,6 +953,12 @@ with connect() as con:
     await page.locator('#section-name').hover();
     assert.equal(await page.locator('[data-date="2026-11-09"] .remark-overtime').evaluate(el=>getComputedStyle(el).backgroundColor),'rgb(211, 228, 252)');
     assert.equal(await page.locator('[data-date="2026-11-09"] .overtime-value').textContent(),'01:00:00');
+    const earned=page.locator('[data-date="2026-11-09"] .overtime-value');
+    assert.ok(await earned.evaluate(el=>el.classList.contains('duration-positive')));
+    const late=page.locator('[data-date="2026-11-10"] .undertime-value');
+    assert.equal(await late.evaluateAll(nodes=>nodes.filter(el=>el.classList.contains('duration-positive')).length),2);
+    assert.equal(await filled.locator('.undertime-value.duration-muted').count(),2);
+    assert.equal(await day.locator('.undertime-value.duration-muted').count(),2);
     assert.deepEqual(await page.evaluate(()=>[durationText(28815),durationText(65),durationText(0),durationText(null),durationText(90061)]),['08:00:15','00:01:05','00:00:00','—','25:01:01']);
     assert.equal((await page.locator('#dtr-form-preview').innerText()).trim(),'Export DTR');
     assert.equal(await page.locator('[data-date="2026-11-10"] .monitor-remark').textContent(),'Undertime');
