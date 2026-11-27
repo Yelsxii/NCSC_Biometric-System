@@ -99,6 +99,15 @@ def main() -> None:
         info["sync_enabled"] = info["attendance_sync"]["enabled"]
         print(json.dumps(info, indent=2, ensure_ascii=False))
         return
+    if command and command[0]=="import-positions":
+        if len(command) not in (2,3) or (len(command)==3 and command[2]!="--apply"):
+            raise SystemExit("Usage: python -m app.cli import-positions <reference.json> [--apply]")
+        from app.position_reference import import_positions
+        try:
+            import_positions(command[1], apply=len(command)==3)
+        except (OSError, ValueError, KeyError, TypeError) as exc:
+            raise SystemExit(f"Position import failed: {exc}") from exc
+        return
     if command in (["create-employee-account"], ["disable-employee-account"]):
         initialize()
         code = input("Employee biometric ID: ").strip()
@@ -147,7 +156,7 @@ def main() -> None:
         print("Employee portal account ready. Provide credentials privately.")
         return
     if command != ["create-admin"]:
-        raise SystemExit("Usage: python -m app.cli create-admin | create-employee-account | disable-employee-account | sync-k14 | k14-status | poll-k14 | inspect-bionet <path> | sync-bionet | inspect-bionet-workcodes | inspect-bionet-attendance")
+        raise SystemExit("Usage: python -m app.cli create-admin | create-employee-account | disable-employee-account | import-positions <reference.json> [--apply] | sync-k14 | k14-status | poll-k14 | inspect-bionet <path> | sync-bionet | inspect-bionet-workcodes | inspect-bionet-attendance")
     initialize()
     username = input("Admin username: ").strip().lower()
     if not re.fullmatch(r"[a-z0-9._-]{3,40}", username):
