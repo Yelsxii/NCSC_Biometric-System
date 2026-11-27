@@ -495,6 +495,26 @@ function closeProfileSelects(){
 function focusProfileField(id){
   (profileSelectControls.get(id)?.trigger||$(id)).focus();
 }
+// One placement policy for profile dropdowns. Use below-first with a
+// bounded scrollable list for long editable menus; flip only if two rows
+// cannot fit in the viewport below the control.
+function placeProfileMenu(anchor,menu,{maxHeight=Infinity,preferBelow=false,exactWidth=false}={}){
+  const r=anchor.getBoundingClientRect(),margin=8,gap=5;
+  const dialog=$('profile-dialog').getBoundingClientRect();
+  const leftBound=Math.max(margin,dialog.left+margin),rightBound=Math.min(window.innerWidth-margin,dialog.right-margin);
+  const availableWidth=Math.max(0,rightBound-leftBound);
+  const width=Math.min(exactWidth?r.width:Math.max(r.width,Math.min(245,availableWidth)),availableWidth);
+  menu.style.width=width+'px';
+  menu.style.left=Math.max(leftBound,Math.min(r.left,rightBound-width))+'px';
+  menu.style.maxHeight='none';
+  const below=Math.max(0,window.innerHeight-r.bottom-gap-margin),above=Math.max(0,r.top-gap-margin);
+  const desired=Math.min(menu.scrollHeight+2,maxHeight);
+  const up=desired>below&&above>below&&(!preferBelow||below<Math.min(68,desired));
+  const height=Math.min(desired,Math.max(0,up?above:below));
+  menu.dataset.direction=up?'up':'down';
+  menu.style.maxHeight=height+'px';
+  menu.style.top=Math.max(margin,up?r.top-gap-height:r.bottom+gap)+'px';
+}
 // Editable position combobox. No native datalist or browser-stored employee history.
 function initializePositionCombo(){
   const input=$('profile-position'),field=input.closest('.profile-select-field');
@@ -509,7 +529,7 @@ function initializePositionCombo(){
   input.setAttribute('aria-haspopup','listbox');input.setAttribute('aria-controls',menu.id);
   input.setAttribute('aria-expanded','false');toggle.setAttribute('aria-controls',menu.id);
   toggle.setAttribute('aria-expanded','false');toggle.hidden=false;anchor.classList.add('enhanced');
-  let choices=[],active=-1,filtering=false;
+  let choices=[],active=-1;
   const opened=()=>menu.matches(':popover-open');
   const key=s=>String(s||'').trim().toLowerCase();
   function setActive(index){
@@ -531,7 +551,7 @@ function initializePositionCombo(){
     for(const value of [typed,...presets,...(profileRows||[]).map(row=>row.position)]){
       if(key(value)&&!values.has(key(value)))values.set(key(value),String(value).trim());
     }
-    const matches=[...values.values()].filter(value=>!filtering||key(value).includes(q));
+    const matches=[...values.values()];
     menu.replaceChildren();choices=[];active=-1;input.removeAttribute('aria-activedescendant');
     matches.forEach((value,i)=>{
       const button=document.createElement('button');button.type='button';button.tabIndex=-1;
@@ -549,40 +569,40 @@ function initializePositionCombo(){
     });
     menu.scrollTop=0;
   }
-  function place(){
-    const r=anchor.getBoundingClientRect(),margin=8,gap=5;
-    const width=Math.min(r.width,window.innerWidth-margin*2);
-    menu.style.width=width+'px';menu.style.left=Math.max(margin,Math.min(r.left,window.innerWidth-margin-width))+'px';
-    menu.style.maxHeight='none';
-    const desired=Math.min(menu.scrollHeight+2,260);
-    const below=window.innerHeight-r.bottom-gap-margin,above=r.top-gap-margin;
-    const up=desired>below&&above>below;
-    const height=Math.min(desired,Math.max(30,up?above:below));
-    menu.dataset.direction=up?'up':'down';menu.style.maxHeight=height+'px';
-    menu.style.top=Math.max(margin,up?r.top-gap-height:r.bottom+gap)+'px';
-  }
+  function place(){placeProfileMenu(anchor,menu,{maxHeight:168,preferBelow:true,exactWidth:true});}
   function close(){
     if(opened())menu.hidePopover();
     input.setAttribute('aria-expanded','false');toggle.setAttribute('aria-expanded','false');
+    toggle.setAttribute('aria-label','Show position suggestions');
     input.removeAttribute('aria-activedescendant');active=-1;
   }
-  function open(filter=false){
+  function open(){
     if(!opened())closeProfileSelects();
-    filtering=filter;render();
+    render();
     if(!opened())menu.showPopover();
     place();input.setAttribute('aria-expanded','true');toggle.setAttribute('aria-expanded','true');
+    toggle.setAttribute('aria-label','Hide position suggestions');
   }
+  toggle.setAttribute('aria-haspopup','listbox');
   toggle.addEventListener('pointerdown',event=>event.preventDefault());
+  toggle.addEventListener('keydown',event=>{
+    if(event.key==='ArrowDown'||event.key==='ArrowUp'){
+      event.preventDefault();input.focus({preventScroll:true});if(!opened())open();
+      if(choices.length)setActive(event.key==='ArrowDown'?0:choices.length-1);
+    }
+  });
   toggle.addEventListener('click',()=>{
     if(opened())close();else{input.focus({preventScroll:true});open();}
   });
-  input.addEventListener('click',()=>{if(!opened())open();});
-  input.addEventListener('input',()=>open(true));
+  // Typing or clicking the editable text never opens suggestions.
+  input.addEventListener('pointerdown',()=>close());
+  input.addEventListener('input',()=>close());
   input.addEventListener('blur',()=>close());
   input.addEventListener('keydown',event=>{
     if(event.isComposing)return;
     if(event.key==='ArrowDown'||event.key==='ArrowUp'){
-      event.preventDefault();if(!opened())open();
+      if(!opened())return;
+      event.preventDefault();
       if(choices.length)setActive(active<0?(event.key==='ArrowDown'?0:choices.length-1):
         Math.max(0,Math.min(choices.length-1,active+(event.key==='ArrowDown'?1:-1))));
     }else if(event.key==='Enter'&&opened()){
@@ -626,23 +646,7 @@ function initializeProfileSelects(){
       if(id==='profile-type')trigger.dataset.category=select.value;
       for(const button of options)button.setAttribute('aria-selected',String(button.dataset.value===select.value));
     }
-    function place(){
-      const r=trigger.getBoundingClientRect(),margin=8,gap=5;
-      const dialog=$('profile-dialog').getBoundingClientRect();
-      const leftBound=Math.max(margin,dialog.left+margin),rightBound=Math.min(window.innerWidth-margin,dialog.right-margin);
-      const width=Math.min(Math.max(r.width,Math.min(245,rightBound-leftBound)),rightBound-leftBound);
-      menu.style.width=width+'px';menu.style.left=Math.max(leftBound,Math.min(r.left,rightBound-width))+'px';
-      menu.style.maxHeight='none';
-      const below=window.innerHeight-r.bottom-gap-margin,above=r.top-gap-margin;
-      const desired=menu.scrollHeight+2;
-      // Normal dropdowns open below the trigger. The top-layer popover may
-      // extend beyond the dialog; only viewport space determines a flip.
-      const up=desired>below&&above>below;
-      const available=Math.max(30,up?above:below);
-      menu.dataset.direction=up?'up':'down';
-      menu.style.maxHeight=available+'px';
-      menu.style.top=Math.max(margin,Math.min(up?r.top-gap-Math.min(desired,available):r.bottom+gap,window.innerHeight-margin-Math.min(desired,available)))+'px';
-    }
+    function place(){placeProfileMenu(trigger,menu);}
     function close(restoreFocus=false){
       if(menu.matches(':popover-open'))menu.hidePopover();
       trigger.setAttribute('aria-expanded','false');
