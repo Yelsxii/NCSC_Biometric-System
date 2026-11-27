@@ -117,11 +117,21 @@ def format_dates(days):
     return "; ".join(parts)
 
 
+def aja_print_batches(days):
+    """Only a continuous date range with one identical schedule shares a form."""
+    ordered = sorted(days, key=lambda day: day.date)
+    first = ordered[0]
+    consecutive = all(b.date - a.date == timedelta(days=1)
+                      for a, b in zip(ordered, ordered[1:]))
+    same_times = all((day.departure, day.return_time) ==
+                     (first.departure, first.return_time) for day in ordered)
+    if consecutive and same_times:
+        return [(first.departure, first.return_time, [day.date for day in ordered])]
+    return [(day.departure, day.return_time, [day.date]) for day in ordered]
+
+
 def build_aja_packet(payload, user, template):
     from pypdf import PdfReader, PdfWriter
-    groups = {}
-    for day in payload.days:
-        groups.setdefault((day.departure, day.return_time), []).append(day.date)
     writer = PdfWriter()
     def render(dates, departure, return_time):
         data = AjaPrintInput(name=user["name"], position=user["position"],
@@ -129,12 +139,9 @@ def build_aja_packet(payload, user, template):
             destination=payload.destination, purpose=payload.purpose,
             departure=departure, return_time=return_time)
         return build_aja_pdf(data, template)
-    # The original one-page form has one time pair. If schedules differ,
-    # use one form per day in chronological order, never ambiguous time lists.
-    batches = [(payload.days[0].departure, payload.days[0].return_time,
-                [day.date for day in payload.days])] if len(groups)==1 else [
-                (day.departure, day.return_time, [day.date]) for day in payload.days]
-    for departure, return_time, dates in batches:
+    # Nonconsecutive dates always receive their own signed forms, regardless
+    # of the amount of space in the printed date cell.
+    for departure, return_time, dates in aja_print_batches(payload.days):
         label = format_dates(dates)
         pages = []
         if len(label) <= 100:
