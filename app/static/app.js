@@ -495,6 +495,107 @@ function closeProfileSelects(){
 function focusProfileField(id){
   (profileSelectControls.get(id)?.trigger||$(id)).focus();
 }
+// Editable position combobox. No native datalist or browser-stored employee history.
+function initializePositionCombo(){
+  const input=$('profile-position'),field=input.closest('.profile-select-field');
+  const anchor=input.closest('.profile-position-control'),toggle=anchor.querySelector('button');
+  const menu=document.createElement('div');
+  if(typeof menu.showPopover!=='function')return; // Plain editable input fallback.
+  const presets=[...$('profile-position-options').content.querySelectorAll('option')].map(o=>o.value);
+  menu.id='profile-position-menu';menu.className='profile-select-menu profile-position-menu';
+  menu.setAttribute('popover','manual');menu.setAttribute('role','listbox');
+  menu.setAttribute('aria-labelledby','profile-position-label');field.append(menu);
+  input.setAttribute('role','combobox');input.setAttribute('aria-autocomplete','list');
+  input.setAttribute('aria-haspopup','listbox');input.setAttribute('aria-controls',menu.id);
+  input.setAttribute('aria-expanded','false');toggle.setAttribute('aria-controls',menu.id);
+  toggle.setAttribute('aria-expanded','false');toggle.hidden=false;anchor.classList.add('enhanced');
+  let choices=[],active=-1,filtering=false;
+  const opened=()=>menu.matches(':popover-open');
+  const key=s=>String(s||'').trim().toLowerCase();
+  function setActive(index){
+    active=index;
+    choices.forEach((node,i)=>node.toggleAttribute('data-keyboard-active',i===active));
+    if(active>=0&&choices[active]){
+      input.setAttribute('aria-activedescendant',choices[active].id);
+      choices[active].scrollIntoView({block:'nearest'});
+    }else input.removeAttribute('aria-activedescendant');
+  }
+  function choose(value){
+    input.value=value;
+    input.dispatchEvent(new Event('change',{bubbles:true}));
+    close();input.focus({preventScroll:true});
+  }
+  function render(){
+    const typed=input.value.trim(),q=key(typed);
+    const values=new Map();
+    for(const value of [typed,...presets,...(profileRows||[]).map(row=>row.position)]){
+      if(key(value)&&!values.has(key(value)))values.set(key(value),String(value).trim());
+    }
+    const matches=[...values.values()].filter(value=>!filtering||key(value).includes(q));
+    menu.replaceChildren();choices=[];active=-1;input.removeAttribute('aria-activedescendant');
+    matches.forEach((value,i)=>{
+      const button=document.createElement('button');button.type='button';button.tabIndex=-1;
+      button.id=menu.id+'-option-'+i;button.setAttribute('role','option');
+      button.setAttribute('aria-selected',String(key(value)===q));
+      const label=document.createElement('span');label.textContent=value;
+      button.append(label);
+      // Retain the typed value as a selectable custom title.
+      if(key(value)===q&&!presets.some(p=>key(p)===q)){
+        const custom=document.createElement('span');custom.className='position-custom-caption';custom.textContent='Custom';button.append(custom);
+      }
+      button.addEventListener('pointerdown',event=>event.preventDefault());
+      button.addEventListener('click',()=>choose(value));
+      menu.append(button);choices.push(button);
+    });
+    menu.scrollTop=0;
+  }
+  function place(){
+    const r=anchor.getBoundingClientRect(),margin=8,gap=5;
+    const width=Math.min(r.width,window.innerWidth-margin*2);
+    menu.style.width=width+'px';menu.style.left=Math.max(margin,Math.min(r.left,window.innerWidth-margin-width))+'px';
+    menu.style.maxHeight='none';
+    const desired=Math.min(menu.scrollHeight+2,260);
+    const below=window.innerHeight-r.bottom-gap-margin,above=r.top-gap-margin;
+    const up=desired>below&&above>below;
+    const height=Math.min(desired,Math.max(30,up?above:below));
+    menu.dataset.direction=up?'up':'down';menu.style.maxHeight=height+'px';
+    menu.style.top=Math.max(margin,up?r.top-gap-height:r.bottom+gap)+'px';
+  }
+  function close(){
+    if(opened())menu.hidePopover();
+    input.setAttribute('aria-expanded','false');toggle.setAttribute('aria-expanded','false');
+    input.removeAttribute('aria-activedescendant');active=-1;
+  }
+  function open(filter=false){
+    if(!opened())closeProfileSelects();
+    filtering=filter;render();
+    if(!opened())menu.showPopover();
+    place();input.setAttribute('aria-expanded','true');toggle.setAttribute('aria-expanded','true');
+  }
+  toggle.addEventListener('pointerdown',event=>event.preventDefault());
+  toggle.addEventListener('click',()=>{
+    if(opened())close();else{input.focus({preventScroll:true});open();}
+  });
+  input.addEventListener('click',()=>{if(!opened())open();});
+  input.addEventListener('input',()=>open(true));
+  input.addEventListener('blur',()=>close());
+  input.addEventListener('keydown',event=>{
+    if(event.isComposing)return;
+    if(event.key==='ArrowDown'||event.key==='ArrowUp'){
+      event.preventDefault();if(!opened())open();
+      if(choices.length)setActive(active<0?(event.key==='ArrowDown'?0:choices.length-1):
+        Math.max(0,Math.min(choices.length-1,active+(event.key==='ArrowDown'?1:-1))));
+    }else if(event.key==='Enter'&&opened()){
+      event.preventDefault();if(active>=0&&choices[active])choices[active].click();else close();
+    }else if(event.key==='Escape'&&opened()){
+      event.preventDefault();event.stopPropagation();close();
+    }else if(event.key==='Tab')close();
+  });
+  menu.addEventListener('toggle',()=>{
+    if(!opened()){input.setAttribute('aria-expanded','false');toggle.setAttribute('aria-expanded','false');input.removeAttribute('aria-activedescendant');}
+  });
+  profileSelectControls.set(input.id,{trigger:input,anchor,menu,refresh:close,close});
+}
 function initializeProfileSelects(){
   for(const id of ['profile-type','profile-department']){
     const select=$(id),field=select.closest('.profile-select-field');
@@ -578,11 +679,12 @@ function initializeProfileSelects(){
     field.querySelector('label').htmlFor=trigger.id;
     profileSelectControls.set(id,{trigger,menu,refresh,close});refresh();
   }
+  initializePositionCombo();
   // Manual popovers keep the trigger click from being swallowed by the
   // browser's automatic light-dismiss. Explicit outside clicks still close.
   document.addEventListener('pointerdown',event=>{
     for(const control of profileSelectControls.values()){
-      if(control.menu.matches(':popover-open')&&!control.trigger.contains(event.target)&&!control.menu.contains(event.target))control.close();
+      if(control.menu.matches(':popover-open')&&!(control.anchor||control.trigger).contains(event.target)&&!control.menu.contains(event.target))control.close();
     }
   },true);
   $('profile-dialog').addEventListener('cancel',event=>{
