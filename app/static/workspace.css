@@ -1050,9 +1050,11 @@ dialog.app-dialog[open]::backdrop,#dtr-preview-dialog[open]::backdrop{
 .workspace #employee-profile-panel .category-tab[data-profile-category="OJT"]{--filter-accent:#a35113;--filter-count:#ffead7;--filter-hover:#fce4ce}
 .workspace #employee-profile-panel .category-tab:not(.active):is(:hover,:focus-visible){background:var(--filter-hover);color:var(--filter-accent);box-shadow:none}
 .workspace #employee-profile-panel .category-tab:not(.active):is(:hover,:focus-visible) span{background:var(--filter-accent);color:#fff}
-.workspace #employee-profile-panel .category-tab.active{color:#fff;background:#3263bd;box-shadow:none;font-weight:650}
-.workspace #employee-profile-panel .category-tab.active:hover{background:#2855a7}
-.workspace #employee-profile-panel .category-tab.active span{background:#f0f5ff;color:#244b9a;box-shadow:none}
+/* Selected filters retain their own hover palette, with a slightly richer tint
+   and a colored count badge so selection stays distinguishable from hover. */
+.workspace #employee-profile-panel .category-tab.active{color:color-mix(in srgb,var(--filter-accent) 74%,#172b49);background:color-mix(in srgb,var(--filter-hover) 86%,var(--filter-accent));box-shadow:none;font-weight:650}
+.workspace #employee-profile-panel .category-tab.active:is(:hover,:focus-visible){background:color-mix(in srgb,var(--filter-hover) 78%,var(--filter-accent))}
+.workspace #employee-profile-panel .category-tab.active span{background:var(--filter-accent);color:#fff;box-shadow:none}
 .workspace #employee-profile-panel .category-tab:focus-visible{outline:2px solid #7295ce;outline-offset:2px}
 .workspace #employee-profile-panel #open-profile{height:38px;min-height:38px;border-radius:9px;font-size:11px;font-weight:650;gap:7px;flex-shrink:0}
 .workspace #employee-profile-panel #open-profile svg{width:16px;height:16px;flex:none}
