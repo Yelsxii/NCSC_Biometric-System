@@ -1315,17 +1315,19 @@ body:has(#profile-undo-stack:not(:empty)) #toast:not(.hidden){bottom:auto;top:22
 .workspace .sidebar{
   --nav-join-fill:#e4ecf7;
   --nav-join-radius:12px;
-  --nav-join-tip:3px;
-  --nav-join-lip:2px;
+  --nav-join-tip:2px;
+  --nav-join-lip:3px;
 }
 .workspace .sidebar .nav-edge-highlight{
   position:absolute;
   inset:0 calc(-1 * (var(--rail-inset) + var(--nav-join-lip))) 0 0;
   z-index:-1;pointer-events:none;
-  /* A shallow elliptical lip rounds the exposed edge without the old
-     horizontal bridge or overlap onto the neighbouring glass panel. */
-  border-radius:12px var(--nav-join-tip) var(--nav-join-tip) 12px / 12px 50% 50% 12px;
-  background:linear-gradient(to right,#f4f7fc 0%,var(--nav-join-fill) 70%,var(--nav-join-fill) calc(100% - 1px),#e4ecf700 100%);
+  /* Keep the fill opaque through the rail boundary. The former tall
+     elliptical corners and transparent tip exposed two navy slivers
+     where the body met the inverted shoulders. Round only the small
+     lip outside the rail, without touching the neighbouring panel. */
+  border-radius:12px var(--nav-join-tip) var(--nav-join-tip) 12px / 12px 6px 6px 12px;
+  background:linear-gradient(to right,#f4f7fc 0%,var(--nav-join-fill) 70%);
   opacity:0;transform:translateX(-3px) scaleX(.985);
   transform-origin:right center;
   transition:opacity .38s cubic-bezier(.25,.7,.25,1),transform .38s cubic-bezier(.25,.7,.25,1);
@@ -1334,16 +1336,16 @@ body:has(#profile-undo-stack:not(:empty)) #toast:not(.hidden){bottom:auto;top:22
 .workspace .sidebar .nav-edge-highlight::before,
 .workspace .sidebar .nav-edge-highlight::after{
   content:"";position:absolute;
-  right:calc(var(--nav-join-lip) - 1px);
+  right:calc(var(--nav-join-lip) - 2px);
   width:var(--nav-join-radius);height:var(--nav-join-radius);
   pointer-events:none;
 }
 .workspace .sidebar .nav-edge-highlight::before{
-  bottom:calc(100% - 1px);
+  bottom:calc(100% - 2px);
   background:radial-gradient(circle at 0 0,transparent calc(var(--nav-join-radius) - .65px),var(--nav-join-fill) var(--nav-join-radius));
 }
 .workspace .sidebar .nav-edge-highlight::after{
-  top:calc(100% - 1px);
+  top:calc(100% - 2px);
   background:radial-gradient(circle at 0 100%,transparent calc(var(--nav-join-radius) - .65px),var(--nav-join-fill) var(--nav-join-radius));
 }
 .workspace .sidebar .nav-item.active,
@@ -1359,7 +1361,7 @@ body:has(#profile-undo-stack:not(:empty)) #toast:not(.hidden){bottom:auto;top:22
   .workspace .sidebar .nav-edge-highlight{border-top-left-radius:10px;border-bottom-left-radius:10px}
 }
 @media(max-width:740px){
-  .workspace .sidebar{--nav-join-radius:8px;--nav-join-lip:1px;--nav-join-tip:2px}
+  .workspace .sidebar{--nav-join-radius:8px}
 }
 @media(prefers-reduced-motion:reduce){
   .workspace .sidebar .nav-edge-highlight{transition:none;transform:none}
