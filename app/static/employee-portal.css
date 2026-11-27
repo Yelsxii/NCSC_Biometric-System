@@ -138,17 +138,20 @@
 /* Itinerary-inspired summary using the same blue, rounded and muted field family. */
 .workspace #aja-pilot-panel .aja-trip-ticket{background:#f6f8fc;border:1px solid #dce5f2;border-radius:9px;overflow:hidden;color:#243e68;min-width:0}
 .workspace #aja-pilot-panel .aja-ticket-label{display:block;color:#657997;font-size:10px;font-weight:600;margin-bottom:4px}
-.workspace #aja-pilot-panel .aja-ticket-date{display:flex;align-items:center;gap:8px;padding:11px 12px;border-bottom:1px solid #e0e7f3}
-.workspace #aja-pilot-panel .aja-ticket-date>svg{width:17px;height:17px;flex:none;color:#526fa4}
-.workspace #aja-pilot-panel .aja-ticket-date>div{min-width:0;flex:1}
-.workspace #aja-pilot-panel .aja-ticket-date strong{font-size:12px;font-weight:650;overflow-wrap:anywhere}
+.workspace #aja-pilot-panel .aja-ticket-date{display:grid;gap:8px;padding:10px 12px 12px;border-bottom:1px solid #e0e7f3;min-width:0}
+.workspace #aja-pilot-panel .aja-ticket-date-heading{display:flex;align-items:center;gap:7px;min-width:0}
+.workspace #aja-pilot-panel .aja-ticket-date-heading svg{width:14px;height:14px;flex:none;color:#526fa4}
+.workspace #aja-pilot-panel .aja-ticket-date-heading .aja-ticket-label{flex:1;margin:0}
+.workspace #aja-pilot-panel .aja-ticket-date-values{display:flex;flex-wrap:wrap;gap:5px;min-width:0}
+.workspace #aja-pilot-panel .aja-ticket-date-chip{display:inline-flex;align-items:center;max-width:100%;box-sizing:border-box;padding:4px 7px;border:1px solid #d7e2f2;border-radius:5px;background:#eaf0fa;color:#244b9a;font-size:10.5px;font-weight:600;line-height:1.4;overflow-wrap:anywhere}
+.workspace #aja-pilot-panel .aja-ticket-date-empty{color:#657997;font-size:12px}
 .workspace #aja-pilot-panel .aja-ticket-count{flex:none;font-size:10px;color:#244b9a;background:#e4edfb;padding:4px 7px;border-radius:6px}
-.workspace #aja-pilot-panel .aja-ticket-route{display:grid;grid-template-columns:minmax(0,1fr) minmax(36px,64px) minmax(0,1fr);gap:8px;align-items:center;padding:15px 12px 13px}
+.workspace #aja-pilot-panel .aja-ticket-route{display:grid;grid-template-columns:minmax(0,1fr) 26px minmax(0,1fr);gap:8px;align-items:center;padding:15px 12px 13px}
 .workspace #aja-pilot-panel .aja-ticket-stop{min-width:0}
 .workspace #aja-pilot-panel .aja-ticket-stop:last-child{text-align:right}
 .workspace #aja-pilot-panel .aja-ticket-stop strong{display:block;font-size:15px;color:#203b67;line-height:1.35;font-weight:700;overflow-wrap:anywhere}
 .workspace #aja-pilot-panel .aja-ticket-connector{display:flex;align-items:center;justify-content:center;min-width:0;color:#526fa4}
-.workspace #aja-pilot-panel .aja-ticket-connector svg{display:block;width:100%;max-width:72px;height:18px;flex:none}
+.workspace #aja-pilot-panel .aja-ticket-connector svg{display:block;width:21px;height:21px;flex:none}
 .workspace #aja-pilot-panel .aja-ticket-times{display:grid;grid-template-columns:minmax(0,1fr) auto minmax(0,1fr);align-items:center;gap:6px;padding:12px;border-top:1px dashed #c6d4e8}
 .workspace #aja-pilot-panel .aja-ticket-times>div:last-child{text-align:right}
 .workspace #aja-pilot-panel .aja-ticket-times strong{font-size:15px;font-weight:700;white-space:nowrap;font-variant-numeric:tabular-nums}
