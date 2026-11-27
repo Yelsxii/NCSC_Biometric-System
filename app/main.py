@@ -20,7 +20,7 @@ from dotenv import load_dotenv
 from fastapi import Depends, FastAPI, File, Form, HTTPException, Request, UploadFile
 from itsdangerous import URLSafeTimedSerializer, BadSignature, SignatureExpired
 from fastapi.responses import FileResponse, JSONResponse, Response
-from app.aja_print import AjaPrintInput, build_aja_pdf
+from app.employee_portal import router as employee_portal_router
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, Field, field_validator, model_validator
 from starlette.middleware.sessions import SessionMiddleware
@@ -56,6 +56,7 @@ app.add_middleware(
 )
 ROOT = Path(__file__).resolve().parent
 app.mount("/static", StaticFiles(directory=ROOT / "static"), name="static")
+app.include_router(employee_portal_router)
 CODE_RE = re.compile(r"^[A-Za-z0-9._-]{1,64}$")
 
 
@@ -952,10 +953,3 @@ def monitor_official_activities(
                 "official TO coverage requires approved office records for DTR treatment.",
     }
 
-
-@app.post("/api/aja/preview")
-def preview_aja(payload: AjaPrintInput, request: Request, user: dict = Depends(require_admin)):
-    require_csrf(request)
-    pdf = build_aja_pdf(payload, ROOT / "aja-template.pdf")
-    return Response(pdf, media_type="application/pdf",
-                    headers={"Content-Disposition": 'inline; filename="AJA-OB.pdf"'})
