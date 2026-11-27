@@ -6,17 +6,15 @@
 .workspace #aja-pilot-panel .aja-form-body{flex:1;min-height:0;min-width:0;overflow:auto;overscroll-behavior:contain;padding:0 1px calc(14px + var(--aja-picker-space,0px));scrollbar-width:thin;scrollbar-color:#c1cfe3 transparent}
 .workspace #aja-pilot-panel .aja-form-body::-webkit-scrollbar{display:block;width:5px}
 .workspace #aja-pilot-panel .aja-form-body::-webkit-scrollbar-thumb{background:#c1cfe3;border-radius:8px}
-.workspace #aja-pilot-panel .aja-layout{display:grid;grid-template-columns:minmax(0,1.65fr) minmax(250px,1fr);gap:12px;align-items:stretch}
-.workspace #aja-pilot-panel .aja-side{display:grid;min-width:0;grid-template-columns:minmax(0,1fr);gap:12px;align-content:start}
+.workspace #aja-pilot-panel .aja-layout{display:grid;grid-template-columns:minmax(0,1.65fr) minmax(250px,1fr);gap:12px;align-items:stretch;min-height:100%}
+.workspace #aja-pilot-panel .aja-side{display:grid;min-width:0;grid-template-columns:minmax(0,1fr);grid-template-rows:auto minmax(min-content,1fr);gap:12px;align-items:stretch}
 .workspace #aja-pilot-panel .aja-main{min-width:0;display:flex;flex-direction:column;gap:10px}
 .workspace #aja-pilot-panel .aja-main fieldset{flex:1;display:flex;flex-direction:column}
 .workspace #aja-pilot-panel .aja-schedule-grid{grid-template-columns:repeat(2,minmax(0,1fr))}
 .workspace #aja-pilot-panel .aja-schedule-grid>label{grid-column:1/-1}
-.workspace #aja-pilot-panel .aja-trip-grid{flex:1;grid-template-rows:auto minmax(100px,1fr)}
- .workspace #aja-pilot-panel .aja-trip-grid>.aja-wide{display:block;min-height:0}
-.workspace #aja-pilot-panel .aja-trip-grid>.aja-wide textarea{height:calc(100% - 20px);min-height:88px}
-.workspace #aja-pilot-panel .aja-trip-grid textarea{flex:1;height:100%;min-height:88px}
-.workspace #aja-pilot-panel .aja-trip-grid{margin-top:12px}
+.workspace #aja-pilot-panel .aja-trip-grid{flex:1;grid-template-rows:auto minmax(118px,1fr);margin-top:12px}
+.workspace #aja-pilot-panel .aja-trip-grid>.aja-purpose-field{display:flex;flex-direction:column;gap:0;min-height:0}
+.workspace #aja-pilot-panel .aja-trip-grid>.aja-purpose-field>textarea{flex:1 1 88px;height:auto;min-height:88px}
 .workspace #aja-pilot-panel .aja-side .aja-summary-card{padding:12px 14px}
 .workspace #aja-pilot-panel .aja-side .aja-summary-list{gap:6px}
 .workspace #aja-pilot-panel .aja-side .aja-summary-list>div{padding-bottom:5px}
@@ -25,22 +23,27 @@
 .workspace #aja-pilot-panel .aja-route-arrow{color:#7891b4}
 .workspace #aja-pilot-panel .aja-side #aja-progress{margin:7px 0 9px}
 .workspace #aja-pilot-panel .aja-side .aja-person{margin-bottom:8px}
+.workspace #aja-pilot-panel .aja-live-summary{display:flex;flex-direction:column;min-height:0}
+.workspace #aja-pilot-panel .aja-live-summary .aja-trip-summary{flex:1;align-content:space-between;gap:10px}
 .workspace #aja-pilot-panel :is(fieldset,.aja-summary-card){min-width:0;margin:0;padding:14px 16px 16px;background:#fff;border:1px solid #dce5f2;border-radius:10px;box-shadow:inset 0 1px 0 #fff}
 .workspace #aja-pilot-panel :is(fieldset,.aja-summary-card) h3{margin:0 0 12px;color:#385780;font-size:12px;font-weight:700;line-height:1.4}
 .workspace #aja-pilot-panel .aja-form-grid{gap:9px 12px}
 .workspace #aja-pilot-panel .aja-form-grid label{display:block;font-size:11px;color:#52688a;font-weight:650;line-height:1.4;min-width:0}
 .workspace #aja-pilot-panel .required-mark{color:#bd3654}
-.workspace #aja-pilot-panel .aja-form-grid :is(input:not([type=hidden]),textarea,.aja-time-trigger){box-sizing:border-box;width:100%;min-width:0;margin-top:4px;height:33px;min-height:33px;border:1px solid #dce5f2;border-radius:7px;background:#f6f8fc;color:#243e68;font-size:12px;font-weight:600;padding:5px 9px;box-shadow:none;transition:border-color .18s ease,background-color .18s ease,box-shadow .18s ease}
+.workspace #aja-pilot-panel .aja-form-grid :is(input:not([type=hidden]),textarea){box-sizing:border-box;width:100%;min-width:0;margin-top:4px;height:33px;min-height:33px;border:1px solid #dce5f2;border-radius:7px;background:#f6f8fc;color:#243e68;font-size:12px;font-weight:600;padding:5px 9px;box-shadow:none;transition:border-color .18s ease,background-color .18s ease,box-shadow .18s ease}
 .workspace #aja-pilot-panel .aja-form-grid input[type=hidden]{display:none}
 .workspace #aja-pilot-panel .aja-form-grid :is(input,textarea)::placeholder{color:#8698b3;font-weight:500;opacity:1}
-.workspace #aja-pilot-panel .aja-form-grid :is(input,textarea,.aja-time-trigger):hover{border-color:#a5bce2}
-.workspace #aja-pilot-panel .aja-form-grid :is(input,textarea):focus,.workspace #aja-pilot-panel .aja-time-trigger:focus-visible{border-color:#6284ca;outline:none;box-shadow:0 0 0 2px #244b9a12}
+.workspace #aja-pilot-panel .aja-form-grid :is(input,textarea):hover{border-color:#a5bce2}
+.workspace #aja-pilot-panel .aja-form-grid :is(input,textarea):focus{border-color:#6284ca;outline:none;box-shadow:0 0 0 2px #244b9a12}
 .workspace #aja-pilot-panel .aja-form-grid textarea{height:88px;min-height:88px;resize:vertical;padding:9px}
-.workspace #aja-pilot-panel .aja-time-control{position:relative;min-width:0}
-.workspace #aja-pilot-panel .aja-time-control .aja-time-input{padding-right:34px;font-variant-numeric:tabular-nums}
-.workspace #aja-pilot-panel .aja-time-control .aja-time-trigger{position:absolute;right:3px;top:4px;bottom:0;width:29px;height:auto;min-height:0;margin:0;padding:0;border:0;border-radius:6px;display:grid;place-items:center;background:transparent;color:#526fa4;cursor:pointer}
+/* The input owns the only visible field border. The icon is an inset action,
+   never a full-width form control. */
+.workspace #aja-pilot-panel .aja-time-control{position:relative;min-width:0;display:flex;align-items:center;margin-top:4px}
+.workspace #aja-pilot-panel .aja-form-grid .aja-time-control>input.aja-time-input{display:block;width:100%;height:33px;min-height:33px;margin:0;padding:5px 36px 5px 9px;font-variant-numeric:tabular-nums}
+.workspace #aja-pilot-panel .aja-form-grid .aja-time-control>button.aja-time-trigger{box-sizing:border-box;position:absolute;inset:3px 3px 3px auto;width:27px;min-width:27px;max-width:27px;height:27px;min-height:0;margin:0;padding:0;border:0;border-radius:5px;box-shadow:none;display:grid;place-items:center;background:transparent;color:#526fa4;cursor:pointer;transition:background-color .18s ease,color .18s ease}
 .workspace #aja-pilot-panel .aja-time-trigger svg{width:15px;height:15px;pointer-events:none}
-.workspace #aja-pilot-panel .aja-time-trigger:is(:hover,[aria-expanded=true]){background:#e3edfc;color:#244b9a}
+.workspace #aja-pilot-panel .aja-time-control>button.aja-time-trigger:focus-visible{outline:2px solid #7095d1;outline-offset:-2px}
+.workspace #aja-pilot-panel .aja-form-grid .aja-time-control>button.aja-time-trigger:is(:hover,[aria-expanded=true]){background:#e3edfc;color:#244b9a}
 .workspace #aja-pilot-panel .aja-time-control:has(.aja-time-trigger[aria-expanded=true]) .aja-time-input{border-color:#a5bce2;background:#e3edfc}
 .workspace #aja-pilot-panel .aja-time-control .aja-time-input[aria-invalid=true]{border-color:#d36b83;background:#fff5f7}
 .workspace #aja-pilot-panel .aja-person{display:flex;align-items:center;gap:9px;color:#243e68;font-size:13px;margin-bottom:12px;overflow-wrap:anywhere}
@@ -82,6 +85,6 @@
 .workspace .aja-picker-actions .button.primary{background:#244b9a;color:#fff}
 .workspace .aja-picker-actions .button.primary:hover{background:#173b80}
 #aja-paper{display:block;margin:0 auto;max-width:none;background:#fff;box-shadow:0 6px 25px #243e6b24}
-@media(max-width:1000px){.workspace #aja-pilot-panel .aja-layout{grid-template-columns:minmax(0,1fr)}.workspace #aja-pilot-panel .aja-side{grid-template-columns:repeat(2,minmax(0,1fr))}}
-@media(max-width:740px){.workspace #aja-pilot-panel :is(fieldset,.aja-summary-card){padding:12px}.workspace #aja-pilot-panel :is(.aja-form-grid,.aja-side){grid-template-columns:minmax(0,1fr);gap:10px}.workspace #aja-pilot-panel .aja-trip-grid{grid-template-rows:auto}.workspace #aja-pilot-panel .aja-trip-grid>.aja-wide textarea{height:88px}.workspace #aja-pilot-panel .aja-actions{width:100%}.workspace #aja-pilot-panel .aja-actions .button{flex:1}}
+@media(max-width:1000px){.workspace #aja-pilot-panel .aja-layout{grid-template-columns:minmax(0,1fr);min-height:0}.workspace #aja-pilot-panel .aja-side{grid-template-columns:repeat(2,minmax(0,1fr));grid-template-rows:auto}.workspace #aja-pilot-panel .aja-trip-grid>.aja-purpose-field>textarea{height:100px;flex:none}}
+@media(max-width:740px){.workspace #aja-pilot-panel :is(fieldset,.aja-summary-card){padding:12px}.workspace #aja-pilot-panel :is(.aja-form-grid,.aja-side){grid-template-columns:minmax(0,1fr);gap:10px}.workspace #aja-pilot-panel .aja-trip-grid{grid-template-rows:auto}.workspace #aja-pilot-panel .aja-trip-grid>.aja-purpose-field>textarea{height:100px;flex:none}.workspace #aja-pilot-panel .aja-actions{width:100%}.workspace #aja-pilot-panel .aja-actions .button{flex:1}}
 @media(prefers-reduced-motion:reduce){.workspace #aja-pilot-panel :is(input,textarea,.aja-time-trigger,.button){transition:none}.workspace #aja-pilot-panel #aja-progress::-webkit-progress-value{transition:none}}
