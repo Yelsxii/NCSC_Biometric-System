@@ -9,7 +9,7 @@
   <link rel="stylesheet" href="/static/workspace.css?v=employees-163">
   <link rel="stylesheet" href="/static/attendance-detail.css?v=auto-dtr-45">
   <link rel="stylesheet" href="/static/dtr-preview.css?v=23">
-  <link rel="stylesheet" href="/static/employee-portal.css?v=2">
+  <link rel="stylesheet" href="/static/employee-portal.css?v=3">
   <script src="/static/employee-portal.js?v=2" defer></script>
 </head>
 <body>
@@ -76,28 +76,34 @@
           <div class="panel records-panel" id="aja-pilot-panel">
             <div class="panel-header"><h2>New AJA / Official Business</h2></div>
             <form id="aja-form" autocomplete="off">
-              <fieldset>
-                <h3>Employee information</h3>
-                <div class="aja-form-grid aja-identity-grid">
-                  <label>Employee name<input id="employee-name" readonly></label>
-                  <label>Position<input id="employee-position" readonly></label>
-                  <label class="aja-wide">Department / Office / Division<input id="employee-department" readonly></label>
-                </div>
-              </fieldset>
-              <fieldset>
-                <h3>Official business</h3>
-                <div class="aja-form-grid">
-                  <label class="aja-wide">Date/s of official business<input name="dates" placeholder="e.g. November 27, 2026" maxlength="100" required></label>
-                  <label>From<input name="origin" maxlength="200" placeholder="Origin" required></label>
-                  <label>To<input name="destination" maxlength="200" placeholder="Destination" required></label>
-                  <label class="aja-wide">Purpose(s)<textarea name="purpose" rows="3" maxlength="500" placeholder="Purpose of official business" required></textarea></label>
-                  <label>Time of departure<input name="departure" type="time" required></label>
-                  <label>Time of return<input name="return_time" type="time" required></label>
-                </div>
-              </fieldset>
-              <p id="aja-error" class="form-error hidden" role="alert"></p>
-              <p class="aja-note">Print and secure required signatures before departure.</p>
-              <div class="aja-actions"><button type="reset" class="button outline">Clear form</button><button id="aja-submit" type="submit" class="button primary">Preview official form</button></div>
+              <div class="aja-form-body">
+                <fieldset>
+                  <h3>Employee information</h3>
+                  <div class="aja-form-grid aja-identity-grid">
+                    <label>Employee name<input id="employee-name" readonly></label>
+                    <label>Position<input id="employee-position" readonly></label>
+                    <label>Department / Office / Division<input id="employee-department" readonly></label>
+                  </div>
+                </fieldset>
+                <fieldset>
+                  <h3>Official business</h3>
+                  <div class="aja-form-grid aja-schedule-grid">
+                    <label>Date/s of official business <input name="dates" placeholder="e.g. November 27, 2026" maxlength="100" required></label>
+                    <label>Time of departure<input name="departure" type="time" required></label>
+                    <label>Time of return<input name="return_time" type="time" required></label>
+                  </div>
+                  <div class="aja-form-grid aja-trip-grid">
+                    <label>From<input name="origin" maxlength="200" placeholder="Origin" required></label>
+                    <label>To<input name="destination" maxlength="200" placeholder="Destination" required></label>
+                    <label class="aja-wide">Purpose(s)<textarea name="purpose" rows="3" maxlength="500" placeholder="Purpose of official business" required></textarea></label>
+                  </div>
+                </fieldset>
+                <p id="aja-error" class="form-error hidden" role="alert"></p>
+              </div>
+              <div class="aja-form-footer">
+                <p class="aja-note">Print and secure required signatures before departure.</p>
+                <div class="aja-actions"><button type="reset" class="button outline">Clear form</button><button id="aja-submit" type="submit" class="button primary">Preview official form</button></div>
+              </div>
             </form>
           </div>
         </section>
