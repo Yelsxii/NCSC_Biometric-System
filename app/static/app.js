@@ -1754,8 +1754,10 @@ async function initialize(){
 
 /* Admin-only employee AJA monitor. No unsigned filing is posted to attendance. */
 let adminAjaRows=[],adminAjaTimer=null,adminAjaRequest=0,adminAjaLoading=false,adminAjaMenuContext=null,adminAjaBusy=false;
-let adminAjaPdfUrl=null,adminAjaPages=[],adminAjaPage=0,adminAjaReference='',adminAjaZoom=1,adminAjaFit=true,adminAjaPrintFrame=null;
+let adminAjaPages=[],adminAjaPage=0,adminAjaZoom=1,adminAjaFit=true,adminAjaReview=null,adminAjaReviewSaving=false;
 const adminAjaApi='/api/admin/aja/filings';
+const ajaStatusLabels={awaiting_signatures:'Awaiting signatures',approved:'Approved',returned:'Returned',disapproved:'Disapproved'};
+function ajaStatusLabel(status){return ajaStatusLabels[status]||'For review';}
 function adminAjaAllowed(){return session?.role==='admin'&&currentPage==='activities';}
 function stopAdminAjaRefresh(){clearInterval(adminAjaTimer);adminAjaTimer=null;adminAjaRequest++;adminAjaLoading=false;}
 function startAdminAjaRefresh(){
@@ -1764,7 +1766,7 @@ function startAdminAjaRefresh(){
 }
 function resetAdminAja(){
   stopAdminAjaRefresh();closeAdminAjaMenu();closeAdminAjaPreview();
-  adminAjaRows=[];adminAjaBusy=false;
+  adminAjaRows=[];adminAjaBusy=false;adminAjaReviewSaving=false;
   $('admin-aja-search').value='';$('admin-aja-rows').replaceChildren();$('admin-aja-count').textContent='';adminAjaMessage('');
 }
 function adminAjaMessage(message){const node=$('admin-aja-message');node.textContent=message;node.classList.toggle('hidden',!message);}
@@ -1782,8 +1784,8 @@ function adminAjaTime(value){
 }
 function renderAdminAja(){
   const term=$('admin-aja-search').value.trim().toLowerCase();
-  const rows=adminAjaRows.filter(f=>!term||[f.employee_name,f.employee_code,f.department,f.reference,f.destination,f.origin,f.purpose,adminAjaFiled(f.filed_at),...f.days.map(d=>adminAjaDate(d.date))].join(' ').toLowerCase().includes(term));
-  const markup=rows.map((f,i)=>'<tr><td class="id-cell admin-aja-number-cell">'+(i+1)+'</td><td class="admin-aja-employee-cell"><strong>'+esc(f.employee_name)+'</strong><small>'+esc(f.department||'—')+'</small></td><td class="id-cell admin-aja-reference-cell">'+esc(f.reference)+'</td><td class="department-name">'+esc(adminAjaFiled(f.filed_at))+'</td><td class="department-name">'+esc(f.days.map(d=>adminAjaDate(d.date)).join('; '))+'</td><td class="department-name">'+esc(f.destination)+'</td><td><span class="admin-aja-status-chip">'+esc(f.status==='awaiting_signatures'?'Awaiting signatures':f.status)+'</span></td><td class="directory-action-cell"><button type="button" class="profile-more" data-admin-aja-reference="'+esc(f.reference)+'" aria-controls="admin-aja-action-menu" aria-haspopup="true" aria-expanded="false" aria-label="Actions for '+esc(f.reference)+'"><svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><circle cx="5" cy="12" r="1.8"/><circle cx="12" cy="12" r="1.8"/><circle cx="19" cy="12" r="1.8"/></svg></button></td></tr>').join('');
+  const rows=adminAjaRows.filter(f=>!term||[f.employee_name,f.employee_code,f.department,f.reference,f.destination,f.origin,f.purpose,ajaStatusLabel(f.status),adminAjaFiled(f.filed_at),...f.days.map(d=>adminAjaDate(d.date))].join(' ').toLowerCase().includes(term));
+  const markup=rows.map((f,i)=>'<tr><td class="id-cell admin-aja-number-cell">'+(i+1)+'</td><td class="admin-aja-employee-cell"><strong>'+esc(f.employee_name)+'</strong><small>'+esc(f.department||'—')+'</small></td><td class="id-cell admin-aja-reference-cell">'+esc(f.reference)+'</td><td class="department-name">'+esc(adminAjaFiled(f.filed_at))+'</td><td class="department-name">'+esc(f.days.map(d=>adminAjaDate(d.date)).join('; '))+'</td><td class="department-name">'+esc(f.destination)+'</td><td><span class="admin-aja-status-chip" data-status="'+esc(f.status)+'">'+esc(ajaStatusLabel(f.status))+'</span></td><td class="directory-action-cell"><button type="button" class="profile-more" data-admin-aja-reference="'+esc(f.reference)+'" aria-controls="admin-aja-action-menu" aria-haspopup="true" aria-expanded="false" aria-label="Actions for '+esc(f.reference)+'"><svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><circle cx="5" cy="12" r="1.8"/><circle cx="12" cy="12" r="1.8"/><circle cx="19" cy="12" r="1.8"/></svg></button></td></tr>').join('');
   setHtmlIfChanged($('admin-aja-rows'),markup||'<tr><td colspan="8" class="table-empty">'+(term?'No matching filings.':'No AJA filings yet.')+'</td></tr>');
   $('admin-aja-count').textContent=rows.length+' of '+adminAjaRows.length+' filings';
 }
@@ -1816,11 +1818,10 @@ function openAdminAjaMenu(trigger){
   trigger.setAttribute('aria-expanded','true');$('admin-aja-menu-view').focus({preventScroll:true});
 }
 function clearAdminAjaPreview(){
-  if(adminAjaPdfUrl)URL.revokeObjectURL(adminAjaPdfUrl);
-  adminAjaPdfUrl=null;adminAjaPages=[];adminAjaReference='';$('admin-aja-paper').removeAttribute('src');$('admin-aja-preview-details').replaceChildren();
+  adminAjaPages=[];adminAjaReview=null;$('admin-aja-paper').removeAttribute('src');$('admin-aja-preview-details').replaceChildren();$('admin-aja-review-result').replaceChildren();
 }
 function closeAdminAjaPreview(){
-  const dialog=$('admin-aja-preview-dialog');if(dialog.open)dialog.close();clearAdminAjaPreview();
+  const dialog=$('admin-aja-preview-dialog');if(adminAjaReviewSaving&&session)return;if(dialog.open)dialog.close();clearAdminAjaPreview();
 }
 function applyAdminAjaZoom(){
   const stage=$('admin-aja-stage');if(!$('admin-aja-preview-dialog').open)return;
@@ -1840,43 +1841,74 @@ function showAdminAjaPage(index){
   $('admin-aja-page-prev').disabled=adminAjaPage===0;$('admin-aja-page-next').disabled=adminAjaPage===adminAjaPages.length-1;
   $('admin-aja-stage').scrollTop=0;requestAnimationFrame(applyAdminAjaZoom);
 }
+function adminAjaReviewError(message){
+  const node=$('admin-aja-review-error');node.textContent=message;node.classList.toggle('hidden',!message);
+}
+function updateAdminAjaReviewButtons(){
+  const pending=adminAjaReview?.status==='awaiting_signatures',verified=$('admin-aja-verified').checked,remarks=$('admin-aja-remarks').value.trim();
+  $('admin-aja-approve').disabled=!pending||!verified||adminAjaReviewSaving;
+  $('admin-aja-return').disabled=!pending||!remarks||adminAjaReviewSaving;
+  $('admin-aja-disapprove').disabled=!pending||!verified||!remarks||adminAjaReviewSaving;
+  $('admin-aja-verified').disabled=adminAjaReviewSaving;$('admin-aja-remarks').disabled=adminAjaReviewSaving;
+  $('admin-aja-preview-back').disabled=adminAjaReviewSaving;
+}
+function displayAdminAjaReview(f){
+  adminAjaReview=f;
+  const status=$('admin-aja-review-status');status.dataset.status=f.status;status.textContent=ajaStatusLabel(f.status);
+  $('admin-aja-preview-reference').textContent=f.reference;
+  const details=document.createElement('div');details.className='admin-aja-schedule';
+  for(const day of f.days){
+    const line=document.createElement('div');line.className='admin-aja-review-field';
+    const date=document.createElement('strong'),time=document.createElement('span');
+    date.textContent=adminAjaDate(day.date);time.textContent=adminAjaTime(day.departure)+' – '+adminAjaTime(day.return_time);line.append(date,time);details.append(line);
+  }
+  $('admin-aja-preview-details').replaceChildren(details);
+  const pending=f.status==='awaiting_signatures';
+  $('admin-aja-review-form').classList.toggle('hidden',!pending);
+  const result=$('admin-aja-review-result');result.classList.toggle('hidden',pending);result.replaceChildren();
+  if(!pending){
+    const title=document.createElement('h4');title.textContent='Review completed';result.append(title);
+    const when=document.createElement('p');when.textContent='Reviewed '+adminAjaFiled(f.reviewed_at);result.append(when);
+    if(f.review_remarks){const label=document.createElement('strong'),note=document.createElement('p');label.textContent='Remarks';note.textContent=f.review_remarks;result.append(label,note);}
+    if(f.status==='approved'){const note=document.createElement('p');note.textContent='Authorized approval verified. Attendance credit remains subject to actual attendance verification.';result.append(note);}
+  }
+  $('admin-aja-verified').checked=false;$('admin-aja-remarks').value='';adminAjaReviewError('');updateAdminAjaReviewButtons();
+}
 async function openAdminAjaDocument(reference,owner){
   const data=await api(adminAjaApi+'/'+encodeURIComponent(reference)+'/document');
   if(owner!==session||!adminAjaAllowed())return;
   clearAdminAjaPreview();
-  const f=data.filing;
-  adminAjaPdfUrl=URL.createObjectURL(new Blob([Uint8Array.from(atob(data.pdf),c=>c.charCodeAt(0))],{type:'application/pdf'}));
-  adminAjaPages=data.previews;adminAjaReference=f.reference;
-  $('admin-aja-preview-context').textContent=f.employee_name;
-  $('admin-aja-preview-reference').textContent=f.reference;$('admin-aja-preview-note').hidden=true;
-  const details=document.createElement('dl');
-  for(const [label,value] of [['Status',f.status==='awaiting_signatures'?'Awaiting signatures':f.status],['Position / department',[f.position,f.department].filter(Boolean).join(' · ')],['Route',f.origin+' → '+f.destination],['Purpose',f.purpose],...f.days.map(d=>[adminAjaDate(d.date),adminAjaTime(d.departure)+' – '+adminAjaTime(d.return_time)])]){
-    const dt=document.createElement('dt'),dd=document.createElement('dd');dt.textContent=label;dd.textContent=value;details.append(dt,dd);
-  }
-  $('admin-aja-preview-details').append(details);
+  adminAjaPages=data.previews;$('admin-aja-preview-context').textContent=data.filing.employee_name;$('admin-aja-preview-note').hidden=true;
+  displayAdminAjaReview(data.filing);
   adminAjaFit=true;$('admin-aja-preview-dialog').showModal();showAdminAjaPage(0);
 }
-function saveAdminAjaBlob(url,reference){
-  const a=document.createElement('a');a.href=url;a.download=reference+'.pdf';document.body.append(a);a.click();a.remove();
+async function submitAdminAjaReview(decision){
+  const f=adminAjaReview,owner=session;
+  if(!f||f.status!=='awaiting_signatures'||!adminAjaAllowed()||adminAjaReviewSaving)return;
+  const verified=$('admin-aja-verified').checked,remarks=$('admin-aja-remarks').value.trim();
+  if(decision!=='returned'&&!verified){adminAjaReviewError('Verify the authorized decision first.');return;}
+  if(decision!=='approved'&&!remarks){adminAjaReviewError('Enter the reason for the decision.');return;}
+  adminAjaReviewSaving=true;adminAjaReviewError('');
+  const dialog=$('admin-aja-preview-dialog');dialog.setAttribute('aria-busy','true');updateAdminAjaReviewButtons();
+  try{
+    const result=await api(adminAjaApi+'/'+encodeURIComponent(f.reference)+'/review',{method:'POST',body:JSON.stringify({decision,remarks,authorized_decision_verified:verified})});
+    if(owner!==session||!adminAjaAllowed())return;
+    adminAjaRows=adminAjaRows.map(row=>row.reference===f.reference?{...row,...result.filing}:row);
+    renderAdminAja();displayAdminAjaReview(result.filing);toast('AJA review saved.');
+  }catch(error){if(owner===session)adminAjaReviewError(error.message);}
+  finally{adminAjaReviewSaving=false;dialog.removeAttribute('aria-busy');updateAdminAjaReviewButtons();}
 }
-async function downloadAdminAja(reference,owner){
-  const response=await fetch(adminAjaApi+'/'+encodeURIComponent(reference)+'/pdf',{credentials:'same-origin',cache:'no-store'});
-  if(!response.ok)throw Error('Unable to download the saved AJA PDF.');
-  const blob=await response.blob();if(owner!==session||!adminAjaAllowed())return;
-  const url=URL.createObjectURL(blob);saveAdminAjaBlob(url,reference);setTimeout(()=>URL.revokeObjectURL(url),30000);
-}
-async function runAdminAjaAction(action){
+async function runAdminAjaAction(){
   const context=adminAjaMenuContext;if(!context||context.owner!==session||adminAjaBusy)return;
   closeAdminAjaMenu(true);adminAjaBusy=true;context.trigger.disabled=true;adminAjaMessage('');
-  try{if(action==='view')await openAdminAjaDocument(context.reference,context.owner);else await downloadAdminAja(context.reference,context.owner);}
+  try{await openAdminAjaDocument(context.reference,context.owner);}
   catch(error){if(context.owner===session&&adminAjaAllowed())adminAjaMessage(error.message);}
   finally{adminAjaBusy=false;context.trigger.disabled=false;}
 }
 function initializeAdminAja(){
   $('admin-aja-search').addEventListener('input',()=>{closeAdminAjaMenu();renderAdminAja();});
   $('admin-aja-rows').addEventListener('click',e=>{const trigger=e.target.closest('[data-admin-aja-reference]');if(trigger)openAdminAjaMenu(trigger);});
-  $('admin-aja-menu-view').addEventListener('click',()=>runAdminAjaAction('view'));
-  $('admin-aja-menu-download').addEventListener('click',()=>runAdminAjaAction('download'));
+  $('admin-aja-menu-view').addEventListener('click',runAdminAjaAction);
   document.addEventListener('pointerdown',e=>{if(adminAjaMenuContext&&!$('admin-aja-action-menu').contains(e.target)&&!e.target.closest('[data-admin-aja-reference]'))closeAdminAjaMenu();});
   document.addEventListener('keydown',e=>{
     if(!adminAjaMenuContext)return;
@@ -1888,27 +1920,18 @@ function initializeAdminAja(){
   window.addEventListener('resize',()=>{closeAdminAjaMenu();if(adminAjaFit)applyAdminAjaZoom();});
   document.addEventListener('visibilitychange',()=>{if(!document.hidden&&adminAjaAllowed()&&!adminAjaBusy&&!$('admin-aja-preview-dialog').open){closeAdminAjaMenu();void loadAdminAja(true);}});
   $('admin-aja-preview-back').addEventListener('click',closeAdminAjaPreview);
-  $('admin-aja-preview-dialog').addEventListener('close',()=>{if(!$('admin-aja-preview-dialog').open)clearAdminAjaPreview();});
+  $('admin-aja-preview-dialog').addEventListener('cancel',e=>{if(adminAjaReviewSaving)e.preventDefault();});
+  $('admin-aja-preview-dialog').addEventListener('close',()=>{if(!$('admin-aja-preview-dialog').open){clearAdminAjaPreview();if(adminAjaAllowed())void loadAdminAja(true);}});
   $('admin-aja-page-prev').addEventListener('click',()=>showAdminAjaPage(adminAjaPage-1));
   $('admin-aja-page-next').addEventListener('click',()=>showAdminAjaPage(adminAjaPage+1));
   $('admin-aja-zoom-out').addEventListener('click',()=>{adminAjaFit=false;adminAjaZoom=Math.max(.12,adminAjaZoom-.15);applyAdminAjaZoom();});
   $('admin-aja-zoom-in').addEventListener('click',()=>{adminAjaFit=false;adminAjaZoom=Math.min(2,adminAjaZoom+.15);applyAdminAjaZoom();});
   $('admin-aja-zoom-fit').addEventListener('click',()=>{adminAjaFit=true;applyAdminAjaZoom();});
-  $('admin-aja-preview-download').addEventListener('click',()=>{if(adminAjaPdfUrl)saveAdminAjaBlob(adminAjaPdfUrl,adminAjaReference);});
-  $('admin-aja-preview-print').addEventListener('click',async()=>{
-    if(!adminAjaPdfUrl||!adminAjaPages.length||adminAjaPrintFrame)return;
-    const button=$('admin-aja-preview-print'),frame=document.createElement('iframe');adminAjaPrintFrame=frame;button.disabled=true;
-    frame.className='admin-aja-print-frame';frame.title='Printable AJA forms';frame.setAttribute('aria-hidden','true');frame.tabIndex=-1;
-    const release=()=>{if(adminAjaPrintFrame===frame){frame.remove();adminAjaPrintFrame=null;button.disabled=false;}};
-    try{
-      document.body.append(frame);const doc=frame.contentDocument;
-      doc.open();doc.write('<!doctype html><html><head><meta charset="utf-8"><title>AJA</title><style>@page{size:8.5in 13in;margin:0}html,body{margin:0;padding:0;background:white}img{display:block;width:8.5in;height:13in;object-fit:contain;break-after:page;page-break-after:always}img:last-child{break-after:auto;page-break-after:auto}</style></head><body></body></html>');doc.close();
-      const images=adminAjaPages.map(page=>{const image=doc.createElement('img');image.src='data:image/png;base64,'+page;doc.body.append(image);return image;});
-      await Promise.all(images.map(image=>image.decode()));
-      if(!adminAjaPdfUrl||!$('admin-aja-preview-dialog').open){release();return;}
-      frame.contentWindow.addEventListener('afterprint',release,{once:true});frame.contentWindow.focus();frame.contentWindow.print();release();
-    }catch(error){release();const note=$('admin-aja-preview-note');note.textContent='Unable to print. Download the original PDF and print it instead.';note.hidden=false;}
-  });
+  $('admin-aja-verified').addEventListener('change',updateAdminAjaReviewButtons);
+  $('admin-aja-remarks').addEventListener('input',updateAdminAjaReviewButtons);
+  $('admin-aja-approve').addEventListener('click',()=>submitAdminAjaReview('approved'));
+  $('admin-aja-return').addEventListener('click',()=>submitAdminAjaReview('returned'));
+  $('admin-aja-disapprove').addEventListener('click',()=>submitAdminAjaReview('disapproved'));
 }
 
 document.addEventListener('DOMContentLoaded',initialize);
