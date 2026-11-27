@@ -175,13 +175,18 @@
 .workspace #aja-filings-panel .aja-filings-heading{display:flex;justify-content:space-between;align-items:center;margin:0 0 12px;flex:none}
 .workspace #aja-filings-panel .aja-filings-heading h2{margin:0;color:#20375f;font-size:15px;font-weight:700}
 .workspace #aja-filings-panel .table-wrap{flex:1;background:#fff;border:1px solid #dce5f2;border-radius:9px}
-.workspace #aja-filings-panel .aja-filings-table{width:100%;min-width:690px}
-.workspace #aja-filings-panel .aja-filings-table td{overflow-wrap:anywhere}
-.workspace #aja-filings-panel .aja-filings-table th{color:#52688a;background:#e6eef8;font-size:11px}
-.workspace #aja-filings-panel .aja-filings-table td:first-child{font-size:10px}
-.workspace #aja-filings-panel .aja-filing-status{display:inline-flex;padding:5px 8px;border-radius:6px;background:#fff3d9;color:#846119;font-size:10px;font-weight:650;white-space:nowrap}
-.workspace #aja-filings-panel .aja-open-filing{background:#eaf0fa;color:#31588e;border:0;white-space:nowrap}
-.workspace #aja-filings-panel .aja-open-filing:hover{background:#dbe7fa;color:#244b9a}
+.workspace #aja-filings-panel .aja-filings-table{width:100%;min-width:700px;table-layout:fixed}
+.workspace #aja-filings-panel .aja-col-reference{width:22%}
+.workspace #aja-filings-panel .aja-col-filed{width:15%}
+.workspace #aja-filings-panel .aja-col-dates{width:24%}
+.workspace #aja-filings-panel .aja-col-destination{width:auto}
+.workspace #aja-filings-panel .aja-col-status{width:19%}
+.workspace #aja-filings-panel .aja-col-actions,.workspace #aja-filings-panel .aja-filings-table .actions-column{width:78px;min-width:78px;max-width:78px}
+.workspace #aja-filings-panel .aja-filings-table .aja-reference-cell{font-size:10.5px;white-space:normal;overflow-wrap:anywhere}
+.workspace #aja-filings-panel .aja-filing-status{display:inline-flex;padding:4px 7px;border-radius:6px;background:#fff3d9;color:#846119;font-size:10px;font-weight:650;line-height:1.4;transition:background-color .22s ease,color .22s ease}
+.workspace #aja-filings-panel .aja-filings-table tbody tr:is(:hover,:focus-within) .aja-filing-status{background:#f9e5b5;color:#795511}
+.workspace #aja-filings-panel .aja-filing-actions{display:flex;align-items:center;justify-content:center;gap:6px}
+.workspace #aja-filings-panel .aja-filing-action:disabled{opacity:.45;cursor:wait}
 .workspace #aja-filings-panel .aja-filings-message{margin:0 0 10px;font-size:11px;font-weight:600;color:#385780;overflow-wrap:anywhere}
 .workspace #aja-filings-panel .aja-filings-message.is-error{color:#a12a45}
 .workspace #aja-pilot-panel .aja-form-footer{justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap}
@@ -190,3 +195,10 @@
 #aja-preview-reference{font-size:11px;overflow-wrap:anywhere}
 
 .workspace #aja-pilot-panel .aja-actions #aja-submit:disabled{background:#dce5f1;color:#8494ad;opacity:1;cursor:not-allowed;box-shadow:none;transform:none}
+
+/* Primary action sizing matches the shared register button hierarchy. */
+.workspace #aja-pilot-panel .aja-actions #aja-submit{min-width:140px;height:38px;min-height:38px;padding:0 20px;font-size:12px;font-weight:700;border-radius:8px}
+.workspace #aja-pilot-panel .aja-actions #aja-submit:disabled{background:#dce5f1;color:#8494ad;opacity:1;box-shadow:none;cursor:not-allowed}
+.workspace #aja-pilot-panel .aja-actions #aja-submit:disabled::before{opacity:0}
+.workspace #aja-filings-panel #aja-new-filing{display:inline-flex;align-items:center;gap:7px;min-height:33px;padding:0 13px;border-radius:8px;font-size:11px;font-weight:650}
+@media(prefers-reduced-motion:reduce){.workspace #aja-filings-panel .aja-filing-status{transition:none}}
