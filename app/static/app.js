@@ -443,7 +443,6 @@ function initializeProfileSelects(){
       trigger.querySelector('span').textContent=select.selectedOptions[0]?.textContent||select.options[0].textContent;
       trigger.dataset.empty=String(!select.value);
       if(id==='profile-type')trigger.dataset.category=select.value;
-      if(select.value)trigger.removeAttribute('aria-invalid');
       for(const button of options)button.setAttribute('aria-selected',String(button.dataset.value===select.value));
     }
     function place(){
@@ -512,6 +511,63 @@ function initializeProfileSelects(){
   window.addEventListener('resize',closeProfileSelects);
   $('profile-dialog').querySelector('.app-dialog-body').addEventListener('scroll',closeProfileSelects,{passive:true});
 }
+// Profile-specific inline validation; native required/maxlength constraints
+// remain as semantics and the API continues to enforce its own validation.
+const profileValidationFields=['profile-id','profile-first','profile-last','profile-middle','profile-suffix','profile-type','profile-department'];
+function profileFieldMessage(id){
+  const field=$(id),value=field.value.trim();
+  if(id==='profile-id'){
+    if(profileLockedCode)return '';
+    return /^[A-Za-z0-9._-]{1,64}$/.test(value)?'':'Enter a valid biometric ID.';
+  }
+  const labels={'profile-first':'First name','profile-last':'Last name','profile-middle':'Middle name','profile-suffix':'Suffix'};
+  if(labels[id]){
+    if(!value&&field.required)return labels[id]+' is required.';
+    if(value.length>field.maxLength)return labels[id]+' is too long.';
+    if(/[\x00-\x1f]/.test(value))return 'Remove unsupported characters.';
+    return '';
+  }
+  if(!value||![...field.options].some(option=>option.value===value&&option.value!==''&&!option.disabled))
+    return id==='profile-type'?'Select an employee category.':'Select a department / unit.';
+  return '';
+}
+function setProfileFieldError(id,message){
+  const field=$(id),trigger=profileSelectControls.get(id)?.trigger;
+  const container=field.closest('.profile-select-field')||field.closest('label');
+  let error=$(id+'-error');
+  if(!error){
+    error=document.createElement('div');error.id=id+'-error';error.className='profile-field-error';error.setAttribute('aria-live','polite');
+    error.innerHTML='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 7v6M12 16h.01"/></svg><span></span>';
+    container.append(error);
+  }
+  error.querySelector('span').textContent=message;error.hidden=!message;
+  for(const node of [field,trigger].filter(Boolean)){
+    if(message){node.setAttribute('aria-invalid','true');node.setAttribute('aria-describedby',error.id);}
+    else{node.removeAttribute('aria-invalid');node.removeAttribute('aria-describedby');}
+  }
+}
+function resetProfileValidation(){
+  for(const id of profileValidationFields)setProfileFieldError(id,'');
+}
+function validateProfileForm(){
+  let first=null;
+  for(const id of profileValidationFields){
+    const message=profileFieldMessage(id);setProfileFieldError(id,message);
+    if(message&&!first)first=id;
+  }
+  if(first){closeProfileSelects();focusProfileField(first);return false;}
+  return true;
+}
+function initializeProfileValidation(){
+  for(const id of profileValidationFields){
+    const field=$(id);
+    const update=()=>{
+      if(field.getAttribute('aria-invalid')==='true')setProfileFieldError(id,profileFieldMessage(id));
+    };
+    field.addEventListener('input',update);field.addEventListener('change',update);
+  }
+  resetProfileValidation();
+}
 async function openProfile(code=null){
   if(session?.role!=='admin')return;
   const token=++profileFormToken;
@@ -519,6 +575,7 @@ async function openProfile(code=null){
   profileEditing=null;profileVersion=null;profileSyncAuthorized=true;profileLockedCode=null;
   $('profile-dialog').dataset.profileMode=code?'edit':'register';
   $('profile-form').reset();$('profile-id').readOnly=false;$('profile-id-display').textContent='';
+  resetProfileValidation();
   $('profile-error').classList.add('hidden');$('save-profile').disabled=false;
   $('profile-heading').textContent='Register employee';$('save-profile').textContent='Register employee';
   try{
@@ -554,16 +611,15 @@ async function openProfile(code=null){
 async function saveProfile(event){
   event.preventDefault();
   if(session?.role!=='admin')return;
+  $('profile-error').classList.add('hidden');
+  if(!validateProfileForm())return;
   const account=session,code=profileLockedCode??$('profile-id').value.trim();
   const payload={};
   for(const [field,key] of [['first','first_name'],['middle','middle_name'],['last','last_name'],['suffix','suffix'],['type','employment_type'],['department','department']])
     payload[key]=$('profile-'+field).value.trim();
   payload.sync_authorized=profileSyncAuthorized;
-  if(!payload.first_name||!payload.middle_name||!payload.last_name||!payload.employment_type||!payload.department){
-    $('profile-error').textContent='First name, middle name, last name, category and department are required.';$('profile-error').classList.remove('hidden');return;
-  }
-  if(!/^[A-Za-z0-9._-]{1,64}$/.test(code)){
-    $('profile-error').textContent='Enter a valid existing biometric ID.';$('profile-error').classList.remove('hidden');return;
+  if([payload.first_name,payload.middle_name,payload.last_name,payload.suffix].filter(Boolean).join(' ').length>140){
+    setProfileFieldError('profile-last','The complete name must be at most 140 characters.');focusProfileField('profile-last');return;
   }
   // Saving a fixed existing identity is the administrator's approval.
   // Manual entry of an otherwise unverified ID still needs explicit confirmation.
@@ -1329,6 +1385,7 @@ async function initialize(){
   initializeAttendanceMonthPicker();
   initializeModalDismissal();
   initializeProfileSelects();
+  initializeProfileValidation();
   document.addEventListener('visibilitychange',()=>{
     if(!document.hidden)updateWorkspaceClock();
     if(document.hidden){
