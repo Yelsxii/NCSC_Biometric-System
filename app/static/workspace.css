@@ -1029,10 +1029,10 @@ dialog.app-dialog[open]::backdrop,#dtr-preview-dialog[open]::backdrop{
 .workspace #employee-profile-panel #profile-search:focus{border-color:#7295ce;background:#fff;box-shadow:0 0 0 3px #244b9a12}
 .workspace #employee-profile-panel #open-profile{background:#244b9a;border-color:#244b9a;color:#fff}
 .workspace #employee-profile-panel #open-profile:not(:disabled):hover{background:#17356e;border-color:#17356e}
-.workspace #employee-profile-panel .profile-table{width:100%;min-width:650px;table-layout:fixed;font-size:11.5px}
+.workspace #employee-profile-panel .profile-table{width:100%;min-width:820px;table-layout:fixed;font-size:11.5px}
 .workspace #employee-profile-panel .profile-table td{height:44px;padding:7px 10px;vertical-align:middle}
 .workspace #employee-profile-panel .profile-table th{height:34px;padding:9px 10px}
-.workspace #employee-profile-panel .profile-name{width:34%}.workspace #employee-profile-panel .profile-id{width:100px}.workspace #employee-profile-panel .profile-category{width:15%}.workspace #employee-profile-panel .profile-department{width:auto}.workspace #employee-profile-panel .profile-action{width:60px}
+.workspace #employee-profile-panel .profile-name{width:28%}.workspace #employee-profile-panel .profile-id{width:88px}.workspace #employee-profile-panel .profile-position{width:24%}.workspace #employee-profile-panel .profile-category{width:12%}.workspace #employee-profile-panel .profile-department{width:auto}.workspace #employee-profile-panel .profile-action{width:60px}
 .workspace #employee-profile-panel .profile-table tbody tr:nth-child(even){background:#f7f9fc}
 .workspace #employee-profile-panel .profile-table tbody tr:is(:hover,:focus-within){background:#dbe7f7}
 .workspace #employee-profile-panel .employee-name-cell small{font-size:10px;color:#657997;line-height:1.3}
@@ -1496,3 +1496,9 @@ body:has(#profile-undo-stack:not(:empty)) #toast:not(.hidden){bottom:auto;top:22
 
 /* Keep Position aligned with the existing half-width employment controls. */
 #profile-dialog .profile-position-field{grid-column:auto}
+
+/* Directory position is a distinct column; preserve saved title capitalization. */
+.workspace #employee-profile-panel .profile-table .profile-position-cell{color:#334d73;font-weight:600;line-height:1.4;overflow-wrap:anywhere;transition:color .22s ease,text-shadow .22s ease}
+.workspace #employee-profile-panel .profile-table tbody tr:is(:hover,:focus-within) .profile-position-cell{color:#0755c5;text-shadow:0 0 7px rgba(25,102,231,.16)}
+.workspace #employee-profile-panel .position-unset{color:#8294ad;text-shadow:none;font-weight:500}
+@media(prefers-reduced-motion:reduce){.workspace #employee-profile-panel .profile-table .profile-position-cell{transition:none}}
