@@ -1,0 +1,675 @@
+/* Scope DTR styling to the existing internal workspace; login stays unchanged. */
+.workspace .attendance-sheet{padding:18px 20px 12px;border:1px solid #e8edf6;border-radius:13px;box-shadow:0 4px 20px #243b7003}
+.workspace .attendance-sheet .sheet-header{display:flex;gap:13px;align-items:center;padding:0;border:0;flex-wrap:nowrap}
+.workspace .attendance-sheet .sheet-identity{min-width:0;flex:1}
+.workspace .attendance-sheet .metadata-label{display:block;font-size:9px;letter-spacing:.06em;font-weight:600;color:#8290a8;margin-bottom:6px}
+.workspace .attendance-sheet .sheet-identity h2{font-size:19px;line-height:1.3;font-weight:650;color:#263b60;letter-spacing:.015em;margin:0;text-transform:uppercase}
+.workspace .attendance-sheet .back-button{border:0!important;background:transparent;color:#7184a4;width:33px;height:33px;border-radius:9px;padding:7px}
+.workspace .attendance-sheet .back-button:hover{background:#edf2ff;color:#3155a6}
+.workspace .attendance-sheet .sheet-filters{display:flex;align-items:flex-end;gap:28px;flex-wrap:wrap;padding:19px 0 17px;margin-bottom:0;border-bottom:1px solid #edf1f7;flex-shrink:0}
+.workspace .attendance-sheet .sheet-meta{min-width:90px;max-width:240px;font-size:12px}
+.workspace .attendance-sheet .sheet-meta strong{color:#536885;font-size:12px;font-weight:550}
+.workspace .attendance-sheet .month-inline{font-size:9px;display:flex;flex-direction:column;gap:5px;margin:0;min-width:151px}
+.workspace .attendance-sheet .month-inline input{height:32px;min-height:32px;border:0;background:#f5f7fc;color:#526887;border-radius:7px;font-size:11px;padding:6px 10px}
+.workspace .attendance-sheet button:not(.month-trigger){border:0!important;text-decoration:none!important;transition:background-color .28s cubic-bezier(.4,0,.2,1),color .28s cubic-bezier(.4,0,.2,1),transform .32s cubic-bezier(.4,0,.2,1)}
+.workspace .attendance-sheet button:active{transform:translateY(1px)}
+.workspace .attendance-sheet #open-manual-dtr{margin-left:auto;height:32px;min-height:32px;border:0;background:#edf2ff;color:#4165ad;font-size:10px;box-shadow:none}
+.workspace .attendance-sheet #open-manual-dtr:hover{background:#e0e9ff;color:#254b9c;box-shadow:0 3px 8px #294c9410}
+.workspace .attendance-sheet .sheet-toolbar{display:flex;justify-content:flex-start;align-items:center;padding:13px 0 8px;gap:14px;margin:0;flex-shrink:0}
+.workspace .attendance-sheet .attendance-legend{display:flex;flex-wrap:wrap;gap:9px 18px;align-items:center}
+.workspace .attendance-sheet .attendance-legend span{display:inline-flex;align-items:center;gap:8px;color:#8a97aa;font-size:9px;white-space:nowrap}
+.workspace .attendance-sheet .attendance-legend span::before{content:"";width:6px;height:6px;border:0;border-radius:50%;background:var(--legend-dot)!important;box-shadow:0 0 0 3px var(--legend-glow),0 0 8px var(--legend-glow)}
+.workspace .legend-missing{--legend-dot:#e77d9d;--legend-glow:#e77d9d20}
+.workspace .legend-entry{--legend-dot:#48aa88;--legend-glow:#48aa8822}
+.workspace .legend-holiday{--legend-dot:#6399de;--legend-glow:#6399de25}
+.workspace .legend-aja{--legend-dot:#deb54b;--legend-glow:#deb54b25}
+.workspace .legend-travel{--legend-dot:#a084d6;--legend-glow:#a084d626}
+.workspace .attendance-sheet .attendance-month-status{font-size:9px;color:#9aa6b9;margin:0 0 12px;line-height:1.5;font-weight:400}
+.workspace .attendance-sheet #daily-table-wrap{border:0;border-radius:9px;overflow:auto;min-height:0;flex:1;max-height:none}
+.workspace .attendance-sheet .dtr-grid{min-width:1090px;width:100%;table-layout:fixed;border-collapse:separate;border-spacing:0;color:#435978;font-size:11.5px}
+.workspace .attendance-sheet .dtr-grid th{border:0;border-bottom:1px solid #e8edf6;padding:8px 7px;height:30px;font-size:9px;letter-spacing:.01em;font-weight:600;background:#f3f5fc;color:#7c8ca6;text-align:center;position:sticky;z-index:3;top:0;border-radius:0;white-space:normal}
+.workspace .attendance-sheet .dtr-grid th:first-child{width:65px}
+.workspace .attendance-sheet .dtr-grid th[colspan="2"]{width:164px}
+.workspace .attendance-sheet .dtr-grid th[colspan="2"]:nth-last-child(5){width:100px}
+.workspace .attendance-sheet .dtr-grid th.daily-total{width:80px}
+.workspace .attendance-sheet .dtr-grid th.overtime-total{width:91px}
+.workspace .attendance-sheet .dtr-grid th:nth-last-child(3)[rowspan]{width:173px}
+.workspace .attendance-sheet .dtr-grid th:nth-last-child(2)[rowspan]{width:158px}
+.workspace .attendance-sheet .dtr-grid th.actions-column{width:66px}
+.workspace .attendance-sheet .dtr-grid thead tr:last-child th{top:30px;height:27px;background:#fafbfe;font-size:9px;color:#9ca7b9;font-weight:450}
+.workspace .attendance-sheet .dtr-grid td{border:0;border-bottom:1px solid #edf1f8;line-height:1.3;padding:6px 7px;height:39px;font-size:11px;text-align:center;vertical-align:middle;background:transparent}
+.workspace .attendance-sheet .dtr-grid tbody tr:nth-child(even){background:#fafbfe}
+.workspace .attendance-sheet .dtr-grid tbody tr:hover{background:#dbe7f7}
+.workspace .attendance-sheet .dtr-grid tbody tr:hover td{box-shadow:none}
+.workspace .attendance-sheet .dtr-grid .dtr-date{white-space:nowrap;text-align:left;padding-left:11px;color:#8b9ab1}
+.workspace .attendance-sheet .dtr-date strong{display:inline;color:#536887;font-size:11px;font-weight:600;margin-right:5px}
+.workspace .attendance-sheet .dtr-date span{font-size:8px;color:#a2aec0}
+.workspace .attendance-sheet .dtr-grid .time-slot{background:transparent!important;padding:4px 5px;min-width:0;font-variant-numeric:tabular-nums}
+.workspace .attendance-sheet .time-value{display:block;color:#3b5577;font-size:12px;font-weight:600;line-height:1.35}
+.workspace .attendance-sheet .origin-label{display:inline-block;color:#58a18b;background:#eaf6f0;border-radius:3px;padding:1px 3px;font-size:7px;line-height:1.3;margin-top:2px}
+.workspace .attendance-sheet .origin-manual_sheet{color:#7779b8;background:#f0effc}
+.workspace .attendance-sheet .origin-reviewed{color:#5e83b6;background:#edf3fc}
+.workspace .attendance-sheet .time-code{display:inline;font-size:7px;color:#a6b1c3;padding-left:4px;margin-left:0;border:0}
+.workspace .attendance-sheet .no-time{font-size:12px;color:#b8c4d6}
+.workspace .attendance-sheet .slot-missing .no-time{color:#dba2b2}
+.workspace .attendance-sheet .undertime-value{color:#9a7b8a;font-variant-numeric:tabular-nums;font-size:10px}
+.workspace .attendance-sheet .daily-total-value{font-size:12px;font-weight:600;color:#4f6c90;font-variant-numeric:tabular-nums}
+.workspace .attendance-sheet .overtime-value{font-size:11px;color:#6586b2;font-variant-numeric:tabular-nums}
+.workspace .attendance-sheet .day-holiday .dtr-date{box-shadow:inset 3px 0 #99bfed;background:#f1f7ff}
+.workspace .attendance-sheet .day-travel .dtr-date{box-shadow:inset 3px 0 #b79bdd;background:#f8f4fe}
+.workspace .attendance-sheet .day-aja .dtr-date{box-shadow:inset 3px 0 #dfc16c;background:#fffbf0}
+.workspace .attendance-sheet .day-activities{text-align:left!important;min-width:0;line-height:1.5}
+.workspace .attendance-sheet .monitor-remark{display:inline-block;font-size:8px;line-height:1.3;font-weight:550;border-radius:4px;padding:3px 5px;color:#9aa6b9;background:#f0f3f9;margin:1px 2px 2px 0}
+.workspace .attendance-sheet .remark-complete{background:#eaf6ef;color:#609a7b}
+.workspace .attendance-sheet .remark-undertime{background:#fff0f4;color:#bf7b90}
+.workspace .attendance-sheet .remark-overtime{background:#eaf2ff;color:#6b8cbd}
+.workspace .attendance-sheet .remark-conflict{background:#fff5e1;color:#b49a62}
+.workspace .attendance-sheet .day-badge{display:inline-block;font-size:8px;line-height:1.3;font-weight:500;padding:2px 5px;margin:1px 2px 1px 0;border-radius:4px;max-width:100%;background:#f0f3f9;color:#97a5bb;white-space:normal}
+.workspace .attendance-sheet .holiday-badge{background:#eaf3ff;color:#769fc7}
+.workspace .attendance-sheet .aja-badge{background:#fff4d3;color:#b29957}
+.workspace .attendance-sheet .travel-badge{background:#f1eafb;color:#aa8fc8}
+.workspace .attendance-sheet .day-remark{font-size:8px;color:#9aa7bb;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;display:block}
+.workspace .attendance-sheet .weekend-label{font-size:8px;color:#b0bbce}
+.workspace .attendance-sheet .activity-evidence{text-align:left;min-width:0}
+.workspace .attendance-sheet .compact-activity{display:flex;align-items:center;gap:3px 5px;flex-wrap:wrap;margin:2px 0}
+.workspace .attendance-sheet .activity-clock{font-size:9px;color:#7187a7;font-variant-numeric:tabular-nums;white-space:nowrap}
+.workspace .attendance-sheet .activity-clock b{font-weight:500;font-size:7px;color:#a8b4c7;margin-right:2px}
+.workspace .attendance-sheet .pair-state{font-size:7px;color:#9ba9bc}
+.workspace .attendance-sheet .day-action{text-align:right!important;min-width:0}
+.workspace .attendance-sheet .edit-day{height:26px;min-height:26px;padding:0 6px;gap:4px;color:#8194b2;font-size:9px;border:0!important;background:transparent;box-shadow:none;border-radius:7px}
+.workspace .attendance-sheet .edit-day:hover{background:#e7eefc;color:#4165a5}
+.workspace .attendance-sheet .edit-day svg{width:11px;height:11px}
+.workspace .attendance-sheet .unassigned-count{display:inline-block;font-size:7px;color:#b09c7c;margin-left:3px;margin-top:0}
+.app-dialog.manual-dtr-dialog{width:min(790px,calc(100vw - 32px))}
+.manual-file-label{display:block;font-size:11px;color:#8190aa}
+.app-dialog .manual-file-label input{border:1px dashed #dce5f7;background:#f8faff;height:auto;padding:13px;font-size:10px}
+.manual-matches{margin-top:18px}
+.manual-match-row{display:grid;grid-template-columns:1fr 1fr;gap:20px;align-items:center;padding:9px 0;border-bottom:1px solid #edf1f8}
+.manual-match-row strong{display:block;font-size:10px;color:#667b9c;font-weight:550}
+.manual-match-row small{display:block;font-size:8px;color:#a4b1c7;margin-top:4px}
+.app-dialog .manual-match-row select{margin:0;font-size:10px}
+.source-detail{padding:10px 12px;background:#f7f8fe;border-radius:8px;margin-top:10px;font-size:9px;color:#8797b4}
+.source-detail:empty{display:none}
+.source-detail>strong{font-size:9px;font-weight:550}
+.source-detail>div{display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-top:7px}
+.source-detail b{font-weight:500;margin-left:4px;color:#6c7fa2}
+@media(max-width:740px){.workspace .attendance-sheet{padding:13px 11px 10px}.workspace .attendance-sheet .sheet-identity h2{font-size:15px}.workspace .attendance-sheet .sheet-filters{gap:13px;padding:16px 0 12px}.workspace .attendance-sheet .sheet-meta{flex:1;min-width:82px}.workspace .attendance-sheet .month-inline{flex:1;min-width:126px}.workspace .attendance-sheet #open-manual-dtr{margin-left:0}.workspace .attendance-sheet .sheet-toolbar{padding:12px 0 8px}.workspace .attendance-sheet .attendance-legend{gap:8px 13px}.workspace .attendance-sheet .attendance-legend span{font-size:8px;gap:7px}.workspace .attendance-sheet .dtr-grid .dtr-date{position:sticky;left:0;z-index:1;background:#fff}.workspace .attendance-sheet .dtr-grid thead tr:first-child th:first-child{position:sticky;left:0;z-index:4}.manual-match-row{grid-template-columns:1fr;gap:8px}.app-dialog.manual-dtr-dialog{width:calc(100vw - 24px)}}
+/* Work-code direction mapping: compact, readable and review-first. */
+.mapping-note{margin:0 0 11px;font-size:11px;color:#63748e}
+.direction-pill{display:inline-flex;align-items:center;justify-content:center;padding:3px 7px;border-radius:4px;font-size:10px;font-weight:750;white-space:nowrap;background:#f0f2f6;color:#68768a;border:1px solid #dce3ec}
+.direction-pill.direction-in{background:#e7f4ed;border-color:#bfdfcf;color:#28634e}
+.direction-pill.direction-out{background:#eaf0ff;border-color:#cddbf7;color:#345a99}
+.direction-pill.direction-unmapped{background:#fff7e8;border-color:#f0dbb7;color:#8e6229}
+.dtr-grid .activity-evidence{min-width:185px;max-width:270px}
+.evidence-direction-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:5px;margin:4px 0 2px}
+.evidence-direction{display:flex;justify-content:space-between;gap:5px;align-items:center;border-radius:3px;background:#fff;border:1px solid #d5e0ee;padding:4px 5px}
+.evidence-direction b{font-size:9px;color:#546a8c}
+.evidence-direction strong{font-size:11px;font-variant-numeric:tabular-nums;color:#263e69}
+.evidence-status{display:block;font-size:9px;line-height:1.45;overflow-wrap:anywhere}
+.evidence-status.mapped{color:#27614c}
+.evidence-status.review{color:#995c21;font-weight:650}
+.evidence-raw{font-size:9px;line-height:1.4;color:#63748c;margin-top:3px;overflow-wrap:anywhere}
+#code-direction-field{margin-top:6px}
+#code-direction-help{margin:7px 0 0}
+@media(max-width:740px){
+  .workspace .attendance-sheet .sheet-filters{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:13px 18px}
+  .workspace .attendance-sheet .sheet-meta{min-width:0;max-width:none}
+  .workspace .attendance-sheet .month-inline{min-width:0;width:100%}
+  .workspace .attendance-sheet .month-inline input{min-width:0;width:100%}
+  .workspace .attendance-sheet #open-manual-dtr{width:100%;align-self:end;font-size:9px}
+}
+.app-dialog.manual-dtr-dialog button,.app-dialog.day-review-dialog button{border:0!important;text-decoration:none!important;transition:background-color .28s cubic-bezier(.4,0,.2,1),color .28s cubic-bezier(.4,0,.2,1)}
+.app-dialog.manual-dtr-dialog .button.outline,.app-dialog.day-review-dialog .button.outline{background:#f1f5fc;color:#7288ad}
+.app-dialog.manual-dtr-dialog .button.outline:hover,.app-dialog.day-review-dialog .button.outline:hover{background:#e6edfc;color:#4167aa}
+.app-dialog.manual-dtr-dialog input::file-selector-button{border:0;border-radius:6px;background:#e9f0ff;color:#5578b5;padding:7px 10px;margin-right:10px;cursor:pointer}
+
+/* Attendance detail: source colors live in each time cell, with strong navigation. */
+.workspace .attendance-sheet .sheet-header{justify-content:space-between;gap:18px}
+.workspace .attendance-sheet .sheet-identity{flex:1}
+.workspace .attendance-sheet .sheet-personnel{display:flex;justify-content:flex-end;gap:28px;align-items:start;text-align:right;flex-wrap:wrap}
+.workspace .attendance-sheet .sheet-filters{padding:12px 0;gap:10px;align-items:center}
+.workspace .attendance-sheet .back-button{background:#243e75;color:#fff;flex:none;width:33px;height:33px;box-shadow:0 3px 9px #233d7426}
+.workspace .attendance-sheet .back-button:hover{background:#375fba;color:#fff;box-shadow:0 5px 13px #233d7433}
+.workspace .attendance-sheet .month-inline{flex-direction:row;gap:10px;align-items:center;font-size:11px;color:#4c638a}
+.workspace .attendance-sheet .month-inline input{background:#e9effd;color:#18386f;font-size:11px;font-weight:650;padding:6px 12px}
+.workspace .attendance-sheet .month-inline input:hover{background:#dbe6fc}
+.workspace .attendance-sheet .attendance-month-status{color:#52688a;font-size:10px}
+.workspace .attendance-sheet .dtr-grid th{background:#eaf0fa;color:#36517a}
+.workspace .attendance-sheet .dtr-grid thead tr:last-child th{background:#f3f6fd;color:#586e91}
+.workspace .attendance-sheet .dtr-grid .time-slot{box-shadow:inset 0 0 0 2px #fff}
+.workspace .attendance-sheet .dtr-grid .time-slot.slot-provisional{background:#e9f6f0!important}
+.workspace .attendance-sheet .dtr-grid .time-slot.slot-sheet{background:#eeeafd!important}
+.workspace .attendance-sheet .dtr-grid .time-slot.slot-entry{background:#e8effd!important}
+.workspace .attendance-sheet .dtr-grid .time-slot.slot-missing{background:#fcecf1!important}
+.workspace .attendance-sheet .dtr-grid .time-slot.slot-neutral{background:#f1f4f9!important}
+.workspace .attendance-sheet .dtr-grid .time-slot.slot-holiday{background:#eaf3ff!important}
+.workspace .attendance-sheet .dtr-grid .time-slot.slot-aja{background:#fff4d7!important}
+.workspace .attendance-sheet .dtr-grid .time-slot.slot-travel{background:#f3edfc!important}
+.workspace .attendance-sheet .time-value{color:#223a66;font-weight:700}
+.workspace .attendance-sheet .origin-label{font-size:8px;font-weight:650}
+.workspace .attendance-sheet .edit-day{background:#e8effd;color:#1d4388;font-weight:650}
+.workspace .attendance-sheet .edit-day:hover{background:#284f9e;color:#fff;box-shadow:0 4px 10px #253f782d}
+.app-dialog.day-review-dialog .button.primary{background:#244b9a;color:#fff}
+.app-dialog.day-review-dialog .button.primary:hover{background:#193a7e}
+@media(max-width:740px){
+  .workspace .attendance-sheet .sheet-header{align-items:flex-start}
+  .workspace .attendance-sheet .sheet-personnel{gap:5px 14px;max-width:52%}
+  .workspace .attendance-sheet .sheet-personnel .sheet-meta{font-size:10px}
+  .workspace .attendance-sheet .sheet-filters{display:flex;gap:10px}
+  .workspace .attendance-sheet .month-inline{min-width:0;width:auto;flex:1}
+  .workspace .attendance-sheet .month-inline input{width:auto;min-width:140px}
+}
+
+/* Compact monitoring view; provenance remains in tooltips and evidence details. */
+.workspace .attendance-sheet .dtr-grid td{height:30px;padding:3px 5px;line-height:1.15}
+.workspace .attendance-sheet .dtr-grid .time-slot{padding:2px 4px}
+.workspace .attendance-sheet .time-value{font-size:11px;white-space:nowrap}
+.workspace .attendance-sheet .edit-day{height:23px;min-height:23px}
+.workspace .attendance-sheet .monitor-remark,.workspace .attendance-sheet .day-badge{margin:0 2px 0 0;padding:2px 5px}
+.travel-status{display:inline-flex;align-items:center;justify-content:center;padding:4px 10px;border-radius:999px;background:#e8ddfa;color:#5b368d;font-size:10px;font-weight:700;white-space:nowrap}
+.workspace .attendance-sheet .slot-travel[colspan]{background:#eee7fa!important}
+.app-dialog.day-review-dialog{width:min(490px,calc(100vw - 24px));max-height:90dvh}
+.app-dialog.day-review-dialog .app-dialog-head,.app-dialog.day-review-dialog .app-dialog-body,.app-dialog.day-review-dialog .app-dialog-footer{padding:12px 16px}
+.app-dialog.day-review-dialog .form-section-title{font-size:11px;margin:9px 0 5px}
+.app-dialog.day-review-dialog .profile-form-grid{grid-template-columns:repeat(2,minmax(0,1fr));gap:7px 10px}
+.app-dialog.day-review-dialog input,.app-dialog.day-review-dialog select{min-height:31px;height:31px;font-size:11px;padding:5px 8px}
+.app-dialog.day-review-dialog .source-detail{margin-top:5px;padding:7px 9px}
+.app-dialog.day-review-dialog .field-hint{font-size:10px;margin:5px 0;overflow-wrap:anywhere}
+.review-evidence{margin:7px 0;font-size:10px;color:#52688a}
+.review-evidence summary{cursor:pointer;font-weight:650}
+
+.workspace .attendance-sheet .dtr-grid{min-width:1110px}
+.workspace .attendance-sheet .dtr-grid th.aja-column{width:115px}
+.workspace .attendance-sheet .dtr-grid th.travel-column{width:108px}
+.workspace .attendance-sheet .dtr-grid .activity-evidence{min-width:0;max-width:none}
+.workspace .attendance-sheet .dtr-grid .travel-column{text-align:center}
+.workspace .attendance-sheet .travel-status.travel-badge{background:#e8ddfa;color:#5b368d}
+
+/* Compact separate AJA directions and HR-approved time inputs. */
+.workspace .attendance-sheet .dtr-grid th.aja-column{width:168px}
+.workspace .attendance-sheet .dtr-grid .activity-evidence{text-align:center;padding:4px}
+.workspace .attendance-sheet .aja-time{padding:4px 2px;border-radius:5px;margin:2px 0;font-weight:600;white-space:normal}
+.workspace .attendance-sheet .aja-out .aja-time{background:#fce8ea;color:#a32e42}
+.workspace .attendance-sheet .aja-in .aja-time{background:#e4edfc;color:#254b9a}
+.workspace .attendance-sheet .aja-time small{display:block;font-size:8px;font-weight:400}
+.workspace .attendance-sheet #dtr-form-preview{margin-left:auto;background:#244b9a;color:white}
+.approved-clock-grid label{font-size:11px}
+.approved-clock-grid input{background:#f4f7fc;border:1px solid #dce5f2}
+
+/* Separate attendance provenance from activity status and fit all fourteen columns. */
+.workspace .attendance-sheet .dtr-grid{width:100%;min-width:1040px;table-layout:fixed}
+.workspace .attendance-sheet .dtr-grid thead th{width:auto!important}
+.workspace .attendance-sheet .dtr-col-date{width:6%}
+.workspace .attendance-sheet .dtr-col-clock{width:7%}
+.workspace .attendance-sheet .dtr-col-total{width:7%}
+.workspace .attendance-sheet .dtr-col-ut{width:4%}
+.workspace .attendance-sheet .dtr-col-ot{width:8%}
+.workspace .attendance-sheet .dtr-col-aja{width:7%}
+.workspace .attendance-sheet .dtr-col-travel{width:9%}
+.workspace .attendance-sheet .dtr-col-remarks{width:13%}
+.workspace .attendance-sheet .dtr-col-action{width:7%}
+.workspace .attendance-sheet .dtr-grid .time-slot.slot-sheet,
+.workspace .attendance-sheet .dtr-grid .time-slot.slot-entry,
+.workspace .attendance-sheet .dtr-grid .time-slot.slot-provisional{background:#e9f6f0!important}
+.workspace .attendance-sheet .aja-out .aja-time.has-aja,
+.workspace .attendance-sheet .aja-in .aja-time.has-aja{background:#fff4d7;color:#896018}
+.workspace .attendance-sheet .aja-out .aja-time.aja-missing,
+.workspace .attendance-sheet .aja-in .aja-time.aja-missing{background:#f1f4f9;color:#8290a4}
+.workspace .attendance-sheet .dtr-grid .day-action{position:sticky;right:0;background:#fff;z-index:2;text-align:center!important;box-shadow:-3px 0 6px #263b6010}
+.workspace .attendance-sheet .dtr-grid th.actions-column{right:0;z-index:5}
+.workspace .attendance-sheet .dtr-grid .travel-status{white-space:normal;padding:3px 6px}
+.workspace .attendance-sheet .edit-day{background:#244b9a;color:white}
+@media(max-width:740px){
+  .workspace .attendance-sheet .sheet-filters{flex-wrap:wrap}
+  .workspace .attendance-sheet .month-inline{flex:1 1 205px}
+  .workspace .attendance-sheet .month-inline input{min-width:150px;width:150px;flex:none}
+  .workspace .attendance-sheet #dtr-form-preview{margin-left:auto}
+}
+
+/* Flat DTR cells and compact, custom 24-hour editor. */
+.workspace .attendance-sheet .dtr-grid .travel-status{background:none;color:#654297;border-radius:0;padding:0;font-size:11px;font-weight:700;box-shadow:none}
+.workspace .attendance-sheet .dtr-grid .activity-evidence{padding:2px 4px;vertical-align:middle}
+.workspace .attendance-sheet .aja-time{padding:3px 0;margin:0;border-radius:0;min-height:24px;display:flex;align-items:center;justify-content:center}
+.workspace .attendance-sheet .aja-time+.aja-time{margin-top:2px}
+.workspace .attendance-sheet .dtr-grid .activity-evidence:has(.has-aja):not(:has(.aja-time+.aja-time)){background:#fff4d7;box-shadow:inset 0 0 0 2px #fff}
+.workspace .attendance-sheet .aja-time.has-aja .time-value{color:#223a66;font-size:11px;font-weight:700}
+.workspace .attendance-sheet .dtr-grid .day-action{padding:6px 5px}
+.workspace .attendance-sheet .edit-day{height:22px;min-height:22px;padding:0 9px;border-radius:5px;transition:background-color .28s cubic-bezier(.4,0,.2,1),color .28s cubic-bezier(.4,0,.2,1),transform .32s cubic-bezier(.4,0,.2,1)}
+.workspace .attendance-sheet .edit-day:hover{background:#17356e;color:#fff;transform:translateY(-1px);box-shadow:0 3px 9px #244b9a40}
+.workspace .attendance-sheet .edit-day:active{transform:translateY(0)}
+.app-dialog.day-review-dialog{width:min(460px,calc(100vw - 24px))}
+.app-dialog.day-review-dialog .clock-field{min-width:0;display:grid;gap:4px}
+.app-dialog.day-review-dialog .clock-field label{font-size:10px;font-weight:650;color:#52688a}
+.app-dialog.day-review-dialog .clock-control{display:flex;align-items:center;gap:0;border:1px solid #dce5f2;border-radius:7px;background:#f6f8fc;overflow:hidden}
+.app-dialog.day-review-dialog .clock-control:focus-within{border-color:#6284ca;box-shadow:0 0 0 2px #244b9a12}
+.app-dialog.day-review-dialog .clock-control input{border:0;background:transparent;box-shadow:none;flex:1;min-width:0;width:100%;font-variant-numeric:tabular-nums;font-weight:650;font-size:12px;letter-spacing:.02em}
+.app-dialog.day-review-dialog .clock-control input:focus{box-shadow:none;outline:none}
+.app-dialog.day-review-dialog .clock-pick{flex:0 0 32px;width:32px;height:31px;display:grid;place-items:center;color:#526fa4;background:transparent;padding:0;border-radius:5px}
+.app-dialog.day-review-dialog .clock-pick:hover,.app-dialog.day-review-dialog .clock-pick[aria-expanded=true]{background:#e2eafa;color:#244b9a}
+.clock-pick svg{width:16px;height:16px}
+.clock-picker{margin:10px 0 4px;border:1px solid #dce5f2;background:#fff;border-radius:10px;padding:10px;box-shadow:0 5px 18px #244b9a12}
+.clock-picker-head{display:flex;align-items:center;gap:8px;font-size:11px;color:#244b9a}
+.clock-picker-head span{font-size:9px;color:#8290a4;margin-left:auto}
+.clock-picker-head button{width:23px;height:23px;background:#eef3fb;color:#52688a;border-radius:5px;font-size:16px}
+.clock-picker-parts{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;margin:9px 0}
+.clock-part{display:grid;gap:3px;text-align:center}
+.clock-part label{font-size:9px;color:#52688a;font-weight:600}
+.app-dialog.day-review-dialog .clock-part input{text-align:center;height:35px;font-size:17px;font-weight:700;color:#244b9a;background:#f1f5fc;border:1px solid #e0e7f3;font-variant-numeric:tabular-nums}
+.clock-part button{background:#edf2fb;color:#244b9a;border-radius:5px;height:23px;font-size:12px}
+.clock-part button:hover{background:#dce8ff}
+.clock-picker-actions{display:flex;align-items:center;justify-content:flex-end;gap:9px;margin-top:9px}
+#review-reason-field{margin-top:8px}
+
+/* Single readable status badge; travel reference stays in its merged time cell. */
+.workspace .attendance-sheet .dtr-grid{min-width:960px}
+.workspace .attendance-sheet .dtr-col-clock{width:8%}
+.workspace .attendance-sheet .dtr-col-total{width:8%}
+.workspace .attendance-sheet .dtr-col-remarks{width:16%}
+.workspace .attendance-sheet .dtr-col-action{width:8%}
+.workspace .attendance-sheet .dtr-grid .day-activities{padding:5px 10px;vertical-align:middle}
+.workspace .attendance-sheet .monitor-remark{
+  display:inline-block;font-size:11px;line-height:1.25;font-weight:600;
+  padding:4px 8px;margin:0;border:0;border-radius:6px;
+  white-space:normal;overflow-wrap:anywhere;max-width:100%;box-sizing:border-box;
+  background:#e0e7f0;color:#4b5f7a;
+}
+.workspace .attendance-sheet .remark-complete{background:#cfeadb;color:#216743}
+.workspace .attendance-sheet .remark-undertime{background:#f6d4df;color:#97334e}
+.workspace .attendance-sheet .remark-overtime{background:#d3e4fc;color:#25579b}
+.workspace .attendance-sheet .remark-conflict{background:#f7e4b9;color:#80560f}
+.workspace .attendance-sheet .remark-holiday{background:#d5e9f8;color:#285c86}
+.workspace .attendance-sheet .remark-travel{background:#e7d9fa;color:#654297}
+.workspace .attendance-sheet .remark-aja{background:#f6e4bc;color:#84590f}
+.workspace .attendance-sheet .remark-missing{background:#f6d4df;color:#97334e}
+.workspace .attendance-sheet .remark-weekend{background:#dfe5ef;color:#53647d}
+/* Keep the calendar indication in the date cell, even on worked weekends.
+   Travel and AJA keep their existing date accents. */
+.workspace .attendance-sheet .dtr-grid tbody tr:not(.day-travel):not(.day-aja) .dtr-date.calendar-weekend{
+  background:#eef2f7;box-shadow:inset 3px 0 #aab9cd;
+}
+.workspace .attendance-sheet .remark-pending{background:#e0e7f0;color:#4b5f7a}
+.workspace .attendance-sheet .remark-progress{background:#d5e9f8;color:#285c86}
+/* Match the employment chips: a flat, vivid fill and bright text on row highlight. */
+.workspace .attendance-sheet .monitor-remark{
+  --remark-active:#536b89;
+  transition:background-color .22s ease,color .22s ease,text-shadow .22s ease;
+  box-shadow:none;
+}
+.workspace .attendance-sheet .remark-complete{--remark-active:#23784e}
+.workspace .attendance-sheet :is(.remark-undertime,.remark-missing){--remark-active:#c12e55}
+.workspace .attendance-sheet .remark-overtime{--remark-active:#3458cd}
+.workspace .attendance-sheet .remark-conflict{--remark-active:#94600d}
+.workspace .attendance-sheet :is(.remark-holiday,.remark-progress){--remark-active:#0874aa}
+.workspace .attendance-sheet .remark-travel{--remark-active:#8050b5}
+.workspace .attendance-sheet .remark-aja{--remark-active:#93610e}
+.workspace .attendance-sheet .remark-weekend{--remark-active:#596e89}
+.workspace .attendance-sheet .remark-pending{--remark-active:#526987}
+.workspace .attendance-sheet .dtr-grid tbody tr:is(:hover,:focus-within) .monitor-remark{
+  background-color:var(--remark-active);color:#fff;
+  text-shadow:0 0 4px #ffffff38;box-shadow:none;border:0;
+}
+@media(prefers-reduced-motion:reduce){
+  .workspace .attendance-sheet .monitor-remark{transition:none}
+}
+.workspace .attendance-sheet .dtr-grid .travel-status{overflow-wrap:anywhere}
+/* Full-width calendar labels follow the flat merged Travel Order cell. */
+.workspace .attendance-sheet .dtr-grid .slot-calendar[colspan="4"]{text-align:center;vertical-align:middle}
+.workspace .attendance-sheet .dtr-grid .calendar-status{
+  display:inline-block;padding:0;font-size:11px;font-weight:700;
+  line-height:1.3;white-space:normal;overflow-wrap:anywhere;
+  color:#53647d;background:none;border:0;box-shadow:none;
+}
+.workspace .attendance-sheet .dtr-grid .slot-calendar.slot-holiday .calendar-status{color:#34689d}
+.workspace .attendance-sheet .sheet-toolbar{padding:12px 0 13px}
+.app-dialog.day-review-dialog #review-travel-info{background:none;border-radius:0;padding:0;color:#654297;justify-content:flex-start;font-size:11px}
+.app-dialog.day-review-dialog #review-travel-reference{display:grid;gap:6px;font-size:11px;font-weight:650;color:#52688a;margin:12px 0 4px}
+
+/* Preserve table proportions and restore the raised right-hand action rail.
+   At narrow widths Remarks remain reachable by scrolling to the right edge. */
+.workspace .attendance-sheet #daily-table-wrap .dtr-grid{width:100%;min-width:960px;table-layout:fixed}
+.workspace .attendance-sheet #daily-table-wrap .day-action{
+  position:sticky;right:0;z-index:2;background:#fff;
+  box-shadow:-3px 0 8px #263b601c;text-align:center!important;transition:background-color .22s cubic-bezier(.4,0,.2,1)
+}
+.workspace .attendance-sheet #daily-table-wrap th.actions-column{
+  right:0;z-index:5;text-align:center;box-shadow:-3px 0 8px #263b6010
+}
+.workspace .attendance-sheet #daily-table-wrap tbody tr:hover .day-action{
+  background:#dbe7f7;box-shadow:-3px 0 8px #263b6024
+}
+.workspace .attendance-sheet #daily-table-wrap .edit-day{
+  box-shadow:0 2px 4px #244b9a26
+}
+.workspace .attendance-sheet #daily-table-wrap .edit-day:hover{
+  box-shadow:0 3px 9px #244b9a40
+}
+@media(prefers-reduced-motion:reduce){
+  .workspace .attendance-sheet #daily-table-wrap .edit-day{transition:none}
+  .workspace .attendance-sheet #daily-table-wrap .edit-day:hover{transform:none}
+}
+
+
+/* Keep the employee identity flush left, with a compact category pill. */
+.workspace .attendance-sheet{
+  --detail-back-size:33px;
+  --detail-control-gap:10px;
+}
+.workspace .attendance-sheet .sheet-identity{
+  padding-left:0;
+  text-align:left;
+  overflow-wrap:anywhere;
+}
+.workspace .attendance-sheet .sheet-name-line{
+  display:flex;align-items:center;gap:10px;flex-wrap:wrap;min-width:0;
+}
+.workspace .attendance-sheet .sheet-name-line h2{min-width:0;max-width:100%}
+.workspace .attendance-sheet .sheet-category{
+  display:inline-flex;align-items:center;flex:0 0 auto;white-space:nowrap;
+}
+.workspace .attendance-sheet .sheet-category .tag{
+  display:inline-flex;align-items:center;border-radius:999px;
+  padding:4px 10px;font-size:10px;line-height:1.2;font-weight:650;
+}
+.workspace .attendance-sheet .sheet-filters{
+  gap:var(--detail-control-gap);align-items:center;
+}
+/* Keep the month trigger flush with the employee identity. */
+.workspace .attendance-sheet .sheet-filters .month-inline{
+  flex:0 0 auto;width:auto;min-width:0;gap:0;
+}
+.workspace .attendance-sheet .sheet-filters #detail-month{
+  width:150px;min-width:150px;height:var(--detail-back-size);
+  min-height:var(--detail-back-size);
+}
+/* Compact split-window / phone header. Do not allocate a full row to department
+   while there is room alongside the employee identity. */
+@media(max-width:740px){
+  .workspace .attendance-sheet .sheet-header{
+    display:grid;grid-template-columns:minmax(0,1fr) minmax(76px,28%);
+    align-items:start;gap:6px 12px;
+  }
+  .workspace .attendance-sheet .sheet-identity{min-width:0}
+  .workspace .attendance-sheet .sheet-name-line{gap:5px 8px}
+  .workspace .attendance-sheet .sheet-personnel{
+    margin:0;max-width:none;min-width:0;gap:0;
+  }
+  .workspace .attendance-sheet .sheet-personnel .sheet-meta{
+    min-width:0;max-width:100%;overflow-wrap:anywhere;
+  }
+  .workspace .attendance-sheet .metadata-label{margin-bottom:4px}
+  .workspace .attendance-sheet .sheet-filters{padding:8px 0;gap:8px}
+  .workspace .attendance-sheet .sheet-toolbar{padding:8px 0}
+  .workspace .attendance-sheet .attendance-legend{gap:6px 12px}
+}
+@media(max-width:360px){
+  .workspace .attendance-sheet .sheet-header{grid-template-columns:minmax(0,1fr)}
+  .workspace .attendance-sheet .sheet-personnel{justify-content:flex-start;text-align:left}
+  .workspace .attendance-sheet .sheet-personnel .sheet-meta{display:flex;align-items:baseline;gap:7px}
+  .workspace .attendance-sheet .sheet-personnel .metadata-label{margin:0}
+  .workspace .attendance-sheet .sheet-filters #detail-month{width:150px;min-width:150px}
+}
+/* Only the table can scroll sideways; the surrounding panel stays in view.
+   A thin local scroll track makes the remaining columns discoverable. */
+.workspace .attendance-sheet #daily-table-wrap{
+  min-width:0;max-width:100%;scrollbar-width:thin;
+  scrollbar-color:#b8c6dd transparent;
+}
+.workspace .attendance-sheet #daily-table-wrap::-webkit-scrollbar{
+  display:block;width:6px;height:6px;
+}
+.workspace .attendance-sheet #daily-table-wrap::-webkit-scrollbar-thumb{
+  background:#b8c6dd;border-radius:999px;
+}
+@media(min-width:741px) and (max-width:1100px){
+  .workspace .attendance-sheet .sheet-header{gap:12px}
+  .workspace .attendance-sheet .sheet-personnel{min-width:0;max-width:30%}
+  .workspace .attendance-sheet .sheet-personnel .sheet-meta{min-width:0;overflow-wrap:anywhere}
+  .workspace .attendance-sheet .sheet-filters{padding:9px 0}
+  .workspace .attendance-sheet .sheet-toolbar{padding:9px 0}
+}
+
+/* Use the shared reporting month design; only constrain the layout on this page. */
+.workspace .attendance-sheet .sheet-filters #detail-month-trigger{width:160px;max-width:100%}
+
+
+/* Compact identity hierarchy and readable DTR typography.
+   Keep the existing sticky columns, row heights and attendance status colors. */
+.workspace .attendance-sheet .sheet-identity{
+  display:flex;align-items:center;gap:10px;min-width:0;
+}
+.workspace .attendance-sheet .sheet-identity .sheet-name-line{flex:1;min-width:0}
+.workspace .topbar-heading .back-button{
+  display:inline-flex;align-items:center;justify-content:center;
+  width:32px;min-width:32px;height:32px;min-height:32px;padding:0;
+  flex:0 0 32px;border:0!important;border-radius:9px;
+  background:#dce7f6;box-shadow:none;
+  color:#234778;cursor:pointer;
+  transition:background-color .28s cubic-bezier(.4,0,.2,1),color .28s cubic-bezier(.4,0,.2,1);
+}
+.workspace .topbar-heading .back-button svg{
+  width:21px;height:21px;flex:none;transition:transform .32s cubic-bezier(.4,0,.2,1);
+}
+.workspace .topbar-heading .back-button:is(:hover,:focus-visible){
+  background:#315a96;color:#fff;box-shadow:none;
+}
+.workspace .topbar-heading .back-button:is(:hover,:focus-visible) svg{transform:translateX(-2px)}
+.workspace .topbar-heading .back-button:focus-visible{outline:2px solid #7c9bd0;outline-offset:2px}
+.workspace .attendance-sheet .sheet-identity h2{
+  font-size:21px;line-height:1.28;font-weight:700;letter-spacing:0;color:#20375f;
+}
+.workspace .attendance-sheet .sheet-personnel .metadata-label{
+  font-size:10px;letter-spacing:.015em;font-weight:600;color:#526b8c;text-transform:none;
+}
+.workspace .attendance-sheet .sheet-personnel .sheet-meta strong{color:#263f65;font-weight:600}
+.workspace .attendance-sheet .sheet-category .tag{
+  font-size:10px;font-weight:600;
+}
+.workspace .attendance-sheet .attendance-legend span{
+  font-size:10px;font-weight:550;color:#536b89;gap:7px;
+}
+.workspace .attendance-sheet .dtr-grid thead tr:first-child th{
+  color:#29476e;font-size:10px;font-weight:650;letter-spacing:0;
+}
+.workspace .attendance-sheet .dtr-grid thead tr:last-child th{
+  color:#435d80;font-size:10px;font-weight:550;letter-spacing:0;
+}
+.workspace .attendance-sheet .dtr-date strong{color:#304b72;font-weight:650}
+.workspace .attendance-sheet .dtr-date span{color:#657c9b;font-size:9px;font-weight:550}
+.workspace .attendance-sheet .daily-total-value{color:#304e77;font-weight:650}
+/* Make earned and missing time distinct without adding containers. */
+.workspace .attendance-sheet :is(.overtime-value,.undertime-value){
+  font-size:11.5px;font-weight:650;font-variant-numeric:tabular-nums;
+  transition:color .22s ease,text-shadow .22s ease;
+}
+.workspace .attendance-sheet .overtime-value.duration-positive{color:#087449;font-weight:700}
+.workspace .attendance-sheet .undertime-value.duration-positive{color:#d32640;font-weight:700}
+.workspace .attendance-sheet :is(.overtime-value,.undertime-value).duration-muted{color:#788ba6;font-weight:500}
+.workspace .attendance-sheet .dtr-grid tbody tr:is(:hover,:focus-within) .overtime-value.duration-positive{color:#00663d;text-shadow:0 0 5px #00864a24}
+.workspace .attendance-sheet .dtr-grid tbody tr:is(:hover,:focus-within) .undertime-value.duration-positive{color:#c01c36;text-shadow:0 0 5px #e22d4824}
+@media(prefers-reduced-motion:reduce){.workspace .attendance-sheet :is(.overtime-value,.undertime-value){transition:none}}
+@media(max-width:740px){
+  .workspace .attendance-sheet .sheet-identity{gap:6px}
+  .workspace .topbar-heading .back-button{width:28px;min-width:28px;height:28px;min-height:28px;flex-basis:28px}
+  .workspace .topbar-heading .back-button svg{width:19px;height:19px}
+  .workspace .attendance-sheet .sheet-identity h2{font-size:16px}
+  .workspace .attendance-sheet .attendance-legend span{font-size:9px}
+}
+@media(max-width:400px){
+  .workspace .attendance-sheet .sheet-filters #detail-month-trigger{min-width:150px}
+}
+@media(prefers-reduced-motion:reduce){
+  .workspace .topbar-heading .back-button,
+  .workspace .topbar-heading .back-button svg{transition:none}
+  .workspace .topbar-heading .back-button:is(:hover,:focus-visible) svg{transform:none}
+}
+
+/* Keep all employee identity metadata together; leave only export on the right. */
+.workspace .topbar-heading{display:flex;align-items:center;gap:10px;flex:1;min-width:0}
+.workspace .topbar-heading .topbar-title{flex:1;min-width:0;max-width:none;overflow-wrap:normal}
+.workspace .attendance-sheet .sheet-header{
+  display:grid;grid-template-columns:minmax(0,1fr) auto;
+  align-items:stretch;gap:0 16px;flex-shrink:0;
+  padding:0 0 10px;border-bottom:1px solid #edf1f7;
+}
+.workspace .attendance-sheet .sheet-identity{
+  display:flex;flex-direction:column;align-items:flex-start;justify-content:flex-start;
+  gap:7px;min-width:0;
+}
+.workspace .attendance-sheet .sheet-name-line{flex:0 0 auto;gap:5px 12px;align-items:center}
+/* One flat capsule: the existing category pill overlays the department surface. */
+.workspace .attendance-sheet .sheet-classification{
+  display:inline-flex;align-items:center;gap:9px;max-width:100%;min-width:0;
+  padding:0 12px 0 0;border:0;border-radius:999px;
+  --classification-bg:#e5edf8;--classification-ink:#334d73;
+  background:var(--classification-bg);box-shadow:none;
+}
+.workspace .attendance-sheet .sheet-classification:has(.tag-cos){--classification-bg:#e5eaff;--classification-ink:#283d86}
+.workspace .attendance-sheet .sheet-classification:has(.tag-permanent){--classification-bg:#e0f2fc;--classification-ink:#145578}
+.workspace .attendance-sheet .sheet-classification:has(.tag-gip){--classification-bg:#f0e8fc;--classification-ink:#62398e}
+.workspace .attendance-sheet .sheet-classification:has(.tag-ojt){--classification-bg:#fff0e0;--classification-ink:#854514}
+.workspace .attendance-sheet .sheet-classification .sheet-category{flex:none}
+.workspace .attendance-sheet .sheet-department{
+  min-width:0;max-width:100%;font-size:11.5px;line-height:1.4;font-weight:600;
+  color:var(--classification-ink);overflow-wrap:anywhere;padding:4px 0;
+}
+.workspace .attendance-sheet .sheet-classification .employment-chip{
+  font-size:11px;font-weight:700;min-height:25px;padding:5px 12px;
+  background-color:var(--chip-active);color:var(--chip-active-ink);
+  border:0;box-shadow:none;
+}
+.workspace .attendance-sheet .sheet-filters{
+  display:flex;flex:0 0 auto;align-items:flex-start;justify-content:flex-start;
+  gap:0;padding:0;margin:0;border:0;
+}
+.workspace .attendance-sheet .sheet-personnel{
+  display:flex;flex-direction:column;flex-wrap:nowrap;
+  justify-content:flex-end;align-items:flex-end;
+  min-width:0;max-width:none;margin:0;text-align:right;
+}
+.workspace .attendance-sheet .sheet-personnel #dtr-form-preview{
+  flex:0 0 auto;margin:0;height:38px;min-height:38px;white-space:nowrap;
+}
+@media(max-width:740px){
+  .workspace .topbar-heading{gap:7px}
+  .workspace .attendance-sheet .sheet-header{gap:0 8px;padding-bottom:8px}
+  .workspace .attendance-sheet .sheet-name-line{gap:4px 7px}
+  .workspace .attendance-sheet .sheet-classification{gap:7px;padding-right:10px}
+  .workspace .attendance-sheet .sheet-department{font-size:11px}
+  .workspace .attendance-sheet .sheet-personnel #dtr-form-preview{padding-inline:9px;font-size:10px}
+}
+@media(max-width:400px){
+  .workspace .topbar-heading{gap:5px}
+  .workspace .topbar-heading .topbar-title{font-size:11px;overflow-wrap:anywhere}
+}
+@media(max-width:360px){
+  .workspace .attendance-sheet .sheet-header{grid-template-columns:minmax(0,1fr);row-gap:6px}
+  .workspace .attendance-sheet .sheet-personnel{align-items:flex-end}
+}
+
+/* Duration columns retain second-level precision without wrapping.
+   Export opens the existing printable DTR, including Save as PDF. */
+.workspace .attendance-sheet .daily-total-value,
+.workspace .attendance-sheet .overtime-value{white-space:nowrap;font-variant-numeric:tabular-nums}
+.workspace .attendance-sheet .sheet-personnel #dtr-form-preview{
+  display:inline-flex;align-items:center;justify-content:center;gap:6px;
+  padding-inline:11px;border-radius:8px;font-size:11px;font-weight:650;
+  background:#244b9a;color:#fff;box-shadow:none;
+}
+.workspace .attendance-sheet .sheet-personnel #dtr-form-preview svg{width:15px;height:15px;flex:none}
+.workspace .attendance-sheet .sheet-personnel #dtr-form-preview:is(:hover,:focus-visible){background:#17356e;color:#fff}
+@media(max-width:740px){
+  .workspace .attendance-sheet .sheet-personnel #dtr-form-preview{padding-inline:7px;gap:4px;font-size:10px}
+  .workspace .attendance-sheet .sheet-personnel #dtr-form-preview svg{width:13px;height:13px}
+}
+
+/* Compact attendance editor: remove inherited input top margins inside the
+   clock controls so the actual field height matches its visual height. */
+#day-review-dialog .app-dialog-head{padding:10px 16px}
+#day-review-dialog .app-dialog-head p{margin-top:3px;line-height:1.4}
+#day-review-dialog .app-dialog-body{padding:10px 16px 12px}
+#day-review-dialog .app-dialog-footer{padding:9px 16px}
+#day-review-dialog .form-section-title{margin:8px 0 5px}
+#day-review-dialog #review-time-section>.form-section-title:first-child{margin-top:0}
+#day-review-dialog .profile-form-grid{gap:6px 10px}
+#day-review-dialog .clock-field{gap:3px}
+#day-review-dialog .clock-control input{height:30px;min-height:30px;margin:0;padding:3px 8px;border:0;background:transparent}
+#day-review-dialog .clock-control{min-height:32px;box-sizing:border-box}
+#day-review-dialog .clock-pick{height:30px;min-height:30px;flex-basis:30px;width:30px}
+#day-review-dialog :is(#review-ut-hours,#review-ut-minutes,#review-reference,#review-remark){height:32px;min-height:32px;margin-top:4px;padding:4px 8px}
+#day-review-dialog :is(#review-ut-hours,#review-ut-minutes){font-variant-numeric:tabular-nums;font-weight:650}
+#day-review-dialog #review-aja-hint{line-height:1.4}
+#day-review-dialog form{max-height:min(90dvh,calc(100dvh - 48px))}
+
+/* Compact, separated attendance sections and the DTR preview close treatment. */
+#day-review-dialog .review-minimal-head{position:relative;justify-content:flex-end;align-items:center;padding:10px 16px 8px;border-bottom:0}
+#day-review-dialog .review-minimal-head .sr-only{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0}
+#day-review-dialog .review-close{
+  display:grid;place-items:center;width:32px;height:32px;min-width:32px;min-height:32px;
+  padding:0;border-radius:50%;background:linear-gradient(145deg,#fff1f3df,#f8dce5cf);
+  color:#b42d4e;box-shadow:inset 0 1px 1px #fff9,0 3px 10px #b42d4e12;
+  backdrop-filter:blur(12px);cursor:pointer;
+  transition:background .18s ease,color .18s ease,box-shadow .18s ease,transform .18s ease;
+}
+#day-review-dialog .review-close:is(:hover,:focus-visible){background:linear-gradient(145deg,#ffe9ee,#f5c5d2);color:#96233e;box-shadow:inset 0 1px 1px #fffc,0 5px 14px #b42d4e26;transform:translateY(-1px)}
+#day-review-dialog .review-close:active{transform:scale(.96)}
+#day-review-dialog .review-close:focus-visible{outline:2px solid #b4233b;outline-offset:2px}
+#day-review-dialog .review-close svg{pointer-events:none}
+#day-review-dialog .app-dialog-body{padding-top:0}
+#day-review-dialog .review-field-section{min-width:0;margin:0;padding:10px 0 9px;border:0}
+#day-review-dialog .review-field-section:last-child{padding-bottom:0}
+#day-review-dialog .review-field-section .form-section-title{display:block;margin:0 0 7px;font-size:11.5px;font-weight:700;line-height:1.4;color:#385780}
+#day-review-dialog .clock-field label,#day-review-dialog .profile-form-grid label{color:#52688a;font-weight:650}
+#day-review-dialog .clock-control input,#day-review-dialog :is(#review-ut-hours,#review-ut-minutes){color:#243e68;font-size:12px;font-weight:700}
+#day-review-dialog .clock-control input::placeholder,#day-review-dialog :is(#review-ut-hours,#review-ut-minutes)::placeholder{color:#8698b3;font-weight:550}
+#day-review-dialog :is(#review-ut-hours,#review-ut-minutes):disabled{color:#8b9ab3}
+#day-review-dialog .app-dialog-footer{gap:9px;background:#f8faff}
+#day-review-dialog :is(.app-dialog-footer,.clock-picker-actions) .button{height:33px;min-height:33px;padding:0 14px;border-radius:8px;font-size:11px;font-weight:650;box-shadow:none;transition:background-color .22s ease,color .22s ease,transform .22s ease,box-shadow .22s ease}
+#day-review-dialog :is(.app-dialog-footer,.clock-picker-actions) .button.outline{background:#eaf0fa;color:#31588e}
+#day-review-dialog :is(.app-dialog-footer,.clock-picker-actions) .button.outline:is(:hover,:focus-visible):not(:disabled){background:#dbe7fa;color:#244b9a;transform:translateY(-1px)}
+#day-review-dialog :is(.app-dialog-footer,.clock-picker-actions) .button.primary{background:#244b9a;color:#fff}
+#day-review-dialog :is(.app-dialog-footer,.clock-picker-actions) .button.primary:is(:hover,:focus-visible):not(:disabled){background:#173b83;color:#fff;transform:translateY(-1px);box-shadow:0 3px 8px #244b9a22}
+#day-review-dialog :is(.app-dialog-footer,.clock-picker-actions) .button:not(:disabled):active{transform:scale(.98)}
+#day-review-dialog :is(.app-dialog-footer,.clock-picker-actions) .button:focus-visible{outline:2px solid #7095d1;outline-offset:2px}
+@media(prefers-reduced-motion:reduce){#day-review-dialog .review-close,#day-review-dialog :is(.app-dialog-footer,.clock-picker-actions) .button{transition:none;transform:none!important}}
+
+/* Documented leave and AJA coverage are not missing attendance. */
+.workspace .legend-leave{--legend-dot:#6b8da6;--legend-glow:#6b8da625}
+.workspace .attendance-sheet .dtr-grid .time-slot.slot-leave{background:#e5edf4!important}
+.workspace .attendance-sheet .dtr-grid .leave-status,
+.workspace .attendance-sheet .dtr-grid .aja-coverage-status{font-size:11px;font-weight:700;overflow-wrap:anywhere}
+.workspace .attendance-sheet .dtr-grid .leave-status{color:#45627b}
+.workspace .attendance-sheet .dtr-grid .aja-coverage-status{color:#84590f}
+.workspace .attendance-sheet .day-leave .dtr-date{box-shadow:inset 3px 0 #94adc3;background:#eff4f8}
+.workspace .attendance-sheet .remark-leave{background:#dbe6ef;color:#45627b;--remark-active:#496d89}
+
+/* Distinguish actual morning departure from subsequent official coverage. */
+.workspace .attendance-sheet .dtr-grid .aja-coverage-caption{
+  display:block;font-size:9px;line-height:1.15;font-weight:600;color:#84590f;margin-top:2px;
+}
+.workspace .attendance-sheet .dtr-grid .slot-aja-departure .aja-coverage-status{font-variant-numeric:tabular-nums}
+
+/* In-period AJA note, not a replacement time or a departure punch. */
+.workspace .attendance-sheet .dtr-grid .slot-aja-inline .aja-coverage-caption{
+  font-size:9px;line-height:1.2;white-space:normal;overflow-wrap:normal;
+}
+.workspace .attendance-sheet .dtr-grid .slot-aja-inline .time-value{color:#223a66}
+/* Suggested historical scan is not an approved attendance entry. */
+.workspace .attendance-sheet .dtr-grid .time-slot.slot-suggested{background:#fff0d9!important}
+.workspace .attendance-sheet .dtr-grid .slot-suggested .time-value{color:#7b551f}
+.workspace .attendance-sheet .suggested-caption{display:block;font-size:9px;color:#8a6124;line-height:1.2;margin-top:2px}
+#review-historical-suggestions{margin-top:8px;align-self:flex-start}
+
+/* Organic, staggered color droplets. Fixed irregular centers; no linear or bottom-up fill. */
+.workspace .attendance-sheet .sheet-personnel #dtr-form-preview{--liquid-base:#244b9a;--liquid-fill:#132e6e;position:relative;isolation:isolate;overflow:hidden;background:var(--liquid-base);color:#fff;box-shadow:none;transform:none;transition:none}
+.workspace .attendance-sheet .sheet-personnel #dtr-form-preview::before{content:"";position:absolute;inset:0;z-index:-1;pointer-events:none;border-radius:inherit;background-image:radial-gradient(circle at 8% 23%,var(--liquid-fill) max(0%,calc(var(--ncsc-fill-a) - .35%)),transparent var(--ncsc-fill-a)),
+    radial-gradient(circle at 26% 81%,var(--liquid-fill) max(0%,calc(var(--ncsc-fill-b) - .35%)),transparent var(--ncsc-fill-b)),
+    radial-gradient(circle at 47% 12%,var(--liquid-fill) max(0%,calc(var(--ncsc-fill-c) - .35%)),transparent var(--ncsc-fill-c)),
+    radial-gradient(circle at 59% 63%,var(--liquid-fill) max(0%,calc(var(--ncsc-fill-d) - .35%)),transparent var(--ncsc-fill-d)),
+    radial-gradient(circle at 79% 37%,var(--liquid-fill) max(0%,calc(var(--ncsc-fill-e) - .35%)),transparent var(--ncsc-fill-e)),
+    radial-gradient(circle at 96% 86%,var(--liquid-fill) max(0%,calc(var(--ncsc-fill-f) - .35%)),transparent var(--ncsc-fill-f));background-repeat:no-repeat;opacity:0;transition:--ncsc-fill-a 0s linear .42s,--ncsc-fill-b 0s linear .42s,--ncsc-fill-c 0s linear .42s,--ncsc-fill-d 0s linear .42s,--ncsc-fill-e 0s linear .42s,--ncsc-fill-f 0s linear .42s,opacity .4s ease-out}
+.workspace .attendance-sheet .sheet-personnel #dtr-form-preview:not(:disabled):is(:hover,:focus-visible){background:var(--liquid-base);color:#fff;box-shadow:none;transform:none}
+.workspace .attendance-sheet .sheet-personnel #dtr-form-preview:not(:disabled):is(:hover,:focus-visible)::before{--ncsc-fill-a:56%;--ncsc-fill-b:53%;--ncsc-fill-c:64%;--ncsc-fill-d:105%;--ncsc-fill-e:58%;--ncsc-fill-f:53%;opacity:1;transition:--ncsc-fill-a .80s cubic-bezier(.42,0,.24,1),--ncsc-fill-b .72s cubic-bezier(.42,0,.24,1),--ncsc-fill-c .87s cubic-bezier(.42,0,.24,1),--ncsc-fill-d .89s cubic-bezier(.42,0,.24,1),--ncsc-fill-e .76s cubic-bezier(.42,0,.24,1),--ncsc-fill-f .82s cubic-bezier(.42,0,.24,1),opacity 0s;transition-delay:.10s,0s,.19s,.24s,.05s,.16s,0s}
+.workspace .attendance-sheet .sheet-personnel #dtr-form-preview svg,.workspace .attendance-sheet .sheet-personnel #dtr-form-preview:not(:disabled):is(:hover,:focus-visible) svg{transform:none;animation:none;transition:none}
+.workspace .attendance-sheet .sheet-personnel #dtr-form-preview:not(:disabled):active{background:var(--liquid-fill);transform:none;box-shadow:none}
+.workspace .attendance-sheet .sheet-personnel #dtr-form-preview:focus-visible{outline:2px solid #7295ce;outline-offset:2px}
+@media(prefers-reduced-motion:reduce){.workspace .attendance-sheet .sheet-personnel #dtr-form-preview::before{transition:none}}

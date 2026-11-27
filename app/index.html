@@ -1,13 +1,18 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
-  <meta name="theme-color" content="#1d3795"><meta name="description" content="NCSC's local workspace for biometric attendance and official activities.">
-  <title>NCSC | Biometric Attendance</title>
-  <link rel="icon" href="/static/images/ncsc-seal.jpg" type="image/jpeg"><link rel="stylesheet" href="/static/app.css"><script src="/static/app.js" defer></script>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#142650">
+  <title>NCSC | Attendance Records</title>
+  <link rel="stylesheet" href="/static/app.css">
+  <link rel="stylesheet" href="/static/workspace.css?v=employees-167">
+  <link rel="stylesheet" href="/static/attendance-detail.css?v=auto-dtr-45">
+  <link rel="stylesheet" href="/static/dtr-preview.css?v=25">
+  <script src="/static/dtr-preview.js?v=22" defer></script>
+  <script src="/static/app.js?v=employees-75" defer></script>
 </head>
 <body>
-  <noscript><p class="notice">Please enable JavaScript to use the attendance workspace.</p></noscript>
   <main id="login-view" class="auth-shell" aria-labelledby="login-heading">
     <div class="national-stripe" aria-hidden="true"></div>
     <section class="login-card">
@@ -15,8 +20,10 @@
         <aside class="login-story" aria-label="NCSC Biometric Attendance System">
           <img class="login-story-photo" src="/static/images/ncsc-summit.webp" alt="" fetchpriority="high">
           <div class="login-story-content">
-            <img class="seal" src="/static/images/ncsc-seal.jpg" width="96" height="96" alt="NCSC seal">
-            <p class="eyebrow">NATIONAL COMMISSION OF SENIOR CITIZENS</p>
+            <div class="login-story-brand">
+              <img class="seal" src="/static/images/ncsc-seal.jpg" width="112" height="112" alt="NCSC seal">
+              <p class="eyebrow">NATIONAL COMMISSION OF SENIOR CITIZENS</p>
+            </div>
             <h2>Biometric Attendance<br>System</h2>
             <div class="story-rule" aria-hidden="true"></div>
           </div>
@@ -32,12 +39,13 @@
             <p class="muted">Sign in to access attendance records.</p>
             <form id="login-form" autocomplete="on">
               <label for="login-username">Username</label>
-              <div class="input-with-icon"><i data-icon="user"></i><input id="login-username" name="username" required maxlength="40" autocomplete="username" placeholder="Enter your username" autofocus></div>
-              <div class="password-label"><label for="login-password">Password</label><button class="text-button" type="button" id="login-help">Need help?</button></div>
-              <div class="input-with-icon"><i data-icon="lock"></i><input id="login-password" name="password" type="password" required maxlength="256" autocomplete="current-password" placeholder="Enter your password"><button class="icon-button password-toggle" type="button" id="toggle-password" aria-label="Show password" aria-pressed="false"><i data-icon="eye"></i></button></div>
+              <div class="input-with-icon"><svg class="inline-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 21a8 8 0 0 0-16 0"/><circle cx="12" cy="8" r="4"/></svg><input id="login-username" name="username" required maxlength="40" autocomplete="username" placeholder="Enter your username" autofocus></div>
+              <div class="password-label"><label for="login-password">Password</label></div>
+              <div class="input-with-icon"><svg class="inline-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="5" y="10" width="14" height="11" rx="2"/><path d="M8 10V7a4 4 0 0 1 8 0v3"/></svg><input id="login-password" name="password" type="password" required maxlength="256" autocomplete="current-password" placeholder="Enter your password"><button class="icon-button password-toggle" type="button" id="toggle-password" aria-label="Show password" aria-pressed="false"><svg class="inline-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M2 12s4-7 10-7 10 7 10 7-4 7-10 7S2 12 2 12z"/><circle cx="12" cy="12" r="3"/></svg></button></div>
               <p id="login-error" class="form-error hidden" role="alert"></p>
-              <p id="login-help-text" class="inline-help hidden">Contact your system administrator for account or password assistance.</p>
-              <button class="btn primary block" id="login-submit" type="submit">Sign in</button>
+              
+              <button class="button primary wide" id="login-submit" type="submit">Sign in</button>
+              <a href="/employee" style="display:block;text-align:center;margin-top:10px;font-size:12px;color:#244b9a;text-decoration:none">Employee Portal</a>
             </form>
           </div>
         </div>
@@ -45,57 +53,400 @@
     </section>
   </main>
   <div id="workspace" class="workspace hidden">
-    <aside class="sidebar"><a class="brand" href="#overview" aria-label="NCSC Attendance overview"><img class="seal" src="/static/images/ncsc-seal.jpg" width="48" height="48" alt="NCSC seal"><span>NCSC<span class="brand-sub">Attendance workspace</span></span></a><div class="sidebar-label">YOUR WORKSPACE</div>
-      <nav class="workspace-nav" aria-label="Main navigation"><button class="nav-item active" data-page="overview"><i data-icon="grid"></i> Overview</button><button class="nav-item" data-page="dtr"><i data-icon="file"></i> DTR monitoring</button><button class="nav-item" data-page="attendance"><i data-icon="fingerprint"></i> Attendance logs</button><button class="nav-item" data-page="staff"><i data-icon="users"></i> Staff & work codes</button><button class="nav-item" data-page="imports"><i data-icon="upload"></i> USB imports</button><button class="nav-item" data-page="fieldwork"><i data-icon="briefcase"></i> Activity references</button></nav>
-      <div class="sidebar-bottom"><button class="nav-item help-nav" type="button" data-help><i data-icon="help"></i> Help & guidance</button><div class="local-status"><i data-icon="database"></i><div><strong>Local workspace</strong><small>USB import mode</small></div></div><button class="nav-item logout-button" id="logout" type="button"><i data-icon="logout"></i> Sign out</button></div>
+    <aside class="sidebar">
+      <div class="brand">
+        <img src="/static/images/ncsc-seal.jpg" width="58" height="58" alt="NCSC seal">
+        <div><span class="brand-country">Republic of the Philippines</span><strong>NATIONAL COMMISSION<br>OF SENIOR CITIZENS</strong></div>
+      </div>
+      <div class="nav-title">OPERATIONS</div>
+      <nav class="nav" aria-label="Main navigation">
+        <button class="nav-item active" type="button" data-page="employees" aria-label="Employee Attendance" data-tooltip="Employee Attendance"><i class="nav-edge-highlight" aria-hidden="true"></i><svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.65" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="5" width="18" height="16" rx="3"/><path d="M16 3v4M8 3v4M3 10h18m-13 5 2.5 2.5L16 13"/></svg><span>Employee Attendance</span></button>
+        <button class="nav-item" type="button" data-page="profiles" aria-label="Employees" data-tooltip="Employees"><i class="nav-edge-highlight" aria-hidden="true"></i><svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.65" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="4" width="18" height="16" rx="3"/><circle cx="9" cy="10" r="2.4"/><path d="M5.5 16v-1a3.5 3.5 0 0 1 7 0v1M15 9h3m-3 4h3m-3 3h2"/></svg><span>Employees</span></button>
+        <div class="nav-title document-nav-title">DOCUMENTS</div>
+        <button class="nav-item" type="button" data-page="activities" aria-label="AJA / Official Business" data-tooltip="AJA / Official Business"><i class="nav-edge-highlight" aria-hidden="true"></i><svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.65" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="7" width="18" height="14" rx="3"/><path d="M8 7V5a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2M3 12a20 20 0 0 0 18 0m-9 1v2"/></svg><span>AJA / Official Business</span></button>
+        <div class="nav-title document-nav-title">ADMINISTRATION</div>
+        <button class="nav-item" type="button" data-page="staff" aria-label="Users &amp; Work Codes" data-tooltip="Users &amp; Work Codes"><i class="nav-edge-highlight" aria-hidden="true"></i><svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.65" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="5" y="2.5" width="14" height="19" rx="3"/><rect x="8" y="6" width="8" height="4" rx="1"/><path d="M8 14h1m3 0h1m3 0h.1M8 17h1m3 0h1m3 0h.1"/></svg><span>Users &amp; Work Codes</span></button>
+      </nav>
+      <div class="sidebar-bottom"><button id="logout-sidebar" class="sidebar-signout" type="button" aria-label="Sign out" data-tooltip="Sign out"><svg class="signout-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.65" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path class="signout-frame" d="M3.5 21V3h13v5m0 8v5h-13"/><g class="signout-door"><path d="M3.5 3 12 5v14l-8.5 2Z" fill="currentColor" fill-opacity=".10"/><circle cx="9.3" cy="12" r=".65" fill="currentColor" stroke="none"/></g><path class="signout-arrow" d="m18 9 3 3-3 3m-5-3h8"/></svg><span>Sign out</span></button></div>
     </aside>
-    <div class="main-shell"><header class="topbar"><div class="breadcrumb">Workspace <span>/</span> <strong id="current-location">Overview</strong></div><div class="top-actions"><span class="today" id="today"></span><span class="topbar-divider"></span><span class="avatar" id="account-avatar" aria-hidden="true">A</span><div class="account-detail"><strong id="account">Administrator</strong><small id="account-role">Administrator</small></div></div></header>
-      <main id="main-content" tabindex="-1">
-        <div class="page-heading"><div><h1 id="page-heading">Overview</h1><p id="page-description">A clear view of your attendance records and official activities.</p></div><button class="btn primary" id="heading-action" type="button" data-go="imports"><i data-icon="upload"></i> Import attendance</button></div>
-        <section class="page" data-view="overview" aria-label="Attendance overview">
-          <div class="metrics">
-            <article class="metric"><div class="metric-top"><span class="metric-icon blue"><i data-icon="fingerprint"></i></span><span class="metric-period">All time</span></div><strong id="metric-scans">—</strong><h3>Recorded scans</h3><small>Original imported device events</small></article>
-            <article class="metric"><div class="metric-top"><span class="metric-icon red"><i data-icon="users"></i></span><span class="metric-period">All time</span></div><strong id="metric-employees">—</strong><h3>Staff records</h3><small>Device IDs and linked staff names</small></article>
-            <article class="metric"><div class="metric-top"><span class="metric-icon blue"><i data-icon="folder"></i></span><span class="metric-period">All time</span></div><strong id="metric-imports">—</strong><h3>Import batches</h3><small>Attendance files processed</small></article>
-            <article class="metric"><div class="metric-top"><span class="metric-icon gold"><i data-icon="clock"></i></span><span class="metric-period">On file</span></div><strong id="metric-activities">—</strong><h3>Activity references</h3><small>Existing AJA and travel records</small></article>
+
+    <div class="content-shell">
+      <header class="topbar">
+        <div class="topbar-heading"><button id="back-to-register" class="back-button hidden" type="button" aria-label="Back to employees" title="Back to employees"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M19 12H5m7-7-7 7 7 7"/></svg></button><h1 class="topbar-title" id="section-name">Employee Attendance</h1></div>
+        <div class="topbar-user"><div class="workspace-clock" aria-label="Philippine local time"><div class="clock-date-row"><svg class="clock-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.65" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="5" width="18" height="16" rx="3"/><path d="M8 3v4m8-4v4M3 10h18m-13 5h2m3 0h3"/></svg><span class="clock-date" id="today"></span></div><time class="clock-time" id="live-time"></time><span class="clock-zone">PHT</span></div></div>
+      </header>
+
+      <dialog id="attendance-month-picker" class="attendance-month-picker" aria-labelledby="month-picker-title">
+        <div class="month-picker-heading"><span id="month-picker-title">Reporting month</span></div>
+        <div class="month-picker-year"><button type="button" id="month-year-prev" aria-label="Previous year">‹</button><button type="button" id="month-year-trigger" aria-expanded="false" aria-controls="month-year-grid" aria-label="Choose year"><span id="month-year-value"></span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m7 10 5 5 5-5"/></svg></button><button type="button" id="month-year-next" aria-label="Next year">›</button></div>
+        <div class="month-picker-grid" id="month-picker-grid" role="group" aria-label="Choose month"></div>
+        <div class="month-picker-grid" id="month-year-grid" role="group" aria-label="Choose year" hidden></div>
+      </dialog>
+      <main id="main-content">
+        <section class="page" data-view="employees">
+          <div class="panel list-panel" id="attendance-register-panel">
+            <section class="live-overview" aria-label="Today's attendance overview">
+              <div class="live-overview-head"><strong>Today's Attendance</strong><button type="button" id="live-other-filter" class="live-other hidden" data-live-filter="other" aria-pressed="false">Other / Review <span data-live-count="other">—</span></button><span id="live-refresh-note" role="status" hidden></span></div>
+              <div class="live-kpi-strip" role="group" aria-label="Filter employees by today's status">
+                  <button type="button" class="live-kpi kpi-all" data-live-filter="all" aria-pressed="true"><span class="kpi-glass-flow" aria-hidden="true"></span><span class="kpi-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.65" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2m20 0v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75"/><circle cx="9" cy="7" r="4"/></svg></span><span class="kpi-text"><small>Employees</small><strong data-live-count="all">—</strong></span></button>
+                  <button type="button" class="live-kpi kpi-in" data-live-filter="in" aria-pressed="false"><span class="kpi-glass-flow" aria-hidden="true"></span><span class="kpi-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.65" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 4h7a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2h-7"/><path d="M3 12h13"/><path d="m11 8 5 4-5 4"/></svg></span><span class="kpi-text"><small>Timed In</small><strong data-live-count="in">—</strong></span></button>
+                  <button type="button" class="live-kpi kpi-out" data-live-filter="out" aria-pressed="false"><span class="kpi-glass-flow" aria-hidden="true"></span><span class="kpi-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.65" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 4H5a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h7"/><path d="M8 12h13"/><path d="m16 8 5 4-5 4"/></svg></span><span class="kpi-text"><small>Timed Out</small><strong data-live-count="out">—</strong></span></button>
+                  <button type="button" class="live-kpi kpi-missing" data-live-filter="missing" aria-pressed="false"><span class="kpi-glass-flow" aria-hidden="true"></span><span class="kpi-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.65" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 7v6m0 3h.01"/></svg></span><span class="kpi-text"><small>No Entry</small><strong data-live-count="missing">—</strong></span></button>
+                  <button type="button" class="live-kpi kpi-aja" data-live-filter="aja" aria-pressed="false"><span class="kpi-glass-flow" aria-hidden="true"></span><span class="kpi-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.65" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="7" width="18" height="14" rx="3"/><path d="M8 7V4h8v3M3 12h18"/></svg></span><span class="kpi-text"><small>On AJA</small><strong data-live-count="aja">—</strong></span></button>
+                  <button type="button" class="live-kpi kpi-travel" data-live-filter="travel" aria-pressed="false"><span class="kpi-glass-flow" aria-hidden="true"></span><span class="kpi-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.65" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 21s7-6 7-12a7 7 0 1 0-14 0c0 6 7 12 7 12z"/><circle cx="12" cy="9" r="2"/></svg></span><span class="kpi-text"><small>Travel Order</small><strong data-live-count="travel">—</strong></span></button>
+              </div>
+            </section>
+            <form id="employee-filter" class="toolbar" role="search" aria-label="Employee attendance filters" autocomplete="off">
+              <div class="search-box"><label for="employee-search">Search employees</label><div class="employee-search-field"><svg class="search-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><circle cx="10.5" cy="10.5" r="6.5"/><path d="m16 16 4 4"/></svg><input id="employee-search" type="search" placeholder="Search by employee name" autocomplete="off" maxlength="80"><button id="clear-employee-search" type="button" aria-label="Clear search" title="Clear search" hidden><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><path d="m7 7 10 10M17 7 7 17"/></svg></button></div></div>
+              <div class="register-month-control"><label id="register-month-label" for="register-month-trigger">Reporting month</label><input id="register-month" type="month" hidden tabindex="-1" aria-hidden="true"><button type="button" class="month-trigger" id="register-month-trigger" data-month-target="register-month" aria-haspopup="dialog" aria-controls="attendance-month-picker" aria-expanded="false"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="5" width="18" height="16" rx="3"/><path d="M8 3v4m8-4v4M3 10h18"/></svg><span class="month-trigger-value">Select month</span><svg class="month-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><path d="m7 10 5 5 5-5"/></svg></button></div>
+              <button id="open-attendance-import" class="button outline import-button record-create-action" type="button" aria-haspopup="dialog">
+                <svg class="inline-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 16V3M7 8l5-5 5 5"/><path d="M4 16v3a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-3"/></svg>
+                Import attendance
+              </button>
+            </form>
+            <div class="table-wrap">
+              <table class="records-table attendance-directory"><colgroup><col class="directory-name"><col class="directory-category"><col class="directory-department"><col class="directory-status"><col class="directory-update"><col class="directory-action"></colgroup><thead><tr><th>Employee Name</th><th>Category</th><th>Department</th><th>Live Status</th><th>Last Update</th><th class="actions-column">Action</th></tr></thead><tbody id="register-rows"><tr><td colspan="6">Loading employees…</td></tr></tbody></table>
+            </div>
+            <div class="list-footer register-footer"><span id="register-count" role="status" aria-live="polite"></span></div>
           </div>
-          <div class="overview-grid"><article class="panel chart-panel"><div class="section-top"><div><h2>Scan activity</h2><p id="chart-period">Latest seven days of imported records</p></div><span class="chart-legend"><i></i> Device scans</span></div><div id="activity-chart" class="activity-chart"><div class="empty">Import a file to see daily scan activity.</div></div><p class="chart-foot">Counts show recorded scan events, rather than hours worked.</p></article><article class="panel quick-panel"><div class="section-top"><div><h2>Quick actions</h2><p>Attendance and official activities</p></div><i class="quick-spark" data-icon="spark"></i></div><button class="quick-action" type="button" data-go="imports"><span class="feature-icon blue"><i data-icon="upload"></i></span><span><strong>Import attendance</strong><small>Preview a USB export before importing</small></span><i data-icon="chevron"></i></button><button class="quick-action" type="button" data-go="fieldwork"><span class="feature-icon red"><i data-icon="briefcase"></i></span><span><strong>View activity references</strong><small>Existing AJA, fieldwork and travel orders</small></span><i data-icon="chevron"></i></button><button class="quick-action" type="button" data-go="dtr"><span class="feature-icon blue"><i data-icon="file"></i></span><span><strong>Check daily records</strong><small>Scans and references by employee</small></span><i data-icon="chevron"></i></button><div class="quick-note"><i data-icon="shield"></i><span>Original biometric scans stay unchanged.</span></div></article></div>
-          <article class="panel recent-panel"><div class="section-top"><div><h2>Recent imports</h2><p>Your most recently processed attendance files</p></div><button class="text-button" type="button" data-go="imports">Manage imports</button></div><div id="recent-imports" class="empty">Loading imports…</div></article>
+
+          <section id="employee-detail" class="detail-section hidden">
+            <div class="panel attendance-sheet">
+              <div class="sheet-header">
+                <div class="sheet-identity">
+                  <div class="sheet-name-line"><h2 id="detail-name">—</h2><div class="sheet-classification"><span id="detail-category" class="sheet-category" role="group" aria-label="Employment category">—</span><span id="detail-department" class="sheet-department" role="group" aria-label="Department">—</span></div></div>
+                  <div class="sheet-filters"><div class="month-inline"><span class="sr-only" id="detail-month-label">Reporting month</span><input id="detail-month" type="month" hidden tabindex="-1" aria-hidden="true"><button type="button" class="month-trigger" id="detail-month-trigger" data-month-target="detail-month" aria-haspopup="dialog" aria-controls="attendance-month-picker" aria-expanded="false"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="5" width="18" height="16" rx="3"/><path d="M8 3v4m8-4v4M3 10h18"/></svg><span class="month-trigger-value">Select month</span><svg class="month-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><path d="m7 10 5 5 5-5"/></svg></button></div></div>
+                </div>
+                <div class="sheet-personnel">
+                  <button id="dtr-form-preview" class="button primary" type="button" title="Open printable DTR and save as PDF"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3v12m-4-4 4 4 4-4M5 16v4h14v-4"/></svg><span>Export DTR</span></button>
+                </div>
+              </div>
+              <div class="sheet-toolbar">
+                <div class="attendance-legend" aria-label="Attendance colors"><span class="legend-missing">No entry / incomplete</span><span class="legend-entry">Entry</span><span class="legend-holiday">Holiday</span><span class="legend-aja" title="IN marks the period with documented AJA; AM OUT is highlighted at departure or during cross-noon coverage. Regular PM OUT stays unchanged.">AJA coverage</span><span class="legend-travel">Travel Order</span><span class="legend-leave">Leave</span></div>
+              </div>
+              <div class="table-wrap" id="daily-table-wrap"><table class="records-table dtr-grid" aria-label="Monthly employee attendance">
+                <colgroup><col class="dtr-col-date"><col class="dtr-col-clock"><col class="dtr-col-clock"><col class="dtr-col-clock"><col class="dtr-col-clock"><col class="dtr-col-total"><col class="dtr-col-ut"><col class="dtr-col-ut"><col class="dtr-col-ot"><col class="dtr-col-aja"><col class="dtr-col-aja"><col class="dtr-col-remarks"><col class="dtr-col-action"></colgroup><thead><tr><th rowspan="2" scope="col">Date</th><th colspan="2" scope="colgroup">A.M.</th><th colspan="2" scope="colgroup">P.M.</th><th rowspan="2" scope="col" class="daily-total" title="Hours:minutes:seconds">Total hours</th><th colspan="2" scope="colgroup">Undertime</th><th rowspan="2" scope="col" class="overtime-total" title="Hours:minutes:seconds">Overtime earned</th><th colspan="2" scope="colgroup" class="aja-column">AJA</th><th rowspan="2" scope="col">Remarks</th><th rowspan="2" scope="col" class="actions-column">Action</th></tr><tr><th scope="col">Time in</th><th scope="col">Time out</th><th scope="col">Time in</th><th scope="col">Time out</th><th scope="col">Hours</th><th scope="col">Minutes</th><th scope="col">Out</th><th scope="col">In / End</th></tr></thead>
+                <tbody id="daily-rows"><tr><td colspan="13">Choose an employee.</td></tr></tbody>
+              </table></div>
+            </div>
+          </section>
         </section>
-        <section class="page hidden" data-view="attendance" aria-label="Attendance logs"><div class="info-banner"><i data-icon="info"></i><span>Device status codes are shown exactly as exported.</span></div><div class="panel table-panel"><form id="filter-form" class="filterbar"><div class="input-with-icon"><i data-icon="search"></i><input id="filter-id" aria-label="Employee ID" placeholder="Search an exact employee ID" maxlength="64"></div><label class="date-filter">From<input id="filter-from" type="date"></label><label class="date-filter">To<input id="filter-to" type="date"></label><button class="btn primary" type="submit">Apply filters</button><button class="btn outline" type="button" id="clear-filter">Reset</button></form><div class="table-scroll"><table><thead><tr><th>Staff / device ID</th><th>Scan date & time</th><th>Device</th><th>Status code</th><th>Verify code</th><th>Work code</th></tr></thead><tbody id="punch-rows"></tbody></table></div><div class="table-bottom"><p id="punch-count">Loading records…</p><div class="pagination"><button class="btn outline" type="button" id="prev-punches" disabled>Previous</button><button class="btn outline" type="button" id="next-punches" disabled>Next</button></div></div></div></section>
-        <section class="page hidden" data-view="imports" aria-label="USB attendance imports"><div class="two-col imports-layout"><article class="panel"><div class="section-top"><div><h2>Upload attendance file</h2><p>Choose a USB export, then review it before saving.</p></div><span class="tag blue-tag">ZKTeco K14</span></div><form id="import-form"><label id="drop-area" class="drop-area" for="attendance-file"><span class="drop-icon"><i data-icon="upload"></i></span><strong>Drop an attendance file here</strong><span>or <b>browse your files</b></span><small>.dat / .txt source logs · .xls report preview · up to 2 MB</small><span id="file-name" class="file-name">No file selected</span></label><input id="attendance-file" type="file" accept=".dat,.txt,.xls" class="sr-only"><div class="button-row"><button class="btn outline" type="button" id="preview-btn"><i data-icon="eye"></i> Preview file</button><button class="btn primary" type="submit" id="import-submit" disabled>Import records</button></div></form><p id="import-error" class="form-error hidden" role="alert"></p><div id="preview-output" class="preview-output hidden" aria-live="polite"></div><button id="view-imported" class="btn outline hidden" type="button" data-go="attendance">View imported attendance</button><button id="report-staff" class="btn outline hidden" type="button" data-go="staff">Import staff names from this report</button><p id="import-access-note" class="inline-help hidden">Sign in with an administrator account to preview or import office files.</p></article><article class="panel import-guide"><p class="eyebrow">USB ATTENDANCE IMPORT</p><h2>Import instructions</h2><ol class="guide-steps"><li><span>1</span><div><strong>Download from your K14</strong><p>USB Manager → Download → Attendance Data.</p></div></li><li><span>2</span><div><strong>Preview the original file</strong><p>Check the date range, employee IDs, and record count.</p></div></li><li><span>3</span><div><strong>Import when ready</strong><p>Existing scans are skipped. Your device stays unchanged.</p></div></li></ol><div class="guide-note"><i data-icon="info"></i><p>Use Staff &amp; work codes to import names from Excel reports. Import original <strong>_attlog.dat</strong> files to preserve exact timestamps and source codes.</p></div></article></div></section>
-        <section class="page hidden" data-view="fieldwork" aria-label="Existing activity references">
-          <div class="two-col fieldwork-layout"><article class="panel"><div class="section-top"><div><h2>Add an existing reference</h2><p>Optional: record an AJA or order already handled by the office.</p></div></div>
-            <form id="fieldwork-form" class="form-grid">
-              <label>Employee ID<input name="employee_code" required maxlength="64" pattern="[A-Za-z0-9._\-]+" placeholder="Device employee ID" list="known-employees"></label>
-              <label>Activity type<select name="category"><option>AJA</option><option>Fieldwork</option><option>Official Business</option><option>Travel Order</option></select></label>
-              <label>Start (Manila time)<input name="start_at" type="datetime-local" required></label>
-              <label>End (Manila time)<input name="end_at" type="datetime-local" required></label>
-              <label class="span-2">Existing document / order number<input name="reference" maxlength="140" placeholder="Reference, if available"></label>
-              <label class="span-2">Purpose / DTR note<textarea name="purpose" maxlength="600" rows="2" placeholder="Short note, if there is no document number"></textarea></label>
-              <button class="btn primary span-2" type="submit" id="fieldwork-submit"><i data-icon="plus"></i> Save reference</button>
-            </form><p class="table-foot">No new application or approval. References do not replace device scans or automatically add work hours.</p>
-          </article><article class="panel"><div class="section-top"><div><h2>Recorded references</h2><p>Existing supporting records for DTR monitoring.</p></div><label class="sr-only" for="activity-status">Filter references</label><select id="activity-status" class="compact-select"><option value="recorded">On file</option><option value="all">All records</option><option value="voided">Voided</option></select></div><div id="fieldwork-items" class="request-list"></div><details id="legacy-activities" class="hidden"><summary>Previous system entries</summary><p class="inline-help">History retained as entered. Previous request statuses are not converted into approved office records.</p><div id="legacy-items"></div></details></article></div>
+
+        <section class="page hidden" data-view="profiles">
+          <div class="panel list-panel" id="employee-profile-panel">
+            <div class="panel-header"><h2>Employee directory</h2><button class="button primary record-create-action" id="open-profile" type="button" aria-haspopup="dialog"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.65" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="9" cy="7" r="4"/><path d="M2 21v-2a6 6 0 0 1 6-6h2a6 6 0 0 1 6 6v2m3-11v6m-3-3h6"/></svg>Register employee</button></div>
+            
+            <form class="toolbar profile-toolbar" id="profile-filter" role="search" aria-label="Employee filters" autocomplete="off">
+              <div class="search-box"><label for="profile-search">Search employees</label><div class="employee-search-field"><svg class="search-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.65" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="10.5" cy="10.5" r="6.5"/><path d="m16 16 4 4"/></svg><input id="profile-search" type="search" maxlength="80" autocomplete="off" placeholder="Search name, ID, position or department"></div></div>
+              <div class="category-tabs" role="group" aria-label="Employee category">
+              <button type="button" class="category-tab active" data-profile-category="All" aria-pressed="true">All employees <span id="profile-total-badge">0</span></button>
+              <button type="button" class="category-tab" data-profile-category="COS" aria-pressed="false">COS <span id="profile-cos-badge">0</span></button>
+              <button type="button" class="category-tab" data-profile-category="Permanent" aria-pressed="false">Permanent <span id="profile-permanent-badge">0</span></button>
+              <button type="button" class="category-tab" data-profile-category="GIP" aria-pressed="false">GIP <span id="profile-gip-badge">0</span></button>
+              <button type="button" class="category-tab" data-profile-category="OJT" aria-pressed="false">OJT <span id="profile-ojt-badge">0</span></button>
+            </div>
+            </form>
+            <div class="registry-summary" id="profile-summary" role="status">Loading employees…</div>
+            <div class="table-wrap"><table class="records-table profile-table"><colgroup><col class="profile-id"><col class="profile-name"><col class="profile-position"><col class="profile-category"><col class="profile-department"><col class="profile-action"></colgroup><thead><tr><th>Employee ID</th><th>Employee Name</th><th>Position</th><th>Category</th><th>Department</th><th class="actions-column">Action</th></tr></thead><tbody id="profile-rows"><tr><td colspan="6">Loading employees…</td></tr></tbody></table></div>
+            <div class="list-footer"><span id="profile-count">— employees</span><button type="button" id="profile-archive-toggle" class="directory-archive-toggle" aria-pressed="false" hidden>Archived employees</button></div>
+          </div>
         </section>
-        <section class="page hidden" data-view="dtr" aria-label="DTR daily monitoring">
-          <article class="panel table-panel"><form id="dtr-filter" class="filterbar"><label class="date-filter">Employee ID<select id="dtr-employee" required><option value="">Choose employee ID</option></select></label><label class="date-filter">Month<input id="dtr-month" type="month" required min="2000-01" max="2100-12"></label><button class="btn primary" type="submit">View daily records</button></form>
-            <p id="dtr-summary" class="monitor-summary" aria-live="polite">Choose an employee and month to compare with the office DTR.</p>
-            <div class="table-scroll"><table class="monitor-table"><thead><tr><th>Date / day</th><th>Device scan times</th><th>AJA / official activity reference</th><th>Records available</th></tr></thead><tbody id="dtr-rows"><tr><td colspan="4">No employee selected.</td></tr></tbody></table></div>
-            <p class="table-foot monitor-foot">Times are original device scans. A blank day does not mean absence. Check AM/PM entries and totals against the office DTR.</p>
-          </article>
+
+        <section class="page hidden" data-view="activities">
+          <div class="panel records-panel list-panel" id="aja-filings-panel">
+            <div class="panel-header admin-aja-heading"><h2>AJA / Official Business</h2><div class="admin-aja-search"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" aria-hidden="true"><circle cx="10.5" cy="10.5" r="6.5"/><path d="m16 16 5 5"/></svg><input id="admin-aja-search" type="search" placeholder="Search filings" aria-label="Search AJA filings" autocomplete="off"></div></div>
+            <p id="admin-aja-message" class="admin-aja-message hidden" role="status"></p>
+            <div class="table-wrap"><table class="records-table profile-table admin-aja-table">
+              <colgroup><col class="admin-aja-number"><col class="admin-aja-employee"><col class="admin-aja-reference"><col class="admin-aja-filed"><col class="admin-aja-dates"><col class="admin-aja-destination"><col class="admin-aja-status"><col class="admin-aja-actions"></colgroup>
+              <thead><tr><th scope="col" class="admin-aja-number-cell">No.</th><th scope="col">Employee Name</th><th scope="col">Reference No.</th><th scope="col">Date filed</th><th scope="col">Business date/s</th><th scope="col">Destination</th><th scope="col">Status</th><th scope="col" class="actions-column">Action</th></tr></thead>
+              <tbody id="admin-aja-rows"><tr><td colspan="8" class="table-empty">Loading filings…</td></tr></tbody>
+            </table></div><div class="admin-aja-footer" id="admin-aja-count"></div>
+          </div>
         </section>
-        <section class="page hidden" data-view="staff" aria-label="Staff database and work code mapping">
-          <div class="two-col registry-layout"><article class="panel"><div class="section-top"><div><h2>Staff database</h2><p>Names linked to the same employee IDs used on the device.</p></div><button class="btn primary" id="open-staff-import" type="button">Import staff names</button></div><div class="registry-tools"><input id="staff-search" type="search" aria-label="Search staff" placeholder="Search a name or device ID"><button class="btn outline" id="add-staff" type="button">Add staff</button></div><div class="table-scroll"><table><thead><tr><th>Device ID</th><th>Staff name</th><th>Department</th><th></th></tr></thead><tbody id="staff-rows"></tbody></table></div></article>
-          <article class="panel"><div class="section-top"><div><h2>Device work codes</h2><p>Match the code labels configured on your actual device.</p></div><button class="btn outline" id="add-work-code" type="button">Add code</button></div><div id="work-code-items"></div><p class="table-foot">Unmapped codes stay unclassified. A work code label does not change scan times or approve an activity.</p></article></div><p id="staff-error" class="form-error hidden" role="alert"></p>
-        </section><datalist id="known-employees"></datalist>
+
+        <section class="page hidden" data-view="staff">
+          <div class="panel records-panel">
+            <div class="panel-header"><h2>Device user synchronization</h2>
+              <button type="button" class="button outline import-button record-create-action" id="open-user-import" aria-haspopup="dialog">
+                <svg class="inline-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 16V3M7 8l5-5 5 5"/><path d="M4 16v3a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-3"/></svg>
+                Import device users
+              </button>
+            </div>
+          </div>
+          <div class="panel section-gap">
+            <div class="panel-header"><h2>Work-code classification</h2></div><p class="table-note mapping-note">Map the codes actually present in your device exports. Set IN/OUT only for AJA or Travel Order. Mappings are local to this website and never change the K14 device.</p>
+            <div class="table-wrap"><table class="records-table"><thead><tr><th>Device</th><th>Numeric code</th><th>Classification</th><th>IN / OUT</th><th>Label</th><th>Recorded events</th><th class="actions-column">Action</th></tr></thead><tbody id="code-rows"><tr><td colspan="7">Loading device codes…</td></tr></tbody></table></div>
+          </div>
+          <details class="connection-details section-gap" id="connection-details">
+            <summary>Connection diagnostics</summary>
+            <div class="panel">
+              <div class="connection-grid">
+                <div><span class="field-label">Configured K14 IP address</span><strong id="lan-ip">—</strong></div>
+                <div><span class="field-label">Communication port</span><strong id="lan-port">—</strong></div>
+                <div><span class="field-label">Automatic connector imports</span><strong id="lan-sync">Loading…</strong></div>
+                <div class="connection-action"><button id="probe-lan" type="button" class="button outline">Test TCP port</button></div>
+              </div>
+              <div class="connection-grid">
+                <div><span class="field-label">Connector database</span><strong id="lan-connector">—</strong></div>
+                <div><span class="field-label">Total attendance records</span><strong id="lan-total-records">—</strong></div>
+                <div><span class="field-label">Optional TCP probe</span><strong id="lan-probe-status">—</strong></div>
+              </div>
+              <div class="connection-grid" id="attendance-sync-grid">
+                <div><span class="field-label">Last successful synchronization</span><strong id="lan-last-sync">—</strong></div>
+                <div><span class="field-label">New records (last success)</span><strong id="lan-new-records">—</strong></div>
+                <div><span class="field-label">Latest result</span><strong id="lan-sync-result">—</strong></div>
+                <div class="connection-action"><button id="sync-connector" type="button" class="button outline">Read connector database</button></div>
+              </div>
+              <p class="table-note" id="lan-sync-error"></p>
+              <p class="table-note" id="lan-live-status" role="status" aria-live="polite">Status updates automatically every 5 seconds.</p>
+              <p class="table-note" id="lan-message">Loading local connector diagnostics…</p>
+              <span class="hidden" id="lan-badge">Not connected</span>
+            </div>
+          </details>
+        </section>
       </main>
     </div>
   </div>
-  <dialog id="help-dialog" class="small-dialog" aria-labelledby="help-heading"><button class="icon-button dialog-close" type="button" data-close="help-dialog" aria-label="Close help"><i data-icon="x"></i></button><span class="login-icon"><i data-icon="help"></i></span><p class="eyebrow">NCSC BIOMETRIC SYSTEM</p><h2 id="help-heading">System help</h2><div class="help-items"><div><strong>Signing in</strong><p>Use the account assigned by your system administrator. Contact them for access or password assistance.</p></div><div><strong>Import attendance</strong><p>Choose the original _attlog.dat / .txt export in USB imports, preview it, then select Import records. Excel reports supply staff names in Staff &amp; work codes.</p></div><div><strong>Staff and work codes</strong><p>Import staff names from the K14 .xls report or a CSV roster. Match work code labels with the device. Staff registration stays on the biometric device.</p></div><div><strong>DTR monitoring</strong><p>Compare daily scans with your existing DTR. No extra lunch deduction or automatic absence, overtime, or undertime is applied.</p></div><div><strong>Activity references</strong><p>AJA and travel orders use the existing office process. Add a reference only when useful for checking the DTR; there is no second approval.</p></div></div><button class="btn primary block" type="button" data-close="help-dialog">Got it</button></dialog>
-  <dialog id="void-dialog" class="small-dialog" aria-labelledby="void-heading"><h2 id="void-heading">Void this reference?</h2><p class="muted">Use this to correct an entry. The original reference stays in the record history.</p><form id="void-form" class="form-grid"><label class="span-2">Reason<input id="void-reason" required minlength="3" maxlength="300" placeholder="Reason for correction"></label><div class="button-row span-2"><button class="btn outline" type="button" data-close="void-dialog">Cancel</button><button class="btn primary" id="confirm-void" type="submit">Void reference</button></div></form></dialog>
-  <dialog id="staff-dialog" class="small-dialog" aria-labelledby="staff-heading"><h2 id="staff-heading">Staff details</h2><form id="staff-form" class="form-grid"><label class="span-2">Device employee ID<input id="staff-code" required maxlength="64" pattern="[A-Za-z0-9._\-]+"></label><label class="span-2">Staff name<input id="staff-name" required maxlength="140"></label><label class="span-2">Department<input id="staff-department" maxlength="140"></label><p id="staff-save-error" class="form-error span-2 hidden" role="alert"></p><div class="button-row span-2"><button class="btn outline" type="button" data-close="staff-dialog">Cancel</button><button id="save-staff" class="btn primary" type="submit">Save staff</button></div></form></dialog>
-  <dialog id="work-code-dialog" class="small-dialog" aria-labelledby="work-code-heading"><h2 id="work-code-heading">Work code mapping</h2><form id="work-code-form" class="form-grid"><label>Device ID<input id="work-device" required maxlength="64" pattern="[A-Za-z0-9._\-]+"></label><label>Work code<input id="work-code" required maxlength="64" pattern="[A-Za-z0-9._\-]+"></label><label class="span-2">Label from device<input id="work-label" required maxlength="100" placeholder="Use the actual device label"></label><label class="span-2">Activity type<select id="work-type"><option>Unclassified</option><option>Regular</option><option>AJA</option><option>Fieldwork</option><option>Official Business</option><option>Travel Order</option></select></label><p id="work-save-error" class="form-error span-2 hidden" role="alert"></p><div class="button-row span-2"><button class="btn outline" type="button" data-close="work-code-dialog">Cancel</button><button id="save-work-code" class="btn primary" type="submit">Save mapping</button></div></form></dialog>
-  <dialog id="staff-import-dialog" class="roster-dialog" aria-labelledby="staff-import-heading"><button class="icon-button dialog-close" type="button" data-close="staff-import-dialog" aria-label="Close staff import"><i data-icon="x"></i></button><h2 id="staff-import-heading">Import staff names</h2><p class="muted">Use the K14 .xls report or a UTF-8 CSV roster. Existing names will not be overwritten.</p><label class="roster-file">Staff file<input id="staff-file" type="file" accept=".xls,.csv"></label><p id="roster-selected" class="table-foot"></p><p class="inline-help">CSV columns: employee_code,display_name,department. Department is optional. Binary user.dat backups are not supported.</p><div class="button-row"><button id="preview-staff" class="btn outline" type="button">Preview staff</button><button id="import-staff" class="btn primary" type="button" disabled>Import names</button></div><p id="roster-error" class="form-error hidden" role="alert"></p><div id="roster-preview" class="hidden" aria-live="polite"></div></dialog>
-  <div id="toast" class="toast hidden" role="status" aria-live="polite"></div>
-</body>
-</html>
+
+  <dialog id="day-review-dialog" class="app-dialog day-review-dialog" aria-labelledby="day-review-heading" aria-describedby="day-review-context">
+    <form id="day-review-form" autocomplete="off">
+      <div class="app-dialog-head review-minimal-head"><div class="sr-only"><h2 id="day-review-heading">Edit attendance</h2><p id="day-review-context"></p></div><button type="button" class="modal-x review-close" id="close-day-review" aria-label="Close attendance editor"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg></button></div>
+      <div class="app-dialog-body">
+        <p id="review-travel-info" class="travel-status hidden"></p>
+        <div id="review-time-section">
+        <section class="review-field-section" aria-labelledby="review-regular-label">
+        <h3 id="review-regular-label" class="form-section-title">Regular attendance</h3>
+        <div class="profile-form-grid approved-clock-grid">
+          <div class="clock-field"><label for="clock-am-in">AM IN</label><div class="clock-control"><input id="clock-am-in" type="text" inputmode="numeric" autocomplete="off" spellcheck="false" maxlength="8" placeholder="HH:MM:SS" aria-label="AM IN (24-hour time)"><button type="button" class="clock-pick" data-clock-pick="am-in" aria-label="Choose AM IN time" aria-expanded="false" aria-controls="clock-picker"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><circle cx="12" cy="12" r="8"/><path d="M12 7v5l3 2"/></svg></button></div></div><div class="clock-field"><label for="clock-am-out">AM OUT</label><div class="clock-control"><input id="clock-am-out" type="text" inputmode="numeric" autocomplete="off" spellcheck="false" maxlength="8" placeholder="HH:MM:SS" aria-label="AM OUT (24-hour time)"><button type="button" class="clock-pick" data-clock-pick="am-out" aria-label="Choose AM OUT time" aria-expanded="false" aria-controls="clock-picker"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><circle cx="12" cy="12" r="8"/><path d="M12 7v5l3 2"/></svg></button></div></div>
+          <div class="clock-field"><label for="clock-pm-in">PM IN</label><div class="clock-control"><input id="clock-pm-in" type="text" inputmode="numeric" autocomplete="off" spellcheck="false" maxlength="8" placeholder="HH:MM:SS" aria-label="PM IN (24-hour time)"><button type="button" class="clock-pick" data-clock-pick="pm-in" aria-label="Choose PM IN time" aria-expanded="false" aria-controls="clock-picker"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><circle cx="12" cy="12" r="8"/><path d="M12 7v5l3 2"/></svg></button></div></div><div class="clock-field"><label for="clock-pm-out">PM OUT</label><div class="clock-control"><input id="clock-pm-out" type="text" inputmode="numeric" autocomplete="off" spellcheck="false" maxlength="8" placeholder="HH:MM:SS" aria-label="PM OUT (24-hour time)"><button type="button" class="clock-pick" data-clock-pick="pm-out" aria-label="Choose PM OUT time" aria-expanded="false" aria-controls="clock-picker"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><circle cx="12" cy="12" r="8"/><path d="M12 7v5l3 2"/></svg></button></div></div>
+        </div>
+        </section>
+        <section class="review-field-section" aria-labelledby="review-aja-label">
+        <h3 id="review-aja-label" class="form-section-title">AJA</h3>
+        <div class="profile-form-grid approved-clock-grid">
+          <div class="clock-field"><label for="clock-aja-out">AJA OUT</label><div class="clock-control"><input id="clock-aja-out" type="text" inputmode="numeric" autocomplete="off" spellcheck="false" maxlength="8" placeholder="HH:MM:SS" aria-label="AJA OUT (24-hour time)"><button type="button" class="clock-pick" data-clock-pick="aja-out" aria-label="Choose AJA OUT time" aria-expanded="false" aria-controls="clock-picker"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><circle cx="12" cy="12" r="8"/><path d="M12 7v5l3 2"/></svg></button></div></div><div class="clock-field"><label for="clock-aja-in">AJA IN / End</label><div class="clock-control"><input id="clock-aja-in" type="text" inputmode="numeric" autocomplete="off" spellcheck="false" maxlength="8" placeholder="HH:MM:SS" aria-label="AJA IN / End (24-hour time)"><button type="button" class="clock-pick" data-clock-pick="aja-in" aria-label="Choose AJA IN / End time" aria-expanded="false" aria-controls="clock-picker"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><circle cx="12" cy="12" r="8"/><path d="M12 7v5l3 2"/></svg></button></div></div>
+        </div>
+        <p id="review-aja-hint" class="field-hint hidden"></p>
+        <button type="button" class="btn secondary hidden" id="review-historical-suggestions">Use suggested biometric entries</button>
+        </section>
+        <section class="clock-picker hidden" id="clock-picker" aria-label="Choose time">
+          <div class="clock-picker-head"><strong id="clock-picker-title">Choose time</strong><span>24-hour</span><button type="button" id="clock-picker-close" aria-label="Close time picker">×</button></div>
+          <div class="clock-picker-parts">
+            <div class="clock-part"><label for="picker-hour">Hour</label><button type="button" data-clock-step="hour" data-delta="1" aria-label="Increase hour">+</button><input id="picker-hour" type="text" inputmode="numeric" maxlength="2" autocomplete="off" aria-label="Hour (0–23)"><button type="button" data-clock-step="hour" data-delta="-1" aria-label="Decrease hour">−</button></div><div class="clock-part"><label for="picker-minute">Minute</label><button type="button" data-clock-step="minute" data-delta="1" aria-label="Increase minute">+</button><input id="picker-minute" type="text" inputmode="numeric" maxlength="2" autocomplete="off" aria-label="Minute (0–59)"><button type="button" data-clock-step="minute" data-delta="-1" aria-label="Decrease minute">−</button></div><div class="clock-part"><label for="picker-second">Second</label><button type="button" data-clock-step="second" data-delta="1" aria-label="Increase second">+</button><input id="picker-second" type="text" inputmode="numeric" maxlength="2" autocomplete="off" aria-label="Second (0–59)"><button type="button" data-clock-step="second" data-delta="-1" aria-label="Decrease second">−</button></div>
+          </div>
+          <div class="clock-picker-actions"><button type="button" class="button outline" id="clock-picker-clear">Clear</button><button type="button" class="button primary" id="clock-picker-apply">Apply</button></div>
+        </section>
+        <section class="review-field-section" aria-labelledby="review-undertime-label">
+        <h3 id="review-undertime-label" class="form-section-title">Undertime</h3>
+        <div class="profile-form-grid"><label>Hours<input id="review-ut-hours" type="number" min="0" max="24" step="1" placeholder="—"></label><label>Minutes<input id="review-ut-minutes" type="number" min="0" max="59" step="1" placeholder="—"></label></div>
+        </section>
+        </div>
+        <label id="review-travel-reference" class="hidden">Travel Order number / reference<input id="review-reference" maxlength="140" placeholder="e.g. RO 1 2026-11-2"></label>
+        <p id="day-review-error" class="form-error hidden" role="alert"></p>
+      </div>
+      <div class="app-dialog-footer"><button id="cancel-day-review" type="button" class="button outline">Cancel</button><button id="save-day-review" class="button primary" type="submit">Save changes</button></div>
+    </form>
+  </dialog>
+
+  <dialog id="dtr-preview-dialog" aria-labelledby="dtr-preview-name">
+    <div class="export-preview-toolbar">
+      <div class="preview-identity"><h2 id="dtr-preview-name" class="preview-person" tabindex="-1" autofocus></h2><span class="preview-month"><svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="5" width="18" height="16" rx="3"/><path d="M8 3v4m8-4v4M3 10h18"/></svg><span id="dtr-preview-context"></span></span></div>
+      <button type="button" id="dtr-preview-back" class="preview-close" title="Close preview" aria-label="Close DTR preview"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg></button>
+    </div>
+    <div class="dtr-workspace">
+      <div class="dtr-document-area">
+        <div class="export-preview-note" id="dtr-preview-note" role="status" hidden></div>
+        <div class="export-preview-stage"><div id="dtr-paper-canvas" hidden><iframe id="dtr-preview-frame" title="Printable daily time record" scrolling="no" hidden></iframe></div></div>
+        <div class="preview-zoom-bar" id="dtr-zoom-controls" role="group" aria-label="Paper preview zoom" hidden>
+          <button type="button" id="dtr-zoom-out" title="Zoom out" aria-label="Zoom out"><svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" aria-hidden="true"><path d="M5 12h14"/></svg></button>
+          <output id="dtr-zoom-value" aria-live="polite">100%</output>
+          <button type="button" id="dtr-zoom-in" title="Zoom in" aria-label="Zoom in"><svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" aria-hidden="true"><path d="M5 12h14M12 5v14"/></svg></button>
+          <span class="zoom-divider" aria-hidden="true"></span>
+          <button type="button" id="dtr-zoom-fit" title="Fit page to preview" aria-label="Fit page to preview" aria-pressed="true"><svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M8 4H4v4m12-4h4v4M4 16v4h4m12-4v4h-4"/><rect x="9" y="7" width="6" height="10" rx="1"/></svg><span>Fit Page</span></button>
+        </div>
+      </div>
+      <aside class="preview-controls" aria-labelledby="dtr-settings-heading">
+        <h3 id="dtr-settings-heading">Document settings</h3>
+        <div class="preview-fields">
+        <div class="preview-category-field"><span id="dtr-preview-category-label">Category</span><output id="dtr-preview-category" class="preview-category-value" aria-labelledby="dtr-preview-category-label">Not Set</output></div>
+        <label id="dtr-preview-period-control" hidden>Period<select id="dtr-preview-period"><option value="first">1–15</option><option value="second">16–End</option><option value="month">Full Month</option></select></label>
+        <label>Paper Size<select id="dtr-preview-paper"><option value="a4">A4</option><option value="folio">Folio (8.5 × 13 in)</option></select></label>
+        </div>
+        <div class="preview-actions">
+        <button type="button" id="dtr-preview-print" class="button primary" disabled><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 9V3h12v6M6 17H4a2 2 0 0 1-2-2v-4a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v4a2 2 0 0 1-2 2h-2M6 14h12v7H6z"/></svg>Print</button>
+        <button type="button" id="dtr-preview-download" class="preview-download" title="Download PDF" aria-label="Download DTR as PDF" disabled><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3v12m-4-4 4 4 4-4M5 16v4h14v-4"/></svg>Download PDF</button>
+        </div>
+      </aside>
+    </div>
+  </dialog>
+
+  <dialog id="calendar-dialog" class="app-dialog edit-dialog" aria-labelledby="calendar-heading">
+    <form id="calendar-form" autocomplete="off"><div class="app-dialog-head"><div><h2 id="calendar-heading">Attendance calendar</h2><p>Holiday labels apply to all employees.</p></div><button type="button" class="modal-x" id="close-calendar" aria-label="Close calendar">×</button></div>
+      <div class="app-dialog-body"><label>Date<select id="calendar-date"></select></label><label>Holiday name<input id="calendar-name" maxlength="140" placeholder="Leave blank for a regular date"></label><p id="calendar-error" class="form-error hidden" role="alert"></p></div>
+      <div class="app-dialog-footer"><button id="cancel-calendar" type="button" class="button outline">Cancel</button><button id="save-calendar" class="button primary" type="submit">Save calendar</button></div>
+    </form>
+  </dialog>
+
+  <div id="profile-action-menu" popover="manual" role="group" aria-label="Employee actions">
+    <button type="button" id="profile-menu-edit"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m13.5 6.5 4 4M4 20l4.5-1 11-11a2.8 2.8 0 0 0-4-4l-11 11L4 20z"/></svg><span>Edit profile</span></button>
+    <button type="button" id="profile-menu-delete"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 6h18M9 6V3h6v3M5 6l1 15h12l1-15M10 10v7m4-7v7"/></svg><span>Delete</span></button>
+  </div>
+  <dialog id="profile-archive-dialog" class="app-dialog" data-action="delete" aria-labelledby="profile-archive-heading" aria-describedby="profile-archive-name profile-archive-description">
+    <div class="app-dialog-body">
+      <div class="profile-archive-art" aria-hidden="true">
+        <svg class="archive-trash" viewBox="0 0 144 120" xmlns="http://www.w3.org/2000/svg">
+          <defs><linearGradient id="archive-red" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#ff6570"/><stop offset="1" stop-color="#e83249"/></linearGradient></defs>
+          <ellipse cx="72" cy="110" rx="43" ry="4" fill="#fce5e8"/>
+          <g fill="none" stroke="#ed475b" stroke-width="1.7" stroke-linecap="round"><path d="M27 28v8m-4-4h8M108 14v8m-4-4h8M17 68v8m-4-4h8"/><circle cx="119" cy="65" r="2"/></g>
+          <g fill="#f15163"><circle cx="62" cy="9" r="1.7"/><circle cx="99" cy="95" r="1.5"/></g>
+          <path d="M45 47h54l-5.2 49a7 7 0 0 1-7 6H57.2a7 7 0 0 1-7-6z" fill="url(#archive-red)"/>
+          <path d="M45 47h54l-.8 7H45.8z" fill="#cf2d42" opacity=".25"/>
+          <path d="M59 57l2.4 34M72 57v34M85 57l-2.4 34" fill="none" stroke="#fff" stroke-width="3.6" stroke-linecap="round"/>
+          <g transform="rotate(-10 72 39)"><path d="M64 31v-6a3 3 0 0 1 3-3h10a3 3 0 0 1 3 3v6" fill="none" stroke="#e83b51" stroke-width="4.5" stroke-linecap="round"/><rect x="40" y="31" width="64" height="12" rx="5" fill="url(#archive-red)"/><path d="M46 34h50" stroke="#fff" stroke-opacity=".28" stroke-width="1.4" stroke-linecap="round"/></g>
+        </svg>
+        <svg class="archive-restore" viewBox="0 0 144 120" xmlns="http://www.w3.org/2000/svg">
+          <ellipse cx="72" cy="110" rx="43" ry="4" fill="#e5edf9"/><circle cx="72" cy="60" r="40" fill="#edf3ff"/><g fill="none" stroke="#7395d4" stroke-width="1.7" stroke-linecap="round"><path d="M27 28v8m-4-4h8M108 14v8m-4-4h8M17 68v8m-4-4h8"/><circle cx="119" cy="65" r="2"/></g><path d="M45 55a28 28 0 1 1 6 25M45 55V33m0 22h22" fill="none" stroke="#244b9a" stroke-width="6" stroke-linecap="round" stroke-linejoin="round"/><path d="m62 63 7 7 15-16" stroke="#244b9a" stroke-width="4" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>
+      </div>
+      <h2 id="profile-archive-heading">Delete employee?</h2>
+      <strong id="profile-archive-name"></strong>
+      <p id="profile-archive-description">Remove this employee from the active directory? Attendance is preserved and the employee can be restored.</p>
+      <p id="profile-archive-error" class="form-error hidden" role="alert"></p>
+    </div>
+    <div class="app-dialog-footer"><button id="cancel-profile-archive" type="button" class="button outline" autofocus>Cancel</button><button id="confirm-profile-archive" type="button" class="button primary">Delete</button></div>
+  </dialog>
+
+  <dialog id="profile-dialog" class="app-dialog profile-dialog" data-profile-mode="register" aria-labelledby="profile-heading">
+    <div class="app-dialog-head profile-hero">
+      <h2 id="profile-heading" class="sr-only">Register employee</h2>
+      <div class="profile-hero-art" aria-hidden="true">
+        <svg viewBox="0 0 120 82" xmlns="http://www.w3.org/2000/svg">
+          <defs><linearGradient id="profile-art-card" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#729be8"/><stop offset="1" stop-color="#345eb4"/></linearGradient><linearGradient id="profile-art-pencil" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#5784d8"/><stop offset="1" stop-color="#244b9a"/></linearGradient></defs>
+          <ellipse cx="60" cy="75" rx="38" ry="3.5" fill="#e5edf9"/>
+          <g fill="none" stroke="#7297d8" stroke-width="1.5" stroke-linecap="round"><path d="M16 18v8m-4-4h8M98 8v8m-4-4h8M12 54v6m-3-3h6"/><circle cx="109" cy="49" r="2"/></g>
+          <circle cx="43" cy="7" r="1.5" fill="#7397d8"/>
+          <g transform="rotate(-5 57 37)"><rect x="24" y="17" width="69" height="46" rx="8" fill="url(#profile-art-card)"/><path d="M32 22h53" stroke="#fff" stroke-opacity=".28" stroke-width="1.4" stroke-linecap="round"/><rect x="32" y="27" width="24" height="27" rx="5" fill="#fff" opacity=".94"/><circle cx="44" cy="35" r="4.5" fill="#638bd0"/><path d="M36 49v-2a8 8 0 0 1 16 0v2z" fill="#638bd0"/><path d="M63 33h21M63 40h17M63 47h10" fill="none" stroke="#fff" stroke-opacity=".9" stroke-width="2.8" stroke-linecap="round"/></g>
+          <g class="profile-art-edit"><circle cx="89" cy="57" r="17" fill="#fff"/><circle cx="89" cy="57" r="14" fill="#e6efff"/><path d="m81 61 2-7 10-10 6 6-10 10z" fill="url(#profile-art-pencil)" stroke="#244b9a" stroke-width="1" stroke-linejoin="round"/><path d="m90 47 6 6" stroke="#fff" stroke-width="1.3"/></g>
+          <g class="profile-art-add"><circle cx="89" cy="57" r="17" fill="#fff"/><circle cx="89" cy="57" r="14" fill="#e6efff"/><path d="M89 50v14m-7-7h14" fill="none" stroke="#244b9a" stroke-width="3" stroke-linecap="round"/></g>
+        </svg>
+      </div>
+      <div class="profile-id-badge"><span class="profile-id-meta"><span>Biometric ID</span><strong id="profile-id-display"></strong></span></div>
+      <span class="profile-register-caption" aria-hidden="true">Register employee</span>
+      <button class="modal-x profile-close" id="close-profile" type="button" aria-label="Close employee profile"><svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><path d="m6 6 12 12M18 6 6 18"/></svg></button>
+    </div>
+    <form id="profile-form" novalidate autocomplete="off">
+      <div class="app-dialog-body">
+        <h3 class="form-section-title">Employee identity</h3>
+        <div class="profile-form-grid">
+          <label class="profile-id-field" for="profile-id">Biometric ID <span class="required-mark">*</span><span class="profile-id-control"><input id="profile-id" required maxlength="64" pattern="[A-Za-z0-9._\-]+" autocomplete="off" placeholder="Existing K14 ID"><svg class="profile-id-lock" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="5" y="10" width="14" height="11" rx="2"/><path d="M8 10V7a4 4 0 0 1 8 0v3"/></svg></span></label>
+          <div class="profile-spacer" aria-hidden="true"></div>
+          <label>First name <span class="required-mark">*</span><input id="profile-first" required maxlength="70" autocomplete="off"></label>
+          <label>Last name <span class="required-mark">*</span><input id="profile-last" required maxlength="70" autocomplete="off"></label>
+          <label>Middle name <span class="required-mark">*</span><input id="profile-middle" required maxlength="60" autocomplete="off"></label>
+          <label>Suffix<input id="profile-suffix" maxlength="20" placeholder="Optional"></label>
+        </div>
+        <h3 class="form-section-title">Employment details</h3>
+        <div class="profile-form-grid">
+          <div class="profile-select-field"><label id="profile-type-label" for="profile-type">Employee category <span class="required-mark">*</span></label><select id="profile-type" required><option value="">Select category</option><option value="COS">COS</option><option value="Permanent">Permanent</option><option value="GIP">GIP</option><option value="OJT">OJT</option></select></div>
+          <div class="profile-select-field"><label id="profile-department-label" for="profile-department">Department / unit <span class="required-mark">*</span></label><select id="profile-department" required><option value="">Select department</option><option>Operations Division (OPS)</option><option>Administrative and Finance Section (AFS)</option><option>Office of the Regional Director (ORD)</option></select></div>
+          <div class="profile-select-field profile-position-field"><label id="profile-position-label" for="profile-position">Position</label><div class="profile-position-control"><input id="profile-position" maxlength="140" autocomplete="off" spellcheck="false" placeholder="Select or enter position"><button type="button" class="profile-position-toggle" aria-label="Show position suggestions" hidden><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg></button></div><template id="profile-position-options"><option value="PDO I"><option value="PDO II"><option value="PDO III"><option value="PDO IV"><option value="Project Development Officer V"><option value="PDO I (COS)"><option value="PDO I (COS-RA 11982)"><option value="PDO II (COS-RA 11982)"><option value="PDO III (COS-RA 11982)"><option value="Administrative Officer IV"><option value="Administrative Officer V - Head (AFS)"><option value="ADAS I"><option value="Administrative Assistant III (Secretary III)"><option value="Admin Aide IV (COS)"><option value="Admin Aide IV (Driver II)"><option value="Accountant II"><option value="Regional Director (Director IV)"><option value="GIP Intern"><option value="OJT"></template></div>
+        </div>
+        <p id="profile-error" class="form-error hidden" role="alert"></p>
+      </div>
+      <div class="app-dialog-footer"><button id="cancel-profile" type="button" class="button outline">Cancel</button><button id="save-profile" type="submit" class="button primary">Register employee</button></div>
+    </form>
+  </dialog>
+
+  <dialog id="attendance-import-dialog" class="file-dialog app-dialog" aria-labelledby="attendance-import-heading">
+    <div class="file-dialog-head">
+      <div class="file-dialog-icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M12 16V3M7 8l5-5 5 5M4 16v3a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-3"/></svg></div>
+      <div><h2 id="attendance-import-heading">Import attendance logs</h2><p>Recover missing scans from the K14 USB export.</p></div>
+      <button id="close-attendance-import" class="modal-x" aria-label="Close attendance import" type="button">×</button>
+    </div>
+    <form id="usb-form" autocomplete="off">
+      <div class="file-dialog-body">
+        <label class="file-dropzone" for="usb-file" id="usb-dropzone">
+          <svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"><path d="M12 16V4M8 8l4-4 4 4M5 18h14M5 18v3h14v-3"/></svg>
+          <strong>Choose a K14 attendance file</strong>
+          <span>Click to select your original <b>.dat</b> or <b>.txt</b> log</span>
+          <span id="usb-file-name" class="selected-file">No file selected</span>
+        </label>
+        <input class="sr-only" id="usb-file" type="file" accept=".dat,.txt" required>
+        <div class="import-message"><span class="notice-icon">i</span><span>Only missing scan events are added. Duplicates already stored in the system are skipped; original timestamps remain unchanged.</span></div>
+        <div id="usb-result" class="upload-result hidden" role="status" aria-live="polite"></div>
+      </div>
+      <div class="file-dialog-actions"><button class="button outline" id="usb-preview" type="button">Preview</button><button class="button primary" type="submit">Merge attendance logs</button></div>
+    </form>
+  </dialog>
+  <dialog id="user-import-dialog" class="file-dialog app-dialog" aria-labelledby="user-import-heading">
+    <div class="file-dialog-head">
+      <div class="file-dialog-icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M12 16V3M7 8l5-5 5 5M4 16v3a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-3"/></svg></div>
+      <div><h2 id="user-import-heading">Import device users</h2><p>Fallback synchronization of employee IDs and names.</p></div>
+      <button id="close-user-import" class="modal-x" aria-label="Close user import" type="button">×</button>
+    </div>
+    <form id="roster-form" autocomplete="off">
+      <div class="file-dialog-body">
+        <label class="file-dropzone" for="roster-file">
+          <svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"><path d="M12 16V4M8 8l4-4 4 4M5 18h14"/></svg>
+          <strong>Choose an authorized user export</strong>
+          <span>K14 <b>user.dat</b>, report <b>.xls</b>, or roster <b>.csv</b></span>
+          <span id="roster-file-name" class="selected-file">No file selected</span>
+        </label>
+        <input class="sr-only" id="roster-file" type="file" accept=".dat,.xls,.csv" required>
+        <div class="import-message"><span class="notice-icon">i</span><span>Only employee names and IDs are imported. Never select fingerprint template files such as <b>template.fp10</b>.</span></div>
+        <div id="roster-result" class="upload-result hidden" role="status" aria-live="polite"></div>
+      </div>
+      <div class="file-dialog-actions"><button class="button outline" id="roster-preview" type="button">Preview</button><button class="button primary" type="submit">Synchronize users</button></div>
+    </form>
+  </dialog>
+
+  <dialog id="code-dialog" class="edit-dialog app-dialog" aria-labelledby="code-heading"><form id="code-form" autocomplete="off"><div class="app-dialog-head"><div><p class="page-eyebrow">DEVICE CLASSIFICATION</p><h2 id="code-heading">Work code label</h2><p>Choose the activity and a verified scan direction. This does not program the device.</p></div></div><div class="app-dialog-body"><input id="code-device" type="hidden"><label>Numeric device code<input id="code-number" readonly></label><label>Local label<input id="code-label" required maxlength="100"></label><label>Activity type<select id="code-activity"><option>Unclassified</option><option>Regular</option><option>AJA</option><option>Fieldwork</option><option>Official Business</option><option>Travel Order</option></select></label><label id="code-direction-field">Scan direction<select id="code-direction"><option value="Unspecified">Unspecified — review required</option><option value="IN">Time In</option><option value="OUT">Time Out</option></select></label><p class="field-hint" id="code-direction-help">A scan can be paired only when the date contains exactly one configured IN and one later OUT of the same activity.</p></div><div class="app-dialog-footer"><button id="close-code" type="button" class="button outline">Cancel</button><button class="button primary" type="submit">Save mapping</button></div></form></dialog>
+
+  <div id="admin-aja-action-menu" popover="manual" role="group" aria-label="AJA filing actions">
+    <button type="button" id="admin-aja-menu-view"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M2 12s4-7 10-7 10 7 10 7-4 7-10 7S2 12 2 12Z"/><circle cx="12" cy="12" r="3"/></svg><span>Review</span></button>
+
+    </div>
+  <dialog id="admin-aja-preview-dialog" aria-labelledby="admin-aja-preview-name">
+    <div class="export-preview-toolbar">
+      <div class="preview-identity"><h2 id="admin-aja-preview-name" class="preview-person" tabindex="-1" autofocus>AJA Application Review</h2><span class="preview-month"><svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="5" width="18" height="16" rx="3"/><path d="M8 3v4m8-4v4M3 10h18"/></svg><span id="admin-aja-preview-context"></span></span></div>
+      <button type="button" id="admin-aja-preview-back" class="preview-close" title="Close preview" aria-label="Close AJA preview"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg></button>
+    </div>
+    <div class="dtr-workspace">
+      <div class="dtr-document-area">
+        <div class="export-preview-note" id="admin-aja-preview-note" role="status" hidden></div>
+        <div id="admin-aja-stage" class="export-preview-stage"><img id="admin-aja-paper" alt="Generated AJA form including Certificate of Appearance"></div>
+        <div class="preview-zoom-bar" id="admin-aja-zoom-controls" role="group" aria-label="Paper preview zoom">
+          <button type="button" id="admin-aja-zoom-out" title="Zoom out" aria-label="Zoom out"><svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" aria-hidden="true"><path d="M5 12h14"/></svg></button>
+          <output id="admin-aja-zoom-value" aria-live="polite">100%</output>
+          <button type="button" id="admin-aja-zoom-in" title="Zoom in" aria-label="Zoom in"><svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" aria-hidden="true"><path d="M5 12h14M12 5v14"/></svg></button>
+          <span class="zoom-divider" aria-hidden="true"></span>
+          <button type="button" id="admin-aja-zoom-fit" title="Fit page to preview" aria-label="Fit page to preview" aria-pressed="true"><svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M8 4H4v4m12-4h4v4M4 16v4h4m12-4v4h-4"/><rect x="9" y="7" width="6" height="10" rx="1"/></svg><span>Fit Page</span></button>
+        </div>
+      </div>
+      <aside class="preview-controls admin-aja-review-panel" aria-labelledby="admin-aja-settings-heading">
+        <div class="admin-aja-review-heading"><h3 id="admin-aja-settings-heading">Application review</h3><span id="admin-aja-review-status" class="aja-review-chip" data-status="awaiting_signatures"></span></div>
+        <div class="admin-aja-review-summary">
+          <div class="admin-aja-review-field"><span>Reference No.</span><strong id="admin-aja-preview-reference"></strong></div>
+          <div id="admin-aja-preview-details"></div>
+        </div>
+        <div id="admin-aja-page-nav" class="aja-page-nav hidden"><button type="button" class="button outline" id="admin-aja-page-prev" aria-label="Previous form page">‹</button><output id="admin-aja-page-count">1 / 1</output><button type="button" class="button outline" id="admin-aja-page-next" aria-label="Next form page">›</button></div>
+        <div id="admin-aja-review-result" class="admin-aja-review-result hidden"></div>
+        <div id="admin-aja-review-form" class="admin-aja-review-form">
+          <h4>Verification</h4>
+          <p class="admin-aja-review-hint">Review the physical signed form. This preview is the original submitted copy.</p>
+          <label class="admin-aja-verification"><input id="admin-aja-verified" type="checkbox"><span>I have verified the authorized decision on the signed document.</span></label>
+          <label class="admin-aja-remarks-label" for="admin-aja-remarks">Remarks <small>(required when returning or disapproving)</small></label>
+          <textarea id="admin-aja-remarks" rows="3" maxlength="600" placeholder="Enter remarks…"></textarea>
+          <div id="admin-aja-review-error" class="admin-aja-review-error hidden" role="alert"></div>
+          <div class="admin-aja-review-actions">
+            <button type="button" id="admin-aja-approve" class="button primary" disabled><svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m5 12 4 4L19 6"/></svg>Verify approval</button>
+            <button type="button" id="admin-aja-return" class="button outline" disabled>Return for correction</button>
+            <button type="button" id="admin-aja-disapprove" class="button outline" disabled>Record disapproval</button>
+          </div>
+        </div>
+      </aside>
+    </div>
+  </dialog>
+  <div id="profile-undo-stack" role="region" aria-label="Recent employee removals"></div>
+  <div class="toast hidden" id="toast" role="status" aria-live="polite"></div>
+</body></html>

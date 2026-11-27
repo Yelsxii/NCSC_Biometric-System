@@ -1,491 +1,1937 @@
 'use strict';
-
+/* NCSC records-first UI. All information comes from authenticated same-origin APIs. */
 const $ = id => document.getElementById(id);
-const escapeHtml = value => String(value ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
-const icon = name => '<svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><use href="/static/icons.svg#' + name.replace(/[^a-z]/g, '') + '"></use></svg>';
+const esc = value => String(value ?? '').replace(/[&<>"']/g, c => ({
+  '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'
+}[c]));
+// Preserve DOM nodes if a live refresh produces identical markup.
+const renderedMarkup = new WeakMap();
+function setHtmlIfChanged(el, markup){
+  const previous=renderedMarkup.get(el);
+  if(previous && previous.markup===markup && previous.first===el.firstChild)return false;
+  el.innerHTML=markup;
+  renderedMarkup.set(el,{markup,first:el.firstChild});
+  return true;
+}
+function setTextIfChanged(el,value){
+  if(el.textContent!==value)el.textContent=value;
+}
+function setAttrIfChanged(el,name,value){
+  if(el.getAttribute(name)!==value)el.setAttribute(name,value);
+}
 let session = null;
 let currentPage = 'overview';
-let toastTimer;
-let punchOffset = 0;
-let punchRequest = 0;
-let selectedFile = null;
-let fileVersion = 0;
-let previewReady = false;
-let importBusy = false;
-let pendingVoid = null;
+let selectedEmployee = null;
+let selectedName = '';
+let selectedDepartment = '';
+let activeDtr = null;
+let lastEmployeeRows = [];
+let registerReady = false;
+let registerInFlight = null;
+let liveFilter = 'all';
+let registerLiveAsOf = '';
+let toastTimer = null;
+let requestSerial = 0;
+let rosterPreviewOkay = false;
+let usbPreviewOkay = false;
+let connectorReadPending = false;
+const PROFILE_BATCH_SIZE = 50;
+let profileCategory = 'All';
+let profileRequest = 0;
+let profileRows = null;
+let profileArchived = false;
+let profileMenuTrigger = null;
+let profileMenuRow = null;
+let profileArchiveBusy = false;
+let profileArchiveContext = null;
+const profileUndoNotices = new Map();
+let profileSummary = null;
+let profileFormToken = 0;
+let profileEditing = null;
+let profileVersion = null;
+let profileSyncAuthorized = true;
+let profileLockedCode = null;
+const profileSelectControls = new Map();
+let profileReturn = null;
+let detailRequest = 0;
+let dayReviewContext = null;
+let attendanceRefreshTimer = null;
+let attendanceRefreshEpoch = 0;
+const DEVICE_REFRESH_MS = 5000;
+let deviceRefreshTimer = null;
+let deviceRefreshEpoch = 0;
+let deviceStatusRequest = null;
+let deviceStatusController = null;
+let workCodeRows = [];
+const titles = {
+  employees:'Employee Attendance',
+  profiles:'Employees',
+  activities:'AJA / Official Business',
+  staff:'Users & Work Codes'
+};
 let activityRequest = 0;
-let monitorRequest = 0;
-let employeeRequest = 0;
-let registryRequest = 0;
-let staffRows = [];
-let workRows = [];
-let rosterFile = null;
-let rosterReady = false;
-let rosterBusy = false;
-let rosterVersion = 0;
-const pageSize = 25;
-const pages = {
-  overview: ['Overview', 'Attendance records and official activities.'],
-  attendance: ['Attendance logs', 'Filter source scans by employee or date.'],
-  imports: ['USB imports', 'Import original attendance scans; use Excel reports for staff names.'],
-  staff: ['Staff & work codes', 'Staff database linked to biometric IDs and device work codes.'],
-  fieldwork: ['Activity references', 'Existing AJA, fieldwork and travel orders.'],
-  dtr: ['DTR monitoring', 'Check daily scans alongside existing activity references.']
+const currentMonth = () => {
+  const parts = new Intl.DateTimeFormat('en-CA',{timeZone:'Asia/Manila',year:'numeric',month:'2-digit'})
+    .formatToParts(new Date());
+  return parts.find(x=>x.type==='year').value + '-' + parts.find(x=>x.type==='month').value;
 };
 
-function hydrateIcons(root = document) {
-  root.querySelectorAll('[data-icon]').forEach(node => { node.outerHTML = icon(node.dataset.icon); });
-}
-function toast(message, error = false) {
+function toast(message, error=false) {
   $('toast').textContent = message;
-  $('toast').className = error ? 'toast error' : 'toast';
+  $('toast').className = error ? 'toast error-toast' : 'toast';
   clearTimeout(toastTimer);
-  toastTimer = setTimeout(() => $('toast').classList.add('hidden'), 5000);
+  toastTimer = setTimeout(()=> $('toast').classList.add('hidden'),4500);
 }
-function localDate(value, options = {}) {
-  // Raw device strings represent Manila wall time; an explicit offset avoids host timezone shifts.
-  let text = String(value).replace(' ', 'T');
-  if (/^\d{4}-\d{2}-\d{2}$/.test(text)) text += 'T12:00:00';
-  if (!/(Z|[+-]\d{2}:\d{2})$/.test(text)) text += '+08:00';
-  const date = new Date(text);
-  if (Number.isNaN(date.getTime())) return String(value);
-  return date.toLocaleDateString('en-PH', {timeZone:'Asia/Manila', day:'numeric', month:'short', year:'numeric', ...options});
-}
-function dayLabel(value) {
-  return new Date(value.slice(0, 10) + 'T12:00:00+08:00').toLocaleDateString('en-PH', {timeZone:'Asia/Manila', weekday:'short'});
-}
-function openDialog(id) { if (!$(id).open) $(id).showModal(); }
-
-async function api(path, options = {}) {
-  const headers = new Headers(options.headers || {});
-  if (session?.csrf && options.method && options.method !== 'GET') headers.set('X-CSRF-Token', session.csrf);
-  if (options.body && !(options.body instanceof FormData)) headers.set('Content-Type', 'application/json');
-  let response;
-  try { response = await fetch(path, {credentials:'same-origin', ...options, headers}); }
-  catch (_) { throw new Error('Cannot reach the local server. Start the application, then retry.'); }
-  let result;
-  try { result = await response.json(); } catch (_) { result = {}; }
+async function api(path,options={}) {
+  const headers = new Headers(options.headers||{});
+  if (session?.csrf && options.method && options.method.toUpperCase()!=='GET')
+    headers.set('X-CSRF-Token',session.csrf);
+  if (options.body && !(options.body instanceof FormData)) headers.set('Content-Type','application/json');
+  const response = await fetch(path,{credentials:'same-origin',...options,headers});
+  const data = await response.json().catch(()=>({}));
   if (!response.ok) {
-    if (response.status === 401 && !path.endsWith('/login') && !path.endsWith('/me')) {
-      session = null; showAuth();
-    }
-    let detail = result.detail || 'Request failed (' + response.status + '). Please try again.';
-    if (Array.isArray(detail)) detail = detail.map(x => x.msg).join('; ');
-    throw new Error(String(detail));
+    if (response.status===401 && !path.endsWith('/login')) {session=null;showLogin();}
+    const detail = Array.isArray(data.detail) ? data.detail.map(x=>x.msg).join('; ') : data.detail;
+    throw new Error(String(detail||'Request failed ('+response.status+')'));
   }
-  return result;
+  return data;
 }
-
-function resetFile() {
-  selectedFile = null; fileVersion++; previewReady = false;
-  $('attendance-file').value = '';
-  $('file-name').textContent = 'No file selected';
-  $('preview-output').innerHTML = '';
-  $('preview-output').classList.add('hidden');
-  $('import-submit').disabled = true;
-  $('import-error').classList.add('hidden'); $('import-error').textContent = '';
-  $('view-imported').classList.add('hidden'); $('report-staff').classList.add('hidden');
+function showLogin(){
+  resetAdminAja();
+  closeProfileMenu();profileArchived=false;profileArchiveBusy=false;profileArchiveContext=null;
+  clearProfileUndoNotices();
+  stopDeviceRefresh();
+  stopAttendanceRefresh();
+  requestSerial++;registerInFlight=null;registerReady=false;lastEmployeeRows=[];registerLiveAsOf='';
+  profileRequest++;profileRows=null;profileSummary=null;
+  selectedEmployee=null;activeDtr=null;dayReviewContext=null;detailRequest++;
+  document.querySelectorAll('dialog[open]').forEach(dialog=>dialog.close());
+  $('login-view').classList.remove('hidden');
+  $('workspace').classList.add('hidden');
+  $('login-password').value='';
+  $('login-password').type='password';
+  $('toggle-password').setAttribute('aria-pressed','false');
+  $('login-username').focus();
 }
-function showAuth() {
-  document.querySelectorAll('dialog[open]').forEach(dialog => dialog.close());
-  $('login-view').classList.remove('hidden'); $('workspace').classList.add('hidden');
-  $('login-form').reset(); $('fieldwork-form').reset(); $('filter-form').reset(); resetFile();
-  $('login-error').classList.add('hidden'); $('login-help-text').classList.add('hidden');
-  $('login-password').type = 'password';
-  $('toggle-password').setAttribute('aria-label', 'Show password');
-  $('toggle-password').setAttribute('aria-pressed', 'false');
-  pendingVoid = null; activityRequest++; monitorRequest++; employeeRequest++; registryRequest++;
-  staffRows = []; workRows = []; $('staff-rows').innerHTML = ''; $('work-code-items').innerHTML = '';
-  $('staff-form').reset(); $('work-code-form').reset(); $('staff-search').value = '';
-  $('staff-file').value = ''; rosterFile = null; rosterReady = false; rosterVersion++;
-  $('roster-preview').innerHTML = '';
-  for (const id of ['staff-error','staff-save-error','work-save-error','roster-error']) { $(id).textContent = ''; $(id).classList.add('hidden'); }
-  $('void-form').reset(); $('dtr-filter').reset(); $('dtr-rows').innerHTML = '';
-  $('dtr-employee').innerHTML = '<option value="">Choose employee ID</option>';
-  $('known-employees').innerHTML = ''; $('legacy-items').innerHTML = '';
-  $('legacy-activities').classList.add('hidden');
-  $('dtr-summary').textContent = 'Choose an employee and month to compare with the office DTR.';
-  $('punch-rows').innerHTML = ''; $('fieldwork-items').innerHTML = ''; $('recent-imports').innerHTML = '';
-  $('activity-chart').innerHTML = '';
-  for (const key of ['scans','employees','imports','activities']) $('metric-' + key).textContent = '—';
-  $('toast').classList.add('hidden');
-  document.title = 'NCSC | Biometric Attendance';
-  $('login-username').focus({preventScroll:true});
+function showApp(){
+  $('login-view').classList.add('hidden');
+  $('workspace').classList.remove('hidden');
+  const canWrite=session.role==='admin';
+  document.querySelector('[data-page="activities"]').hidden=!canWrite;
+  document.querySelectorAll('#usb-form button,#roster-form button')
+    .forEach(el=>el.disabled=!canWrite);
+  $('open-attendance-import').disabled=!canWrite;
+  $('open-user-import').disabled=!canWrite;
+  $('open-profile').disabled=!canWrite;
+  $('profile-archive-toggle').hidden=!canWrite;
+  setAttendanceMonth('register-month',currentMonth());
+  setAttendanceMonth('detail-month',currentMonth());
+  navigate('employees');
 }
-function showWorkspace() {
-  $('login-form').reset();
-  $('login-view').classList.add('hidden'); $('workspace').classList.remove('hidden');
-  $('account').textContent = session.username;
-  $('account-avatar').textContent = session.username.slice(0, 1).toUpperCase();
-  $('account-role').textContent = session.role === 'admin' ? 'Administrator' : 'Reviewer';
-  $('logout').innerHTML = icon('logout') + ' Sign out';
-  const canWrite = session.role === 'admin';
-  $('preview-btn').disabled = !canWrite;
-  $('fieldwork-form').querySelectorAll('input, select, textarea, button').forEach(el => { el.disabled = !canWrite; });
-  $('import-access-note').classList.toggle('hidden', canWrite);
-  for (const id of ['open-staff-import','add-staff','add-work-code','preview-staff','import-staff']) $(id).disabled = !canWrite;
-  $('import-staff').disabled = true;
-  resetFile();
-  $('dtr-month').value = new Date().toLocaleDateString('en-CA', {timeZone:'Asia/Manila'}).slice(0,7);
-  const hashPage = location.hash.slice(1);
-  navigate(pages[hashPage] ? hashPage : 'overview');
-}
-function navigate(page) {
-  if (!session || !pages[page]) return;
-  currentPage = page;
-  document.querySelectorAll('[data-view]').forEach(el => el.classList.toggle('hidden', el.dataset.view !== page));
-  document.querySelectorAll('[data-page]').forEach(el => {
-    el.classList.toggle('active', el.dataset.page === page);
-    if (el.dataset.page === page) el.setAttribute('aria-current', 'page'); else el.removeAttribute('aria-current');
+function navigate(page){
+  if (!session || !titles[page] || (page==='activities'&&session.role!=='admin')) return;
+  stopAdminAjaRefresh();closeAdminAjaMenu();
+  closeProfileMenu();
+  cancelRegisterSearch();
+  stopDeviceRefresh();
+  stopAttendanceRefresh();
+  currentPage=page;
+  liveFilter='all';
+  $('back-to-register').classList.add('hidden');
+  document.querySelectorAll('[data-view]').forEach(node=>node.classList.toggle('hidden',node.dataset.view!==page));
+  document.querySelectorAll('[data-page]').forEach(node=>{
+    node.classList.toggle('active',node.dataset.page===page);
+    if (node.dataset.page===page) node.setAttribute('aria-current','page');
+    else node.removeAttribute('aria-current');
   });
-  $('page-heading').textContent = pages[page][0]; $('current-location').textContent = pages[page][0];
-  $('page-description').textContent = pages[page][1];
-  $('heading-action').classList.toggle('hidden', page === 'imports' || page === 'fieldwork' || page === 'staff');
-  $('main-content').scrollTop = 0;
-  history.replaceState(null, '', '#' + page);
-  document.title = pages[page][0] + ' | NCSC Attendance';
-  if (page === 'overview') loadOverview();
-  if (page === 'attendance') { punchOffset = 0; loadPunches(); }
-  if (page === 'fieldwork') { loadFieldwork(); loadEmployees(); }
-  if (page === 'dtr') loadEmployees(true);
-  if (page === 'staff') loadRegistry();
-}
-
-function renderChart(days) {
-  if (!days?.length) {
-    $('activity-chart').innerHTML = '<div class="empty">Import an attendance file to see daily scan activity.</div>';
-    $('chart-period').textContent = 'Latest seven days of imported records'; return;
+  $('section-name').textContent=titles[page];
+  document.title=titles[page]+' | NCSC Records';
+  window.history.replaceState(null,'','#'+page);
+  if (page==='employees') {
+    $('employee-detail').classList.add('hidden');
+    $('attendance-register-panel').classList.remove('hidden');
+    selectedEmployee=null;activeDtr=null;
+    if(registerReady)renderRegister();
+    startAttendanceRefresh();
+    return loadRegister();
   }
-  const max = Math.max(...days.map(d => d.scans), 1);
-  $('chart-period').textContent = localDate(days[0].date + ' 12:00:00') + ' – ' + localDate(days.at(-1).date + ' 12:00:00');
-  $('activity-chart').innerHTML = '<div class="chart-bars" role="img" aria-label="' + escapeHtml(days.map(d => d.date + ': ' + d.scans + ' scans').join('; ')) + '">' + days.map(d => '<div class="chart-column"><div class="chart-bar-track"><div class="chart-bar" style="--bar-height:' + Math.max(1, Math.round(d.scans / max * 82)) + '%"><span class="chart-value">' + Number(d.scans) + '</span></div></div><span class="chart-date">' + dayLabel(d.date) + '</span></div>').join('') + '</div>';
+  if (page==='profiles') {startAttendanceRefresh();return loadProfiles();}
+  if (page==='activities') {startAdminAjaRefresh();return loadAdminAja();}
+  if (page==='staff') {startDeviceRefresh();return loadDevice();}
 }
-async function loadOverview() {
-  const context = session;
-  try {
-    const result = await api('/api/overview');
-    if (context !== session) return;
-    for (const key of ['scans','employees','imports','activities']) $('metric-' + key).textContent = Number(result.totals[key] || 0).toLocaleString();
-    renderChart(result.daily_scans);
-    $('recent-imports').className = '';
-    $('recent-imports').innerHTML = result.recent_imports.length ? result.recent_imports.map(item => '<div class="import-row"><span class="file-icon">' + icon('file') + '</span><div><strong>' + escapeHtml(item.original_name) + '</strong><small>' + escapeHtml(localDate(item.imported_at + 'Z')) + ' · ' + Number(item.total_records).toLocaleString() + ' rows processed</small></div><b>+' + Number(item.inserted_records).toLocaleString() + ' new scans</b></div>').join('') : '<div class="empty">No imports yet. Choose USB imports to preview your first attendance file.</div>';
-  } catch (error) { if (context === session) toast(error.message, true); }
+function cancelRegisterSearch(){requestSerial++;}
+function updateRegisterSearchControl(){$('clear-employee-search').hidden=!$('employee-search').value;}
+function applyRegisterFilters(){
+  updateRegisterSearchControl();
+  if(!session||currentPage!=='employees'||selectedEmployee)return;
+  if(registerReady)renderRegister();
 }
-async function loadPunches() {
-  const context = session; const requestId = ++punchRequest;
-  const params = new URLSearchParams({limit:pageSize, offset:punchOffset, employee_code:$('filter-id').value.trim()});
-  if ($('filter-from').value) params.set('date_from', $('filter-from').value);
-  if ($('filter-to').value) params.set('date_to', $('filter-to').value);
-  $('punch-rows').innerHTML = '<tr><td colspan="6">Loading attendance records…</td></tr>';
-  $('prev-punches').disabled = true; $('next-punches').disabled = true;
-  try {
-    const result = await api('/api/punches?' + params);
-    if (context !== session || requestId !== punchRequest) return;
-    $('punch-rows').innerHTML = result.items.length ? result.items.map(item => '<tr><td><strong>' + escapeHtml(item.display_name || 'Name not imported') + '</strong><span class="scan-day">ID: ' + escapeHtml(item.employee_code) + '</span></td><td><span class="scan-date">' + escapeHtml(localDate(item.happened_at)) + ' <strong>' + escapeHtml(item.happened_at.slice(11)) + '</strong></span><span class="scan-day">' + dayLabel(item.happened_at) + ' · Manila time</span></td><td>' + escapeHtml(item.device_id) + '</td><td><span class="tag blue-tag">' + escapeHtml(item.status_code) + '</span></td><td>' + escapeHtml(item.verification_code) + '</td><td>' + escapeHtml(item.work_code) + (item.work_label ? ' · ' + escapeHtml(item.work_label) : '<span class="scan-day">Unmapped</span>') + '</td></tr>').join('') : '<tr><td colspan="6">No matching scans. Try another employee ID or date range.</td></tr>';
-    $('punch-count').textContent = result.total ? (punchOffset + 1) + '–' + (punchOffset + result.items.length) + ' of ' + result.total.toLocaleString() + ' records · Raw device codes' : '0 matching records';
-    $('prev-punches').disabled = punchOffset === 0; $('next-punches').disabled = punchOffset + pageSize >= result.total;
-  } catch (error) {
-    if (context !== session || requestId !== punchRequest) return;
-    $('punch-rows').innerHTML = '<tr><td colspan="6">Records could not be loaded. Adjust your filters and try again.</td></tr>';
-    $('punch-count').textContent = 'Unable to load records'; toast(error.message, true);
+function registerDate(){
+  const parts=new Intl.DateTimeFormat('en-CA',{timeZone:'Asia/Manila',year:'numeric',month:'2-digit',day:'2-digit'}).formatToParts(new Date());
+  return ['year','month','day'].map(key=>parts.find(p=>p.type===key).value).join('-');
+}
+async function loadRegister({quiet=false}={}){
+  updateRegisterSearchControl();
+  if(!session||currentPage!=='employees'||selectedEmployee)return;
+  const account=session;
+  const month=$('register-month').value||currentMonth();
+  if(registerInFlight&&registerInFlight.account===account&&registerInFlight.serial===requestSerial&&registerInFlight.month===month)return;
+  const serial=++requestSerial;
+  const job={account,serial,month};registerInFlight=job;
+  const valid=()=>serial===requestSerial&&session===account&&currentPage==='employees'&&!selectedEmployee&&month===($('register-month').value||currentMonth());
+  if(registerLiveAsOf&&registerLiveAsOf.slice(0,10)!==registerDate()){
+    lastEmployeeRows=lastEmployeeRows.map(({live,...row})=>row);registerLiveAsOf='';
+    if(registerReady)renderRegister();
   }
-}
-
-function chooseFile(file) {
-  resetFile();
-  if (!file) return;
-  if (!/\.(dat|txt|xls)$/i.test(file.name)) { showInlineError('import-error', 'Choose a .dat/.txt attendance log or .xls report.'); return; }
-  if (!file.size || file.size > 2 * 1024 * 1024) { showInlineError('import-error', 'Choose a nonempty file up to 2 MB.'); return; }
-  selectedFile = file; $('file-name').textContent = file.name;
-}
-function previewStat(label, value) {
-  return '<div class="preview-stat"><span>' + escapeHtml(label) + '</span><strong>' + escapeHtml(value) + '</strong></div>';
-}
-async function handleImport(previewOnly) {
-  if (importBusy) return;
-  if (!selectedFile) { toast('Choose an attendance file first.', true); return; }
-  if (!previewOnly && !previewReady) { toast('Preview the selected source log before importing.', true); return; }
-  const context = session; const version = fileVersion;
-  const data = new FormData(); data.append('file', selectedFile);
-  $('import-error').classList.add('hidden');
-  importBusy = true; $('preview-btn').disabled = true; $('import-submit').disabled = true;
-  $('preview-btn').textContent = previewOnly ? 'Reading file…' : 'Saving records…';
-  try {
-    const result = await api(previewOnly ? '/api/imports/preview' : '/api/imports', {method:'POST', body:data});
-    if (context !== session || version !== fileVersion) return;
-    const output = $('preview-output'); output.classList.remove('hidden');
-    if (previewOnly && result.format === 'report') {
-      previewReady = false; $('report-staff').classList.remove('hidden');
-      output.innerHTML = '<h3>Excel report preview</h3><div class="preview-grid">' + previewStat('Employee IDs in report', result.employees) + previewStat('Report period', result.period) + '</div><ul class="report-sheets">' + result.sheets.map(s => '<li>' + escapeHtml(s.name) + ' · ' + Number(s.rows) + ' rows</li>').join('') + '</ul><p class="inline-help">This Excel report can supply staff names. Select Import staff names from this report. To import attendance scans, choose the original _attlog.dat file.</p>';
-    } else if (previewOnly) {
-      previewReady = !result.already_imported;
-      output.innerHTML = '<h3>Source log preview</h3><div class="preview-grid">' + previewStat('Scan records', result.rows.toLocaleString()) + previewStat('Employee IDs', result.employees) + previewStat('First scan', result.earliest) + previewStat('Last scan', result.latest) + '</div><p class="inline-help">' + (result.already_imported ? 'This exact file has already been imported.' : 'Nothing saved yet. Review the details, then select Import records.') + '<br>Raw status codes: ' + result.codes.map(escapeHtml).join(', ') + '</p>';
-    } else {
-      previewReady = false;
-      output.innerHTML = '<h3>Import complete</h3><div class="preview-grid">' + previewStat('New scans', result.inserted.toLocaleString()) + previewStat('Duplicates skipped', result.duplicates.toLocaleString()) + '</div><p class="inline-help">Original K14 scans remain unchanged. Open Attendance logs to review your records.</p>';
-      $('view-imported').classList.remove('hidden');
-      toast('Attendance imported successfully.'); loadOverview();
+  try{
+    // Render the inexpensive directory first; today's live computation follows separately.
+    if(!registerReady){
+      $('register-rows').innerHTML='<tr><td colspan="6" class="table-empty">Loading employees…</td></tr>';
+      const directory=await api('/api/employee-register?'+new URLSearchParams({month,live:'false'}));
+      if(!valid())return;
+      lastEmployeeRows=directory.items;registerReady=true;renderRegister();
     }
-  } catch (error) {
-    if (context === session && version === fileVersion) { previewReady = false; $('preview-output').classList.add('hidden'); showInlineError('import-error', error.message); }
-  } finally {
-    importBusy = false; $('preview-btn').innerHTML = icon('eye') + ' Preview file';
-    $('preview-btn').disabled = session?.role !== 'admin';
-    $('import-submit').disabled = !previewReady;
+    if(!registerLiveAsOf){
+      $('live-refresh-note').textContent='Updating live status…';$('live-refresh-note').hidden=false;
+    }
+    const result=await api('/api/employee-register?'+new URLSearchParams({month,live:'true'}));
+    if(!valid())return;
+    lastEmployeeRows=result.items;registerReady=true;
+    registerLiveAsOf=result.live_as_of||'';
+    $('live-refresh-note').hidden=true;renderRegister();
+  }catch(error){
+    if(!valid())return;
+    $('live-refresh-note').textContent='Attendance refresh failed';$('live-refresh-note').hidden=false;
+    if(!registerReady)$('register-rows').innerHTML='<tr><td colspan="6" class="table-empty">Unable to load employee attendance.</td></tr>';
+    if(!quiet&&!registerReady)toast(error.message,true);
+  }finally{
+    if(registerInFlight===job)registerInFlight=null;
   }
 }
+// Presentation only: preserve known abbreviations and Roman regional numbers.
+function displayTitle(value){
+  const acronyms=new Set(['NCSC','AJA','AM','PM','HR','HRD','HRIS','HRMO','AFS','ORD','OPS','OPD','IT','ICT','GIP','COS','OJT','DTR','PDO','RO','TO','CSC','DOLE','DSWD','DBM','COA','BAC','GAD']);
+  return String(value??'').replace(/\p{L}+/gu,word=>{
+    const upper=word.toUpperCase();
+    if(acronyms.has(upper)||/^(?:I|II|III|IV|V|VI|VII|VIII|IX|X|XI|XII|XIII|XIV|XV|XVI|XVII|XVIII)$/.test(upper))return upper;
+    return word.charAt(0).toUpperCase()+word.slice(1).toLowerCase();
+  });
+}
+function categoryBadge(value){
+  const kind={COS:'cos',Permanent:'permanent',GIP:'gip',OJT:'ojt'}[value];
+  return '<span class="tag employment-chip tag-'+(kind||'neutral')+'">'+esc(value||'Not Set')+'</span>';
+}
+function departmentParts(value){
+  const raw=String(value||'').trim();
+  const official={OPS:'Operations Division',AFS:'Administrative and Finance Section',ORD:'Office of the Regional Director'};
+  const suffix=raw.match(/\s*\((OPS|AFS|ORD)\)\s*$/i);
+  const key=(suffix?.[1]||raw).toUpperCase();
+  const code=Object.keys(official).find(k=>k===key||official[k].toLowerCase()===raw.toLowerCase());
+  return code?{name:official[code],code}:{name:raw?displayTitle(raw):'—',code:''};
+}
+function departmentLabel(value){
+  return departmentParts(value).name;
+}
+function departmentCell(value){
+  return '<span class="department-display"><span class="department-name">'+esc(departmentLabel(value))+'</span></span>';
+}
+function employeeCell(row){
+  const name=row.display_name||'Name not synchronized';
+  const source='';
+  return '<div class="employee-cell"><span class="name-avatar" aria-hidden="true">'+esc(name.slice(0,1).toUpperCase())+
+    '</span><span><strong>'+esc(name)+'</strong>'+source+(row.position?'<small>'+esc(row.position)+'</small>':'')+'</span></div>';
+}
+// Initials are derived from the synchronized display name, never a photo.
+function registerInitials(value){
+  const name=String(value||'').trim();
+  if(!name || name.toLowerCase()==='name not synchronized')return '—';
+  const words=s=>s.trim().split(/\s+/).filter(Boolean);
+  const initial=s=>(s.match(/\p{L}/u)?.[0]||'').toUpperCase();
+  const parts=name.split(',');
+  const suffix=/^(?:jr|sr|ii|iii|iv|v)\.?$/i;
+  if(parts.length>1 && parts[1].trim() && !suffix.test(parts[1].trim())){
+    return initial(words(parts[1])[0]||'')+initial(words(parts[0])[0]||'')||'—';
+  }
+  const tokens=words(parts[0]);
+  while(tokens.length>1 && suffix.test(tokens[tokens.length-1]))tokens.pop();
+  return (initial(tokens[0]||'')+(tokens.length>1?initial(tokens[tokens.length-1]):''))||'—';
+}
+function registerNameCell(row){
+  const name=row.display_name||'Name not synchronized';
+  return '<div class="register-identity"><span class="name-avatar" aria-hidden="true">'+esc(registerInitials(row.display_name))+
+    '</span><strong>'+esc(name)+'</strong></div>';
+}
+function liveTime(stamp){
+    if(!stamp)return '—';
+    const match=String(stamp).match(/(\d{2}):(\d{2}):(\d{2})/);
+    if(!match)return '—';
+    const h=Number(match[1]);
+    return String(h%12||12).padStart(2,'0')+':'+match[2]+':'+match[3]+' '+(h<12?'AM':'PM');
+}
+function liveMatches(row,key){
+    const status=row.live?.status||'pending';
+    return key==='all'||(key==='other'?['review','offday'].includes(status):status===key);
+}
+function renderRegister(){
+    const q=$('employee-search').value.trim().toLowerCase();
+    const rows=lastEmployeeRows.filter(row=>liveMatches(row,liveFilter)&&(!q||String(row.employee_code).toLowerCase().includes(q)||String(row.display_name||'').toLowerCase().includes(q)));
+    const pending=lastEmployeeRows.some(row=>!row.live);
+    document.querySelectorAll('[data-live-count]').forEach(el=>{setTextIfChanged(el,el.dataset.liveCount!=='all'&&pending?'—':String(lastEmployeeRows.filter(row=>liveMatches(row,el.dataset.liveCount)).length));});
+    document.querySelectorAll('[data-live-filter]').forEach(el=>setAttrIfChanged(el,'aria-pressed',String(el.dataset.liveFilter===liveFilter)));
+    const other=$('live-other-filter');
+    other.classList.toggle('hidden',!lastEmployeeRows.some(row=>liveMatches(row,'other'))&&liveFilter!=='other');
+    document.querySelectorAll('.live-kpi').forEach(button=>{
+      const total=lastEmployeeRows.length;
+      const count=lastEmployeeRows.filter(row=>liveMatches(row,button.dataset.liveFilter)).length;
+      setAttrIfChanged(button,'aria-label',button.querySelector('small').textContent+': '+(pending&&button.dataset.liveFilter!=='all'?'Updating':count+' of '+total+' employees'));
+    });
+    
+    const total=rows.length;
+    setTextIfChanged($('register-count'),total?total+(total===1?' employee':' employees'):'No employees found');
+    setHtmlIfChanged($('register-rows'),rows.length?rows.map(row=>
+      '<tr>'+
+      '<td class="employee-name-cell">'+registerNameCell(row)+'</td>'+
+      '<td>'+categoryBadge(row.employment_type)+'</td>'+
+      '<td>'+departmentCell(row.department)+'</td>'+
+      '<td><span class="live-status live-'+esc(row.live?.status||'pending')+'" title="'+esc(row.live?.reason||'Live status is being updated')+'">'+esc(displayTitle(row.live?.label||'Updating'))+'</span></td>'+
+      '<td class="live-last-update'+(row.live?.last_update?' has-update':'')+'" title="'+esc([row.live?.at?liveTime(row.live.at):'',row.live?.reason||''].filter(Boolean).join(' · '))+'">'+esc(row.live?.last_update||'—')+'</td>'+
+      '<td class="directory-action-cell"><button type="button" class="button primary row-action" data-employee="'+esc(row.employee_code)+'" aria-label="View attendance: '+esc(row.display_name||row.employee_code)+'">View attendance</button></td>'+
+      '</tr>'
+    ).join(''):'<tr><td colspan="6" class="table-empty">No employees found.</td></tr>');
+}
+async function openEmployee(code){
+  if (!code) return;
+  cancelRegisterSearch();
+  selectedEmployee=code;
+  const row=lastEmployeeRows.find(x=>x.employee_code===code);
+  selectedName=row?.display_name||'Name not synchronized';
+  selectedDepartment=row?.department||'';
+  $('detail-name').textContent=selectedName;
+  $('detail-department').textContent=departmentLabel(selectedDepartment);
+  $('detail-category').innerHTML=categoryBadge(row?.employment_type);
+  setAttendanceMonth('detail-month',$('register-month').value);
+  $('employee-detail').classList.remove('hidden');
+  $('back-to-register').classList.remove('hidden');
+  $('attendance-register-panel').classList.add('hidden');
+  await loadDetail();
+  $('main-content').scrollTop=0;
+}
 
-async function loadFieldwork() {
-  const context = session; const requestId = ++activityRequest;
-  try {
-    const result = await api('/api/activities');
-    if (context !== session || requestId !== activityRequest) return;
-    const filter = $('activity-status').value;
-    const items = result.items.filter(item => filter === 'all' || item.status === filter);
-    $('fieldwork-items').innerHTML = items.length ? items.map(item => {
-      const action = item.status === 'recorded' && context.role === 'admin' ? '<button class="text-button" type="button" data-void="' + Number(item.id) + '">Void reference</button>' : '';
-      return '<div class="request"><div class="request-head"><strong>' + escapeHtml(item.employee_code) + '<span> · ' + escapeHtml(item.category) + '</span></strong><span class="tag ' + (item.status === 'recorded' ? 'blue-tag' : '') + '">' + (item.status === 'recorded' ? 'On file' : 'Voided') + '</span></div><p class="request-time">' + escapeHtml(localDate(item.start_at)) + ' ' + escapeHtml(item.start_at.slice(11,16)) + ' – ' + escapeHtml(localDate(item.end_at)) + ' ' + escapeHtml(item.end_at.slice(11,16)) + '</p><p><strong>' + escapeHtml(item.reference) + '</strong></p><p>' + escapeHtml(item.purpose) + '</p>' + (item.void_reason ? '<p>Correction: ' + escapeHtml(item.void_reason) + '</p>' : '') + action + '</div>';
-    }).join('') : '<div class="empty">No ' + (filter === 'voided' ? 'voided ' : '') + 'references on file.</div>';
-    $('legacy-activities').classList.toggle('hidden', !result.legacy_items.length);
-    $('legacy-items').innerHTML = result.legacy_items.map(item => '<div class="request"><strong>' + escapeHtml(item.employee_code) + ' · ' + escapeHtml(item.category) + '</strong><p>Previous status: ' + escapeHtml(item.status) + '</p><p>' + escapeHtml(localDate(item.start_at)) + ' – ' + escapeHtml(localDate(item.end_at)) + '</p><p>' + escapeHtml(item.location) + ' · ' + escapeHtml(item.reason) + '</p></div>').join('');
-  } catch (error) { if (context === session && requestId === activityRequest) toast(error.message, true); }
+function updateProfileTabs(){
+  document.querySelectorAll('[data-profile-category]').forEach(node=>{
+    const active=node.dataset.profileCategory===profileCategory;
+    node.classList.toggle('active',active);node.setAttribute('aria-pressed',String(active));
+  });
 }
-async function createFieldwork(event) {
-  event.preventDefault(); const form = event.currentTarget;
-  const context = session;
-  const data = Object.fromEntries(new FormData(form));
-  if (data.end_at <= data.start_at) { toast('End must be later than start.', true); return; }
-  if (!data.reference.trim() && !data.purpose.trim()) { toast('Enter an existing reference or a short DTR note.', true); return; }
-  $('fieldwork-submit').disabled = true;
-  try {
-    await api('/api/activities', {method:'POST', body:JSON.stringify(data)});
-    if (context !== session) return;
-    form.reset(); $('activity-status').value = 'recorded'; toast('Reference saved. No new approval needed.');
-    loadFieldwork(); loadOverview(); loadEmployees();
-  } catch (error) { if (context === session) toast(error.message, true); }
-  finally { $('fieldwork-submit').disabled = session?.role !== 'admin'; }
+function renderProfiles(){
+  closeProfileMenu();
+  updateProfileTabs();
+  $('profile-archive-toggle').setAttribute('aria-pressed',String(profileArchived));
+  $('profile-archive-toggle').textContent=profileArchived?'Back to employees':'Archived employees';
+  if(!profileRows||!profileSummary)return;
+  const q=$('profile-search').value.trim().toLowerCase();
+  const rows=profileRows.filter(row=>(profileCategory==='All'||row.employment_type===profileCategory)&&(!q||[row.directory_id,row.display_name,row.position,row.department].some(v=>String(v??'').toLowerCase().includes(q))));
+  $('profile-total-badge').textContent=profileSummary.total;
+  for(const kind of ['COS','Permanent','GIP','OJT'])$('profile-'+kind.toLowerCase()+'-badge').textContent=profileSummary.categories[kind]||0;
+  $('profile-summary').textContent=rows.length+' '+(rows.length===1?'employee':'employees');
+  $('profile-count').textContent=rows.length?('Showing '+rows.length+' of '+profileRows.length+' employees'):'No matching employees';
+    setHtmlIfChanged($('profile-rows'),rows.length?rows.map(row=>
+      '<tr><td class="id-cell">'+esc(row.directory_id)+'</td><td class="employee-name-cell"><div class="register-identity"><span class="name-avatar" aria-hidden="true">'+esc(registerInitials(row.display_name))+'</span><span><strong>'+esc(row.display_name||'Name not synchronized')+'</strong></span></div></td><td class="profile-position-cell">'+(String(row.position||'').trim()?esc(row.position):'<span class="position-unset">—</span>')+'</td><td>'+categoryBadge(row.employment_type)+'</td><td>'+departmentCell(row.department)+'</td>'+
+      '<td class="directory-action-cell">'+(session.role==='admin'?'<button type="button" class="profile-more" data-profile-more="'+esc(row.employee_code)+'" aria-haspopup="true" aria-expanded="false" aria-controls="profile-action-menu" aria-label="Actions for '+esc(row.display_name||row.employee_code)+'"><svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><circle cx="5" cy="12" r="1.8"/><circle cx="12" cy="12" r="1.8"/><circle cx="19" cy="12" r="1.8"/></svg></button>':'—')+'</td></tr>'
+    ).join(''):'<tr><td colspan="6" class="table-empty">No matching employees.</td></tr>');
 }
-function openVoid(button) {
-  pendingVoid = Number(button.dataset.void);
-  if (!Number.isInteger(pendingVoid) || pendingVoid < 1) return;
-  $('void-form').reset(); openDialog('void-dialog');
+async function loadProfiles({quiet=false}={}){
+  const serial=++profileRequest,account=session,archived=profileArchived;
+  const valid=()=>serial===profileRequest&&currentPage==='profiles'&&session===account&&archived===profileArchived;
+  updateProfileTabs();
+  if(profileRows){if(!quiet)renderProfiles();}
+  else $('profile-rows').innerHTML='<tr><td colspan="6" class="table-empty">Loading employees…</td></tr>';
+  try{
+    const getPage=page=>api('/api/employee-profiles?'+new URLSearchParams({q:'',category:'All',status:'All',archived:String(archived),page:String(page),limit:String(PROFILE_BATCH_SIZE)}));
+    const first=await getPage(1);
+    if(!valid())return;
+    const all=[...first.items];
+    const pages=Math.max(1,Math.ceil(first.total/PROFILE_BATCH_SIZE));
+    for(let page=2;page<=pages;page++){
+      const next=await getPage(page);
+      if(!valid())return;
+      all.push(...next.items);
+    }
+    // The endpoint already sorts by name; display numbering is separate from device keys.
+    const unique=[...new Map(all.map(row=>[row.employee_code,row])).values()];
+    if(quiet && (profileMenuTrigger || profileArchiveBusy || document.querySelector('dialog[open]')))return;
+    profileRows=unique.map((row,index)=>({...row,directory_id:index+1}));
+    profileSummary=first.summary;renderProfiles();
+  }catch(error){
+    if(!valid())return;
+    if(!profileRows)$('profile-rows').innerHTML='<tr><td colspan="6" class="table-empty">Unable to load employees.</td></tr>';
+    if(!quiet)toast(error.message,true);
+  }
 }
-async function voidReference(event) {
+function closeProfileMenu(restoreFocus=false){
+  const menu=$('profile-action-menu');
+  if(menu?.matches(':popover-open'))menu.hidePopover();
+  if(profileMenuTrigger){
+    profileMenuTrigger.setAttribute('aria-expanded','false');
+    if(restoreFocus&&profileMenuTrigger.isConnected)profileMenuTrigger.focus({preventScroll:true});
+  }
+  profileMenuTrigger=null;profileMenuRow=null;
+}
+function openProfileMenu(trigger){
+  if(session?.role!=='admin'||profileArchiveBusy)return;
+  if(profileMenuTrigger===trigger){closeProfileMenu(true);return;}
+  closeProfileMenu();
+  const row=profileRows?.find(item=>item.employee_code===trigger.dataset.profileMore);
+  if(!row)return;
+  const menu=$('profile-action-menu'),edit=$('profile-menu-edit'),remove=$('profile-menu-delete');
+  profileMenuTrigger=trigger;profileMenuRow=row;
+  edit.hidden=profileArchived;
+  edit.querySelector('span').textContent=row.profile_complete?'Edit profile':'Complete profile';
+  remove.querySelector('span').textContent=profileArchived?'Restore':'Delete';
+  remove.classList.toggle('restore-action',profileArchived);
+  menu.showPopover();
+  const rect=trigger.getBoundingClientRect(),w=menu.offsetWidth,h=menu.offsetHeight;
+  menu.style.left=Math.max(8,Math.min(window.innerWidth-w-8,rect.right-w))+'px';
+  menu.style.top=Math.max(8,rect.bottom+h+8<=window.innerHeight?rect.bottom+6:rect.top-h-6)+'px';
+  trigger.setAttribute('aria-expanded','true');
+  (profileArchived?remove:edit).focus({preventScroll:true});
+}
+function changeProfileArchive(){
+  const row=profileMenuRow,archived=profileArchived,account=session;
+  if(!row||account?.role!=='admin'||profileArchiveBusy)return;
+  closeProfileMenu(true);
+  profileArchiveContext={row,archived,account};
+  const dialog=$('profile-archive-dialog');
+  dialog.dataset.action=archived?'restore':'delete';
+  $('profile-archive-heading').textContent=archived?'Restore employee?':'Delete employee?';
+  $('profile-archive-name').textContent=row.display_name||row.employee_code;
+  $('profile-archive-description').textContent=archived?'This employee will return to the active Employees directory.':'This employee will be removed from the active directory. Attendance is preserved and the employee can be restored.';
+  $('confirm-profile-archive').textContent=archived?'Restore':'Delete';
+  $('profile-archive-error').classList.add('hidden');
+  dialog.showModal();
+  $('cancel-profile-archive').focus({preventScroll:true});
+}
+function setProfileArchiveBusy(busy){
+  profileArchiveBusy=busy;
+  for(const id of ['cancel-profile-archive','confirm-profile-archive'])$(id).disabled=busy;
+  $('profile-archive-dialog').setAttribute('aria-busy',String(busy));
+  for(const notice of profileUndoNotices.values())notice.button.disabled=busy;
+}
+function dismissProfileUndo(code,expected=null,immediate=false){
+  const notice=profileUndoNotices.get(code);
+  if(!notice||(expected&&notice!==expected))return;
+  profileUndoNotices.delete(code);clearTimeout(notice.timer);
+  notice.button.disabled=true;
+  if(immediate){notice.node.remove();return;}
+  notice.node.classList.add('is-leaving');
+  setTimeout(()=>notice.node.remove(),200);
+}
+function clearProfileUndoNotices(){
+  for(const code of [...profileUndoNotices.keys()])dismissProfileUndo(code,null,true);
+  $('profile-undo-stack').replaceChildren();
+  setProfileArchiveBusy(false);
+}
+function showProfileUndo(row,account){
+  if(session!==account)return;
+  const code=row.employee_code;
+  dismissProfileUndo(code,null,true);
+  const node=document.createElement('div');node.className='profile-undo-notice';
+  node.innerHTML='<span class="undo-icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="m5 12 4 4L19 6"/></svg></span><div class="undo-copy" role="status" aria-live="polite"><strong>Employee removed</strong><span></span></div><button type="button"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 14 4 9l5-5M4 9h9a6 6 0 0 1 0 12"/></svg>Undo</button><span class="undo-progress" aria-hidden="true"></span>';
+  const name=row.display_name||code;
+  node.querySelector('.undo-copy span').textContent=name;
+  const button=node.querySelector('button');
+  button.setAttribute('aria-label','Undo removal of '+name);
+  button.disabled=profileArchiveBusy;
+  const notice={node,button,account,deadline:Date.now()+5000,timer:null};
+  profileUndoNotices.set(code,notice);
+  $('profile-undo-stack').append(node);
+  notice.timer=setTimeout(()=>dismissProfileUndo(code,notice),5000);
+  button.addEventListener('click',()=>void undoProfileArchive(code,notice));
+}
+async function refreshProfileArchiveDirectory(){
+  profileRows=null;profileSummary=null;
+  if(currentPage==='profiles')await loadProfiles();
+}
+async function confirmProfileArchive(){
+  const context=profileArchiveContext;
+  if(!context||context.account!==session||session?.role!=='admin'||profileArchiveBusy)return;
+  const {row,archived,account}=context,dialog=$('profile-archive-dialog');
+  setProfileArchiveBusy(true);
+  $('profile-archive-error').classList.add('hidden');
+  $('confirm-profile-archive').textContent=archived?'Restoring…':'Deleting…';
+  try{
+    await api('/api/employee-profiles/'+encodeURIComponent(row.employee_code)+(archived?'/restore':''),{method:archived?'POST':'DELETE'});
+    if(session!==account)return;
+    dismissProfileUndo(row.employee_code,null,true);
+    dialog.close();
+    await refreshProfileArchiveDirectory();
+    if(session!==account)return;
+    if(archived)toast('Employee restored.');else showProfileUndo(row,account);
+  }catch(error){
+    if(session===account){$('profile-archive-error').textContent=error.message;$('profile-archive-error').classList.remove('hidden');}
+  }finally{
+    if(session===account){setProfileArchiveBusy(false);$('confirm-profile-archive').textContent=archived?'Restore':'Delete';}
+  }
+}
+async function undoProfileArchive(code,notice){
+  if(profileUndoNotices.get(code)!==notice||notice.account!==session||session?.role!=='admin')return;
+  if(Date.now()>=notice.deadline){dismissProfileUndo(code,notice);return;}
+  if(profileArchiveBusy)return;
+  const account=session;
+  setProfileArchiveBusy(true);
+  dismissProfileUndo(code,notice);
+  try{
+    await api('/api/employee-profiles/'+encodeURIComponent(code)+'/restore',{method:'POST'});
+    if(session!==account)return;
+    await refreshProfileArchiveDirectory();
+    if(session===account)toast('Employee restored.');
+  }catch(error){
+    if(session===account)toast('Could not undo removal. Restore the employee from Archived employees. '+error.message,true);
+  }finally{if(session===account)setProfileArchiveBusy(false);}
+}
+function refreshProfileSelects(){
+  for(const control of profileSelectControls.values())control.refresh();
+}
+function closeProfileSelects(){
+  for(const control of profileSelectControls.values())control.close();
+}
+function focusProfileField(id){
+  (profileSelectControls.get(id)?.trigger||$(id)).focus();
+}
+// One placement policy for profile dropdowns. Use below-first with a
+// bounded scrollable list for long editable menus; flip only if two rows
+// cannot fit in the viewport below the control.
+function placeProfileMenu(anchor,menu,{maxHeight=Infinity,preferBelow=false,exactWidth=false}={}){
+  const r=anchor.getBoundingClientRect(),margin=8,gap=5;
+  const dialog=$('profile-dialog').getBoundingClientRect();
+  const leftBound=Math.max(margin,dialog.left+margin),rightBound=Math.min(window.innerWidth-margin,dialog.right-margin);
+  const availableWidth=Math.max(0,rightBound-leftBound);
+  const width=Math.min(exactWidth?r.width:Math.max(r.width,Math.min(245,availableWidth)),availableWidth);
+  menu.style.width=width+'px';
+  menu.style.left=Math.max(leftBound,Math.min(r.left,rightBound-width))+'px';
+  menu.style.maxHeight='none';
+  const below=Math.max(0,window.innerHeight-r.bottom-gap-margin),above=Math.max(0,r.top-gap-margin);
+  const desired=Math.min(menu.scrollHeight+2,maxHeight);
+  const up=desired>below&&above>below&&(!preferBelow||below<Math.min(68,desired));
+  const height=Math.min(desired,Math.max(0,up?above:below));
+  menu.dataset.direction=up?'up':'down';
+  menu.style.maxHeight=height+'px';
+  menu.style.top=Math.max(margin,up?r.top-gap-height:r.bottom+gap)+'px';
+}
+// Editable position combobox. No native datalist or browser-stored employee history.
+function initializePositionCombo(){
+  const input=$('profile-position'),field=input.closest('.profile-select-field');
+  const anchor=input.closest('.profile-position-control'),toggle=anchor.querySelector('button');
+  const menu=document.createElement('div');
+  if(typeof menu.showPopover!=='function')return; // Plain editable input fallback.
+  const presets=[...$('profile-position-options').content.querySelectorAll('option')].map(o=>o.value);
+  menu.id='profile-position-menu';menu.className='profile-select-menu profile-position-menu';
+  menu.setAttribute('popover','manual');menu.setAttribute('role','listbox');
+  menu.setAttribute('aria-labelledby','profile-position-label');field.append(menu);
+  input.setAttribute('role','combobox');input.setAttribute('aria-autocomplete','list');
+  input.setAttribute('aria-haspopup','listbox');input.setAttribute('aria-controls',menu.id);
+  input.setAttribute('aria-expanded','false');toggle.setAttribute('aria-controls',menu.id);
+  toggle.setAttribute('aria-expanded','false');toggle.hidden=false;anchor.classList.add('enhanced');
+  let choices=[],active=-1;
+  const opened=()=>menu.matches(':popover-open');
+  const key=s=>String(s||'').trim().toLowerCase();
+  function setActive(index){
+    active=index;
+    choices.forEach((node,i)=>node.toggleAttribute('data-keyboard-active',i===active));
+    if(active>=0&&choices[active]){
+      input.setAttribute('aria-activedescendant',choices[active].id);
+      choices[active].scrollIntoView({block:'nearest'});
+    }else input.removeAttribute('aria-activedescendant');
+  }
+  function choose(value){
+    input.value=value;
+    input.dispatchEvent(new Event('change',{bubbles:true}));
+    close();input.focus({preventScroll:true});
+  }
+  function render(){
+    const typed=input.value.trim(),q=key(typed);
+    const values=new Map();
+    for(const value of [typed,...presets,...(profileRows||[]).map(row=>row.position)]){
+      if(key(value)&&!values.has(key(value)))values.set(key(value),String(value).trim());
+    }
+    const matches=[...values.values()];
+    menu.replaceChildren();choices=[];active=-1;input.removeAttribute('aria-activedescendant');
+    matches.forEach((value,i)=>{
+      const button=document.createElement('button');button.type='button';button.tabIndex=-1;
+      button.id=menu.id+'-option-'+i;button.setAttribute('role','option');
+      button.setAttribute('aria-selected',String(key(value)===q));
+      const label=document.createElement('span');label.textContent=value;
+      button.append(label);
+      // Retain the typed value as a selectable custom title.
+      if(key(value)===q&&!presets.some(p=>key(p)===q)){
+        const custom=document.createElement('span');custom.className='position-custom-caption';custom.textContent='Custom';button.append(custom);
+      }
+      button.addEventListener('pointerdown',event=>event.preventDefault());
+      button.addEventListener('click',()=>choose(value));
+      menu.append(button);choices.push(button);
+    });
+    menu.scrollTop=0;
+  }
+  function place(){placeProfileMenu(anchor,menu,{maxHeight:168,preferBelow:true,exactWidth:true});}
+  function close(){
+    if(opened())menu.hidePopover();
+    input.setAttribute('aria-expanded','false');toggle.setAttribute('aria-expanded','false');
+    toggle.setAttribute('aria-label','Show position suggestions');
+    input.removeAttribute('aria-activedescendant');active=-1;
+  }
+  function open(){
+    if(!opened())closeProfileSelects();
+    render();
+    if(!opened())menu.showPopover();
+    place();input.setAttribute('aria-expanded','true');toggle.setAttribute('aria-expanded','true');
+    toggle.setAttribute('aria-label','Hide position suggestions');
+  }
+  toggle.setAttribute('aria-haspopup','listbox');
+  toggle.addEventListener('pointerdown',event=>event.preventDefault());
+  toggle.addEventListener('keydown',event=>{
+    if(event.key==='ArrowDown'||event.key==='ArrowUp'){
+      event.preventDefault();input.focus({preventScroll:true});if(!opened())open();
+      if(choices.length)setActive(event.key==='ArrowDown'?0:choices.length-1);
+    }
+  });
+  toggle.addEventListener('click',()=>{
+    if(opened())close();else{input.focus({preventScroll:true});open();}
+  });
+  // Typing or clicking the editable text never opens suggestions.
+  input.addEventListener('pointerdown',()=>close());
+  input.addEventListener('input',()=>close());
+  input.addEventListener('blur',()=>close());
+  input.addEventListener('keydown',event=>{
+    if(event.isComposing)return;
+    if(event.key==='ArrowDown'||event.key==='ArrowUp'){
+      if(!opened())return;
+      event.preventDefault();
+      if(choices.length)setActive(active<0?(event.key==='ArrowDown'?0:choices.length-1):
+        Math.max(0,Math.min(choices.length-1,active+(event.key==='ArrowDown'?1:-1))));
+    }else if(event.key==='Enter'&&opened()){
+      event.preventDefault();if(active>=0&&choices[active])choices[active].click();else close();
+    }else if(event.key==='Escape'&&opened()){
+      event.preventDefault();event.stopPropagation();close();
+    }else if(event.key==='Tab')close();
+  });
+  menu.addEventListener('toggle',()=>{
+    if(!opened()){input.setAttribute('aria-expanded','false');toggle.setAttribute('aria-expanded','false');input.removeAttribute('aria-activedescendant');}
+  });
+  profileSelectControls.set(input.id,{trigger:input,anchor,menu,refresh:close,close});
+}
+function initializeProfileSelects(){
+  for(const id of ['profile-type','profile-department']){
+    const select=$(id),field=select.closest('.profile-select-field');
+    const trigger=document.createElement('button'),menu=document.createElement('div');
+    if(typeof menu.showPopover!=='function')continue; // Native select fallback.
+    trigger.type='button';trigger.className='profile-select-trigger';trigger.id=id+'-trigger';
+    trigger.setAttribute('aria-haspopup','listbox');trigger.setAttribute('aria-expanded','false');
+    trigger.setAttribute('aria-labelledby',id+'-label '+id+'-value');
+    trigger.setAttribute('aria-controls',id+'-menu');
+    trigger.innerHTML='<span id="'+id+'-value"></span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg>';
+    menu.id=id+'-menu';menu.className='profile-select-menu';menu.setAttribute('popover','manual');
+    menu.setAttribute('role','listbox');menu.setAttribute('aria-labelledby',id+'-label');
+    const options=[...select.options].filter(option=>option.value).map(option=>{
+      const button=document.createElement('button');button.type='button';button.setAttribute('role','option');button.tabIndex=-1;button.dataset.value=option.value;
+      if(id==='profile-type')button.dataset.category=option.value;
+      const label=document.createElement('span');label.textContent=option.textContent;
+      button.append(label);
+      menu.append(button);
+      button.addEventListener('click',()=>{
+        select.value=option.value;select.dispatchEvent(new Event('change',{bubbles:true}));
+        close(true);
+      });
+      return button;
+    });
+    function refresh(){
+      trigger.querySelector('span').textContent=select.selectedOptions[0]?.textContent||select.options[0].textContent;
+      trigger.dataset.empty=String(!select.value);
+      if(id==='profile-type')trigger.dataset.category=select.value;
+      for(const button of options)button.setAttribute('aria-selected',String(button.dataset.value===select.value));
+    }
+    function place(){placeProfileMenu(trigger,menu);}
+    function close(restoreFocus=false){
+      if(menu.matches(':popover-open'))menu.hidePopover();
+      trigger.setAttribute('aria-expanded','false');
+      if(restoreFocus)trigger.focus({preventScroll:true});
+    }
+    function open(direction=1){
+      if(menu.matches(':popover-open'))return;
+      closeProfileSelects();refresh();menu.showPopover();place();
+      trigger.setAttribute('aria-expanded','true');
+      (options.find(b=>b.dataset.value===select.value)||options[direction<0?options.length-1:0])?.focus({preventScroll:true});
+    }
+    trigger.addEventListener('click',()=>{if(menu.matches(':popover-open'))close(true);else open();});
+    trigger.addEventListener('keydown',event=>{
+      if(['ArrowDown','ArrowUp'].includes(event.key)){event.preventDefault();open(event.key==='ArrowUp'?-1:1);}
+      else if(event.key==='Escape'&&menu.matches(':popover-open')){event.preventDefault();event.stopPropagation();close(true);}
+    });
+    menu.addEventListener('keydown',event=>{
+      const index=options.indexOf(document.activeElement);
+      if(['ArrowDown','ArrowUp','Home','End'].includes(event.key)){
+        event.preventDefault();
+        const next=event.key==='Home'?0:event.key==='End'?options.length-1:Math.max(0,Math.min(options.length-1,index+(event.key==='ArrowDown'?1:-1)));
+        options[next]?.focus();
+      }else if(event.key==='Escape'){event.preventDefault();event.stopPropagation();close(true);}
+      else if(event.key==='Tab'){close(true);}
+    });
+    menu.addEventListener('toggle',()=>trigger.setAttribute('aria-expanded',String(menu.matches(':popover-open'))));
+    select.addEventListener('change',refresh);
+    select.addEventListener('invalid',event=>{
+      event.preventDefault();trigger.setAttribute('aria-invalid','true');trigger.focus();
+      $('profile-error').textContent=id==='profile-type'?'Select an employee category.':'Select a department / unit.';
+      $('profile-error').classList.remove('hidden');
+    });
+    field.append(trigger,menu);field.classList.add('enhanced');select.tabIndex=-1;
+    field.querySelector('label').htmlFor=trigger.id;
+    profileSelectControls.set(id,{trigger,menu,refresh,close});refresh();
+  }
+  initializePositionCombo();
+  // Manual popovers keep the trigger click from being swallowed by the
+  // browser's automatic light-dismiss. Explicit outside clicks still close.
+  document.addEventListener('pointerdown',event=>{
+    for(const control of profileSelectControls.values()){
+      if(control.menu.matches(':popover-open')&&!(control.anchor||control.trigger).contains(event.target)&&!control.menu.contains(event.target))control.close();
+    }
+  },true);
+  $('profile-dialog').addEventListener('cancel',event=>{
+    if([...profileSelectControls.values()].some(c=>c.menu.matches(':popover-open'))){event.preventDefault();closeProfileSelects();}
+  });
+  window.addEventListener('resize',closeProfileSelects);
+  $('profile-dialog').querySelector('.app-dialog-body').addEventListener('scroll',closeProfileSelects,{passive:true});
+}
+// Profile-specific inline validation; native required/maxlength constraints
+// remain as semantics and the API continues to enforce its own validation.
+const profileValidationFields=['profile-id','profile-first','profile-last','profile-middle','profile-suffix','profile-type','profile-department','profile-position'];
+function profileFieldMessage(id){
+  const field=$(id),value=field.value.trim();
+  if(id==='profile-id'){
+    if(profileLockedCode)return '';
+    return /^[A-Za-z0-9._-]{1,64}$/.test(value)?'':'Enter a valid biometric ID.';
+  }
+  const labels={'profile-first':'First name','profile-last':'Last name','profile-middle':'Middle name','profile-suffix':'Suffix','profile-position':'Position'};
+  if(labels[id]){
+    if(!value&&field.required)return labels[id]+' is required.';
+    if(value.length>field.maxLength)return labels[id]+' is too long.';
+    if(/[\x00-\x1f]/.test(value))return 'Remove unsupported characters.';
+    return '';
+  }
+  if(!value||![...field.options].some(option=>option.value===value&&option.value!==''&&!option.disabled))
+    return id==='profile-type'?'Select an employee category.':'Select a department / unit.';
+  return '';
+}
+function setProfileFieldError(id,message){
+  const field=$(id),trigger=profileSelectControls.get(id)?.trigger;
+  const container=field.closest('.profile-select-field')||field.closest('label');
+  let error=$(id+'-error');
+  if(!error){
+    error=document.createElement('div');error.id=id+'-error';error.className='profile-field-error';error.setAttribute('aria-live','polite');
+    error.innerHTML='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 7v6M12 16h.01"/></svg><span></span>';
+    container.append(error);
+  }
+  error.querySelector('span').textContent=message;error.hidden=!message;
+  for(const node of [field,trigger].filter(Boolean)){
+    if(message){node.setAttribute('aria-invalid','true');node.setAttribute('aria-describedby',error.id);}
+    else{node.removeAttribute('aria-invalid');node.removeAttribute('aria-describedby');}
+  }
+}
+function resetProfileValidation(){
+  for(const id of profileValidationFields)setProfileFieldError(id,'');
+}
+function validateProfileForm(){
+  let first=null;
+  for(const id of profileValidationFields){
+    const message=profileFieldMessage(id);setProfileFieldError(id,message);
+    if(message&&!first)first=id;
+  }
+  if(first){closeProfileSelects();focusProfileField(first);return false;}
+  return true;
+}
+function initializeProfileValidation(){
+  for(const id of profileValidationFields){
+    const field=$(id);
+    const update=()=>{
+      if(field.getAttribute('aria-invalid')==='true')setProfileFieldError(id,profileFieldMessage(id));
+    };
+    field.addEventListener('input',update);field.addEventListener('change',update);
+  }
+  resetProfileValidation();
+}
+async function openProfile(code=null){
+  if(session?.role!=='admin')return;
+  const token=++profileFormToken;
+  profileReturn={page:currentPage,employee:selectedEmployee,month:$('detail-month').value};
+  profileEditing=null;profileVersion=null;profileSyncAuthorized=true;profileLockedCode=null;
+  $('profile-dialog').dataset.profileMode=code?'edit':'register';
+  $('profile-form').reset();$('profile-id').readOnly=false;$('profile-id-display').textContent='';
+  resetProfileValidation();
+  $('profile-error').classList.add('hidden');$('save-profile').disabled=false;
+  $('profile-heading').textContent='Register employee';$('save-profile').textContent='Register employee';
+  try{
+    if(code){
+      const data=await api('/api/employee-profiles/'+encodeURIComponent(code));
+      if(token!==profileFormToken || session?.role!=='admin')return;
+      profileEditing=data.profile_complete?code:null;profileVersion=data.version;
+      profileLockedCode=code;$('profile-id').value=code;$('profile-id').readOnly=true;$('profile-id-display').textContent=code;
+      for(const [field,key] of [['first','first_name'],['middle','middle_name'],['last','last_name'],['suffix','suffix'],['type','employment_type'],['department','department'],['position','position']])
+        $('profile-'+field).value=data[key]||'';
+      const department=String(data.department||'').trim().toLowerCase();
+      const official=[...$('profile-department').options].find(option=>{
+        if(!option.value)return false;
+        const full=option.value.toLowerCase(),code=full.match(/\(([^)]+)\)$/)?.[1];
+        return department===full||department===code||department===full.replace(/\s*\([^)]+\)$/,'');
+      });
+      $('profile-department').value=official?.value||'';
+      // Existing explicitly paused profiles stay paused; new confirmed profiles default to collection.
+      profileSyncAuthorized=data.profile_complete?data.sync_authorized:true;
+      if(!data.profile_complete && data.suggested_name){
+        for(const [field,key] of [['first','first_name'],['middle','middle_name'],['last','last_name'],['suffix','suffix']]){
+          const node=$('profile-'+field);node.value=data.suggested_name[key]||'';
+        }
+      }
+      $('profile-heading').textContent=data.profile_complete?'Edit employee profile':'Complete employee profile';
+      $('save-profile').textContent=data.profile_complete?'Save changes':'Complete profile';
+    }
+    refreshProfileSelects();
+    $('profile-dialog').showModal();
+    focusProfileField(code?($('profile-first').value&&$('profile-last').value?'profile-type':'profile-first'):'profile-id');
+  }catch(error){toast(error.message,true);}
+}
+async function saveProfile(event){
   event.preventDefault();
-  if (!pendingVoid) return;
-  const context = session; const id = pendingVoid;
-  $('confirm-void').disabled = true;
-  try {
-    await api('/api/activities/' + id + '/void', {method:'POST', body:JSON.stringify({reason:$('void-reason').value})});
-    if (context !== session) return;
-    $('void-dialog').close(); pendingVoid = null; toast('Reference voided. History retained.');
-    loadFieldwork(); loadOverview();
-  } catch (error) { if (context === session) toast(error.message, true); }
-  finally { $('confirm-void').disabled = false; }
-}
-async function loadEmployees(openMonitor = false) {
-  const context = session; const requestId = ++employeeRequest;
-  try {
-    const result = await api('/api/employees');
-    if (context !== session || requestId !== employeeRequest) return;
-    const selected = $('dtr-employee').value;
-    $('known-employees').innerHTML = result.staff.map(item => '<option value="' + escapeHtml(item.employee_code) + '">' + escapeHtml(item.display_name) + '</option>').join('');
-    $('dtr-employee').innerHTML = '<option value="">Choose employee ID</option>' + result.staff.map(item => '<option value="' + escapeHtml(item.employee_code) + '">' + escapeHtml(item.display_name ? item.display_name + ' · ' + item.employee_code : item.employee_code) + '</option>').join('');
-    if (result.items.includes(selected)) $('dtr-employee').value = selected;
-    else if (openMonitor && result.items.length) $('dtr-employee').value = result.items[0];
-    if (openMonitor && currentPage === 'dtr') loadMonitor();
-  } catch (error) { if (context === session && requestId === employeeRequest) toast(error.message, true); }
-}
-async function loadMonitor() {
-  const context = session; const requestId = ++monitorRequest;
-  const employee = $('dtr-employee').value; const month = $('dtr-month').value;
-  $('dtr-rows').innerHTML = '<tr><td colspan="4">' + (employee ? 'Loading daily records…' : 'No employee selected. Import scans or add an existing reference first.') + '</td></tr>';
-  $('dtr-summary').textContent = 'Choose an employee and month to compare with the office DTR.';
-  if (!employee || !month) return;
-  try {
-    const result = await api('/api/dtr/monitor?' + new URLSearchParams({employee_code:employee, month}));
-    if (context !== session || requestId !== monitorRequest) return;
-    $('dtr-summary').textContent = (result.display_name ? result.display_name + ' · ' : '') + employee + ' · ' + month + ' · Scans: ' + result.summary.scans + ' · Days with scans: ' + result.summary.days_with_scans + ' · References: ' + result.summary.activity_records;
-    $('dtr-rows').innerHTML = result.days.map(day => {
-      const scans = day.scans.length ? '<div class="scan-times">' + day.scans.map(scan => '<span class="scan-time" title="' + escapeHtml('Device ' + scan.device_id + ' · Status ' + scan.status_code + ' · Verify ' + scan.verification_code + ' · Work code ' + scan.work_code + (scan.work_label ? ' · ' + scan.work_label : ' (unmapped)')) + '">' + escapeHtml(scan.happened_at.slice(11)) + (scan.work_label ? '<small class="scan-work-label">' + escapeHtml(scan.work_label) + '</small>' : '') + '</span>').join('') + '</div>' : '—';
-      const references = day.activities.length ? day.activities.map(item => '<div class="monitor-reference"><strong>' + escapeHtml(item.category) + (item.reference ? ' · ' + escapeHtml(item.reference) : '') + '</strong><span>' + escapeHtml(item.purpose) + '</span></div>').join('') : '—';
-      const label = day.coverage === 'scans' ? 'Device scans' : day.coverage === 'reference_only' ? 'Reference only' : 'No records';
-      return '<tr><td><strong>' + escapeHtml(day.date.slice(8)) + '</strong><span class="scan-day">' + escapeHtml(day.day) + '</span></td><td>' + scans + '</td><td>' + references + '</td><td><span class="tag ' + (day.coverage === 'no_records' ? '' : 'blue-tag') + '">' + label + '</span></td></tr>';
-    }).join('');
-  } catch (error) {
-    if (context !== session || requestId !== monitorRequest) return;
-    $('dtr-rows').innerHTML = '<tr><td colspan="4">Daily records could not be loaded. Try again.</td></tr>'; toast(error.message, true);
+  if(session?.role!=='admin')return;
+  $('profile-error').classList.add('hidden');
+  if(!validateProfileForm())return;
+  const account=session,code=profileLockedCode??$('profile-id').value.trim();
+  const payload={};
+  for(const [field,key] of [['first','first_name'],['middle','middle_name'],['last','last_name'],['suffix','suffix'],['type','employment_type'],['department','department'],['position','position']])
+    payload[key]=$('profile-'+field).value.trim();
+  payload.sync_authorized=profileSyncAuthorized;
+  if([payload.first_name,payload.middle_name,payload.last_name,payload.suffix].filter(Boolean).join(' ').length>140){
+    setProfileFieldError('profile-last','The complete name must be at most 140 characters.');focusProfileField('profile-last');return;
   }
+  // Saving a fixed existing identity is the administrator's approval.
+  // Manual entry of an otherwise unverified ID still needs explicit confirmation.
+  if(!profileLockedCode && !window.confirm('Confirm that this biometric ID is already enrolled on the K14 and the employee name is correct.'))return;
+  payload.device_enrollment_confirmed=true;
+  const editing=profileEditing;
+  if(editing)payload.version=profileVersion;else payload.employee_code=code;
+  $('save-profile').disabled=true;$('profile-error').classList.add('hidden');
+  try{
+    await api('/api/employee-profiles'+(editing?'/'+encodeURIComponent(editing):''),{method:editing?'PUT':'POST',body:JSON.stringify(payload)});
+    if(session!==account)return;
+    $('profile-dialog').close();
+    toast(editing?'Employee profile updated.':'Employee profile registered.');
+    if(!editing){profileCategory='All';profileArchived=false;profileRows=null;profileSummary=null;$('profile-search').value='';}
+    if(profileReturn?.page==='employees'){
+      const previous=profileReturn;
+      await loadRegister();
+      if(previous.employee){await openEmployee(previous.employee);setAttendanceMonth('detail-month',previous.month);await loadDetail();}
+    }else await navigate('profiles');
+  }catch(error){
+    if(session===account){$('profile-error').textContent=error.message;$('profile-error').classList.remove('hidden');}
+  }finally{$('save-profile').disabled=false;}
 }
-
-function showInlineError(id, message) {
-  $(id).textContent = message; $(id).classList.remove('hidden');
+function editIcon(){
+  return '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" aria-hidden="true"><path d="m15 5 4 4M4 20l4-1 12-12a2.8 2.8 0 0 0-4-4L4 15z"/></svg>';
 }
-function renderStaff() {
-  const query = $('staff-search').value.trim().toLowerCase();
-  const rows = staffRows.filter(item => (item.employee_code + ' ' + item.display_name).toLowerCase().includes(query));
-  $('staff-rows').innerHTML = rows.length ? rows.map(item => '<tr><td>' + escapeHtml(item.employee_code) + '</td><td><strong>' + escapeHtml(item.display_name || 'Name not imported') + '</strong></td><td>' + escapeHtml(item.department || '—') + '</td><td>' + (session?.role === 'admin' ? '<button class="text-button" type="button" data-staff-edit="' + escapeHtml(item.employee_code) + '">Edit</button>' : '') + '</td></tr>').join('') : '<tr><td colspan="4">No staff found. Import a staff report or attendance log to get started.</td></tr>';
+function activityScanCell(day){
+  const periods=day.aja_periods||[];
+  return ['out','in'].map(key=>'<td class="activity-evidence aja-'+key+'">'+(periods.length?periods.map(period=>{
+    const entry=period[key];
+    return '<div class="aja-time '+(entry?'has-aja':'aja-missing')+'" title="'+esc((entry?.origin||'Missing entry')+(period.review?' · Needs review':''))+'">'+(entry?'<span class="time-value">'+esc(entry.time)+'</span>':period.review?'<span class="no-time">—</span>':'—')+'</div>';
+  }).join(''):'<span class="empty-cell">—</span>')+'</td>').join('');
 }
-async function loadRegistry() {
-  const context = session; const requestId = ++registryRequest;
-  $('staff-error').classList.add('hidden');
-  $('staff-rows').innerHTML = '<tr><td colspan="4">Loading staff…</td></tr>';
-  try {
-    const [employees, codes] = await Promise.all([api('/api/employees'), api('/api/work-codes')]);
-    if (context !== session || requestId !== registryRequest) return;
-    staffRows = employees.staff; workRows = codes.items; renderStaff();
-    $('work-code-items').innerHTML = workRows.length ? workRows.map(item => '<div class="request"><div class="request-head"><strong>' + escapeHtml(item.work_code) + ' · ' + escapeHtml(item.label || 'Unmapped') + '</strong>' + (context.role === 'admin' ? '<button class="text-button" type="button" data-work-device="' + escapeHtml(item.device_id) + '" data-work-code="' + escapeHtml(item.work_code) + '">Map code</button>' : '') + '</div><p>Device ' + escapeHtml(item.device_id) + ' · ' + Number(item.scan_count) + ' scans · ' + escapeHtml(item.activity_type) + '</p></div>').join('') : '<div class="empty">No work codes yet. Import attendance to see the codes recorded in scans.</div>';
-  } catch (error) {
-    if (context !== session || requestId !== registryRequest) return;
-    $('staff-rows').innerHTML = ''; $('work-code-items').innerHTML = '';
-    showInlineError('staff-error', error.message);
+function travelLabel(day){
+  return day.travel_reference?'Travel Order No.: '+day.travel_reference:'Travel Order';
+}
+function regularReviewCandidates(day){
+  // Keep the existing admin-initiated four-punch review for raw/unclassified
+  // codes; explicitly classified official activity scans are never included.
+  return day.scans.filter(event=>
+    !['AJA','Travel Order','Fieldwork','Official Business'].includes(event.activity_type));
+}
+function provisionalOrdinarySlots(day){
+  // Show evidence-only previews when exactly four unambiguous non-activity
+  // source scans exist; never alter a review or calculate attendance credit.
+  const candidates=regularReviewCandidates(day);
+  if(candidates.length!==4 || day.is_future)return null;
+  const stamps=candidates.map(event=>event.happened_at);
+  if(new Set(stamps).size!==4)return null;
+  const ordered=[...candidates].sort((a,b)=>a.happened_at.localeCompare(b.happened_at));
+  // Provisional only; the administrator is still responsible for confirming slots.
+  return Object.fromEntries(['am_in','am_out','pm_in','pm_out'].map((key,i)=>[key,ordered[i]]));
+}
+function unassignedPunches(day){
+  const assigned=new Set(Object.values(day.slots).filter(Boolean).map(event=>event.id));
+  const other=day.scans.filter(event=>!assigned.has(event.id) &&
+    !['AJA','Travel Order'].includes(event.activity_type));
+  if(!other.length)return '';
+  return '<span class="raw-punch-evidence" title="Original biometric timestamps, not automatically approved for AM/PM">' +
+    '<b>Biometric scans ('+other.length+')</b> '+other.map(event=>
+    '<span class="raw-punch-time">'+esc(event.happened_at.slice(11,16))+'</span>').join('')+
+    '</span>';
+}
+function durationText(seconds){
+  if (!Number.isFinite(seconds)) return '—';
+  const whole=Math.trunc(Math.abs(seconds));
+  const hours=Math.floor(whole/3600), minutes=Math.floor(whole%3600/60), remainder=whole%60;
+  return (seconds<0?'-':'')+[hours,minutes,remainder].map(part=>String(part).padStart(2,'0')).join(':');
+}
+function attendanceTimeCells(day){
+  if(day.travel_order){
+    return '<td colspan="4" class="time-slot slot-travel"><span class="travel-status" title="'+esc((day.travel_source_references||[]).join(' · ')||travelLabel(day))+'">'+esc(travelLabel(day).toUpperCase())+'</span></td>';
   }
-}
-function editStaff(code = '') {
-  const item = staffRows.find(row => row.employee_code === code);
-  $('staff-form').reset(); $('staff-save-error').classList.add('hidden');
-  $('staff-code').value = code; $('staff-code').readOnly = !!code;
-  $('staff-name').value = item?.display_name || '';
-  $('staff-department').value = item?.department || '';
-  openDialog('staff-dialog');
-}
-async function saveStaff(event) {
-  event.preventDefault(); const context = session;
-  $('save-staff').disabled = true; $('staff-save-error').classList.add('hidden');
-  try {
-    await api('/api/employees/' + encodeURIComponent($('staff-code').value.trim()), {method:'PUT',body:JSON.stringify({display_name:$('staff-name').value,department:$('staff-department').value})});
-    if (context !== session) return;
-    $('staff-dialog').close(); toast('Staff details saved.'); loadRegistry(); loadOverview();
-  } catch (error) { if (context === session) showInlineError('staff-save-error', error.message); }
-  finally { $('save-staff').disabled = false; }
-}
-function editWorkCode(device = '', code = '') {
-  const item = workRows.find(row => row.device_id === device && row.work_code === code);
-  $('work-code-form').reset(); $('work-save-error').classList.add('hidden');
-  $('work-device').value = device; $('work-code').value = code;
-  $('work-device').readOnly = !!device; $('work-code').readOnly = !!device;
-  $('work-label').value = item?.label || ''; $('work-type').value = item?.activity_type || 'Unclassified';
-  openDialog('work-code-dialog');
-}
-async function saveWorkCode(event) {
-  event.preventDefault(); const context = session;
-  $('save-work-code').disabled = true; $('work-save-error').classList.add('hidden');
-  try {
-    await api('/api/work-codes/' + encodeURIComponent($('work-device').value.trim()) + '/' + encodeURIComponent($('work-code').value.trim()), {method:'PUT',body:JSON.stringify({label:$('work-label').value,activity_type:$('work-type').value})});
-    if (context !== session) return;
-    $('work-code-dialog').close(); toast('Work code mapping saved.'); loadRegistry();
-  } catch (error) { if (context === session) showInlineError('work-save-error', error.message); }
-  finally { $('save-work-code').disabled = false; }
-}
-function setRosterFile(file) {
-  rosterFile = file || null; rosterVersion++; rosterReady = false;
-  $('roster-selected').textContent = file ? 'Selected: ' + file.name : 'No staff file selected';
-  $('import-staff').disabled = true; $('roster-preview').innerHTML = ''; $('roster-preview').classList.add('hidden');
-  $('roster-error').classList.add('hidden');
-}
-function openStaffImport(file = null) {
-  $('staff-file').value = ''; setRosterFile(file); openDialog('staff-import-dialog');
-}
-async function uploadRoster(previewOnly) {
-  if (rosterBusy) return;
-  if (!rosterFile) { showInlineError('roster-error', 'Choose the K14 .xls report or a staff CSV first.'); return; }
-  if (!previewOnly && !rosterReady) return;
-  const context = session; const version = rosterVersion;
-  const data = new FormData(); data.append('file', rosterFile);
-  rosterBusy = true; $('preview-staff').disabled = true; $('import-staff').disabled = true;
-  $('roster-error').classList.add('hidden');
-  try {
-    const result = await api('/api/employees/import' + (previewOnly ? '/preview' : ''), {method:'POST',body:data});
-    if (context !== session || version !== rosterVersion) return;
-    rosterReady = previewOnly && result.counts.new + result.counts.fill > 0;
-    $('roster-preview').classList.remove('hidden');
-    const counts = result.counts;
-    $('roster-preview').innerHTML = '<p class="inline-help">' + (previewOnly ? 'Preview: ' : 'Import complete: ') + Number(counts.new) + ' new · ' + Number(counts.fill) + ' fill missing details · ' + Number(counts.unchanged) + ' unchanged · ' + Number(counts.conflict) + ' conflicts skipped.</p>';
-    if (previewOnly) {
-      $('roster-preview').innerHTML += '<div class="table-scroll"><table><thead><tr><th>Device ID</th><th>Staff name</th><th>Result</th></tr></thead><tbody>' + result.items.map(item => '<tr><td>' + escapeHtml(item.employee_code) + '</td><td>' + escapeHtml(item.display_name) + (item.change === 'conflict' ? '<span class="scan-day">Existing: ' + escapeHtml(item.existing_name) + '</span>' : '') + '</td><td>' + escapeHtml(item.change) + '</td></tr>').join('') + '</tbody></table></div><p class="table-foot">Preview shows up to 100 of ' + Number(result.total) + ' staff. Conflicts keep the existing details; use Edit after checking the correct ID.</p>';
-    } else {
-      $('roster-preview').innerHTML += '<p>Names saved to the local database. Attendance scans are unchanged.</p>';
-      loadRegistry(); loadOverview();
-    }
-  } catch (error) {
-    if (context !== session || version !== rosterVersion) return;
-    rosterReady = false; showInlineError('roster-error', error.message);
-  } finally {
-    rosterBusy = false; $('preview-staff').disabled = session?.role !== 'admin'; $('import-staff').disabled = !rosterReady || session?.role !== 'admin';
+  if(day.documented_status){
+    return '<td colspan="4" class="time-slot '+(day.documented_status==='ABSENT'?'slot-missing':'slot-leave')+'"><span class="leave-status">'+esc(day.documented_status.toUpperCase())+'</span></td>';
   }
+  if(day.leave_status){
+    return '<td colspan="4" class="time-slot slot-leave"><span class="leave-status">'+esc(day.leave_status.toUpperCase())+'</span></td>';
+  }
+  if(day.aja_covered_slots?.includes('pm_in') && day.aja_covered_slots?.includes('pm_out')){
+    const period=day.aja_periods?.[0], start=period?.out?.time, end=period?.in?.time;
+    return slotCell(day,'am_in')+slotCell(day,'am_out')+
+      '<td colspan="2" class="time-slot slot-aja slot-aja-covered" title="Documented AJA covers both PM slots; no office return recorded"><span class="aja-coverage-status">AJA COVERAGE</span>'+(start&&end?'<span class="aja-coverage-caption">Until '+esc(end.slice(0,5))+'</span>':'')+'</td>';
+  }
+  const holiday=day.calendar?.holiday_name;
+  const calendarLabel=holiday||(day.is_weekend?(day.day==='Sat'?'Saturday':'Sunday'):'');
+  // Merge only confirmed empty calendar days. Never hide recorded punches,
+  // approved time entries, AJA evidence, or unresolved review indicators.
+  if(calendarLabel && day.has_attendance_entries===false &&
+      day.display_remark===calendarLabel && !(day.remark_issues||[]).length &&
+      !(day.scans||[]).length && !Object.values(day.display_slots||day.slots||{}).some(Boolean) &&
+      !(day.aja_periods||[]).length){
+    return '<td colspan="4" class="time-slot slot-calendar '+(holiday?'slot-holiday':'slot-neutral')+'"><span class="calendar-status">'+esc(calendarLabel.toUpperCase())+'</span></td>';
+  }
+  return ['am_in','am_out','pm_in','pm_out'].map(key=>slotCell(day,key)).join('');
 }
-
-async function initialize() {
-  hydrateIcons();
-  $('today').textContent = new Date().toLocaleDateString('en-PH', {timeZone:'Asia/Manila',day:'numeric',month:'long',year:'numeric'});
-  document.addEventListener('click', event => {
-    const button = event.target.closest('button');
-    if (!button) return;
-    if (button.hasAttribute('data-help')) openDialog('help-dialog');
-    if (button.dataset.close) $(button.dataset.close).close();
-    if (button.id === 'view-imported') $('filter-form').reset();
-    if (button.dataset.page || button.dataset.go) navigate(button.dataset.page || button.dataset.go);
-    if (button.dataset.void) openVoid(button);
-    if (button.dataset.staffEdit) editStaff(button.dataset.staffEdit);
-    if (button.dataset.workDevice) editWorkCode(button.dataset.workDevice, button.dataset.workCode);
-    if (button.id === 'report-staff') openStaffImport(selectedFile);
+function manilaClock(){return new Intl.DateTimeFormat('sv-SE',{timeZone:'Asia/Manila',year:'numeric',month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit',second:'2-digit',hourCycle:'h23'}).format(new Date());}
+function embeddedAja(day,key){
+  // Use the IN cell as the period's AJA coverage marker. Keep regular OUT
+  // clocks normal, except an AM OUT at departure or covered by a cross-noon AJA.
+  if(day.travel_order||day.leave_status||day.is_future)return [];
+  const slots=day.display_slots||{},clock=slots[key]?.happened_at?.slice(11,19);
+  if(!clock)return [];
+  const prefix=key.slice(0,2), start=slots[prefix+'_in']?.happened_at?.slice(11,19),end=slots[prefix+'_out']?.happened_at?.slice(11,19);
+  const now=manilaClock();
+  return (day.aja_periods||[]).filter(p=>{
+    if(p.review||!p.out?.time||!p.in?.time||p.out.time>=p.in.time||day.date+' '+p.in.time>now)return false;
+    const a=p.out.time,b=p.in.time;
+    // Strict overlap excludes a morning pair ending exactly at AJA departure.
+    const overlap=start&&end&&start<end&&a<end&&start<b;
+    const endpoint=(a<=clock&&clock<=b)||clock.slice(0,5)===a.slice(0,5)||clock.slice(0,5)===b.slice(0,5);
+    if(key==='pm_out')return false;
+    if(key==='am_out')return clock.slice(0,5)===a.slice(0,5)||(a<'12:00:00'&&b>'12:00:00'&&a<=clock&&clock<=b);
+    return overlap||endpoint;
   });
-  document.querySelectorAll('dialog').forEach(dialog => {
-    dialog.addEventListener('click', event => {
-      const box = dialog.getBoundingClientRect();
-      if (event.target === dialog && (event.clientX < box.left || event.clientX > box.right || event.clientY < box.top || event.clientY > box.bottom)) dialog.close();
+}
+function slotCell(day,key){
+  const event=day.display_slots?day.display_slots[key]:(day.slots[key]||provisionalOrdinarySlots(day)?.[key]);
+  const suggestion=day.historical_suggestions?.[key];
+  if(!event&&suggestion){
+    return '<td class="time-slot slot-suggested" title="'+esc('Original biometric scan '+suggestion.time+'; device state '+suggestion.device_slot.replace('_',' ').toUpperCase()+'; proposed placement only. HR confirmation required.')+'"><span class="time-value">'+esc(suggestion.time)+'</span><span class="suggested-caption">Suggested</span></td>';
+  }
+  const origin=event?.origin||(day.slots[key]?'reviewed':'biometric');
+  const tone=day.tone==='holiday'?'holiday':
+    event?(day.monitoring?.remarks==='Future entry'&&event.happened_at>manilaClock()?'neutral':origin==='manual_sheet'?'sheet':(origin==='reviewed'||origin==='hr_approved')?'entry':'provisional'):
+      (day.is_future||day.is_weekend?'neutral':'missing');
+  const label=origin==='manual_sheet'?'Sheet':origin==='reviewed'?'HR':'Bio';
+  const hint=event?event.happened_at.slice(11)+' · '+(origin==='manual_sheet'?'Manual DTR source':origin==='reviewed'?'Reviewed selection':origin==='hr_approved'?'HR-approved adjustment':'Original biometric time; observed AM/PM placement')+
+    (event.verified_slot?' · Device state: '+event.verified_slot.replace('_',' ').toUpperCase():'')+
+    (event.work_code_conflict?' · Work code conflict':event.work_code_pending?' · Work code awaiting synchronization':event.work_code!==undefined&&event.work_code!==''?' · Work code '+event.work_code:event.k14_state_pending?' · Work code not yet available':''):'No entry';
+  const aja=embeddedAja(day,key);
+  const ajaHint=aja.length?'Regular clock retained; attendance period includes AJA '+aja.map(p=>p.out.time.slice(0,5)+'–'+p.in.time.slice(0,5)).join(' · '):'';
+  const departure=aja.some(p=>p.out.time.slice(0,5)===event?.happened_at?.slice(11,16));
+  return '<td class="time-slot slot-'+(aja.length?'aja slot-aja-inline':tone)+'" data-origin="'+esc(event?origin:'')+'" title="'+esc([hint,ajaHint].filter(Boolean).join(' · '))+'">'+(event?
+    '<span class="time-value">'+esc(event.happened_at.slice(11,19))+'</span>'+(departure?'<span class="aja-coverage-caption">AJA OUT</span>':aja.length?'<span class="aja-coverage-caption">AJA coverage</span>':''):
+    '<span class="no-time">—</span>')+'</td>';
+}
+async function loadDetail({quiet=false}={}){
+  if (!selectedEmployee) return;
+  const serial=++detailRequest,month=$('detail-month').value||currentMonth(),code=selectedEmployee;
+  if(!quiet)$('daily-rows').innerHTML='<tr><td colspan="13" class="table-empty">Loading attendance…</td></tr>';
+  try{
+    const data=await api('/api/dtr/monitor?'+new URLSearchParams({employee_code:code,month}));
+    if(serial!==detailRequest || code!==selectedEmployee || month!==$('detail-month').value || currentPage!=='employees' || !session)return;
+    if(quiet && document.querySelectorAll('dialog[open]').length)return;
+    activeDtr=data;
+    selectedName=data.display_name||'Name not synchronized';
+    setTextIfChanged($('detail-name'),selectedName);
+    setAttrIfChanged($('detail-name'),'title',data.name_source==='device'?'Name synchronized from K14 device; HR profile is separate':'Employee attendance');
+    setTextIfChanged($('detail-department'),departmentLabel(data.department));
+    setHtmlIfChanged($('detail-category'),categoryBadge(data.employment_type));
+    const scroll=$('daily-table-wrap').scrollTop;
+    const changed=setHtmlIfChanged($('daily-rows'),data.days.map(day=>{
+      const metrics=day.monitoring||{total_seconds:day.daily_total_seconds,undertime_seconds:day.review.undertime_minutes===null?null:day.review.undertime_minutes*60,overtime_seconds:null,remarks:'For review'};
+      const calendarLabel=day.calendar.holiday_name||(day.is_weekend?(day.day==='Sat'?'Saturday':'Sunday'):'');
+      const ut=displayUndertimeSeconds(day);
+      const estimatedUt=['documented_partial','documented_conflict'].includes(metrics.undertime_origin);
+      const utTone=ut==null?'duration-muted':ut>0?'duration-positive':'duration-muted';
+      const otTone=metrics.overtime_seconds>0?'duration-positive':'duration-muted';
+      const status=metrics.remarks;
+      const visibleStatus=day.travel_order
+        ? (day.display_remark||(['Source difference','Future entry'].includes(status)?'Review':'Travel Order'))
+        : (day.display_remark||(!day.has_attendance_entries&&calendarLabel?calendarLabel:status==='Source difference'?'Review':status));
+      const unassigned=day.display_unassigned_count??day.unassigned_count;
+      const assignedIds=new Set(Object.values(day.display_slots||{}).filter(Boolean).map(x=>x.id));
+      const rawHint=day.scans.filter(x=>!assignedIds.has(x.id)&&!['AJA','Travel Order','Fieldwork','Official Business'].includes(x.activity_type)).map(x=>x.happened_at.slice(11,19)+(x.k14_punch_type!=null?' · State '+x.k14_punch_type:'')).join(' | ');
+      const sourceLabels={am_in:'AM In',am_out:'AM Out',pm_in:'PM In',pm_out:'PM Out'};
+      const differences=(day.source_differences||[]).map(key=>sourceLabels[key]||key);
+      const detail=[estimatedUt?'Undertime based on recorded hours; verify before final DTR':status,...(day.remark_issues||[]),
+        (day.missing_entries||[]).length?'Missing: '+day.missing_entries.join(', '):'',
+        differences.length?'Biometric preferred over sheet: '+differences.join(', '):'',
+        day.calendar.holiday_name,day.is_weekend?(day.day==='Sat'?'Saturday':'Sunday'):'',day.review.remark,
+        unassigned?'Unassigned punches: '+(rawHint||unassigned):''].filter(Boolean).join(' · ');
+      const kind=day.documented_status?(day.documented_status==='ABSENT'?'missing':'leave'):day.leave_status?'leave':['Complete','Present'].includes(visibleStatus)?'complete':['Undertime','Undertime (provisional)'].includes(visibleStatus)?'undertime':visibleStatus==='Undertime for review'?'conflict':visibleStatus==='Overtime'?'overtime':visibleStatus==='Travel Order'?'travel':visibleStatus==='AJA'?'aja':visibleStatus==='In progress'?'progress':visibleStatus==='Invalid time sequence'?'missing':visibleStatus==='Incomplete AJA'?'aja':visibleStatus==='Travel Order conflict'?'travel':visibleStatus==='Hours for review'?'pending':(day.remark_issues||[]).length||/^(Missing |Incomplete|Review|Future entry|For review)/.test(visibleStatus)?'conflict':visibleStatus==='No entry'?'missing':!day.has_attendance_entries&&day.calendar.holiday_name?'holiday':['Saturday','Sunday','Weekend'].includes(visibleStatus)?'weekend':'pending';
+      return '<tr class="day-row day-'+esc(day.tone)+'" data-date="'+esc(day.date)+'">'+
+        '<td class="dtr-date'+(day.is_weekend&&!day.calendar.holiday_name?' calendar-weekend':'')+'"'+(calendarLabel?' title="'+esc(calendarLabel)+'"':'')+'><strong>'+esc(day.date.slice(8))+'</strong><span>'+esc(day.day)+'</span></td>'+
+        attendanceTimeCells(day)+
+        '<td class="daily-total-value" title="'+esc(estimatedUt?'Documented complete pairs only; missing or unmatched punches need verification':metrics.metrics_origin==='template_recalculated'?'Recalculated using the existing DTR template and resolved attendance times':metrics.metrics_origin==='manual_sheet'?'Manual DTR calculated result':'Elapsed AM + PM time; '+(metrics.total_seconds??'unknown')+' seconds')+'">'+durationText(metrics.total_seconds)+'</td>'+
+        '<td class="undertime-value '+utTone+'" title="'+esc(day.leave_status?'Not applicable on recorded leave':day.aja_covered_slots?.length&&ut==null?'AJA coverage recorded; hours not automatically credited':calendarLabel?'Not applicable on weekends and holidays':ut==null?'For review':estimatedUt?'Based on recorded hours; verify missing or unmatched punches before payroll':metrics.undertime_origin==='reviewed'?'Saved HR undertime override':metrics.undertime_origin==='template_recalculated'?'Recalculated from resolved DTR time entries':'Available DTR undertime')+'">'+(ut==null?'—':Math.floor(ut/3600))+'</td>'+
+        '<td class="undertime-value '+utTone+'">'+(ut==null?'—':String(Math.floor(ut%3600/60)).padStart(2,'0'))+'</td>'+
+        '<td class="overtime-value '+otTone+'" title="'+esc(metrics.metrics_origin==='template_recalculated'?'Recalculated DTR excess hours; not payroll overtime approval':'Manual DTR overtime result')+'">'+durationText(metrics.overtime_seconds)+'</td>'+
+        activityScanCell(day)+'<td class="day-activities">'+(visibleStatus?'<span title="'+esc(detail)+'" class="monitor-remark remark-'+kind+'">'+esc(visibleStatus==='Undertime (provisional)'?'Undertime':visibleStatus)+'</span>':'<span class="empty-cell">—</span>')+'</td>'+
+        '<td class="day-action"><button type="button" class="button outline edit-day" data-edit-day="'+esc(day.date)+'" aria-label="'+(session.role==='admin'?'Edit':'View')+' attendance for '+esc(day.date)+'">'+editIcon()+(session.role==='admin'?'Edit':'View')+'</button></td></tr>';
+    }).join(''));
+    if(changed)$('daily-table-wrap').scrollTop=scroll;
+  }catch(error){
+    if(serial!==detailRequest || code!==selectedEmployee || currentPage!=='employees' || !session)return;
+    if(!quiet){$('daily-rows').innerHTML='<tr><td colspan="13" class="table-empty">Unable to load attendance.</td></tr>';toast(error.message,true);}
+  }
+}
+const REVIEW_CLOCKS=['am_in','am_out','pm_in','pm_out','aja_out','aja_in'];
+let pickerTarget=null;
+function clockInput(key){return $('clock-'+key.replaceAll('_','-'));}
+function normalizedClock(value){
+  const raw=value.trim();
+  if(!raw)return '';
+  const m=/^([01]\d|2[0-3]):([0-5]\d)(?::([0-5]\d))?$/.exec(raw);
+  return m?m[1]+':'+m[2]+':'+(m[3]||'00'):null;
+}
+function clockAdjustments(context){
+  const approved={...(context.day.review.approved_times||{})};
+  for(const key of REVIEW_CLOCKS){
+    const input=clockInput(key);
+    if(input.disabled)continue;
+    const value=normalizedClock(input.value);
+    if(value===null)return null;
+    if(value===context.initialClocks[key])continue;
+    if(value)approved[key]=value;else delete approved[key];
+  }
+  return approved;
+}
+function closeClockPicker(){
+  if(pickerTarget)document.querySelector('[data-clock-pick="'+pickerTarget+'"]')?.setAttribute('aria-expanded','false');
+  pickerTarget=null;$('clock-picker').classList.add('hidden');
+}
+function openClockPicker(id){
+  const input=$('clock-'+id);
+  if(input.disabled)return;
+  if(pickerTarget===id){closeClockPicker();return;}
+  closeClockPicker();pickerTarget=id;
+  document.querySelector('[data-clock-pick="'+id+'"]').setAttribute('aria-expanded','true');
+  const parts=(normalizedClock(input.value)||'00:00:00').split(':');
+  ['hour','minute','second'].forEach((k,i)=>{$('picker-'+k).value=parts[i];});
+  $('clock-picker-title').textContent=input.closest('.clock-field').querySelector('label').textContent;
+  $('clock-picker').classList.remove('hidden');
+  $('picker-hour').focus();$('picker-hour').select();
+}
+function applyClockPicker(clear=false){
+  if(!pickerTarget)return;
+  const values=['hour','minute','second'].map(k=>$('picker-'+k).value.trim());
+  if(!clear && values.some((v,i)=>! /^\d{1,2}$/.test(v)||Number(v)>(i===0?23:59))){
+    $('day-review-error').textContent='Choose a valid 24-hour time.';$('day-review-error').classList.remove('hidden');return;
+  }
+  const input=$('clock-'+pickerTarget);
+  input.value=clear?'':values.map(v=>v.padStart(2,'0')).join(':');
+  input.setCustomValidity('');closeClockPicker();
+  $('day-review-error').classList.add('hidden');input.focus();
+}
+// The table and editor share effective undertime, not merely the stored override.
+function displayUndertimeSeconds(day){
+  if(day.is_weekend||day.calendar.holiday_name||day.travel_order)return null;
+  if(day.monitoring)return day.monitoring.undertime_seconds??null;
+  const reviewed=day.review.undertime_minutes;
+  return reviewed==null?null:reviewed*60;
+}
+function openDayReview(date){
+  const day=activeDtr?.days.find(x=>x.date===date);
+  if(!day || !session)return;
+  dayReviewContext={code:selectedEmployee,month:activeDtr.month,day,account:session,initialClocks:{}};
+  const editable=session.role==='admin';
+  $('day-review-form').reset();closeClockPicker();$('day-review-error').classList.add('hidden');
+  $('day-review-heading').textContent=editable?(day.travel_order?'Edit Travel Order':'Edit attendance'):'Attendance entries';
+  $('day-review-context').textContent=selectedName+' · '+date+' ('+day.day+')';
+  const periods=day.aja_periods||[];
+  for(const key of REVIEW_CLOCKS){
+    const isAja=key.startsWith('aja_');
+    const entry=isAja?(periods.length===1?periods[0][key.slice(4)]:null):day.display_slots?.[key];
+    const input=clockInput(key);
+    input.value=normalizedClock(isAja?entry?.time||'':entry?.happened_at.slice(11,19)||'')||'';
+    input.setCustomValidity('');
+    input.title=entry?.origin==='hr_approved'?'HR-approved adjustment':entry?.origin==='manual_sheet'?'DTR source':entry?.origin==='biometric'?'Biometric entry':'';
+    dayReviewContext.initialClocks[key]=input.value;
+    input.disabled=!editable||(isAja&&periods.length>1);
+    document.querySelector('[data-clock-pick="'+key.replaceAll('_','-')+'"]').disabled=input.disabled;
+  }
+  const suggested=Object.entries(day.historical_suggestions||{});
+  $('review-historical-suggestions').classList.toggle('hidden',!editable||!suggested.length);
+  $('review-historical-suggestions').disabled=!editable||!suggested.length;
+  $('review-historical-suggestions').textContent='Use suggested biometric '+(suggested.length===1?'entry':'entries');
+  $('review-aja-hint').textContent=periods.length>1?'Multiple AJA periods — review separately.':'';
+  $('review-aja-hint').classList.toggle('hidden',periods.length<=1);
+  const offday=day.is_weekend||Boolean(day.calendar.holiday_name);
+  const seconds=displayUndertimeSeconds(day);
+  const minutes=seconds==null?null:Math.floor(seconds/60);
+  $('review-ut-hours').value=minutes===null?'':Math.floor(minutes/60);
+  $('review-ut-minutes').value=minutes===null?'':minutes%60;
+  dayReviewContext.initialUndertime={hours:$('review-ut-hours').value,minutes:$('review-ut-minutes').value};
+  const fullTravel=day.travel_order===true;
+  const editRef=fullTravel;
+  $('review-reference').value=fullTravel?(day.travel_reference||''):'';
+  dayReviewContext.initialTravelReference=$('review-reference').value;
+  $('review-travel-reference').classList.toggle('hidden',!editRef);
+  $('review-reference').disabled=!editable||!editRef;
+  $('review-reference').required=editable&&editRef;
+  $('review-reference').title=fullTravel?(day.travel_source_references||[]).join(' · '):'';
+  for(const id of ['review-ut-hours','review-ut-minutes']){
+    $(id).disabled=!editable||offday;
+    $(id).title=offday?'Not applicable on weekends and holidays':'';
+  }
+  $('save-day-review').classList.toggle('hidden',!editable);$('save-day-review').disabled=false;
+  $('review-time-section').classList.toggle('hidden',fullTravel);
+  $('review-travel-info').classList.toggle('hidden',!fullTravel);
+  $('review-travel-info').textContent=fullTravel?'Travel Order · Full day':'';
+  $('day-review-dialog').showModal();
+}
+function useHistoricalSuggestions(){
+  const context=dayReviewContext;
+  if(!context||context.account!==session||session.role!=='admin')return;
+  context.acceptedHistorical={};
+  for(const [key,suggestion] of Object.entries(context.day.historical_suggestions||{})){
+    const input=clockInput(key);
+    if(input.disabled||input.value)continue;
+    input.value=suggestion.time;
+    context.acceptedHistorical[key]=suggestion;
+  }
+  $('review-historical-suggestions').disabled=true;
+}
+async function saveDayReview(event){
+  event.preventDefault();
+  const context=dayReviewContext;
+  if(!context || context.account!==session || session.role!=='admin')return;
+  const payload={version:context.day.review.version};
+  for(const key of REVIEW_CLOCKS.slice(0,4))payload[key]=context.day.slots[key]?.id||null;
+  let regularChanged=false;
+  if(!context.day.travel_order){
+    const approved=clockAdjustments(context);
+    if(approved===null){
+      $('day-review-error').textContent='Use HH:MM or HH:MM:SS (24-hour time).';$('day-review-error').classList.remove('hidden');return;
+    }
+    const before=context.day.review.approved_times||{};
+    regularChanged=REVIEW_CLOCKS.slice(0,4).some(k=>approved[k]!==before[k]);
+    for(const key of REVIEW_CLOCKS.slice(0,4))if(approved[key]&&approved[key]!==before[key])payload[key]=null;
+    // Explicitly accepted suggestions save the original punch ID, not a
+    // fabricated manual timestamp. A subsequently edited clock remains a
+    // normal HR adjustment, and cancelling the dialog writes nothing.
+    for(const [key,suggestion] of Object.entries(context.acceptedHistorical||{})){
+      if(normalizedClock(clockInput(key).value)===suggestion.time){
+        payload[key]=suggestion.id;
+        delete approved[key];
+        regularChanged=true;
+      }
+    }
+    payload.approved_times=approved;
+  }
+  const h=$('review-ut-hours').value,m=$('review-ut-minutes').value;
+  // Display source-derived values without silently converting them into overrides.
+  const undertimeUnchanged=h===context.initialUndertime.hours&&m===context.initialUndertime.minutes;
+  payload.undertime_minutes=context.day.is_weekend||context.day.calendar.holiday_name||context.day.travel_order
+    ?context.day.review.undertime_minutes
+    :undertimeUnchanged?(regularChanged?null:context.day.review.undertime_minutes)
+    :h===''&&m===''?null:Number(h||0)*60+Number(m||0);
+  payload.activity_type=context.day.review.activity_type;
+  payload.activity_reference=context.day.review.activity_reference;
+  if(context.day.travel_order && $('review-reference').value.trim()!==context.initialTravelReference){
+    payload.activity_type='Travel Order';
+    payload.activity_reference=$('review-reference').value.trim();
+  }
+  payload.remark=context.day.review.remark;
+  $('save-day-review').disabled=true;$('day-review-error').classList.add('hidden');
+  try{
+    await api('/api/attendance/'+encodeURIComponent(context.code)+'/'+context.day.date,{method:'PUT',body:JSON.stringify(payload)});
+    if(context.account!==session)return;
+    $('day-review-dialog').close();toast('Attendance review saved.');
+    if(selectedEmployee===context.code && $('detail-month').value===context.month)await loadDetail({quiet:true});
+  }catch(error){if(context.account===session){$('day-review-error').textContent=error.message;$('day-review-error').classList.remove('hidden');}}
+  finally{$('save-day-review').disabled=false;}
+}
+function calendarDateChanged(){
+  const day=activeDtr?.days.find(x=>x.date===$('calendar-date').value);
+  $('calendar-name').value=day?.calendar.holiday_name||'';$('calendar-error').classList.add('hidden');
+}
+function openCalendar(){
+  if(!activeDtr || session?.role!=='admin')return;
+  $('calendar-date').innerHTML=activeDtr.days.map(day=>'<option value="'+day.date+'">'+day.date+' ('+day.day+')</option>').join('');
+  calendarDateChanged();$('calendar-dialog').showModal();
+}
+async function saveCalendar(event){
+  event.preventDefault();
+  if(!activeDtr || session?.role!=='admin')return;
+  const day=activeDtr.days.find(x=>x.date===$('calendar-date').value),account=session;
+  if(!day)return;
+  $('save-calendar').disabled=true;$('calendar-error').classList.add('hidden');
+  try{
+    await api('/api/attendance-calendar/'+day.date,{method:'PUT',body:JSON.stringify({version:day.calendar.version,holiday_name:$('calendar-name').value.trim()})});
+    if(session!==account)return;
+    $('calendar-dialog').close();toast('Attendance calendar updated.');await loadDetail({quiet:true});
+  }catch(error){if(session===account){$('calendar-error').textContent=error.message;$('calendar-error').classList.remove('hidden');}}
+  finally{$('save-calendar').disabled=false;}
+}
+function stopAttendanceRefresh(){attendanceRefreshEpoch++;clearTimeout(attendanceRefreshTimer);attendanceRefreshTimer=null;}
+function startAttendanceRefresh(){
+  stopAttendanceRefresh();
+  const epoch=attendanceRefreshEpoch;
+  const tick=async()=>{
+    if(epoch!==attendanceRefreshEpoch || !['employees','profiles'].includes(currentPage) || !session || document.hidden)return;
+    if(!document.querySelector('dialog[open]')){
+      if(currentPage==='profiles'){
+        if(!profileMenuTrigger&&!profileArchiveBusy)await loadProfiles({quiet:true});
+      }else if(selectedEmployee)await loadDetail({quiet:true});else await loadRegister({quiet:true});
+    }
+    if(epoch===attendanceRefreshEpoch && ['employees','profiles'].includes(currentPage) && session && !document.hidden)
+      attendanceRefreshTimer=setTimeout(tick,currentPage==='profiles'?60000:10000);
+  };
+  if(['employees','profiles'].includes(currentPage) && session && !document.hidden)attendanceRefreshTimer=setTimeout(tick,currentPage==='profiles'?60000:10000);
+}
+function deviceRefreshAllowed(){
+  return Boolean(session && currentPage==='staff' && !document.hidden);
+}
+function deviceRefreshMessage(message){
+  if($('lan-live-status').textContent!==message)$('lan-live-status').textContent=message;
+}
+function stopDeviceRefresh(){
+  deviceRefreshEpoch++;
+  clearTimeout(deviceRefreshTimer);
+  deviceRefreshTimer=null;
+  deviceStatusController?.abort();
+}
+function startDeviceRefresh(){
+  stopDeviceRefresh();
+  if(!deviceRefreshAllowed())return;
+  const epoch=deviceRefreshEpoch;
+  const tick=async()=>{
+    deviceRefreshTimer=null;
+    if(epoch!==deviceRefreshEpoch || !deviceRefreshAllowed())return;
+    await refreshDeviceStatus({quiet:true});
+    if(epoch===deviceRefreshEpoch && deviceRefreshAllowed())
+      deviceRefreshTimer=setTimeout(tick,DEVICE_REFRESH_MS);
+  };
+  deviceRefreshTimer=setTimeout(tick,DEVICE_REFRESH_MS);
+}
+function renderDeviceStatus(data){
+    $('lan-ip').textContent=data.host;
+    $('lan-port').textContent=data.port??'—';
+    $('lan-badge').textContent=data.sync_enabled?'Connector sync on':'Not synchronized';
+    $('lan-message').textContent=data.message;
+    const sync=data.attendance_sync||{};
+    $('lan-sync').textContent=sync.in_progress?'Import in progress':
+      (sync.enabled?'On · every '+sync.interval_seconds+' seconds':'Off · Manual reads available');
+    $('lan-connector').textContent=sync.connector_available?(sync.source_mode==='bionet'?'ZKBio Time.Net':'Available (local file)'):'Unavailable';
+    $('lan-connector').title=sync.connector_message||'';
+    $('lan-total-records').textContent=Number(sync.total_imported||0).toLocaleString();
+    $('lan-probe-status').textContent=data.probe_enabled?'Enabled':'Disabled';
+    $('lan-last-sync').textContent=sync.last_success_at||'—';
+    $('lan-new-records').textContent=sync.last_inserted==null?'—':String(sync.last_inserted);
+    $('lan-sync-result').textContent=sync.latest_result||'Not yet synchronized';
+    $('lan-sync-error').textContent=[data.configuration_error,sync.last_error,
+      sync.connector_available?'':sync.connector_message].filter(Boolean).filter((value,index,items)=>items.indexOf(value)===index).join(' ');
+    $('probe-lan').disabled=session.role!=='admin'||!data.probe_enabled;
+    $('sync-connector').disabled=session.role!=='admin'||connectorReadPending;
+}
+async function refreshDeviceStatus({quiet=false,fresh=false}={}){
+  // Keep one status request in flight. A manual read waits, then fetches fresh.
+  while(deviceStatusRequest){
+    await deviceStatusRequest;
+    if(!fresh)return;
+  }
+  if(!deviceRefreshAllowed())return;
+  const epoch=deviceRefreshEpoch,account=session;
+  const controller=new AbortController();
+  deviceStatusController=controller;
+  const timeout=setTimeout(()=>controller.abort(),15000);
+  const stillCurrent=()=>epoch===deviceRefreshEpoch && session===account && deviceRefreshAllowed();
+  const request=(async()=>{
+    try{
+      const data=await api('/api/device/status',{signal:controller.signal,cache:'no-store'});
+      if(!stillCurrent())return;
+      renderDeviceStatus(data);
+      deviceRefreshMessage('Status updates automatically every 5 seconds.');
+    }catch(error){
+      if(!stillCurrent())return;
+      deviceRefreshMessage('Live status temporarily unavailable. Retrying automatically.');
+      if(!quiet)toast(error.name==='AbortError'?'Status request timed out. Retrying automatically.':error.message,true);
+    }
+  })();
+  deviceStatusRequest=request;
+  try{await request;}
+  finally{
+    clearTimeout(timeout);
+    if(deviceStatusRequest===request)deviceStatusRequest=null;
+    if(deviceStatusController===controller)deviceStatusController=null;
+  }
+}
+async function loadDevice(){
+  const epoch=deviceRefreshEpoch,account=session;
+  try{
+    await refreshDeviceStatus({fresh:true});
+    if(epoch!==deviceRefreshEpoch || session!==account || currentPage!=='staff')return;
+    const codes=await api('/api/work-codes');
+    if(epoch!==deviceRefreshEpoch || session!==account || currentPage!=='staff')return;
+    workCodeRows=codes.items;
+    $('code-rows').innerHTML=codes.items.length?codes.items.map(row=>
+      '<tr><td>'+esc(row.device_id)+'</td><td><span class="code-pill">'+esc(row.work_code)+'</span></td>'+
+      '<td>'+esc(row.activity_type)+'</td><td><span class="direction-pill '+(row.direction==='IN'?'direction-in':row.direction==='OUT'?'direction-out':'direction-unmapped')+'">'+esc(row.direction||'Unspecified')+'</span></td><td>'+esc(row.label||'Unmapped')+'</td>'+
+      '<td>'+Number(row.scan_count||0)+'</td>'+
+      '<td>'+(session.role==='admin'?'<button class="text-link" type="button" data-map-code="'+
+      esc(row.device_id)+'|'+esc(row.work_code)+'">Edit mapping</button>':'')+'</td></tr>'
+    ).join(''):'<tr><td colspan="7">Import a biometric log to discover device work codes.</td></tr>';
+  }catch(error){toast(error.message,true);}
+}
+async function syncConnector(){
+  if(connectorReadPending)return;
+  connectorReadPending=true;
+  $('sync-connector').disabled=true;
+  try{
+    const data=await api('/api/device/sync',{method:'POST'});
+    const added=data.records_inserted;
+    toast(added===0?'Success — No new records':'Success — '+added+' new record'+(added===1?'':'s')+'.');
+    await loadDevice();
+  }catch(error){
+    toast(error.message,true);
+    try{await loadDevice();}catch(_){}
+  }finally{connectorReadPending=false;$('sync-connector').disabled=session?.role!=='admin';}
+}
+async function probeDevice(){
+  $('probe-lan').disabled=true;
+  try{
+    const data=await api('/api/device/probe',{method:'POST'});
+    $('lan-message').textContent=data.detail;
+    toast(data.detail, data.result==='tcp_unconfirmed');
+  }catch(error){toast(error.message,true);}
+  finally{$('probe-lan').disabled=session.role!=='admin';}
+}
+function uploadBody(file){const form=new FormData();form.append('file',file);return form;}
+async function processUsb(previewOnly){
+  const file=$('usb-file').files[0];
+  if (!file){toast('Select a USB attendance file first.',true);return;}
+  if (file.size>2*1024*1024){toast('File is larger than 2 MB.',true);return;}
+  if (!previewOnly && !usbPreviewOkay){toast('Preview the file before importing.',true);return;}
+  const busyDialog=$('attendance-import-dialog');
+  if(busyDialog.getAttribute('aria-busy')==='true')return;
+  busyDialog.setAttribute('aria-busy','true');
+  try{
+    const result=await api(previewOnly?'/api/imports/preview':'/api/imports',
+      {method:'POST',body:uploadBody(file)});
+    const output=$('usb-result');
+    output.classList.remove('hidden');
+    output.className='upload-result '+(previewOnly?'import-preview':'import-success');
+    if (previewOnly){
+      usbPreviewOkay=result.format==='source'&&!result.already_imported;
+      if(result.already_imported)output.className='upload-result import-warning';
+      output.textContent=result.format==='report'
+        ?'Excel report preview only. It cannot create raw scan events. Use the staff import for names.'
+        :'Preview: '+result.rows+' scans · '+result.employees+' IDs · '+result.earliest+' to '+result.latest+
+         (result.already_imported?' · File already imported':'');
+    }else{
+      output.textContent='Merge complete · '+result.inserted+' new scans added · '+result.duplicates+' duplicate scans skipped.';
+      usbPreviewOkay=false;
+      toast('Attendance import completed.');loadRegister();
+    }
+  }catch(error){toast(error.message,true);}
+  finally{busyDialog.removeAttribute('aria-busy');}
+}
+async function processRoster(previewOnly){
+  const file=$('roster-file').files[0];
+  if (!file){toast('Select a staff file first.',true);return;}
+  if (file.name.toLowerCase().includes('fp10')){toast('Do not upload fingerprint templates.',true);return;}
+  if (!previewOnly && !rosterPreviewOkay){toast('Preview the staff file first.',true);return;}
+  const busyDialog=$('user-import-dialog');
+  if(busyDialog.getAttribute('aria-busy')==='true')return;
+  busyDialog.setAttribute('aria-busy','true');
+  try{
+    const result=await api(previewOnly?'/api/employees/import/preview':'/api/employees/import',
+      {method:'POST',body:uploadBody(file)});
+    const output=$('roster-result');
+    output.classList.remove('hidden');
+    rosterPreviewOkay=previewOnly;
+    output.className='upload-result '+(previewOnly?'import-preview':'import-success');
+    output.textContent=(previewOnly?'Preview':'User sync complete')+': '+result.total+
+      ' staff · New '+result.counts.new+' · Fill '+result.counts.fill+
+      ' · Conflicts '+result.counts.conflict+' (not overwritten)';
+    if(!previewOnly){rosterPreviewOkay=false;toast('Device user names synchronized from file.');}
+  }catch(error){toast(error.message,true);}
+  finally{busyDialog.removeAttribute('aria-busy');}
+}
+function updateCodeDirectionVisibility(){
+  const permitted=['AJA','Travel Order'].includes($('code-activity').value);
+  $('code-direction-field').classList.toggle('hidden',!permitted);
+  $('code-direction-help').classList.toggle('hidden',!permitted);
+  if(!permitted)$('code-direction').value='Unspecified';
+}
+function openCodeEditor(device,code){
+  const saved=workCodeRows.find(row=>row.device_id===device && row.work_code===code);
+  $('code-device').value=device;
+  $('code-number').value=code;
+  $('code-label').value=saved?.label||'';
+  $('code-activity').value=saved?.activity_type||'Unclassified';
+  $('code-direction').value=saved?.direction||'Unspecified';
+  updateCodeDirectionVisibility();
+  $('code-dialog').showModal();
+}
+async function saveCode(event){
+  event.preventDefault();
+  const device=$('code-device').value,code=$('code-number').value;
+  const busyDialog=$('code-dialog');
+  if(busyDialog.getAttribute('aria-busy')==='true')return;
+  busyDialog.setAttribute('aria-busy','true');
+  try{
+    await api('/api/work-codes/'+encodeURIComponent(device)+'/'+encodeURIComponent(code),{
+      method:'PUT',body:JSON.stringify({
+        label:$('code-label').value,
+        activity_type:$('code-activity').value,
+        direction:$('code-direction').value
+      })
+    });
+    $('code-dialog').close();toast('IN/OUT code mapping saved locally. K14 device unchanged.');loadDevice();
+    if(selectedEmployee && currentPage==='employees')void loadDetail({quiet:true});
+  }catch(error){toast(error.message,true);}
+  finally{busyDialog.removeAttribute('aria-busy');}
+}
+const attendanceMonthNames=Array.from({length:12},(_,i)=>new Intl.DateTimeFormat('en-US',{month:'short',timeZone:'UTC'}).format(new Date(Date.UTC(2020,i,1))));
+const attendanceMonthFull=new Intl.DateTimeFormat('en-US',{month:'long',year:'numeric',timeZone:'UTC'});
+function setAttendanceMonth(id,value){
+  const input=$(id);
+  input.value=value;
+  const selected=input.value||currentMonth();
+  const [year,month]=selected.split('-').map(Number);
+  const text=attendanceMonthFull.format(new Date(Date.UTC(year,month-1,1)));
+  const trigger=$(id+'-trigger');
+  trigger.querySelector('.month-trigger-value').textContent=text;
+  trigger.setAttribute('aria-label','Reporting month: '+text);
+}
+function initializeAttendanceMonthPicker(){
+  const dialog=$('attendance-month-picker'),grid=$('month-picker-grid'),yearGrid=$('month-year-grid'),yearTrigger=$('month-year-trigger');
+  const minYear=1900,maxYear=2100,yearsPerPage=12;
+  let target=null,year=0,anchor=null,yearMode=false,yearPage=minYear;
+  const pageFor=value=>minYear+Math.floor((value-minYear)/yearsPerPage)*yearsPerPage;
+  function render(){
+    $('month-year-value').textContent=String(year);
+    yearTrigger.setAttribute('aria-expanded',String(yearMode));
+    yearTrigger.setAttribute('aria-label',yearMode?'Return to month selection':'Choose year: '+year);
+    $('month-year-prev').setAttribute('aria-label',yearMode?'Previous years':'Previous year');
+    $('month-year-next').setAttribute('aria-label',yearMode?'Next years':'Next year');
+    $('month-year-prev').disabled=yearMode?yearPage<=minYear:year<=minYear;
+    $('month-year-next').disabled=yearMode?yearPage+yearsPerPage>maxYear:year>=maxYear;
+    grid.hidden=yearMode;yearGrid.hidden=!yearMode;
+    if(yearMode){
+      yearGrid.replaceChildren(...Array.from({length:Math.min(yearsPerPage,maxYear-yearPage+1)},(_,index)=>{
+        const value=yearPage+index,b=document.createElement('button');
+        b.type='button';b.textContent=String(value);b.dataset.yearValue=String(value);
+        b.setAttribute('aria-pressed',String(value===year));return b;
+      }));
+      return;
+    }
+    const current=currentMonth(),selected=$(target).value;
+    grid.replaceChildren(...attendanceMonthNames.map((name,index)=>{
+      const value=String(year)+'-'+String(index+1).padStart(2,'0');
+      const b=document.createElement('button');b.type='button';b.textContent=name;
+      b.dataset.monthValue=value;b.setAttribute('aria-pressed',String(value===selected));
+      b.setAttribute('aria-label',attendanceMonthFull.format(new Date(Date.UTC(year,index,1))));
+      if(value===current)b.classList.add('is-current');
+      return b;
+    }));
+  }
+  function position(){
+    if(!anchor||!dialog.open)return;
+    const rect=anchor.getBoundingClientRect(),width=dialog.offsetWidth,height=dialog.offsetHeight;
+    const left=Math.max(8,Math.min(rect.left,innerWidth-width-8));
+    const top=rect.bottom+height+16<=innerHeight?rect.bottom+8:Math.max(8,rect.top-height-8);
+    dialog.style.left=left+'px';dialog.style.top=top+'px';
+  }
+  function focusGrid(active){
+    (active.querySelector('[aria-pressed="true"]')||active.firstElementChild)?.focus();
+  }
+  function switchMode(next){
+    yearMode=next;if(next)yearPage=pageFor(year);
+    render();position();focusGrid(next?yearGrid:grid);
+  }
+  function choose(value){
+    if(!target)return;
+    const id=target,previous=$(id).value;
+    setAttendanceMonth(id,value);dialog.close();
+    if($(id).value!==previous)$(id).dispatchEvent(new Event('change',{bubbles:true}));
+  }
+  document.querySelectorAll('[data-month-target]').forEach(b=>b.addEventListener('click',()=>{
+    target=b.dataset.monthTarget;anchor=b;year=Number(($(target).value||currentMonth()).slice(0,4));
+    yearMode=false;render();anchor.setAttribute('aria-expanded','true');dialog.showModal();position();
+    focusGrid(grid);
+  }));
+  yearTrigger.addEventListener('click',()=>switchMode(!yearMode));
+  grid.addEventListener('click',e=>{const b=e.target.closest('[data-month-value]');if(b)choose(b.dataset.monthValue);});
+  yearGrid.addEventListener('click',e=>{const b=e.target.closest('[data-year-value]');if(b){year=Number(b.dataset.yearValue);switchMode(false);}});
+  for(const active of [grid,yearGrid])active.addEventListener('keydown',e=>{
+    const buttons=[...active.querySelectorAll('button')],i=buttons.indexOf(document.activeElement);
+    const delta={ArrowLeft:-1,ArrowRight:1,ArrowUp:-4,ArrowDown:4}[e.key];
+    if(i>=0&&delta!==undefined){e.preventDefault();buttons[(i+delta+buttons.length)%buttons.length].focus();}
+  });
+  function step(direction){
+    if(yearMode){
+      const next=yearPage+direction*yearsPerPage;
+      if(next>=minYear&&next<=maxYear){yearPage=next;render();position();}
+    }else if(year+direction>=minYear&&year+direction<=maxYear){year+=direction;render();position();}
+  }
+  $('month-year-prev').addEventListener('click',()=>step(-1));
+  $('month-year-next').addEventListener('click',()=>step(1));
+  dialog.addEventListener('cancel',e=>{if(yearMode){e.preventDefault();switchMode(false);}});
+  dialog.addEventListener('close',()=>{if(anchor){anchor.setAttribute('aria-expanded','false');if(anchor.getClientRects().length)anchor.focus();}target=null;anchor=null;});
+  window.addEventListener('resize',position);
+}
+// A deliberate backdrop click dismisses a modal, never a click on its padding
+// or a selection/drag that began inside it.
+function initializeModalDismissal(){
+  function outside(dialog,event){
+    if(event.target!==dialog)return false;
+    const r=dialog.getBoundingClientRect();
+    return event.clientX<r.left||event.clientX>=r.right||event.clientY<r.top||event.clientY>=r.bottom;
+  }
+  document.querySelectorAll('dialog').forEach(dialog=>{
+    let start=null,endOutside=false;
+    const reset=()=>{start=null;endOutside=false;};
+    dialog.addEventListener('pointerdown',event=>{
+      reset();
+      if(event.isPrimary&&event.button===0&&outside(dialog,event))
+        start={id:event.pointerId,x:event.clientX,y:event.clientY};
+    });
+    dialog.addEventListener('pointerup',event=>{
+      endOutside=!!start&&event.pointerId===start.id&&outside(dialog,event)&&
+        Math.hypot(event.clientX-start.x,event.clientY-start.y)<=10;
+    });
+    dialog.addEventListener('pointercancel',reset);
+    dialog.addEventListener('close',reset);
+    dialog.addEventListener('click',event=>{
+      const dismiss=dialog.open&&start&&endOutside&&outside(dialog,event);
+      reset();
+      if(!dismiss)return;
+      if(dialog.matches('[aria-busy="true"]')||dialog.querySelector('[aria-busy="true"],#save-profile:disabled,#save-day-review:disabled,#save-calendar:disabled'))return;
+      if(dialog.id==='dtr-preview-dialog')closeDtrPreview();
+      else dialog.close();
     });
   });
-  $('toggle-password').addEventListener('click', () => {
-    const reveal = $('login-password').type === 'password';
-    $('login-password').type = reveal ? 'text' : 'password';
-    $('toggle-password').setAttribute('aria-label', reveal ? 'Hide password' : 'Show password');
-    $('toggle-password').setAttribute('aria-pressed', String(reveal));
-  });
-  $('login-help').addEventListener('click', () => $('login-help-text').classList.toggle('hidden'));
-  $('login-form').addEventListener('submit', async event => {
-    event.preventDefault(); $('login-submit').disabled = true; $('login-submit').textContent = 'Signing in…'; $('login-error').classList.add('hidden');
-    try {
-      session = await api('/api/login', {method:'POST',body:JSON.stringify({username:$('login-username').value,password:$('login-password').value})});
-      showWorkspace();
-    } catch (error) { $('login-error').textContent = error.message; $('login-error').classList.remove('hidden'); }
-    finally { $('login-submit').disabled = false; $('login-submit').textContent = 'Sign in'; }
-  });
-  $('logout').addEventListener('click', async () => {
-    $('logout').disabled = true;
-    try { await api('/api/logout', {method:'POST'}); session = null; showAuth(); }
-    catch (error) { toast(error.message, true); }
-    finally { $('logout').disabled = false; }
-  });
-  $('filter-form').addEventListener('submit', event => { event.preventDefault(); punchOffset = 0; loadPunches(); });
-  $('clear-filter').addEventListener('click', () => { $('filter-form').reset(); punchOffset = 0; loadPunches(); });
-  $('prev-punches').addEventListener('click', () => { punchOffset = Math.max(0,punchOffset-pageSize); loadPunches(); });
-  $('next-punches').addEventListener('click', () => { punchOffset += pageSize; loadPunches(); });
-  $('attendance-file').addEventListener('change', () => chooseFile($('attendance-file').files[0]));
-  $('preview-btn').addEventListener('click', () => handleImport(true));
-  $('import-form').addEventListener('submit', event => { event.preventDefault(); handleImport(false); });
-  $('attendance-file').addEventListener('focus', () => $('drop-area').classList.add('drag-over'));
-  $('attendance-file').addEventListener('blur', () => $('drop-area').classList.remove('drag-over'));
-  $('drop-area').addEventListener('dragover', event => { event.preventDefault(); $('drop-area').classList.add('drag-over'); });
-  $('drop-area').addEventListener('dragleave', () => $('drop-area').classList.remove('drag-over'));
-  $('drop-area').addEventListener('drop', event => { event.preventDefault(); $('drop-area').classList.remove('drag-over'); chooseFile(event.dataTransfer.files[0]); });
-  $('fieldwork-form').addEventListener('submit', createFieldwork);
-  $('open-staff-import').addEventListener('click', () => openStaffImport());
-  $('staff-file').addEventListener('change', () => setRosterFile($('staff-file').files[0]));
-  $('preview-staff').addEventListener('click', () => uploadRoster(true));
-  $('import-staff').addEventListener('click', () => uploadRoster(false));
-  $('add-staff').addEventListener('click', () => editStaff());
-  $('add-work-code').addEventListener('click', () => editWorkCode());
-  $('staff-form').addEventListener('submit', saveStaff);
-  $('work-code-form').addEventListener('submit', saveWorkCode);
-  $('staff-search').addEventListener('input', renderStaff);
-  $('activity-status').addEventListener('change', loadFieldwork);
-  $('void-form').addEventListener('submit', voidReference);
-  $('dtr-filter').addEventListener('submit', event => { event.preventDefault(); loadMonitor(); });
-  $('dtr-employee').addEventListener('change', loadMonitor);
-  $('dtr-month').addEventListener('change', loadMonitor);
-  window.addEventListener('hashchange', () => { if (session && pages[location.hash.slice(1)]) navigate(location.hash.slice(1)); });
-  try { session = await api('/api/me'); showWorkspace(); }
-  catch (_) { session = null; showAuth(); }
 }
-document.addEventListener('DOMContentLoaded', initialize);
+async function initialize(){
+  initializeAdminAja();
+  initializeAttendanceMonthPicker();
+  initializeModalDismissal();
+  initializeProfileSelects();
+  initializeProfileValidation();
+  document.addEventListener('visibilitychange',()=>{
+    if(!document.hidden)updateWorkspaceClock();
+    if(document.hidden){
+      stopDeviceRefresh();
+      stopAttendanceRefresh();
+    }else if(deviceRefreshAllowed()){
+      startDeviceRefresh();
+      void refreshDeviceStatus({quiet:true,fresh:true});
+    }
+    if(!document.hidden && session && currentPage==='profiles'){
+      startAttendanceRefresh();
+      if(!profileMenuTrigger&&!document.querySelector('dialog[open]'))void loadProfiles({quiet:true});
+    }
+    if(!document.hidden && session && currentPage==='employees'){
+      startAttendanceRefresh();
+      if(!document.querySelectorAll('dialog[open]').length){
+        if(selectedEmployee)void loadDetail({quiet:true});else void loadRegister({quiet:true});
+      }
+    }
+  });
+  const clockDate = new Intl.DateTimeFormat('en-PH',{
+    weekday:'short',day:'numeric',month:'short',year:'numeric',timeZone:'Asia/Manila'
+  });
+  const clockTime = new Intl.DateTimeFormat('en-PH',{
+    hour:'2-digit',minute:'2-digit',second:'2-digit',hour12:true,timeZone:'Asia/Manila'
+  });
+  function updateWorkspaceClock(){
+    const now=new Date();
+    setTextIfChanged($('today'),clockDate.format(now));
+    setTextIfChanged($('live-time'),clockTime.format(now));
+    setAttrIfChanged($('live-time'),'datetime',now.toISOString());
+  }
+  updateWorkspaceClock();
+  window.setInterval(updateWorkspaceClock,1000);
+  $('login-form').addEventListener('submit',async event=>{
+    event.preventDefault();
+    $('login-error').classList.add('hidden');
+    $('login-submit').disabled=true;
+    try{
+      session=await api('/api/login',{method:'POST',body:JSON.stringify({
+        username:$('login-username').value,password:$('login-password').value
+      })});
+      $('login-form').reset();showApp();
+    }catch(error){
+      $('login-error').textContent=error.message;$('login-error').classList.remove('hidden');
+    }finally{$('login-submit').disabled=false;}
+  });
+  const signOut=async()=>{
+    try{await api('/api/logout',{method:'POST'});session=null;showLogin();}
+    catch(error){toast(error.message,true);}
+  };
+  $('logout-sidebar').addEventListener('click',signOut);
+  document.querySelectorAll('[data-page],[data-go]').forEach(node=>
+    node.addEventListener('click',()=>navigate(node.dataset.page||node.dataset.go)));
+  $('employee-filter').addEventListener('submit',e=>{e.preventDefault();applyRegisterFilters();});
+  document.querySelectorAll('[data-live-filter]').forEach(button=>button.addEventListener('click',()=>{
+    liveFilter=button.dataset.liveFilter;
+    $('employee-search').value='';
+    updateRegisterSearchControl();
+    renderRegister();
+    $('attendance-register-panel').querySelector('.table-wrap').scrollTop=0;
+  }));
+  const kpiStrip=document.querySelector('.live-kpi-strip');
+  kpiStrip.addEventListener('wheel',e=>{
+    if(kpiStrip.scrollWidth>kpiStrip.clientWidth && Math.abs(e.deltaY)>Math.abs(e.deltaX)){
+      e.preventDefault();
+      kpiStrip.scrollLeft+=e.deltaY*(e.deltaMode===1?16:e.deltaMode===2?kpiStrip.clientWidth:1);
+    }
+  },{passive:false});
+  $('employee-search').addEventListener('input',applyRegisterFilters);
+  $('clear-employee-search').addEventListener('click',()=>{$('employee-search').value='';applyRegisterFilters();$('employee-search').focus();});
+  $('register-month').addEventListener('change',()=>{applyRegisterFilters();void loadRegister({quiet:true});});
+  $('open-profile').addEventListener('click',()=>openProfile());
+  $('close-profile').addEventListener('click',()=>$('profile-dialog').close());
+  $('cancel-profile').addEventListener('click',()=>$('profile-dialog').close());
+  $('profile-dialog').addEventListener('close',()=>{closeProfileSelects();profileFormToken++;});
+  $('profile-form').addEventListener('submit',saveProfile);
+  $('profile-filter').addEventListener('submit',event=>{event.preventDefault();renderProfiles();});
+  $('profile-search').addEventListener('input',renderProfiles);
+  document.querySelectorAll('[data-profile-category]').forEach(node=>node.addEventListener('click',()=>{
+    profileCategory=node.dataset.profileCategory;renderProfiles();
+    $('employee-profile-panel').querySelector('.table-wrap').scrollTop=0;
+  }));
+  $('profile-rows').addEventListener('click',event=>{
+    const button=event.target.closest('[data-profile-more]');if(button)openProfileMenu(button);
+  });
+  $('profile-menu-edit').addEventListener('click',()=>{const code=profileMenuRow?.employee_code;closeProfileMenu();if(code)openProfile(code);});
+  $('profile-menu-delete').addEventListener('click',changeProfileArchive);
+  const archiveDialog=$('profile-archive-dialog');
+  $('confirm-profile-archive').addEventListener('click',confirmProfileArchive);
+  $('cancel-profile-archive').addEventListener('click',()=>{if(!profileArchiveBusy)archiveDialog.close();});
+  archiveDialog.addEventListener('cancel',event=>{if(profileArchiveBusy)event.preventDefault();});
+  archiveDialog.addEventListener('close',()=>{profileArchiveContext=null;});
+  $('profile-archive-toggle').addEventListener('click',()=>{
+    if(session?.role!=='admin'||profileArchiveBusy)return;
+    closeProfileMenu();profileArchived=!profileArchived;profileRows=null;profileSummary=null;profileCategory='All';$('profile-search').value='';loadProfiles();
+  });
+  document.addEventListener('pointerdown',event=>{if(profileMenuTrigger&&!event.target.closest('#profile-action-menu,[data-profile-more]'))closeProfileMenu();});
+  document.addEventListener('keydown',event=>{
+    if(!profileMenuTrigger)return;
+    if(event.key==='Escape'){event.preventDefault();closeProfileMenu(true);}
+    else if(event.key==='ArrowDown'||event.key==='ArrowUp'){event.preventDefault();const items=[...$('profile-action-menu').querySelectorAll('button:not([hidden])')];items[(items.indexOf(document.activeElement)+(event.key==='ArrowDown'?1:items.length-1)+items.length)%items.length]?.focus();}
+    else if(event.key==='Tab')closeProfileMenu();
+  });
+  window.addEventListener('resize',()=>closeProfileMenu());
+  document.addEventListener('scroll',()=>closeProfileMenu(),true);
+  $('register-rows').addEventListener('click',e=>{
+    const row=e.target.closest('[data-employee]');if(row)openEmployee(row.dataset.employee);
+  });
+  $('register-rows').addEventListener('keydown',e=>{
+    const row=e.target.closest('tr[data-employee]');
+    if(row && (e.key==='Enter'||e.key===' ')){e.preventDefault();openEmployee(row.dataset.employee);}
+  });
+  $('back-to-register').addEventListener('click',()=>{
+    $('employee-detail').classList.add('hidden');selectedEmployee=null;activeDtr=null;detailRequest++;
+    $('back-to-register').classList.add('hidden');
+    $('attendance-register-panel').classList.remove('hidden');
+    void loadRegister({quiet:true});
+  });
+  initDtrPreview();
+  $('dtr-form-preview').addEventListener('click',openDtrFormPreview);
+  $('detail-month').addEventListener('change',()=>{setAttendanceMonth('register-month',$('detail-month').value);loadDetail();});
+  $('daily-rows').addEventListener('click',event=>{
+    const button=event.target.closest('[data-edit-day]');if(button)openDayReview(button.dataset.editDay);
+  });
+  $('day-review-form').addEventListener('submit',saveDayReview);
+  $('review-historical-suggestions').addEventListener('click',useHistoricalSuggestions);
+  $('close-day-review').addEventListener('click',()=>$('day-review-dialog').close());
+  $('cancel-day-review').addEventListener('click',()=>$('day-review-dialog').close());
+  $('day-review-dialog').addEventListener('close',()=>{closeClockPicker();dayReviewContext=null;});
+  document.querySelectorAll('[data-clock-pick]').forEach(button=>button.addEventListener('click',()=>openClockPicker(button.dataset.clockPick)));
+  REVIEW_CLOCKS.forEach(key=>{
+    const input=clockInput(key);
+    input.addEventListener('input',()=>{input.setCustomValidity('');});
+    input.addEventListener('blur',()=>{const value=normalizedClock(input.value);if(value!==null)input.value=value;});
+  });
+  // Treat the 24-hour picker as three keyboard-navigable time segments.
+  const pickerParts=['hour','minute','second'].map(part=>$('picker-'+part));
+  function focusPickerPart(index){
+    const next=pickerParts[index];
+    if(next){next.focus();next.select();}
+  }
+  pickerParts.forEach((node,index)=>{
+    node.addEventListener('input',event=>{
+      if(event.isComposing)return;
+      const digits=node.value.replace(/\D/g,'').slice(0,2);
+      if(node.value!==digits)node.value=digits;
+      // Leave invalid values in place for correction; Apply still validates.
+      if(digits.length===2 && Number(digits)<=(index===0?23:59) && index<pickerParts.length-1){
+        focusPickerPart(index+1);
+      }
+    });
+    node.addEventListener('keydown',event=>{
+      if(event.isComposing || event.altKey || event.ctrlKey || event.metaKey || event.shiftKey)return;
+      if(event.key==='ArrowLeft' || event.key==='ArrowRight'){
+        event.preventDefault();
+        focusPickerPart(index+(event.key==='ArrowLeft'?-1:1));
+      }
+    });
+  });
+  document.querySelectorAll('[data-clock-step]').forEach(button=>button.addEventListener('click',()=>{
+    const part=button.dataset.clockStep,node=$('picker-'+part),limit=part==='hour'?24:60;
+    const value=Number(node.value)||0;
+    node.value=String((value+Number(button.dataset.delta)+limit)%limit).padStart(2,'0');
+  }));
+  $('clock-picker-close').addEventListener('click',closeClockPicker);
+  $('clock-picker-apply').addEventListener('click',()=>applyClockPicker());
+  $('clock-picker-clear').addEventListener('click',()=>applyClockPicker(true));
+  $('open-calendar')?.addEventListener('click',openCalendar);
+  $('calendar-date').addEventListener('change',calendarDateChanged);
+  $('calendar-form').addEventListener('submit',saveCalendar);
+  $('close-calendar').addEventListener('click',()=>$('calendar-dialog').close());
+  $('cancel-calendar').addEventListener('click',()=>$('calendar-dialog').close());
+  $('open-attendance-import').addEventListener('click',()=>{
+    $('usb-form').reset();$('usb-file-name').textContent='No file selected';
+    usbPreviewOkay=false;$('usb-result').classList.add('hidden');
+    $('attendance-import-dialog').showModal();
+  });
+  $('close-attendance-import').addEventListener('click',()=>$('attendance-import-dialog').close());
+  $('open-user-import').addEventListener('click',()=>{
+    $('roster-form').reset();$('roster-file-name').textContent='No file selected';
+    rosterPreviewOkay=false;$('roster-result').classList.add('hidden');
+    $('user-import-dialog').showModal();
+  });
+  $('close-user-import').addEventListener('click',()=>$('user-import-dialog').close());
+  $('toggle-password').addEventListener('click',()=>{
+    const input=$('login-password'),btn=$('toggle-password');
+    const visible=input.type==='password';
+    input.type=visible?'text':'password';
+    btn.setAttribute('aria-pressed',String(visible));
+    btn.setAttribute('aria-label',visible?'Hide password':'Show password');
+  });
+  $('usb-file').addEventListener('change',()=>{
+    usbPreviewOkay=false;$('usb-result').classList.add('hidden');
+    $('usb-file-name').textContent=$('usb-file').files[0]?.name||'No file selected';
+  });
+  $('usb-preview').addEventListener('click',()=>processUsb(true));
+  $('usb-form').addEventListener('submit',e=>{e.preventDefault();processUsb(false);});
+  $('roster-file').addEventListener('change',()=>{
+    rosterPreviewOkay=false;$('roster-result').classList.add('hidden');
+    $('roster-file-name').textContent=$('roster-file').files[0]?.name||'No file selected';
+  });
+  $('roster-preview').addEventListener('click',()=>processRoster(true));
+  $('roster-form').addEventListener('submit',e=>{e.preventDefault();processRoster(false);});
+  $('probe-lan').addEventListener('click',probeDevice);
+  $('sync-connector').addEventListener('click',syncConnector);
+  $('code-rows').addEventListener('click',e=>{
+    const node=e.target.closest('[data-map-code]');if(!node)return;
+    const [device,code]=node.dataset.mapCode.split('|');openCodeEditor(device,code);
+  });
+  $('code-activity').addEventListener('change',updateCodeDirectionVisibility);
+  $('close-code').addEventListener('click',()=>$('code-dialog').close());
+  $('code-form').addEventListener('submit',saveCode);
+  try{session=await api('/api/me');showApp();}
+  catch(_){session=null;showLogin();}
+}
+
+/* Admin-only employee AJA monitor. No unsigned filing is posted to attendance. */
+let adminAjaRows=[],adminAjaTimer=null,adminAjaRequest=0,adminAjaLoading=false,adminAjaMenuContext=null,adminAjaBusy=false;
+let adminAjaPages=[],adminAjaPage=0,adminAjaZoom=1,adminAjaFit=true,adminAjaReview=null,adminAjaReviewSaving=false;
+const adminAjaApi='/api/admin/aja/filings';
+const ajaStatusLabels={awaiting_signatures:'Awaiting signatures',approved:'Approved',returned:'Returned',disapproved:'Disapproved'};
+function ajaStatusLabel(status){return ajaStatusLabels[status]||'For review';}
+function adminAjaAllowed(){return session?.role==='admin'&&currentPage==='activities';}
+function stopAdminAjaRefresh(){clearInterval(adminAjaTimer);adminAjaTimer=null;adminAjaRequest++;adminAjaLoading=false;}
+function startAdminAjaRefresh(){
+  stopAdminAjaRefresh();
+  adminAjaTimer=setInterval(()=>{if(adminAjaAllowed()&&!document.hidden&&!adminAjaMenuContext&&!adminAjaBusy&&!$('admin-aja-preview-dialog').open)void loadAdminAja(true);},15000);
+}
+function resetAdminAja(){
+  stopAdminAjaRefresh();closeAdminAjaMenu();closeAdminAjaPreview();
+  adminAjaRows=[];adminAjaBusy=false;adminAjaReviewSaving=false;
+  $('admin-aja-search').value='';$('admin-aja-rows').replaceChildren();$('admin-aja-count').textContent='';adminAjaMessage('');
+}
+function adminAjaMessage(message){const node=$('admin-aja-message');node.textContent=message;node.classList.toggle('hidden',!message);}
+function adminAjaDate(iso){
+  const value=String(iso||'');const date=new Date(value+'T00:00:00Z');
+  return Number.isNaN(date.getTime())?'—':new Intl.DateTimeFormat('en-US',{month:'short',day:'numeric',year:'numeric',timeZone:'UTC'}).format(date);
+}
+function adminAjaFiled(value){
+  const raw=String(value||'').trim();const date=new Date(/^\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}$/.test(raw)?raw.replace(' ','T')+'Z':raw);
+  return Number.isNaN(date.getTime())?'—':new Intl.DateTimeFormat('en-US',{month:'short',day:'numeric',year:'numeric',timeZone:'Asia/Manila'}).format(date);
+}
+function adminAjaTime(value){
+  if(!/^([01]\d|2[0-3]):[0-5]\d$/.test(value||''))return '—';
+  const [h,m]=value.split(':').map(Number);return String(h%12||12).padStart(2,'0')+':'+String(m).padStart(2,'0')+' '+(h<12?'AM':'PM');
+}
+function renderAdminAja(){
+  const term=$('admin-aja-search').value.trim().toLowerCase();
+  const rows=adminAjaRows.filter(f=>!term||[f.employee_name,f.employee_code,f.department,f.reference,f.destination,f.origin,f.purpose,ajaStatusLabel(f.status),adminAjaFiled(f.filed_at),...f.days.map(d=>adminAjaDate(d.date))].join(' ').toLowerCase().includes(term));
+  const markup=rows.map((f,i)=>'<tr><td class="id-cell admin-aja-number-cell">'+(i+1)+'</td><td class="admin-aja-employee-cell"><strong>'+esc(f.employee_name)+'</strong><small>'+esc(f.department||'—')+'</small></td><td class="id-cell admin-aja-reference-cell">'+esc(f.reference)+'</td><td class="department-name">'+esc(adminAjaFiled(f.filed_at))+'</td><td class="department-name">'+esc(f.days.map(d=>adminAjaDate(d.date)).join('; '))+'</td><td class="department-name">'+esc(f.destination)+'</td><td><span class="admin-aja-status-chip" data-status="'+esc(f.status)+'">'+esc(ajaStatusLabel(f.status))+'</span></td><td class="directory-action-cell"><button type="button" class="profile-more" data-admin-aja-reference="'+esc(f.reference)+'" aria-controls="admin-aja-action-menu" aria-haspopup="true" aria-expanded="false" aria-label="Actions for '+esc(f.reference)+'"><svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><circle cx="5" cy="12" r="1.8"/><circle cx="12" cy="12" r="1.8"/><circle cx="19" cy="12" r="1.8"/></svg></button></td></tr>').join('');
+  setHtmlIfChanged($('admin-aja-rows'),markup||'<tr><td colspan="8" class="table-empty">'+(term?'No matching filings.':'No AJA filings yet.')+'</td></tr>');
+  $('admin-aja-count').textContent=rows.length+' of '+adminAjaRows.length+' filings';
+}
+async function loadAdminAja(quiet=false){
+  if(!adminAjaAllowed()||adminAjaLoading)return;
+  const owner=session,request=++adminAjaRequest;adminAjaLoading=true;
+  if(!quiet){$('admin-aja-rows').innerHTML='<tr><td colspan="8" class="table-empty">Loading filings…</td></tr>';adminAjaMessage('');}
+  try{
+    const data=await api(adminAjaApi);
+    if(owner!==session||request!==adminAjaRequest||!adminAjaAllowed())return;
+    if(adminAjaMenuContext||adminAjaBusy||$('admin-aja-preview-dialog').open)return;
+    adminAjaRows=data.filings;renderAdminAja();adminAjaMessage('');
+  }catch(error){if(owner===session&&request===adminAjaRequest&&adminAjaAllowed()){if(!quiet){adminAjaRows=[];renderAdminAja();}adminAjaMessage(error.message);}}
+  finally{if(request===adminAjaRequest)adminAjaLoading=false;}
+}
+function closeAdminAjaMenu(restore=false){
+  const menu=$('admin-aja-action-menu'),context=adminAjaMenuContext;adminAjaMenuContext=null;
+  if(menu.matches(':popover-open'))menu.hidePopover();
+  if(context){context.trigger.setAttribute('aria-expanded','false');if(restore&&context.trigger.isConnected)context.trigger.focus({preventScroll:true});}
+}
+function openAdminAjaMenu(trigger){
+  if(!adminAjaAllowed()||adminAjaBusy)return;
+  if(adminAjaMenuContext?.trigger===trigger){closeAdminAjaMenu(true);return;}
+  closeAdminAjaMenu();
+  adminAjaMenuContext={trigger,reference:trigger.dataset.adminAjaReference,owner:session};
+  const menu=$('admin-aja-action-menu');menu.showPopover();
+  const r=trigger.getBoundingClientRect(),w=menu.offsetWidth,h=menu.offsetHeight;
+  menu.style.left=Math.max(8,Math.min(innerWidth-w-8,r.right-w))+'px';
+  menu.style.top=Math.max(8,r.bottom+h+14<=innerHeight?r.bottom+6:r.top-h-6)+'px';
+  trigger.setAttribute('aria-expanded','true');$('admin-aja-menu-view').focus({preventScroll:true});
+}
+function clearAdminAjaPreview(){
+  adminAjaPages=[];adminAjaReview=null;$('admin-aja-paper').removeAttribute('src');$('admin-aja-preview-details').replaceChildren();$('admin-aja-review-result').replaceChildren();
+}
+function closeAdminAjaPreview(){
+  const dialog=$('admin-aja-preview-dialog');if(adminAjaReviewSaving&&session)return;if(dialog.open)dialog.close();clearAdminAjaPreview();
+}
+function applyAdminAjaZoom(){
+  const stage=$('admin-aja-stage');if(!$('admin-aja-preview-dialog').open)return;
+  if(adminAjaFit)adminAjaZoom=Math.min((stage.clientWidth-34)/816,(stage.clientHeight-74)/1248,1);
+  adminAjaZoom=Math.max(.12,adminAjaZoom);
+  $('admin-aja-paper').style.width=Math.round(816*adminAjaZoom)+'px';
+  $('admin-aja-paper').style.height=Math.round(1248*adminAjaZoom)+'px';
+  $('admin-aja-zoom-value').textContent=Math.round(adminAjaZoom*100)+'%';
+  $('admin-aja-zoom-fit').setAttribute('aria-pressed',String(adminAjaFit));
+}
+function showAdminAjaPage(index){
+  if(!adminAjaPages.length)return;
+  adminAjaPage=Math.max(0,Math.min(adminAjaPages.length-1,index));
+  $('admin-aja-paper').src='data:image/png;base64,'+adminAjaPages[adminAjaPage];
+  $('admin-aja-page-nav').classList.toggle('hidden',adminAjaPages.length<2);
+  $('admin-aja-page-count').textContent=(adminAjaPage+1)+' / '+adminAjaPages.length;
+  $('admin-aja-page-prev').disabled=adminAjaPage===0;$('admin-aja-page-next').disabled=adminAjaPage===adminAjaPages.length-1;
+  $('admin-aja-stage').scrollTop=0;requestAnimationFrame(applyAdminAjaZoom);
+}
+function adminAjaReviewError(message){
+  const node=$('admin-aja-review-error');node.textContent=message;node.classList.toggle('hidden',!message);
+}
+function updateAdminAjaReviewButtons(){
+  const pending=adminAjaReview?.status==='awaiting_signatures',verified=$('admin-aja-verified').checked,remarks=$('admin-aja-remarks').value.trim();
+  $('admin-aja-approve').disabled=!pending||!verified||adminAjaReviewSaving;
+  $('admin-aja-return').disabled=!pending||!remarks||adminAjaReviewSaving;
+  $('admin-aja-disapprove').disabled=!pending||!verified||!remarks||adminAjaReviewSaving;
+  $('admin-aja-verified').disabled=adminAjaReviewSaving;$('admin-aja-remarks').disabled=adminAjaReviewSaving;
+  $('admin-aja-preview-back').disabled=adminAjaReviewSaving;
+}
+function displayAdminAjaReview(f){
+  adminAjaReview=f;
+  const status=$('admin-aja-review-status');status.dataset.status=f.status;status.textContent=ajaStatusLabel(f.status);
+  $('admin-aja-preview-reference').textContent=f.reference;
+  const details=document.createElement('div');details.className='admin-aja-schedule';
+  for(const day of f.days){
+    const line=document.createElement('div');line.className='admin-aja-review-field';
+    const date=document.createElement('strong'),time=document.createElement('span');
+    date.textContent=adminAjaDate(day.date);time.textContent=adminAjaTime(day.departure)+' – '+adminAjaTime(day.return_time);line.append(date,time);details.append(line);
+  }
+  $('admin-aja-preview-details').replaceChildren(details);
+  const pending=f.status==='awaiting_signatures';
+  $('admin-aja-review-form').classList.toggle('hidden',!pending);
+  const result=$('admin-aja-review-result');result.classList.toggle('hidden',pending);result.replaceChildren();
+  if(!pending){
+    const title=document.createElement('h4');title.textContent='Review completed';result.append(title);
+    const when=document.createElement('p');when.textContent='Reviewed '+adminAjaFiled(f.reviewed_at);result.append(when);
+    if(f.review_remarks){const label=document.createElement('strong'),note=document.createElement('p');label.textContent='Remarks';note.textContent=f.review_remarks;result.append(label,note);}
+    if(f.status==='approved'){const note=document.createElement('p');note.textContent='Authorized approval verified. Attendance credit remains subject to actual attendance verification.';result.append(note);}
+  }
+  $('admin-aja-verified').checked=false;$('admin-aja-remarks').value='';adminAjaReviewError('');updateAdminAjaReviewButtons();
+}
+async function openAdminAjaDocument(reference,owner){
+  const data=await api(adminAjaApi+'/'+encodeURIComponent(reference)+'/document');
+  if(owner!==session||!adminAjaAllowed())return;
+  clearAdminAjaPreview();
+  adminAjaPages=data.previews;$('admin-aja-preview-context').textContent=data.filing.employee_name;$('admin-aja-preview-note').hidden=true;
+  displayAdminAjaReview(data.filing);
+  adminAjaFit=true;$('admin-aja-preview-dialog').showModal();showAdminAjaPage(0);
+}
+async function submitAdminAjaReview(decision){
+  const f=adminAjaReview,owner=session;
+  if(!f||f.status!=='awaiting_signatures'||!adminAjaAllowed()||adminAjaReviewSaving)return;
+  const verified=$('admin-aja-verified').checked,remarks=$('admin-aja-remarks').value.trim();
+  if(decision!=='returned'&&!verified){adminAjaReviewError('Verify the authorized decision first.');return;}
+  if(decision!=='approved'&&!remarks){adminAjaReviewError('Enter the reason for the decision.');return;}
+  adminAjaReviewSaving=true;adminAjaReviewError('');
+  const dialog=$('admin-aja-preview-dialog');dialog.setAttribute('aria-busy','true');updateAdminAjaReviewButtons();
+  try{
+    const result=await api(adminAjaApi+'/'+encodeURIComponent(f.reference)+'/review',{method:'POST',body:JSON.stringify({decision,remarks,authorized_decision_verified:verified})});
+    if(owner!==session||!adminAjaAllowed())return;
+    adminAjaRows=adminAjaRows.map(row=>row.reference===f.reference?{...row,...result.filing}:row);
+    renderAdminAja();displayAdminAjaReview(result.filing);toast('AJA review saved.');
+  }catch(error){if(owner===session)adminAjaReviewError(error.message);}
+  finally{adminAjaReviewSaving=false;dialog.removeAttribute('aria-busy');updateAdminAjaReviewButtons();}
+}
+async function runAdminAjaAction(){
+  const context=adminAjaMenuContext;if(!context||context.owner!==session||adminAjaBusy)return;
+  closeAdminAjaMenu(true);adminAjaBusy=true;context.trigger.disabled=true;adminAjaMessage('');
+  try{await openAdminAjaDocument(context.reference,context.owner);}
+  catch(error){if(context.owner===session&&adminAjaAllowed())adminAjaMessage(error.message);}
+  finally{adminAjaBusy=false;context.trigger.disabled=false;}
+}
+function initializeAdminAja(){
+  $('admin-aja-search').addEventListener('input',()=>{closeAdminAjaMenu();renderAdminAja();});
+  $('admin-aja-rows').addEventListener('click',e=>{const trigger=e.target.closest('[data-admin-aja-reference]');if(trigger)openAdminAjaMenu(trigger);});
+  $('admin-aja-menu-view').addEventListener('click',runAdminAjaAction);
+  document.addEventListener('pointerdown',e=>{if(adminAjaMenuContext&&!$('admin-aja-action-menu').contains(e.target)&&!e.target.closest('[data-admin-aja-reference]'))closeAdminAjaMenu();});
+  document.addEventListener('keydown',e=>{
+    if(!adminAjaMenuContext)return;
+    if(e.key==='Escape'){e.preventDefault();closeAdminAjaMenu(true);}
+    else if(e.key==='Tab')closeAdminAjaMenu(true);
+    else if(e.key==='ArrowDown'||e.key==='ArrowUp'){e.preventDefault();const items=[...$('admin-aja-action-menu').querySelectorAll('button')],i=items.indexOf(document.activeElement);items[(i+(e.key==='ArrowDown'?1:items.length-1)+items.length)%items.length].focus({preventScroll:true});}
+  });
+  document.querySelector('#aja-filings-panel .table-wrap').addEventListener('scroll',()=>closeAdminAjaMenu(),{passive:true});
+  window.addEventListener('resize',()=>{closeAdminAjaMenu();if(adminAjaFit)applyAdminAjaZoom();});
+  document.addEventListener('visibilitychange',()=>{if(!document.hidden&&adminAjaAllowed()&&!adminAjaBusy&&!$('admin-aja-preview-dialog').open){closeAdminAjaMenu();void loadAdminAja(true);}});
+  $('admin-aja-preview-back').addEventListener('click',closeAdminAjaPreview);
+  $('admin-aja-preview-dialog').addEventListener('cancel',e=>{if(adminAjaReviewSaving)e.preventDefault();});
+  $('admin-aja-preview-dialog').addEventListener('close',()=>{if(!$('admin-aja-preview-dialog').open){clearAdminAjaPreview();if(adminAjaAllowed())void loadAdminAja(true);}});
+  $('admin-aja-page-prev').addEventListener('click',()=>showAdminAjaPage(adminAjaPage-1));
+  $('admin-aja-page-next').addEventListener('click',()=>showAdminAjaPage(adminAjaPage+1));
+  $('admin-aja-zoom-out').addEventListener('click',()=>{adminAjaFit=false;adminAjaZoom=Math.max(.12,adminAjaZoom-.15);applyAdminAjaZoom();});
+  $('admin-aja-zoom-in').addEventListener('click',()=>{adminAjaFit=false;adminAjaZoom=Math.min(2,adminAjaZoom+.15);applyAdminAjaZoom();});
+  $('admin-aja-zoom-fit').addEventListener('click',()=>{adminAjaFit=true;applyAdminAjaZoom();});
+  $('admin-aja-verified').addEventListener('change',updateAdminAjaReviewButtons);
+  $('admin-aja-remarks').addEventListener('input',updateAdminAjaReviewButtons);
+  $('admin-aja-approve').addEventListener('click',()=>submitAdminAjaReview('approved'));
+  $('admin-aja-return').addEventListener('click',()=>submitAdminAjaReview('returned'));
+  $('admin-aja-disapprove').addEventListener('click',()=>submitAdminAjaReview('disapproved'));
+}
+
+document.addEventListener('DOMContentLoaded',initialize);

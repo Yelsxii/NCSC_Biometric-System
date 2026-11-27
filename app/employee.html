@@ -1,0 +1,221 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#142650">
+  <title>NCSC | Employee Portal</title>
+  <link rel="stylesheet" href="/static/app.css">
+  <link rel="stylesheet" href="/static/workspace.css?v=employees-167">
+  <link rel="stylesheet" href="/static/attendance-detail.css?v=auto-dtr-45">
+  <link rel="stylesheet" href="/static/dtr-preview.css?v=23">
+  <link rel="stylesheet" href="/static/employee-portal.css?v=26">
+  <script src="/static/employee-portal.js?v=19" defer></script>
+</head>
+<body>
+  <main id="login-view" class="auth-shell" aria-labelledby="login-heading">
+    <div class="national-stripe" aria-hidden="true"></div>
+    <section class="login-card">
+      <div class="login-layout">
+        <aside class="login-story" aria-label="NCSC Employee Portal">
+          <img class="login-story-photo" src="/static/images/ncsc-summit.webp" alt="" fetchpriority="high">
+          <div class="login-story-content">
+            <div class="login-story-brand">
+              <img class="seal" src="/static/images/ncsc-seal.jpg" width="112" height="112" alt="NCSC seal">
+              <p class="eyebrow">NATIONAL COMMISSION OF SENIOR CITIZENS</p>
+            </div>
+            <h2>Employee<br>Portal</h2>
+            <div class="story-rule" aria-hidden="true"></div>
+          </div>
+        </aside>
+        <div class="login-form-side">
+          <div class="login-form-wrap">
+            <div class="login-brand-row">
+              <span class="fingerprint-mark" aria-hidden="true"><img src="/static/fingerprint.svg" width="64" height="64" alt=""></span>
+              <img class="seal mobile-seal" src="/static/images/ncsc-seal.jpg" width="72" height="72" alt="NCSC seal">
+            </div>
+            <p class="eyebrow">NCSC EMPLOYEE PORTAL</p>
+            <h1 id="login-heading">Welcome back.</h1>
+            <p class="muted">Sign in to access your employee portal.</p>
+            <form id="login-form" autocomplete="on">
+              <label for="login-username">Username</label>
+              <div class="input-with-icon"><svg class="inline-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 21a8 8 0 0 0-16 0"/><circle cx="12" cy="8" r="4"/></svg><input id="login-username" name="username" required maxlength="40" autocomplete="username" placeholder="Enter your username" autofocus></div>
+              <div class="password-label"><label for="login-password">Password</label></div>
+              <div class="input-with-icon"><svg class="inline-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="5" y="10" width="14" height="11" rx="2"/><path d="M8 10V7a4 4 0 0 1 8 0v3"/></svg><input id="login-password" name="password" type="password" required maxlength="256" autocomplete="current-password" placeholder="Enter your password"><button class="icon-button password-toggle" type="button" id="toggle-password" aria-label="Show password" aria-pressed="false"><svg class="inline-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M2 12s4-7 10-7 10 7 10 7-4 7-10 7S2 12 2 12z"/><circle cx="12" cy="12" r="3"/></svg></button></div>
+              <p id="login-error" class="form-error hidden" role="alert"></p>
+              
+              <button class="button primary wide" id="login-submit" type="submit">Sign in</button>
+              <a href="/" style="display:block;text-align:center;margin-top:10px;font-size:12px;color:#244b9a;text-decoration:none">HR / Admin Portal</a>
+            </form>
+          </div>
+        </div>
+      </div>
+    </section>
+  </main>
+  <div id="workspace" class="workspace hidden">
+    <aside class="sidebar">
+      <div class="brand">
+        <img src="/static/images/ncsc-seal.jpg" width="58" height="58" alt="NCSC seal">
+        <div><span class="brand-country">Republic of the Philippines</span><strong>NATIONAL COMMISSION<br>OF SENIOR CITIZENS</strong></div>
+      </div>
+      <nav class="nav" aria-label="Employee navigation">
+        <div class="nav-title document-nav-title">DOCUMENTS</div>
+        <button class="nav-item active" type="button" data-page="activities" aria-current="page" aria-label="AJA / Official Business" data-tooltip="AJA / Official Business"><i class="nav-edge-highlight" aria-hidden="true"></i><svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.65" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="7" width="18" height="14" rx="3"/><path d="M8 7V5a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2M3 12a20 20 0 0 0 18 0m-9 1v2"/></svg><span>AJA / Official Business</span></button>
+        <button class="nav-item" type="button" data-page="filings" aria-label="My AJA Filings" data-tooltip="My AJA Filings"><i class="nav-edge-highlight" aria-hidden="true"></i><svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.65" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="5" y="3" width="14" height="18" rx="2"/><path d="M8 8h8M8 12h8M8 16h5"/></svg><span>My AJA Filings</span></button>
+      </nav>
+      <div class="sidebar-bottom"><button id="logout-sidebar" class="sidebar-signout" type="button" aria-label="Sign out" data-tooltip="Sign out"><svg class="signout-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.65" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path class="signout-frame" d="M3.5 21V3h13v5m0 8v5h-13"/><g class="signout-door"><path d="M3.5 3 12 5v14l-8.5 2Z" fill="currentColor" fill-opacity=".10"/><circle cx="9.3" cy="12" r=".65" fill="currentColor" stroke="none"/></g><path class="signout-arrow" d="m18 9 3 3-3 3m-5-3h8"/></svg><span>Sign out</span></button></div>
+    </aside>
+
+    <div class="content-shell">
+      <header class="topbar">
+        <div class="topbar-heading"><h1 class="topbar-title" id="section-name">AJA / Official Business</h1></div>
+        <div class="topbar-user"><div class="workspace-clock" aria-label="Philippine local time"><div class="clock-date-row"><svg class="clock-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.65" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="5" width="18" height="16" rx="3"/><path d="M8 3v4m8-4v4M3 10h18m-13 5h2m3 0h3"/></svg><span class="clock-date" id="today"></span></div><time class="clock-time" id="live-time"></time><span class="clock-zone">PHT</span></div></div>
+      </header>
+
+      <div role="dialog" popover="manual" id="aja-time-picker" class="attendance-month-picker aja-time-picker" aria-labelledby="aja-time-title">
+        <div class="month-picker-heading"><span id="aja-time-title">Choose time</span><button type="button" id="aja-time-close" aria-label="Close time picker">×</button></div>
+        <div class="aja-time-columns">
+          <div><span class="aja-time-heading">Hour</span><div id="aja-hours" class="month-picker-grid aja-time-list" role="group" aria-label="Hour"></div></div>
+          <div><span class="aja-time-heading">Minute</span><div id="aja-minutes" class="month-picker-grid aja-time-list" role="group" aria-label="Minute"></div></div>
+          <div><span class="aja-time-heading">AM / PM</span><div class="month-picker-grid aja-time-list aja-period-grid" role="group" aria-label="AM or PM"><button type="button" data-period="AM" aria-pressed="true">AM</button><button type="button" data-period="PM" aria-pressed="false">PM</button></div></div>
+        </div>
+        <div class="aja-picker-actions"><button type="button" id="aja-time-clear" class="button outline">Clear</button><button type="button" id="aja-time-apply" class="button primary">Apply</button></div>
+      </div>
+      <div role="dialog" popover="manual" id="aja-date-picker" class="attendance-month-picker aja-date-picker" aria-labelledby="aja-date-title">
+        <div class="month-picker-heading"><span id="aja-date-title">Select official business dates</span><button type="button" id="aja-date-close" class="aja-picker-close" aria-label="Close calendar">×</button></div>
+        <div class="month-picker-grid aja-date-modes" role="group" aria-label="Date selection mode"><button type="button" data-date-mode="single" aria-pressed="true">Single</button><button type="button" data-date-mode="range" aria-pressed="false">Range</button><button type="button" data-date-mode="multiple" aria-pressed="false">Multiple</button></div>
+        <div class="month-picker-year"><button type="button" id="aja-month-prev" aria-label="Previous month">‹</button><strong id="aja-month-label"></strong><button type="button" id="aja-month-next" aria-label="Next month">›</button></div>
+        <div class="aja-calendar-week" aria-hidden="true"><span>Su</span><span>Mo</span><span>Tu</span><span>We</span><span>Th</span><span>Fr</span><span>Sa</span></div>
+        <div class="month-picker-grid aja-calendar-days" id="aja-calendar-days" role="group" aria-label="Calendar dates"></div>
+        <p id="aja-calendar-status" role="status"></p>
+        <div class="aja-picker-actions"><button type="button" class="button outline" id="aja-date-clear">Clear</button><button type="button" class="button primary" id="aja-date-apply">Apply</button></div>
+      </div>
+      <main id="main-content">
+        <section class="page" data-view="activities">
+          <div class="panel records-panel" id="aja-pilot-panel">
+            <div class="panel-header"><h2>New AJA / Official Business</h2></div>
+            <form id="aja-form" autocomplete="off" class="aja-entry-form">
+              <div class="aja-form-body">
+                <div class="aja-layout">
+                  <div class="aja-main">
+                    <fieldset>
+                      <h3>Official business details</h3>
+                      <div class="aja-form-grid aja-schedule-grid">
+                        <div class="aja-wide aja-date-field"><label id="aja-date-label" for="aja-date-trigger">Date/s of official business <span class="required-mark">*</span></label><div class="aja-date-control" id="aja-date-control"><div class="aja-date-content"><span id="aja-date-display">Select date/s</span><div id="aja-selected-dates" class="aja-selected-dates"></div></div><button type="button" class="aja-date-trigger" id="aja-date-trigger" aria-label="Select official business dates" aria-describedby="aja-date-display aja-selected-dates" aria-haspopup="dialog" aria-controls="aja-date-picker" aria-expanded="false"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="5" width="18" height="16" rx="3"/><path d="M8 3v4m8-4v4M3 10h18"/></svg></button></div></div>
+                        <div id="aja-schedule-options" class="aja-wide hidden"><label>Schedule</label><div class="aja-schedule-mode" role="group" aria-label="Schedule mode"><button type="button" data-schedule-mode="same" aria-pressed="true">Same for all dates</button><button type="button" data-schedule-mode="individual" aria-pressed="false">Individual schedules</button></div></div>
+                        <div id="aja-shared-times" class="aja-wide aja-schedule-grid aja-time-row">
+                        <div class="aja-time-field"><label id="departure-label" for="departure-display">Time of departure <span class="required-mark">*</span></label><div class="aja-time-control"><input type="text" id="departure-display" class="aja-time-input" placeholder="hh:mm AM" maxlength="12" autocomplete="off" spellcheck="false" required><input type="hidden" id="departure" name="departure"><button type="button" class="aja-time-trigger" id="departure-trigger" data-time-target="departure" aria-label="Choose time of departure" aria-haspopup="dialog" aria-controls="aja-time-picker" aria-expanded="false"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="8"/><path d="M12 7v5l3 2"/></svg></button></div></div>
+                        <div class="aja-time-field"><label id="return_time-label" for="return_time-display">Time of return <span class="required-mark">*</span></label><div class="aja-time-control"><input type="text" id="return_time-display" class="aja-time-input" placeholder="hh:mm AM" maxlength="12" autocomplete="off" spellcheck="false" required><input type="hidden" id="return_time" name="return_time"><button type="button" class="aja-time-trigger" id="return_time-trigger" data-time-target="return_time" aria-label="Choose time of return" aria-haspopup="dialog" aria-controls="aja-time-picker" aria-expanded="false"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="8"/><path d="M12 7v5l3 2"/></svg></button></div></div>
+                        </div>
+                        <div id="aja-individual-times" class="aja-wide hidden"></div>
+
+                      </div>
+                      <div class="aja-form-grid aja-trip-grid">
+                        <label>From <span class="required-mark">*</span><input name="origin" maxlength="200" placeholder="Origin" required></label>
+                        <label>To <span class="required-mark">*</span><input name="destination" maxlength="200" placeholder="Destination" required></label>
+                        <label class="aja-wide aja-purpose-field"><span>Purpose(s) <span class="required-mark">*</span></span><textarea name="purpose" rows="3" maxlength="500" placeholder="Purpose of official business" required></textarea></label>
+                      </div>
+                    </fieldset>
+                    <p id="aja-error" class="form-error hidden" role="alert"></p>
+                  </div>
+                  <aside class="aja-side" aria-label="AJA summary">
+                    <section class="aja-summary-card aja-employee-summary">
+                      <h3>Employee information</h3>
+                      <div class="aja-person"><span class="name-avatar" id="aja-avatar" aria-hidden="true">—</span><strong id="employee-name">—</strong></div>
+                      <dl class="aja-summary-list"><div><dt>Position</dt><dd id="employee-position">—</dd></div><div><dt>Department / unit</dt><dd id="employee-department">—</dd></div></dl>
+                    </section>
+                    <section class="aja-summary-card aja-live-summary">
+                      <div class="aja-summary-heading"><h3>Form summary</h3><span id="aja-completion">0 of 6</span></div>
+                      <progress id="aja-progress" max="6" value="0" aria-label="Completed required fields"></progress>
+                      <div class="aja-trip-ticket">
+                        <div class="aja-ticket-date"><div class="aja-ticket-date-heading"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="5" width="18" height="16" rx="3"/><path d="M8 3v4m8-4v4M3 10h18"/></svg><span class="aja-ticket-label">Date/s</span><span id="aja-ticket-date-count" class="aja-ticket-count hidden"></span></div><div id="summary-dates" class="aja-ticket-date-values"><span class="aja-ticket-date-empty">—</span></div></div>
+                        <div class="aja-ticket-route"><div class="aja-ticket-stop"><span class="aja-ticket-label">From</span><strong id="summary-origin">—</strong></div><div class="aja-ticket-connector" id="aja-route-connector" aria-hidden="true"><span class="aja-route-track"></span><span class="aja-route-trail"><svg class="aja-route-head" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"><path d="m5 2 4 4-4 4"/></svg></span></div><div class="aja-ticket-stop"><span class="aja-ticket-label">To</span><strong id="summary-destination">—</strong></div></div>
+                        <div class="aja-ticket-times" id="aja-summary-shared"><div><span class="aja-ticket-label">Departure</span><strong id="summary-departure">—</strong></div><div class="aja-ticket-duration"><span id="aja-ticket-duration">—</span></div><div><span class="aja-ticket-label">Return</span><strong id="summary-return_time">—</strong></div></div>
+                        <div id="aja-summary-individual" class="hidden aja-ticket-daily"><span class="aja-ticket-label">Daily schedules</span><div id="aja-summary-days"></div></div>
+                        <div class="aja-ticket-footer"><span>Official business</span><span id="aja-ticket-forms">—</span></div>
+                      </div>
+                    </section>
+                  </aside>
+                </div>
+              </div>
+              <div class="aja-form-footer">
+                <span class="aja-filing-note">File first, then print for signatures.</span><div class="aja-actions"><button type="reset" class="button outline">Clear form</button><button id="aja-submit" type="submit" class="button primary record-create-action" disabled>Submit</button></div>
+              </div>
+            </form>
+          </div>
+        </section>
+        <section class="page hidden" data-view="filings">
+          <div class="panel records-panel list-panel" id="aja-filings-panel">
+            <div class="panel-header aja-filings-heading"><h2>My AJA Filings</h2><button type="button" id="aja-new-filing" class="button primary record-create-action"><svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" stroke-width="2.25" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>New AJA</button></div>
+            <p id="aja-filings-message" class="aja-filings-message hidden" role="status"></p>
+            <div class="table-wrap"><table class="records-table profile-table aja-filings-table">
+              <colgroup><col class="aja-col-number"><col class="aja-col-reference"><col class="aja-col-filed"><col class="aja-col-dates"><col class="aja-col-destination"><col class="aja-col-status"><col class="aja-col-actions"></colgroup>
+              <thead><tr><th scope="col" class="aja-row-number">No.</th><th>Reference No.</th><th>Date filed</th><th>Date/s of official business</th><th>Destination</th><th>Status</th><th class="actions-column">Action</th></tr></thead>
+              <tbody id="aja-filings-rows"><tr><td colspan="7" class="table-empty">No filings yet.</td></tr></tbody>
+            </table></div>
+          </div>
+        </section>
+      </main>
+    </div>
+  </div>
+  <div id="profile-action-menu" popover="manual" role="group" aria-label="AJA filing actions">
+    <button type="button" id="aja-menu-view"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M2 12s4-7 10-7 10 7 10 7-4 7-10 7S2 12 2 12Z"/><circle cx="12" cy="12" r="3"/></svg><span>View</span></button>
+    <button type="button" id="aja-menu-download"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3v12m-5-5 5 5 5-5M4 16v4h16v-4"/></svg><span>Download PDF</span></button>
+    <hr class="aja-menu-divider" aria-hidden="true">
+    <button type="button" id="profile-menu-delete"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 6h18M9 6V3h6v3M5 6l1 15h12l1-15M10 10v7m4-7v7"/></svg><span>Delete</span></button>
+  </div>
+  <dialog id="profile-archive-dialog" class="app-dialog" data-action="delete" aria-labelledby="profile-archive-heading" aria-describedby="profile-archive-name profile-archive-description">
+    <div class="app-dialog-body">
+      <div class="profile-archive-art" aria-hidden="true">
+        <svg class="archive-trash" viewBox="0 0 144 120" xmlns="http://www.w3.org/2000/svg">
+          <defs><linearGradient id="archive-red" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#ff6570"/><stop offset="1" stop-color="#e83249"/></linearGradient></defs>
+          <ellipse cx="72" cy="110" rx="43" ry="4" fill="#fce5e8"/>
+          <g fill="none" stroke="#ed475b" stroke-width="1.7" stroke-linecap="round"><path d="M27 28v8m-4-4h8M108 14v8m-4-4h8M17 68v8m-4-4h8"/><circle cx="119" cy="65" r="2"/></g>
+          <g fill="#f15163"><circle cx="62" cy="9" r="1.7"/><circle cx="99" cy="95" r="1.5"/></g>
+          <path d="M45 47h54l-5.2 49a7 7 0 0 1-7 6H57.2a7 7 0 0 1-7-6z" fill="url(#archive-red)"/>
+          <path d="M45 47h54l-.8 7H45.8z" fill="#cf2d42" opacity=".25"/>
+          <path d="M59 57l2.4 34M72 57v34M85 57l-2.4 34" fill="none" stroke="#fff" stroke-width="3.6" stroke-linecap="round"/>
+          <g transform="rotate(-10 72 39)"><path d="M64 31v-6a3 3 0 0 1 3-3h10a3 3 0 0 1 3 3v6" fill="none" stroke="#e83b51" stroke-width="4.5" stroke-linecap="round"/><rect x="40" y="31" width="64" height="12" rx="5" fill="url(#archive-red)"/><path d="M46 34h50" stroke="#fff" stroke-opacity=".28" stroke-width="1.4" stroke-linecap="round"/></g>
+        </svg>
+        <svg class="archive-restore" viewBox="0 0 144 120" xmlns="http://www.w3.org/2000/svg">
+          <ellipse cx="72" cy="110" rx="43" ry="4" fill="#e5edf9"/><circle cx="72" cy="60" r="40" fill="#edf3ff"/><g fill="none" stroke="#7395d4" stroke-width="1.7" stroke-linecap="round"><path d="M27 28v8m-4-4h8M108 14v8m-4-4h8M17 68v8m-4-4h8"/><circle cx="119" cy="65" r="2"/></g><path d="M45 55a28 28 0 1 1 6 25M45 55V33m0 22h22" fill="none" stroke="#244b9a" stroke-width="6" stroke-linecap="round" stroke-linejoin="round"/><path d="m62 63 7 7 15-16" stroke="#244b9a" stroke-width="4" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>
+      </div>
+      <h2 id="profile-archive-heading">Delete AJA filing?</h2>
+      <strong id="profile-archive-name"></strong>
+      <p id="profile-archive-description">Remove this filing? You can submit a corrected AJA afterward.</p>
+      <p id="profile-archive-error" class="form-error hidden" role="alert"></p>
+    </div>
+    <div class="app-dialog-footer"><button id="cancel-profile-archive" type="button" class="button outline" autofocus>Cancel</button><button id="confirm-profile-archive" type="button" class="button primary">Delete</button></div>
+  </dialog>
+  <dialog id="dtr-preview-dialog" aria-labelledby="dtr-preview-name">
+    <div class="export-preview-toolbar">
+      <div class="preview-identity"><h2 id="dtr-preview-name" class="preview-person" tabindex="-1" autofocus>AJA / Official Business</h2><span class="preview-month"><svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="5" width="18" height="16" rx="3"/><path d="M8 3v4m8-4v4M3 10h18"/></svg><span id="dtr-preview-context"></span></span></div>
+      <button type="button" id="dtr-preview-back" class="preview-close" title="Close preview" aria-label="Close AJA preview"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg></button>
+    </div>
+    <div class="dtr-workspace">
+      <div class="dtr-document-area">
+        <div class="export-preview-note" id="dtr-preview-note" role="status" hidden></div>
+        <div id="aja-stage" class="export-preview-stage"><img id="aja-paper" alt="Generated AJA form including Certificate of Appearance"></div>
+        <div class="preview-zoom-bar" id="dtr-zoom-controls" role="group" aria-label="Paper preview zoom">
+          <button type="button" id="dtr-zoom-out" title="Zoom out" aria-label="Zoom out"><svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" aria-hidden="true"><path d="M5 12h14"/></svg></button>
+          <output id="dtr-zoom-value" aria-live="polite">100%</output>
+          <button type="button" id="dtr-zoom-in" title="Zoom in" aria-label="Zoom in"><svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" aria-hidden="true"><path d="M5 12h14M12 5v14"/></svg></button>
+          <span class="zoom-divider" aria-hidden="true"></span>
+          <button type="button" id="dtr-zoom-fit" title="Fit page to preview" aria-label="Fit page to preview" aria-pressed="true"><svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M8 4H4v4m12-4h4v4M4 16v4h4m12-4v4h-4"/><rect x="9" y="7" width="6" height="10" rx="1"/></svg><span>Fit Page</span></button>
+        </div>
+      </div>
+      <aside class="preview-controls" aria-labelledby="dtr-settings-heading">
+        <h3 id="dtr-settings-heading">Document settings</h3>
+        <div class="preview-fields"><div class="preview-category-field"><span>Reference No.</span><output id="aja-preview-reference" class="preview-category-value"></output></div><div class="preview-category-field"><span>Paper Size</span><output class="preview-category-value">Folio (8.5 × 13 in)</output></div></div>
+        <div id="aja-employee-review" class="aja-employee-review hidden"></div><div id="aja-page-nav" class="aja-page-nav hidden"><button type="button" class="button outline" id="aja-page-prev" aria-label="Previous form page">‹</button><output id="aja-page-count">1 / 1</output><button type="button" class="button outline" id="aja-page-next" aria-label="Next form page">›</button></div>
+        <div class="preview-actions">
+        <button type="button" id="dtr-preview-print" class="button primary"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 9V3h12v6M6 17H4a2 2 0 0 1-2-2v-4a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v4a2 2 0 0 1-2 2h-2M6 14h12v7H6z"/></svg>Print</button>
+        <button type="button" id="dtr-preview-download" class="preview-download" title="Download PDF" aria-label="Download AJA as PDF"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3v12m-4-4 4 4 4-4M5 16v4h14v-4"/></svg>Download PDF</button>
+        </div>
+      </aside>
+    </div>
+  </dialog>
+
+</body>
+</html>

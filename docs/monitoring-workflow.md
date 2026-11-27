@@ -4,7 +4,7 @@ The office monitors its existing DTR. This application is not a second AJA or tr
 
 | Record | Source | Treatment in this revision |
 | --- | --- | --- |
-| Biometric scans | Original K14 USB export; LAN integration later | Preserve exact timestamp, employee ID and device codes; group by day for checking |
+| Biometric scans | K14 USB export, or the local read-only connector database | Preserve exact timestamp, employee ID and raw device codes; group by day for checking |
 | AJA / fieldwork / official business / travel order | Existing office record | Optional reference or short note, saved directly without another approval |
 | Incorrect reference | Authorized administrator | Void with a reason; retain the original and audit event |
 | Previous application entries | Old system table | Retain original pending/approved/rejected statuses as read-only history |
@@ -14,7 +14,7 @@ The office monitors its existing DTR. This application is not a second AJA or tr
 
 Choose a device employee ID and month. The view lists every calendar day, its day name, original scan times and any references covering that date. A reference can span several days. Its ending timestamp is exclusive, so an order ending at midnight is not displayed on the following day. Voided references stay in reference history and are excluded from daily monitoring.
 
-The displayed coverage labels mean only **Device scans**, **Reference only**, or **No records**. They do not mean present, absent, on approved leave, complete hours, or undertime. Weekends are identified by their day name; holidays and work schedules are not inferred.
+Employee Attendance now uses the [monthly DTR table](employee-attendance.md), with explicitly reviewed AM/PM slot selections, activity colors and undertime Hours/Minutes. The legacy API coverage labels still mean only **Device scans**, **Reference only**, or **No records**. They do not mean present, absent, on approved leave, complete hours, or undertime. Weekends are identified by day name; holidays are labeled explicitly through the office calendar, and work schedules are not inferred.
 
 There is no additional lunch deduction, fixed workday assumption, travel-duration credit, overtime rule, or automatic classification of raw device codes. Fingerprint scans cannot supply an AJA purpose or document number that was never recorded in the device. A document reference does not create a physical scan.
 
@@ -26,4 +26,4 @@ Schema initialization only adds tables/indexes. It does not rewrite or approve o
 
 ## Remaining integration
 
-Automatic AM/PM filling, undertime calculation and exact NCSC printable DTR export are not delivered by the monitoring screen. They require verified device code mapping and alignment with the existing DTR fields/formulas. LAN connectivity and a connector to the existing AJA/order register are also separate integrations. The monitoring revision must not be presented as having those connections already running.
+Automatic AM/PM filling, undertime calculation and exact NCSC printable DTR export are not delivered by the monitoring screen. They require verified device code mapping and alignment with the existing DTR fields/formulas. The attendance connector copies raw punches only. It does not connect to the office AJA or travel-order register, and it does not decide time in, time out, undertime, or overtime.
