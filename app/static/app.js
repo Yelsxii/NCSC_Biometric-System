@@ -97,7 +97,6 @@ async function api(path,options={}) {
   return data;
 }
 function showLogin(){
-  resetAjaPilot();
   closeProfileMenu();profileArchived=false;profileArchiveBusy=false;profileArchiveContext=null;
   clearProfileUndoNotices();
   stopDeviceRefresh();
@@ -125,7 +124,6 @@ function showApp(){
   $('profile-archive-toggle').hidden=!canWrite;
   setAttendanceMonth('register-month',currentMonth());
   setAttendanceMonth('detail-month',currentMonth());
-  resetAjaPilot();
   navigate('employees');
 }
 function navigate(page){
@@ -155,7 +153,7 @@ function navigate(page){
     return loadRegister();
   }
   if (page==='profiles') {startAttendanceRefresh();return loadProfiles();}
-  if (page==='activities') return loadAjaPilot();
+  if (page==='activities') return;
   if (page==='staff') {startDeviceRefresh();return loadDevice();}
 }
 function cancelRegisterSearch(){requestSerial++;}
@@ -1097,69 +1095,6 @@ function startAttendanceRefresh(){
   };
   if(['employees','profiles'].includes(currentPage) && session && !document.hidden)attendanceRefreshTimer=setTimeout(tick,currentPage==='profiles'?60000:10000);
 }
-// AJA print-only pilot: draft stays in the browser and never modifies attendance.
-let ajaRows=[],ajaPdfUrl=null,ajaEpoch=0;
-function clearAjaPreview(){
-  ajaEpoch++;
-  if(ajaPdfUrl)URL.revokeObjectURL(ajaPdfUrl);
-  ajaPdfUrl=null;
-  $('aja-pdf-frame').removeAttribute('src');
-  $('aja-preview-panel').hidden=true;
-  $('aja-download').removeAttribute('href');
-  $('aja-preview-button').disabled=session?.role!=='admin';
-}
-function resetAjaPilot(){
-  clearAjaPreview();
-  ajaRows=[];
-  $('aja-form').reset();
-  $('aja-employee').replaceChildren(new Option('Select employee',''));
-  $('aja-error').textContent='';
-}
-async function loadAjaPilot(){
-  const writable=session?.role==='admin';
-  $('aja-fields').disabled=!writable;
-  $('aja-access-note').hidden=writable;
-  if(!writable)return;
-  try{
-    const data=await api('/api/employee-register?'+new URLSearchParams({month:currentMonth(),live:'false'}));
-    if(currentPage!=='activities'||session?.role!=='admin')return;
-    ajaRows=data.items.filter(row=>row.display_name);
-    const select=$('aja-employee'),selected=select.value;
-    select.replaceChildren(new Option('Select employee',''),...ajaRows.map(row=>new Option(row.display_name,row.employee_code)));
-    select.value=selected;
-  }catch(error){$('aja-error').textContent=error.message;}
-}
-function selectAjaEmployee(){
-  const row=ajaRows.find(item=>item.employee_code===$('aja-employee').value);
-  $('aja-name').value=row?.display_name||'';
-  $('aja-position').value=row?.position||'';
-  $('aja-department').value=row?.department||'';
-  clearAjaPreview();
-}
-async function previewAjaPilot(){
-  if(session?.role!=='admin')return;
-  clearAjaPreview();
-  const token=ajaEpoch;
-  $('aja-preview-button').disabled=true;
-  $('aja-error').textContent='';
-  try{
-    const data=Object.fromEntries(new FormData($('aja-form')));
-    const response=await fetch('/api/aja/preview',{method:'POST',credentials:'same-origin',headers:{'Content-Type':'application/json','X-CSRF-Token':session.csrf},body:JSON.stringify(data)});
-    if(!response.ok){
-      const result=await response.json().catch(()=>({}));
-      const message=Array.isArray(result.detail)?result.detail.map(x=>x.msg).join('; '):result.detail;
-      throw new Error(message||'Unable to generate AJA form.');
-    }
-    const blob=await response.blob();
-    if(token!==ajaEpoch||currentPage!=='activities')return;
-    ajaPdfUrl=URL.createObjectURL(blob);
-    $('aja-pdf-frame').src=ajaPdfUrl;
-    $('aja-download').href=ajaPdfUrl;
-    $('aja-preview-panel').hidden=false;
-    $('aja-preview-panel').scrollIntoView({block:'nearest',behavior:'smooth'});
-  }catch(error){if(token===ajaEpoch)$('aja-error').textContent=error.message;}
-  finally{if(token===ajaEpoch)$('aja-preview-button').disabled=false;}
-}
 function deviceRefreshAllowed(){
   return Boolean(session && currentPage==='staff' && !document.hidden);
 }
@@ -1663,10 +1598,6 @@ async function initialize(){
   $('calendar-form').addEventListener('submit',saveCalendar);
   $('close-calendar').addEventListener('click',()=>$('calendar-dialog').close());
   $('cancel-calendar').addEventListener('click',()=>$('calendar-dialog').close());
-  $('aja-form').addEventListener('submit',e=>{e.preventDefault();previewAjaPilot();});
-  $('aja-employee').addEventListener('change',selectAjaEmployee);
-  $('aja-form').addEventListener('input',clearAjaPreview);
-  $('aja-form').addEventListener('reset',()=>{clearAjaPreview();});
   $('open-attendance-import').addEventListener('click',()=>{
     $('usb-form').reset();$('usb-file-name').textContent='No file selected';
     usbPreviewOkay=false;$('usb-result').classList.add('hidden');
