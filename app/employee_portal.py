@@ -286,3 +286,16 @@ def employee_aja_document(reference: str, response: Response, user=Depends(emplo
         metadata = filing_metadata(con, row)
         pdf = row["pdf"]
     return {"filing": metadata, **render_saved_pdf(pdf)}
+
+
+@router.get("/api/employee-portal/aja/filings/{reference}/pdf")
+def employee_aja_download(reference: str, user=Depends(employee_user)):
+    with closing(connect()) as con:
+        row = con.execute("SELECT reference,pdf FROM aja_filings WHERE reference=? AND employee_code=?",
+                          (reference, user["employee_code"])).fetchone()
+        if not row:
+            raise HTTPException(404, "AJA filing not found.")
+        return Response(content=row["pdf"], media_type="application/pdf", headers={
+            "Cache-Control": "no-store",
+            "Content-Disposition": f'attachment; filename="{row["reference"]}.pdf"'
+        })
