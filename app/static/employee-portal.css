@@ -3,11 +3,22 @@
 .workspace .content-shell .page #aja-pilot-panel{flex:1;display:flex;flex-direction:column;min-height:0;overflow:hidden}
 .workspace #aja-pilot-panel .panel-header{flex:none;margin:0 0 12px}
 .workspace #aja-pilot-panel #aja-form{width:100%;max-width:none;min-width:0;min-height:0;flex:1;display:flex;flex-direction:column}
-.workspace #aja-pilot-panel .aja-form-body{flex:1;min-height:0;min-width:0;overflow:auto;overscroll-behavior:contain;padding:0 1px 14px;scrollbar-width:thin;scrollbar-color:#c1cfe3 transparent}
+.workspace #aja-pilot-panel .aja-form-body{flex:1;min-height:0;min-width:0;overflow:auto;overscroll-behavior:contain;padding:0 1px calc(14px + var(--aja-picker-space,0px));scrollbar-width:thin;scrollbar-color:#c1cfe3 transparent}
 .workspace #aja-pilot-panel .aja-form-body::-webkit-scrollbar{display:block;width:5px}
 .workspace #aja-pilot-panel .aja-form-body::-webkit-scrollbar-thumb{background:#c1cfe3;border-radius:8px}
-.workspace #aja-pilot-panel .aja-layout{display:grid;grid-template-columns:minmax(0,1.65fr) minmax(240px,1fr);align-items:start;gap:12px}
-.workspace #aja-pilot-panel :is(.aja-main,.aja-side){min-width:0;display:grid;gap:12px;align-content:start}
+.workspace #aja-pilot-panel .aja-layout{display:grid;grid-template-columns:minmax(0,1fr);gap:12px}
+.workspace #aja-pilot-panel .aja-utility-row{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.15fr) minmax(0,.85fr);gap:12px;align-items:stretch}
+.workspace #aja-pilot-panel .aja-main{min-width:0;display:grid;gap:12px;align-content:start}
+.workspace #aja-pilot-panel .aja-schedule-grid{grid-template-columns:minmax(0,1.35fr) repeat(2,minmax(0,1fr))}
+.workspace #aja-pilot-panel .aja-trip-grid{margin-top:12px}
+.workspace #aja-pilot-panel .aja-utility-row .aja-summary-card{padding:12px 14px}
+.workspace #aja-pilot-panel .aja-utility-row .aja-summary-list{gap:6px}
+.workspace #aja-pilot-panel .aja-utility-row .aja-summary-list>div{padding-bottom:5px}
+.workspace #aja-pilot-panel .aja-utility-row .aja-summary-list>div:last-child{padding-bottom:0}
+.workspace #aja-pilot-panel .aja-summary-route dd{display:flex;align-items:center;gap:6px;flex-wrap:wrap}
+.workspace #aja-pilot-panel .aja-route-arrow{color:#7891b4}
+.workspace #aja-pilot-panel .aja-utility-row #aja-progress{margin:7px 0 9px}
+.workspace #aja-pilot-panel .aja-utility-row .aja-person{margin-bottom:8px}
 .workspace #aja-pilot-panel :is(fieldset,.aja-summary-card){min-width:0;margin:0;padding:14px 16px 16px;background:#fff;border:1px solid #dce5f2;border-radius:10px;box-shadow:inset 0 1px 0 #fff}
 .workspace #aja-pilot-panel :is(fieldset,.aja-summary-card) h3{margin:0 0 12px;color:#385780;font-size:12px;font-weight:700;line-height:1.4}
 .workspace #aja-pilot-panel .aja-form-grid{gap:9px 12px}
@@ -18,7 +29,7 @@
 .workspace #aja-pilot-panel .aja-form-grid :is(input,textarea)::placeholder{color:#8698b3;font-weight:500;opacity:1}
 .workspace #aja-pilot-panel .aja-form-grid :is(input,textarea,.aja-time-trigger):hover{border-color:#a5bce2}
 .workspace #aja-pilot-panel .aja-form-grid :is(input,textarea):focus,.workspace #aja-pilot-panel .aja-time-trigger:focus-visible{border-color:#6284ca;outline:none;box-shadow:0 0 0 2px #244b9a12}
-.workspace #aja-pilot-panel .aja-form-grid textarea{height:auto;min-height:84px;resize:vertical;padding:9px}
+.workspace #aja-pilot-panel .aja-form-grid textarea{height:88px;min-height:88px;resize:vertical;padding:9px}
 .workspace #aja-pilot-panel .aja-time-trigger{display:flex;justify-content:space-between;align-items:center;gap:8px;text-align:left;cursor:pointer}
 .workspace #aja-pilot-panel .aja-time-trigger svg{width:15px;height:15px;color:#526fa4;flex:none}
 .workspace #aja-pilot-panel .aja-time-trigger.empty .aja-time-value{color:#8698b3;font-weight:500}
@@ -48,21 +59,22 @@
 .workspace .aja-time-picker .month-picker-heading{padding:0 0 8px;color:#385780}
 .workspace #aja-time-close{border:0;border-radius:6px;background:#f0f4fc;color:#52688a;width:24px;height:24px;font-size:17px;line-height:1}
 .workspace #aja-time-close:hover{background:#e7effc;color:#244b9a}
-.workspace .aja-time-heading,.workspace .aja-time-minute-row label{display:block;font-size:10px;font-weight:650;color:#52688a;margin:4px 0 5px}
-.workspace .aja-time-minute-row{display:grid;grid-template-columns:1.2fr 1fr;gap:8px;margin-top:8px}
-.workspace .aja-minute-control{display:flex;align-items:center;gap:3px}
-.workspace .aja-minute-control button{width:25px;height:28px;border:0;border-radius:6px;background:#f0f4fc;color:#244b9a;font-weight:650;flex:none}
-.workspace .aja-minute-control button:hover{background:#e7effc}
-.workspace .aja-minute-control input{min-width:0;width:100%;height:28px;min-height:28px;border:1px solid #dce5f2;border-radius:7px;background:#f6f8fc;color:#243e68;padding:3px;text-align:center;font-size:12px;font-weight:650}
-.workspace .aja-period-grid{grid-template-columns:repeat(2,minmax(0,1fr))}
+.workspace .aja-time-heading{display:block;font-size:10px;font-weight:650;color:#52688a;margin:0 0 5px;text-align:center}
+.workspace .aja-time-columns{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:7px}
+.workspace .aja-time-columns>div{min-width:0}
+.workspace .aja-time-list{display:flex;flex-direction:column;gap:4px;max-height:124px;overflow-y:auto;overscroll-behavior:contain;scrollbar-width:thin;scrollbar-color:#c1cfe3 transparent;padding-right:2px}
+.workspace .aja-time-list::-webkit-scrollbar{display:block;width:4px}
+.workspace .aja-time-list::-webkit-scrollbar-thumb{background:#c1cfe3;border-radius:5px}
+.workspace .aja-time-list::-webkit-scrollbar-button{display:none}
+.workspace .aja-time-list button{flex:none;width:100%;height:28px;min-height:28px}
+.workspace .aja-period-grid{overflow:visible;padding:0}
 .workspace .aja-picker-actions{display:flex;justify-content:flex-end;gap:6px;margin-top:10px}
 .workspace .aja-picker-actions .button{height:30px;min-height:30px;border:0;border-radius:8px}
 .workspace .aja-picker-actions .button.outline{background:#eaf0fa;color:#31588e}
 .workspace .aja-picker-actions .button.outline:hover{background:#dbe7fa;color:#244b9a}
 .workspace .aja-picker-actions .button.primary{background:#244b9a;color:#fff}
 .workspace .aja-picker-actions .button.primary:hover{background:#173b80}
-.workspace #aja-time-error{color:#b32638;font-size:10px;margin:6px 0 0}
 #aja-paper{display:block;margin:0 auto;max-width:none;background:#fff;box-shadow:0 6px 25px #243e6b24}
-@media(max-width:950px){.workspace #aja-pilot-panel .aja-layout{grid-template-columns:minmax(0,1fr)}.workspace #aja-pilot-panel .aja-side{grid-template-columns:repeat(2,minmax(0,1fr))}.workspace #aja-pilot-panel .aja-document-note{grid-column:1/-1}}
-@media(max-width:740px){.workspace #aja-pilot-panel :is(fieldset,.aja-summary-card){padding:12px}.workspace #aja-pilot-panel :is(.aja-form-grid,.aja-side){grid-template-columns:minmax(0,1fr);gap:10px}.workspace #aja-pilot-panel .aja-actions{width:100%}.workspace #aja-pilot-panel .aja-actions .button{flex:1}}
+@media(max-width:1100px){.workspace #aja-pilot-panel .aja-utility-row{grid-template-columns:repeat(2,minmax(0,1fr))}.workspace #aja-pilot-panel .aja-document-note{grid-column:1/-1}.workspace #aja-pilot-panel .aja-schedule-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.workspace #aja-pilot-panel .aja-schedule-grid>label{grid-column:1/-1}}
+@media(max-width:740px){.workspace #aja-pilot-panel :is(fieldset,.aja-summary-card){padding:12px}.workspace #aja-pilot-panel :is(.aja-form-grid,.aja-utility-row){grid-template-columns:minmax(0,1fr);gap:10px}.workspace #aja-pilot-panel .aja-actions{width:100%}.workspace #aja-pilot-panel .aja-actions .button{flex:1}}
 @media(prefers-reduced-motion:reduce){.workspace #aja-pilot-panel :is(input,textarea,.aja-time-trigger,.button){transition:none}.workspace #aja-pilot-panel #aja-progress::-webkit-progress-value{transition:none}}
