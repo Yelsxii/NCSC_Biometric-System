@@ -41,6 +41,33 @@ function timeDisplay(value){
   const [h,m]=value.split(':').map(Number);
   return String(h%12||12).padStart(2,'0')+':'+String(m).padStart(2,'0')+' '+(h<12?'AM':'PM');
 }
+function parseTypedTime(value){
+  const raw=String(value||'').trim().toUpperCase();
+  let m=raw.match(/^(\d{1,2})(?::(\d{2}))?\s*(AM|PM)$/);
+  let h,min;
+  if(m){
+    h=Number(m[1]);min=Number(m[2]||0);
+    if(h<1||h>12||min>59)return '';
+    h=h%12+(m[3]==='PM'?12:0);
+  }else{
+    m=raw.match(/^(\d{1,2}):(\d{2})$/);
+    if(!m)return '';
+    h=Number(m[1]);min=Number(m[2]);
+    if(h>23||min>59)return '';
+  }
+  return String(h).padStart(2,'0')+':'+String(min).padStart(2,'0');
+}
+function syncTypedTime(target,normalize=false){
+  const input=$(target+'-display'),raw=input.value.trim(),parsed=parseTypedTime(raw);
+  $(target).value=parsed;
+  if(normalize&&parsed)input.value=timeDisplay(parsed);
+  if(normalize||input.hasAttribute('aria-invalid')){
+    if(raw&&!parsed)input.setAttribute('aria-invalid','true');
+    else input.removeAttribute('aria-invalid');
+  }
+  input.setCustomValidity(raw&&!parsed?'Enter a valid time, e.g. 8:30 AM or 13:30.':'');
+  return parsed;
+}
 function updateSummary(){
   const values=Object.fromEntries(new FormData(ajaForm));
   let count=0;
@@ -50,12 +77,8 @@ function updateSummary(){
     if(rendered)count++;
     const summary=$('summary-'+key);
     if(summary)summary.textContent=rendered||'—';
-    if(timeNames.includes(key)){
-      const trigger=$(key+'-trigger');
-      $(key+'-display').textContent=rendered||'Select time';
-      trigger.classList.toggle('empty',!rendered);
-      if(rendered)trigger.removeAttribute('aria-invalid');
-    }
+    // Preserve the user's text and cursor while typing. The canonical
+    // hidden value alone drives the summary and PDF payload.
   }
   $('aja-progress').value=count;
   $('aja-completion').textContent=count+' of 6';
@@ -75,7 +98,7 @@ function closeTimePicker(restore=false){
 }
 function placeTimePicker(){
   if(!timeTarget||!timePicker.open)return;
-  const trigger=$(timeTarget+'-trigger'),r=trigger.getBoundingClientRect(),gap=5,margin=8;
+  const trigger=$(timeTarget+'-display'),r=trigger.getBoundingClientRect(),gap=5,margin=8;
   timePicker.style.left=Math.max(margin,Math.min(r.left,window.innerWidth-timePicker.offsetWidth-margin))+'px';
   timePicker.style.top=(r.bottom+gap)+'px';
   timePicker.style.maxHeight=Math.max(40,window.innerHeight-r.bottom-gap-margin)+'px';
@@ -115,6 +138,7 @@ function applyTime(clear=false){
   if(!timeTarget)return;
   const target=$(timeTarget),h=hour%12+(period==='PM'?12:0);
   target.value=clear?'':String(h).padStart(2,'0')+':'+String(minute).padStart(2,'0');
+  const display=$(timeTarget+'-display');display.value=timeDisplay(target.value);display.setCustomValidity('');display.removeAttribute('aria-invalid');
   closeTimePicker(true);
   target.dispatchEvent(new Event('input',{bubbles:true}));
 }
@@ -126,7 +150,13 @@ for(const [list,key,start,end] of [['aja-hours','hour',1,12],['aja-minutes','min
   }
 }
 for(const button of timePicker.querySelectorAll('[data-period]'))button.addEventListener('click',()=>{period=button.dataset.period;refreshTimePicker();});
-for(const target of timeNames)$(target+'-trigger').addEventListener('click',()=>openTimePicker(target));
+for(const target of timeNames){
+  const input=$(target+'-display');
+  $(target+'-trigger').addEventListener('click',()=>openTimePicker(target));
+  input.addEventListener('input',()=>syncTypedTime(target));
+  input.addEventListener('blur',()=>{syncTypedTime(target,true);updateSummary();});
+  input.addEventListener('invalid',()=>{input.setAttribute('aria-invalid','true');});
+}
 $('aja-time-apply').addEventListener('click',()=>applyTime());
 $('aja-time-clear').addEventListener('click',()=>applyTime(true));
 $('aja-time-close').addEventListener('click',()=>closeTimePicker(true));
@@ -155,7 +185,7 @@ $('login-form').addEventListener('submit',async e=>{
   catch(err){setError('login-error',err.message);}finally{b.disabled=false;}
 });
 $('logout-sidebar').addEventListener('click',async()=>{try{await call('logout',{});show(null);}catch(err){setError('aja-error',err.message);}});
-$('aja-form').addEventListener('reset',()=>{closeTimePicker();clearPreview();queueMicrotask(()=>{for(const target of timeNames)$(target).value='';identity();});for(const target of timeNames)$(target+'-trigger').removeAttribute('aria-invalid');setError('aja-error','');$('aja-submit').disabled=false;});
+$('aja-form').addEventListener('reset',()=>{closeTimePicker();clearPreview();queueMicrotask(()=>{for(const target of timeNames){$(target).value='';const input=$(target+'-display');input.value='';input.setCustomValidity('');input.removeAttribute('aria-invalid');}identity();});for(const target of timeNames)$(target+'-trigger').removeAttribute('aria-invalid');setError('aja-error','');$('aja-submit').disabled=false;});
 $('aja-form').addEventListener('input',()=>{clearPreview();updateSummary();setError('aja-error','');$('aja-submit').disabled=false;});
 function applyZoom(){
   const stage=$('aja-stage');
@@ -172,9 +202,9 @@ $('aja-form').addEventListener('submit',async e=>{
   e.preventDefault();if(!account)return;
   closeTimePicker();
   for(const target of timeNames){
-    if(!timeDisplay($(target).value)){
-      setError('aja-error','Choose both departure and return times.');
-      $(target+'-trigger').setAttribute('aria-invalid','true');$(target+'-trigger').focus();return;
+    if(!syncTypedTime(target,true)){
+      setError('aja-error','Enter valid departure and return times.');
+      $(target+'-display').setAttribute('aria-invalid','true');$(target+'-display').focus();return;
     }
   }
   clearPreview();const token=epoch;
