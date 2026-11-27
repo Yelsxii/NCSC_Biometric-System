@@ -26,8 +26,8 @@ def test_employee_portal_access_boundary(admin):
                  "/api/dtr/monitor?employee_code=test-employee-2&month=2026-11",
                  "/api/device/status"):
         assert client.get(path).status_code == 401, path
-    payload = {"dates":"November 27, 2026", "origin":"Office", "destination":"Other office",
-               "purpose":"Meeting", "departure":"09:00", "return_time":"11:00"}
+    payload = {"days":[{"date":"2026-11-27", "departure":"09:00", "return_time":"11:00"}],
+               "origin":"Office", "destination":"Other office", "purpose":"Meeting"}
     assert client.post("/api/employee-portal/aja/preview", json=payload).status_code == 403
     forged = dict(payload, name="Other Employee")
     assert client.post("/api/employee-portal/aja/preview", json=forged,
@@ -35,3 +35,17 @@ def test_employee_portal_access_boundary(admin):
     with closing(connect()) as con, con:
         con.execute("UPDATE employee_portal_accounts SET enabled=0 WHERE username='employee-test'")
     assert client.get("/api/employee-portal/me").status_code == 401
+
+
+def test_aja_structured_days():
+    import pytest
+    from pydantic import ValidationError
+    from app.employee_portal import EmployeeAjaInput, format_dates
+    common = dict(origin="Office", destination="Venue", purpose="Meeting")
+    day = dict(date="2026-11-27", departure="08:00", return_time="16:00")
+    other = dict(day, date="2026-11-30", departure="09:00")
+    payload = EmployeeAjaInput(days=[other, day], **common)
+    assert format_dates([d.date for d in payload.days]) == "Nov 27, 2026; Nov 30, 2026"
+    for days in ([day, day], [dict(day, date="2026-02-30")], [dict(day, return_time="07:00")], []):
+        with pytest.raises(ValidationError):
+            EmployeeAjaInput(days=days, **common)
