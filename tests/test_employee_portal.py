@@ -49,3 +49,17 @@ def test_aja_structured_days():
     for days in ([day, day], [dict(day, date="2026-02-30")], [dict(day, return_time="07:00")], []):
         with pytest.raises(ValidationError):
             EmployeeAjaInput(days=days, **common)
+
+def test_aja_print_batches_are_deterministic():
+    from app.employee_portal import EmployeeAjaInput, aja_print_batches
+    common = dict(origin="Office", destination="Venue", purpose="Meeting")
+    def batches(dates, different=False):
+        days = [dict(date=date, departure="09:00" if different and i == 1 else "08:00",
+                     return_time="16:00") for i, date in enumerate(dates)]
+        return aja_print_batches(EmployeeAjaInput(days=days, **common).days)
+    assert len(batches(["2026-12-16"])) == 1
+    assert len(batches(["2026-12-16", "2026-12-18"])) == 2
+    assert len(batches(["2026-12-16", "2026-12-17", "2026-12-18"])) == 1
+    assert len(batches(["2026-12-16", "2026-12-17", "2026-12-19"])) == 3
+    assert len(batches(["2026-12-16", "2026-12-17"], different=True)) == 2
+    assert len(batches(["2026-12-31", "2027-01-01"])) == 1
