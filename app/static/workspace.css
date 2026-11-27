@@ -1274,8 +1274,8 @@ dialog.app-dialog[open]::backdrop,#dtr-preview-dialog[open]::backdrop{
 #profile-archive-dialog .form-error{background:#fbe2e7;color:#b32638}
 #profile-archive-dialog .app-dialog-footer{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));padding:5px 13px 13px;border:0;background:#fff;gap:9px}
 #profile-archive-dialog .app-dialog-footer .button{height:34px;min-height:34px;width:100%;padding:0 12px;border-radius:7px;font-size:11px;font-weight:650;box-shadow:none;transform:none;transition:background-color .22s ease,color .22s ease,border-color .22s ease,transform .22s ease}
-#profile-archive-dialog #cancel-profile-archive{background:#fff;color:var(--confirm-accent);border:1px solid color-mix(in srgb,var(--confirm-accent) 65%,white)}
-#profile-archive-dialog #cancel-profile-archive:not(:disabled):is(:hover,:focus-visible){background:var(--confirm-soft);border-color:var(--confirm-accent);color:var(--confirm-hover)}
+#profile-archive-dialog #cancel-profile-archive{background:#eaf0fa;color:#31588e;border:1px solid transparent}
+#profile-archive-dialog #cancel-profile-archive:not(:disabled):is(:hover,:focus-visible){background:#dbe7fa;border-color:transparent;color:#244b9a}
 #profile-archive-dialog #confirm-profile-archive{border:1px solid transparent;background:var(--confirm-accent);color:#fff}
 #profile-archive-dialog #confirm-profile-archive:not(:disabled):is(:hover,:focus-visible){background:var(--confirm-hover);color:#fff}
 #profile-archive-dialog .button:not(:disabled):active{transform:scale(.98)}
