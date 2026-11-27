@@ -98,3 +98,33 @@ def test_optional_name_table_absent_does_not_block_existing_connector(admin,monk
     assert result.status_code==200
     assert result.json()["records_inserted"]==1
     assert result.json()["names_updated"]==0
+
+
+def test_discovery_requires_opt_in_and_confirmation(admin, monkeypatch, tmp_path):
+    client, headers = admin
+    source = tmp_path / "roster.sqlite3"
+    k14_poller.save_new(source, HOST, [("99", "2026-11-02 08:00:00", "1", "0")])
+    k14_poller.save_discovered_roster(source, HOST, [("99", "DELA CRUZ, ANA MARIE, SANTOS, JR.")])
+    monkeypatch.setenv("K14_CONNECTOR_DB", str(source))
+    monkeypatch.setenv("K14_HOST", HOST)
+    monkeypatch.setenv("K14_ROSTER_DISCOVERY_ENABLED", "false")
+    assert client.post("/api/device/sync", headers=headers).status_code == 200
+    assert client.get("/api/employee-profiles/99").status_code == 404
+    monkeypatch.setenv("K14_ROSTER_DISCOVERY_ENABLED", "true")
+    assert client.post("/api/device/sync", headers=headers).status_code == 200
+    pending = client.get("/api/employee-profiles/99").json()
+    assert not pending["profile_complete"] and not pending["sync_authorized"]
+    assert pending["suggested_name"]["first_name"] == "ANA MARIE"
+    assert pending["suggested_name"]["last_name"] == "DELA CRUZ"
+    assert pending["suggested_name"]["middle_name"] == "SANTOS"
+    assert pending["suggested_name"]["suffix"] == "JR."
+    assert client.post("/api/device/sync", headers=headers).json()["records_inserted"] == 0
+    from tests.test_profiles import profile
+    payload = profile("99", first_name="ANA MARIE", middle_name="SANTOS", last_name="DELA CRUZ", suffix="JR.")
+    payload.pop("sync_authorized")
+    assert client.post("/api/employee-profiles", json=payload, headers=headers).status_code == 201
+    assert client.get("/api/employee-profiles/99").json()["sync_authorized"]
+    assert client.post("/api/device/sync", headers=headers).json()["records_inserted"] == 1
+    k14_poller.save_discovered_roster(source, HOST, [("99", "Wrong Alias")])
+    client.post("/api/device/sync", headers=headers)
+    assert client.get("/api/employee-profiles/99").json()["display_name"] == "ANA MARIE SANTOS DELA CRUZ JR."

@@ -47,6 +47,7 @@ let profileSummary = null;
 let profileFormToken = 0;
 let profileEditing = null;
 let profileVersion = null;
+let profileSyncAuthorized = true;
 let profileReturn = null;
 let detailRequest = 0;
 let dayReviewContext = null;
@@ -147,7 +148,7 @@ function navigate(page){
     startAttendanceRefresh();
     return loadRegister();
   }
-  if (page==='profiles') return loadProfiles();
+  if (page==='profiles') {startAttendanceRefresh();return loadProfiles();}
   if (page==='activities') return loadActivities();
   if (page==='staff') {startDeviceRefresh();return loadDevice();}
 }
@@ -332,11 +333,11 @@ function renderProfiles(){
       '<td class="directory-action-cell">'+(session.role==='admin'?'<button type="button" class="profile-more" data-profile-more="'+esc(row.employee_code)+'" aria-haspopup="true" aria-expanded="false" aria-controls="profile-action-menu" aria-label="Actions for '+esc(row.display_name||row.employee_code)+'"><svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><circle cx="5" cy="12" r="1.8"/><circle cx="12" cy="12" r="1.8"/><circle cx="19" cy="12" r="1.8"/></svg></button>':'—')+'</td></tr>'
     ).join(''):'<tr><td colspan="5" class="table-empty">No matching employees.</td></tr>');
 }
-async function loadProfiles(){
+async function loadProfiles({quiet=false}={}){
   const serial=++profileRequest,account=session,archived=profileArchived;
   const valid=()=>serial===profileRequest&&currentPage==='profiles'&&session===account&&archived===profileArchived;
   updateProfileTabs();
-  if(profileRows)renderProfiles();
+  if(profileRows){if(!quiet)renderProfiles();}
   else $('profile-rows').innerHTML='<tr><td colspan="5" class="table-empty">Loading employees…</td></tr>';
   try{
     const getPage=page=>api('/api/employee-profiles?'+new URLSearchParams({q:'',category:'All',status:'All',archived:String(archived),page:String(page),limit:String(PROFILE_BATCH_SIZE)}));
@@ -351,12 +352,13 @@ async function loadProfiles(){
     }
     // The endpoint already sorts by name; display numbering is separate from device keys.
     const unique=[...new Map(all.map(row=>[row.employee_code,row])).values()];
+    if(quiet && (profileMenuTrigger || profileArchiveBusy || document.querySelector('dialog[open]')))return;
     profileRows=unique.map((row,index)=>({...row,directory_id:index+1}));
     profileSummary=first.summary;renderProfiles();
   }catch(error){
     if(!valid())return;
     if(!profileRows)$('profile-rows').innerHTML='<tr><td colspan="5" class="table-empty">Unable to load employees.</td></tr>';
-    toast(error.message,true);
+    if(!quiet)toast(error.message,true);
   }
 }
 function closeProfileMenu(restoreFocus=false){
@@ -406,7 +408,7 @@ async function openProfile(code=null){
   if(session?.role!=='admin')return;
   const token=++profileFormToken;
   profileReturn={page:currentPage,employee:selectedEmployee,month:$('detail-month').value};
-  profileEditing=null;profileVersion=null;
+  profileEditing=null;profileVersion=null;profileSyncAuthorized=true;
   $('profile-dialog').dataset.profileMode=code?'edit':'register';
   $('profile-form').reset();$('profile-id').readOnly=false;
   $('profile-error').classList.add('hidden');$('save-profile').disabled=false;
@@ -428,15 +430,21 @@ async function openProfile(code=null){
         return department===full||department===code||department===full.replace(/\s*\([^)]+\)$/,'');
       });
       $('profile-department').value=official?.value||'';
-      $('profile-sync').checked=data.sync_authorized;
+      // Existing explicitly paused profiles stay paused; new confirmed profiles default to collection.
+      profileSyncAuthorized=data.profile_complete?data.sync_authorized:true;
+      if(!data.profile_complete && data.suggested_name){
+        for(const [field,key] of [['first','first_name'],['middle','middle_name'],['last','last_name'],['suffix','suffix']]){
+          const node=$('profile-'+field);node.value=data.suggested_name[key]||'';
+        }
+      }
       $('profile-heading').textContent=data.profile_complete?'Edit employee profile':'Complete employee profile';
       $('save-profile').textContent=data.profile_complete?'Save changes':'Complete profile';
       $('profile-context').textContent='K14 ID '+code+(data.display_name?' · Current name: '+data.display_name:'');
-      $('profile-id-hint').textContent='This existing K14 ID stays fixed. Saving verified details preserves all linked scans.';
+      $('profile-id-hint').textContent=data.profile_complete?'This existing K14 ID stays fixed. Saving verified details preserves all linked scans.':'Verify the suggested name against the device and office records. Category and department are required.';
     }
     $('profile-confirm').checked=false;
     $('profile-dialog').showModal();
-    $(code?'profile-first':'profile-id').focus();
+    $(code?($('profile-first').value&&$('profile-last').value?'profile-type':'profile-first'):'profile-id').focus();
   }catch(error){toast(error.message,true);}
 }
 async function saveProfile(event){
@@ -446,7 +454,7 @@ async function saveProfile(event){
   const payload={};
   for(const [field,key] of [['first','first_name'],['middle','middle_name'],['last','last_name'],['suffix','suffix'],['type','employment_type'],['department','department'],['position','position']])
     payload[key]=$('profile-'+field).value.trim();
-  payload.sync_authorized=$('profile-sync').checked;
+  payload.sync_authorized=profileSyncAuthorized;
   payload.device_enrollment_confirmed=$('profile-confirm').checked;
   const editing=profileEditing;
   if(editing)payload.version=profileVersion;else payload.employee_code=code;
@@ -827,14 +835,16 @@ function startAttendanceRefresh(){
   stopAttendanceRefresh();
   const epoch=attendanceRefreshEpoch;
   const tick=async()=>{
-    if(epoch!==attendanceRefreshEpoch || currentPage!=='employees' || !session || document.hidden)return;
-    if(!document.querySelectorAll('dialog[open]').length){
-      if(selectedEmployee)await loadDetail({quiet:true});else await loadRegister({quiet:true});
+    if(epoch!==attendanceRefreshEpoch || !['employees','profiles'].includes(currentPage) || !session || document.hidden)return;
+    if(!document.querySelector('dialog[open]')){
+      if(currentPage==='profiles'){
+        if(!profileMenuTrigger&&!profileArchiveBusy)await loadProfiles({quiet:true});
+      }else if(selectedEmployee)await loadDetail({quiet:true});else await loadRegister({quiet:true});
     }
-    if(epoch===attendanceRefreshEpoch && currentPage==='employees' && session && !document.hidden)
-      attendanceRefreshTimer=setTimeout(tick,10000);
+    if(epoch===attendanceRefreshEpoch && ['employees','profiles'].includes(currentPage) && session && !document.hidden)
+      attendanceRefreshTimer=setTimeout(tick,currentPage==='profiles'?60000:10000);
   };
-  if(currentPage==='employees' && session && !document.hidden)attendanceRefreshTimer=setTimeout(tick,10000);
+  if(['employees','profiles'].includes(currentPage) && session && !document.hidden)attendanceRefreshTimer=setTimeout(tick,currentPage==='profiles'?60000:10000);
 }
 async function loadActivities(){
   const token=++activityRequest;
@@ -1213,6 +1223,10 @@ async function initialize(){
     }else if(deviceRefreshAllowed()){
       startDeviceRefresh();
       void refreshDeviceStatus({quiet:true,fresh:true});
+    }
+    if(!document.hidden && session && currentPage==='profiles'){
+      startAttendanceRefresh();
+      if(!profileMenuTrigger&&!document.querySelector('dialog[open]'))void loadProfiles({quiet:true});
     }
     if(!document.hidden && session && currentPage==='employees'){
       startAttendanceRefresh();

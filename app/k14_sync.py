@@ -211,6 +211,46 @@ def import_device_names(con: sqlite3.Connection, rows: list[sqlite3.Row],
     return updated
 
 
+def roster_discovery_enabled() -> bool:
+    return os.getenv("K14_ROSTER_DISCOVERY_ENABLED", "false").strip().lower() == "true"
+
+
+def read_discovered_roster(path: Path) -> list[sqlite3.Row]:
+    if not roster_discovery_enabled():
+        return []
+    with _open_connector(path) as source:
+        if not source.execute("SELECT 1 FROM sqlite_master WHERE type='table' AND name='device_roster_discovery'").fetchone():
+            return []
+        return list(source.execute("SELECT device_ip,employee_id,display_name FROM device_roster_discovery LIMIT 5001"))
+
+
+def import_discovered_roster(con: sqlite3.Connection, rows: list[sqlite3.Row], host: str) -> int:
+    """Discover pending profiles without authorizing scans or replacing verified names."""
+    if not roster_discovery_enabled():
+        return 0
+    if len(rows) > 5000:
+        raise ValueError("Too many device names; review the connector source.")
+    changed = 0
+    for item in rows:
+        if str(item["device_ip"] or "").strip() != host or not isinstance(item["display_name"], str):
+            continue
+        try:
+            info = staff_row(item["employee_id"], item["display_name"])
+        except ValueError:
+            continue
+        code, name = info["employee_code"], info["display_name"]
+        old = con.execute("SELECT display_name,name_source FROM employees WHERE employee_code=?", (code,)).fetchone()
+        if old is not None and (old["name_source"] != "device_discovered" or old["display_name"] == name):
+            continue
+        if con.execute("SELECT 1 FROM employee_profiles WHERE employee_code=?", (code,)).fetchone():
+            continue
+        con.execute("INSERT INTO employees(employee_code,display_name,name_source) VALUES(?,?,'device_discovered') "
+                    "ON CONFLICT(employee_code) DO UPDATE SET display_name=excluded.display_name,updated_at=CURRENT_TIMESTAMP "
+                    "WHERE employees.name_source='device_discovered'", (code, name))
+        changed += 1
+    return changed
+
+
 def connector_availability() -> dict:
     """Check local readability/schema only. This cannot prove the K14 is online."""
     from app.bionet_attendance import active, availability
@@ -284,7 +324,8 @@ def _empty(outcome: str, error_message: str, started: str, records_read: int = 0
 
 
 def write_website(rows: list[sqlite3.Row], actor_id: int | None, started: str, source_name: str,
-                  device_names: list[sqlite3.Row] | None = None) -> dict:
+                  device_names: list[sqlite3.Row] | None = None,
+                  discovered_names: list[sqlite3.Row] | None = None) -> dict:
     host = settings().host
     inserted = already = skipped = 0
     with connect() as con:
@@ -382,6 +423,7 @@ def write_website(rows: list[sqlite3.Row], actor_id: int | None, started: str, s
                 )
         register_scan_metadata(con)
         names_updated = import_device_names(con, device_names or [], host, allowed)
+        discovered = import_discovered_roster(con, discovered_names or [], host)
         finished = _record_run(
             con, started, "success", source_name, len(rows), inserted, already, skipped, "", actor_id,
         )
@@ -392,6 +434,7 @@ def write_website(rows: list[sqlite3.Row], actor_id: int | None, started: str, s
         "records_already_present": already,
         "records_skipped": skipped,
         "names_updated": names_updated,
+        "roster_discovered": discovered,
         "error_message": "",
         "finished_at": finished,
     }
@@ -423,11 +466,21 @@ def run_sync(actor_id: int | None = None, *, manual: bool = False) -> dict:
                 raise ValueError("Automatic connector imports are turned off.")
             from app.bionet_attendance import active, import_records
             if active():
-                return import_records(actor_id, started)
+                result = import_records(actor_id, started)
+                if roster_discovery_enabled():
+                    try:
+                        discovered = read_discovered_roster(connector_path())
+                        with connect() as con:
+                            con.execute("BEGIN IMMEDIATE")
+                            result["roster_discovered"] = import_discovered_roster(con, discovered, settings().host)
+                    except (ValueError, sqlite3.Error, OSError):
+                        result["roster_discovery_warning"] = "Device roster snapshot unavailable; vendor attendance preserved."
+                return result
             path = connector_path()
             rows = read_connector(path)
             names = read_connector_names(path)
-            return write_website(rows, actor_id, started, path.name, names)
+            discovered = read_discovered_roster(path)
+            return write_website(rows, actor_id, started, path.name, names, discovered)
         except ValueError as exc:
             return _remember_error(started, str(exc), actor_id)
         except (sqlite3.Error, OSError, RuntimeError):

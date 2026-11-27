@@ -784,6 +784,8 @@ def employee_register(month: str, q: str = "", live: bool = False, user: dict = 
                     AND p.happened_at>=? AND p.happened_at<?
                WHERE (?='' OR instr(lower(e.employee_code),lower(?))>0
                        OR instr(lower(e.display_name),lower(?))>0)
+                 AND (e.name_source<>'device_discovered' OR ep.employee_code IS NOT NULL
+                      OR EXISTS(SELECT 1 FROM k14_authorizations a WHERE a.employee_code=e.employee_code AND a.sync_authorized=1))
                GROUP BY e.employee_code,e.display_name,e.name_source,e.department
                ORDER BY CASE WHEN e.display_name='' THEN 1 ELSE 0 END,
                         lower(e.display_name), e.employee_code LIMIT 1000""",

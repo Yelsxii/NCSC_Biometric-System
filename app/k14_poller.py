@@ -8,13 +8,14 @@ from __future__ import annotations
 
 import argparse
 import ipaddress
+import os
 import sqlite3
 import time
 from contextlib import closing
 from datetime import datetime
 from pathlib import Path
 
-from app.device_access import read_authorized_ids
+from app.device_access import ID_PATTERN, read_authorized_ids
 
 
 def read_attendance(host: str, port: int, use_udp: bool, allowed: frozenset[str]):
@@ -40,11 +41,11 @@ def read_attendance(host: str, port: int, use_udp: bool, allowed: frozenset[str]
 
 
 def read_device_names(host: str, port: int, use_udp: bool,
-                      allowed: frozenset[str]) -> list[tuple[str, str]]:
+                      allowed: frozenset[str] | None) -> list[tuple[str, str]]:
     """Read K14 user ID and display name only; do not retain cards, passwords or templates.
 
-    An office-authorized read is filtered to the approved staff IDs before
-    names leave the collector process. The device is never modified.
+    By default names are limited to approved staff. Passing None is reserved
+    for explicitly enabled office roster discovery. The device is never modified.
     """
     from zk import ZK
 
@@ -59,7 +60,7 @@ def read_device_names(host: str, port: int, use_udp: bool,
         conflicts: set[str] = set()
         for user in users:
             code = str(getattr(user, "user_id", "")).strip()
-            if code not in allowed:
+            if not ID_PATTERN.fullmatch(code) or (allowed is not None and code not in allowed):
                 continue
             raw_name = getattr(user, "name", None)
             if not isinstance(raw_name, str):
@@ -102,6 +103,20 @@ def save_device_names(path: Path, host: str, rows: list[tuple[str, str]]) -> int
                 (host, code, name))
             changed += 1
         return changed
+
+
+def save_discovered_roster(path: Path, host: str, rows: list[tuple[str, str]]) -> None:
+    """Replace the local discovery snapshot only after a successful read."""
+    if len(rows) > 5000:
+        raise ValueError("Device roster exceeds discovery limit.")
+    with closing(sqlite3.connect(path, timeout=30)) as con, con:
+        con.execute("""CREATE TABLE IF NOT EXISTS device_roster_discovery (
+            device_ip TEXT NOT NULL, employee_id TEXT NOT NULL, display_name TEXT NOT NULL,
+            PRIMARY KEY(device_ip, employee_id)
+        )""")
+        con.execute("DELETE FROM device_roster_discovery WHERE device_ip=?", (host,))
+        con.executemany("INSERT INTO device_roster_discovery VALUES(?,?,?)",
+                        [(host, code, name) for code, name in rows])
 
 
 def save_new(path: Path, host: str, records: list) -> int:
@@ -148,12 +163,23 @@ def main(argv=None) -> int:
     if path.suffix.lower() not in (".db", ".sqlite3"):
         parser.error("--db must have a .db or .sqlite3 extension")
     print("K14 read-only collector; employee IDs are approved through the website. Ctrl+C stops collection.", flush=True)
+    discover = os.getenv('K14_ROSTER_DISCOVERY_ENABLED', 'false').strip().lower() == 'true'
     cycle = 0
     try:
         while True:
             stamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
             try:
                 allowed = read_authorized_ids(registry)
+                if discover:
+                    try:
+                        names = read_device_names(args.host, args.port, args.udp, None)
+                        save_new(path, args.host, [])
+                        save_discovered_roster(path, args.host, names)
+                        current = read_authorized_ids(registry)
+                        save_device_names(path, args.host, [(code, name) for code, name in names if code in current])
+                        print(f"[{stamp}] Roster discovery: {len(names)} usable device names; attendance permissions unchanged.", flush=True)
+                    except Exception as exc:
+                        print(f"[{stamp}] Roster discovery unavailable ({type(exc).__name__}); attendance preserved.", flush=True)
                 if not allowed:
                     print(f"[{stamp}] Collection paused: no employee IDs are authorized.", flush=True)
                 else:
@@ -165,7 +191,7 @@ def main(argv=None) -> int:
                     added = save_new(path, args.host, rows)
                     # Refresh approved employee names on startup and every 2 polling cycles.
                     # A name-reader failure never blocks attendance collection.
-                    if cycle % 2 == 0:
+                    if not discover and cycle % 2 == 0:
                         try:
                             names = read_device_names(args.host, args.port, args.udp, current)
                             current_again = read_authorized_ids(registry)

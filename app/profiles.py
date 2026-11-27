@@ -68,6 +68,25 @@ LEFT JOIN k14_authorizations a ON a.employee_code=e.employee_code
 """
 
 
+def suggest_name_parts(name: str) -> dict:
+    """Suggest editable fields; never overwrite the stored device display name."""
+    parts = [" ".join(p.split()) for p in (name or "").split(",")]
+    if 2 <= len(parts) <= 4 and parts[0] and parts[1]:
+        padded = parts + [""] * (4 - len(parts))
+        return dict(last_name=padded[0], first_name=padded[1], middle_name=padded[2],
+                    suffix=padded[3], needs_review=False)
+    words = " ".join((name or "").split()).split()
+    suffix = ""
+    if len(words) > 2 and words[-1].rstrip(".").upper() in {"JR", "SR", "II", "III", "IV", "V"}:
+        suffix = words.pop()
+    last = words.pop() if len(words) > 1 else ""
+    middle = ""
+    if len(words) > 1 and len(words[-1].rstrip(".")) == 1:
+        middle = words.pop()
+    return dict(first_name=" ".join(words), middle_name=middle, last_name=last,
+                suffix=suffix, needs_review=True)
+
+
 def get_profile(code: str) -> dict:
     with closing(connect()) as con:
         row = con.execute(PROFILE_SELECT + " WHERE e.employee_code=?", (code,)).fetchone()
@@ -76,6 +95,8 @@ def get_profile(code: str) -> dict:
     result = dict(row)
     result["profile_complete"] = row["version"] is not None
     result["sync_authorized"] = bool(result["sync_authorized"])
+    if not result["profile_complete"]:
+        result["suggested_name"] = suggest_name_parts(result["display_name"])
     return result
 
 

@@ -184,3 +184,12 @@ def test_directory_archive_is_reversible_and_preserves_attendance(admin):
     with closing(connect()) as con:
         assert [tuple(r) for r in con.execute('SELECT * FROM punches')] == before
         assert '7' in authorized_ids(con)
+
+
+def test_device_name_suggestions():
+    from app.profiles import suggest_name_parts
+    assert suggest_name_parts("DELA CRUZ, ANA MARIE, SANTOS, JR.") == {
+        "last_name":"DELA CRUZ", "first_name":"ANA MARIE", "middle_name":"SANTOS", "suffix":"JR.", "needs_review":False}
+    assert suggest_name_parts("ANA MARIE S. CRUZ") == {
+        "first_name":"ANA MARIE", "middle_name":"S.", "last_name":"CRUZ", "suffix":"", "needs_review":True}
+    assert suggest_name_parts("ANA")["last_name"] == ""

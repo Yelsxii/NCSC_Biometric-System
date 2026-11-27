@@ -10,7 +10,7 @@
   <link rel="stylesheet" href="/static/attendance-detail.css?v=auto-dtr-45">
   <link rel="stylesheet" href="/static/dtr-preview.css?v=23">
   <script src="/static/dtr-preview.js?v=22" defer></script>
-  <script src="/static/app.js?v=employees-58" defer></script>
+  <script src="/static/app.js?v=employees-59" defer></script>
 </head>
 <body>
   <main id="login-view" class="auth-shell" aria-labelledby="login-heading">
@@ -299,10 +299,9 @@
         <p class="field-hint" id="profile-id-hint">Enter the ID already enrolled on the K14. Keep any leading zeroes.</p>
         <h3 class="form-section-title">Verified employee details</h3>
         <div class="profile-form-grid"><label>First name <span class="required-mark">*</span><input id="profile-first" required maxlength="70" autocomplete="given-name"></label><label>Last name <span class="required-mark">*</span><input id="profile-last" required maxlength="70" autocomplete="family-name"></label><label>Middle name<input id="profile-middle" maxlength="60" autocomplete="additional-name"></label><label>Suffix<input id="profile-suffix" maxlength="20" placeholder="Optional"></label><label>Department / unit <span class="required-mark">*</span><select id="profile-department" required><option value="">Select department</option><option>Operations Division (OPS)</option><option>Administrative and Finance Section (AFS)</option><option>Office of the Regional Director (ORD)</option></select></label><label>Position / designation<input id="profile-position" maxlength="140"></label></div>
-        <h3 class="form-section-title">Attendance collection</h3>
-        <label class="check-card"><input id="profile-sync" type="checkbox" checked><span><strong>Enable automatic attendance collection</strong><small>Authorize this ID for the device collector and website import.</small></span></label>
+        <h3 class="form-section-title">Verification</h3>
         <label class="check-line"><input id="profile-confirm" type="checkbox" required><span>I verified that this ID is already enrolled on the K14 and the name matches office records.</span></label>
-        <p class="field-hint">Employee profiles do not create website login accounts or enroll fingerprints. Original attendance remains unchanged.</p>
+        <p class="field-hint">Attendance collection starts automatically for newly confirmed profiles. Existing attendance is preserved.</p>
         <p id="profile-error" class="form-error hidden" role="alert"></p>
       </div>
       <div class="app-dialog-footer"><button id="cancel-profile" type="button" class="button outline">Cancel</button><button id="save-profile" type="submit" class="button primary">Register employee</button></div>
