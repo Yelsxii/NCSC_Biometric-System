@@ -233,7 +233,7 @@ def employee_aja_file(payload: EmployeeAjaInput, request: Request, response: Res
     # Validate against the original template before writing a new filing.
     # Identical retries reopen the original immutable document, rather than filing twice.
     with closing(connect()) as con:
-        row = con.execute("SELECT * FROM aja_filings WHERE employee_code=? AND fingerprint=?",
+        row = con.execute("SELECT * FROM aja_filings WHERE employee_code=? AND fingerprint=? AND NOT EXISTS (SELECT 1 FROM aja_filing_deletions x WHERE x.filing_id=aja_filings.id)",
                           (user["employee_code"], fingerprint)).fetchone()
         if row:
             return {"filing": filing_metadata(con, row), "already_filed": True}
@@ -242,7 +242,7 @@ def employee_aja_file(payload: EmployeeAjaInput, request: Request, response: Res
     render_saved_pdf(pdf)
     with closing(connect()) as con, con:
         con.execute("BEGIN IMMEDIATE")
-        row = con.execute("SELECT * FROM aja_filings WHERE employee_code=? AND fingerprint=?",
+        row = con.execute("SELECT * FROM aja_filings WHERE employee_code=? AND fingerprint=? AND NOT EXISTS (SELECT 1 FROM aja_filing_deletions x WHERE x.filing_id=aja_filings.id)",
                           (user["employee_code"], fingerprint)).fetchone()
         if row:
             return {"filing": filing_metadata(con, row), "already_filed": True}
@@ -251,6 +251,7 @@ def employee_aja_file(payload: EmployeeAjaInput, request: Request, response: Res
             overlap = con.execute("""SELECT f.reference FROM aja_filing_days d
                 JOIN aja_filings f ON f.id=d.filing_id
                 WHERE f.employee_code=? AND d.business_date=? AND d.departure<? AND d.return_time>?
+                AND NOT EXISTS (SELECT 1 FROM aja_filing_deletions x WHERE x.filing_id=f.id)
                 LIMIT 1""", (user["employee_code"], day.date.isoformat(), day.return_time, day.departure)).fetchone()
             if overlap:
                 raise HTTPException(409, f"An overlapping AJA is already filed for {day.date.isoformat()} ({overlap['reference']}).")
@@ -270,7 +271,7 @@ def employee_aja_filings(response: Response, user=Depends(employee_user)):
     response.headers['Cache-Control'] = 'no-store'
     with closing(connect()) as con:
         rows = con.execute("""SELECT id,reference,employee_name,origin,destination,purpose,status,filed_at
-            FROM aja_filings WHERE employee_code=? ORDER BY id DESC""",
+            FROM aja_filings WHERE employee_code=? AND NOT EXISTS (SELECT 1 FROM aja_filing_deletions x WHERE x.filing_id=aja_filings.id) ORDER BY id DESC""",
             (user["employee_code"],)).fetchall()
         return {"filings": [filing_metadata(con, row) for row in rows]}
 
@@ -279,7 +280,7 @@ def employee_aja_filings(response: Response, user=Depends(employee_user)):
 def employee_aja_document(reference: str, response: Response, user=Depends(employee_user)):
     response.headers['Cache-Control'] = 'no-store'
     with closing(connect()) as con:
-        row = con.execute("SELECT * FROM aja_filings WHERE reference=? AND employee_code=?",
+        row = con.execute("SELECT * FROM aja_filings WHERE reference=? AND employee_code=? AND NOT EXISTS (SELECT 1 FROM aja_filing_deletions x WHERE x.filing_id=aja_filings.id)",
                           (reference,user["employee_code"])).fetchone()
         if not row:
             raise HTTPException(404, "AJA filing not found.")
@@ -291,7 +292,7 @@ def employee_aja_document(reference: str, response: Response, user=Depends(emplo
 @router.get("/api/employee-portal/aja/filings/{reference}/pdf")
 def employee_aja_download(reference: str, user=Depends(employee_user)):
     with closing(connect()) as con:
-        row = con.execute("SELECT reference,pdf FROM aja_filings WHERE reference=? AND employee_code=?",
+        row = con.execute("SELECT reference,pdf FROM aja_filings WHERE reference=? AND employee_code=? AND NOT EXISTS (SELECT 1 FROM aja_filing_deletions x WHERE x.filing_id=aja_filings.id)",
                           (reference, user["employee_code"])).fetchone()
         if not row:
             raise HTTPException(404, "AJA filing not found.")
@@ -299,3 +300,27 @@ def employee_aja_download(reference: str, user=Depends(employee_user)):
             "Cache-Control": "no-store",
             "Content-Disposition": f'attachment; filename="{row["reference"]}.pdf"'
         })
+
+
+@router.post("/api/employee-portal/aja/filings/{reference}/delete")
+def employee_aja_delete(reference: str, request: Request, response: Response, user=Depends(employee_user)):
+    """Remove a pending filing from active records while preserving its audit copy."""
+    check_csrf(request)
+    response.headers["Cache-Control"] = "no-store"
+    with closing(connect()) as con, con:
+        con.execute("BEGIN IMMEDIATE")
+        row = con.execute("SELECT id,status,fingerprint FROM aja_filings WHERE reference=? AND employee_code=?",
+                          (reference, user["employee_code"])).fetchone()
+        if not row:
+            raise HTTPException(404, "AJA filing not found.")
+        if con.execute("SELECT 1 FROM aja_filing_deletions WHERE filing_id=?", (row["id"],)).fetchone():
+            return {"deleted": True}
+        if row["status"] != "awaiting_signatures":
+            raise HTTPException(409, "Only filings awaiting signatures can be deleted. Contact HR.")
+        con.execute("INSERT INTO aja_filing_deletions(filing_id,original_fingerprint) VALUES(?,?)",
+                    (row["id"], row["fingerprint"]))
+        # Free the unique active fingerprint so an identical filing can be
+        # submitted again. The original hash, PDF and daily schedule remain intact.
+        con.execute("UPDATE aja_filings SET fingerprint=? WHERE id=?",
+                    ("deleted:" + reference + ":" + row["fingerprint"], row["id"]))
+        return {"deleted": True}
