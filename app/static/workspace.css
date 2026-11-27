@@ -1309,35 +1309,32 @@ body:has(#profile-undo-stack:not(:empty)) #toast:not(.hidden){bottom:auto;top:22
 @media print{#profile-undo-stack{display:none!important}}
 
 
-/* Connected navigation: join the OUTER workspace rim, not the inner
-   content cards. Keep the glass shells and their dimensions unchanged. */
+/* Connected navigation: keep the curved tab at the navy rail's outer edge.
+   The tiny rounded lip stops inside the glass gutter; it never reaches the
+   adjacent content shell. No changes to either glass panel or layout. */
 .workspace .sidebar{
-  --nav-join-gap:5px;
   --nav-join-fill:#e4ecf7;
   --nav-join-radius:12px;
-  --nav-join-overlap:14px;
-  --nav-join-fade:5px;
-  --nav-join-cap:16px;
+  --nav-join-tip:3px;
+  --nav-join-lip:2px;
 }
 .workspace .sidebar .nav-edge-highlight{
   position:absolute;
-  inset:0 calc(-1 * (var(--rail-inset) + var(--nav-join-gap) + var(--nav-join-overlap))) 0 0;
+  inset:0 calc(-1 * (var(--rail-inset) + var(--nav-join-lip))) 0 0;
   z-index:-1;pointer-events:none;
-  /* A rounded tip follows the existing outer glass rim. Fade only the
-     background, NOT the element: masking the whole element previously
-     clipped the curved shoulders outside its bounds. */
-  border-radius:12px var(--nav-join-cap) var(--nav-join-cap) 12px;
-  background:linear-gradient(to right,#f4f7fc 0%,var(--nav-join-fill) calc(100% - var(--nav-join-overlap) - var(--nav-join-gap)),var(--nav-join-fill) calc(100% - var(--nav-join-fade)),#e4ecf700 100%);
+  /* A shallow elliptical lip rounds the exposed edge without the old
+     horizontal bridge or overlap onto the neighbouring glass panel. */
+  border-radius:12px var(--nav-join-tip) var(--nav-join-tip) 12px / 12px 50% 50% 12px;
+  background:linear-gradient(to right,#f4f7fc 0%,var(--nav-join-fill) 70%,var(--nav-join-fill) calc(100% - 1px),#e4ecf700 100%);
   opacity:0;transform:translateX(-3px) scaleX(.985);
   transform-origin:right center;
   transition:opacity .38s cubic-bezier(.25,.7,.25,1),transform .38s cubic-bezier(.25,.7,.25,1);
 }
-/* Inverted curves end at the navy rail's OUTER edge, independently of
-   the protruding rounded tip. Extend them 1px into the body to avoid a seam. */
+/* Preserve the inverted shoulders at the rail edge, independent of the lip. */
 .workspace .sidebar .nav-edge-highlight::before,
 .workspace .sidebar .nav-edge-highlight::after{
   content:"";position:absolute;
-  right:calc(var(--nav-join-overlap) + var(--nav-join-gap) - 1px);
+  right:calc(var(--nav-join-lip) - 1px);
   width:var(--nav-join-radius);height:var(--nav-join-radius);
   pointer-events:none;
 }
@@ -1358,11 +1355,11 @@ body:has(#profile-undo-stack:not(:empty)) #toast:not(.hidden){bottom:auto;top:22
 .workspace .sidebar .nav-item.active .nav-edge-highlight{opacity:1;transform:none}
 /* Keep the responsive rail's tooltip and original hit targets intact. */
 @media(max-width:1100px){
-  .workspace .sidebar{--nav-join-radius:10px;--nav-join-overlap:9px;--nav-join-fade:4px;--nav-join-cap:12px}
+  .workspace .sidebar{--nav-join-radius:10px}
   .workspace .sidebar .nav-edge-highlight{border-top-left-radius:10px;border-bottom-left-radius:10px}
 }
 @media(max-width:740px){
-  .workspace .sidebar{--nav-join-gap:4px;--nav-join-radius:8px;--nav-join-overlap:6px;--nav-join-fade:3px;--nav-join-cap:9px}
+  .workspace .sidebar{--nav-join-radius:8px;--nav-join-lip:1px;--nav-join-tip:2px}
 }
 @media(prefers-reduced-motion:reduce){
   .workspace .sidebar .nav-edge-highlight{transition:none;transform:none}
