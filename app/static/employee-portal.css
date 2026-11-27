@@ -207,3 +207,11 @@
 /* Separate the destructive action without changing the shared menu design. */
 #profile-action-menu .aja-menu-divider{height:0;margin:4px 5px;padding:0;border:0;border-top:1px solid #e0e7f1}
 #profile-action-menu .aja-menu-divider:has(+ #profile-menu-delete[hidden]){display:none}
+
+.aja-employee-review{display:flex;flex-direction:column;gap:7px;padding:12px;border:1px solid #dce5f1;border-radius:9px;background:#fff;color:#52688a;font-size:11px;line-height:1.45;overflow-wrap:anywhere}
+.aja-employee-review.hidden{display:none}
+.aja-employee-review strong{font-size:12px;color:#385780}
+.aja-employee-review strong[data-status="approved"]{color:#226741}
+.aja-employee-review strong[data-status="returned"]{color:#92501b}
+.aja-employee-review strong[data-status="disapproved"]{color:#b32638}
+.aja-employee-review p{margin:0;white-space:pre-wrap}
