@@ -193,3 +193,17 @@ def test_device_name_suggestions():
     assert suggest_name_parts("ANA MARIE S. CRUZ") == {
         "first_name":"ANA MARIE", "middle_name":"S.", "last_name":"CRUZ", "suffix":"", "needs_review":True}
     assert suggest_name_parts("ANA")["last_name"] == ""
+
+
+def test_profile_update_without_position_preserves_saved_designation(admin):
+    client, headers = admin
+    registered = client.post('/api/employee-profiles', json=profile('25'), headers=headers)
+    assert registered.status_code == 201
+    data = profile('25', first_name='Updated')
+    data.pop('employee_code')
+    data.pop('position')
+    data['version'] = registered.json()['version']
+    updated = client.put('/api/employee-profiles/25', json=data, headers=headers)
+    assert updated.status_code == 200, updated.text
+    assert updated.json()['position'] == 'Records Assistant'
+    assert updated.json()['employee_code'] == '25'

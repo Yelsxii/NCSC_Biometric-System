@@ -48,6 +48,8 @@ let profileFormToken = 0;
 let profileEditing = null;
 let profileVersion = null;
 let profileSyncAuthorized = true;
+let profileLockedCode = null;
+const profileSelectControls = new Map();
 let profileReturn = null;
 let detailRequest = 0;
 let dayReviewContext = null;
@@ -404,24 +406,104 @@ async function changeProfileArchive(){
   }catch(error){if(session===account)toast(error.message,true);}
   finally{profileArchiveBusy=false;}
 }
+function refreshProfileSelects(){
+  for(const control of profileSelectControls.values())control.refresh();
+}
+function closeProfileSelects(){
+  for(const control of profileSelectControls.values())if(control.menu.matches(':popover-open'))control.menu.hidePopover();
+}
+function focusProfileField(id){
+  (profileSelectControls.get(id)?.trigger||$(id)).focus();
+}
+function initializeProfileSelects(){
+  for(const id of ['profile-type','profile-department']){
+    const select=$(id),field=select.closest('.profile-select-field');
+    const trigger=document.createElement('button'),menu=document.createElement('div');
+    if(typeof menu.showPopover!=='function')continue; // Native select fallback.
+    trigger.type='button';trigger.className='profile-select-trigger';trigger.id=id+'-trigger';
+    trigger.setAttribute('aria-haspopup','listbox');trigger.setAttribute('aria-expanded','false');
+    trigger.setAttribute('aria-labelledby',id+'-label '+id+'-value');
+    trigger.setAttribute('aria-controls',id+'-menu');
+    trigger.innerHTML='<span id="'+id+'-value"></span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg>';
+    menu.id=id+'-menu';menu.className='profile-select-menu';menu.setAttribute('popover','auto');
+    menu.setAttribute('role','listbox');menu.setAttribute('aria-labelledby',id+'-label');
+    const options=[...select.options].filter(option=>option.value).map(option=>{
+      const button=document.createElement('button');button.type='button';button.setAttribute('role','option');button.tabIndex=-1;button.dataset.value=option.value;
+      const label=document.createElement('span');label.textContent=option.textContent;
+      button.append(label);
+      button.insertAdjacentHTML('beforeend','<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m5 12 4 4L19 6"/></svg>');
+      menu.append(button);
+      button.addEventListener('click',()=>{
+        select.value=option.value;select.dispatchEvent(new Event('change',{bubbles:true}));
+        menu.hidePopover();trigger.focus({preventScroll:true});
+      });
+      return button;
+    });
+    function refresh(){
+      trigger.querySelector('span').textContent=select.selectedOptions[0]?.textContent||select.options[0].textContent;
+      trigger.dataset.empty=String(!select.value);
+      if(select.value)trigger.removeAttribute('aria-invalid');
+      for(const button of options)button.setAttribute('aria-selected',String(button.dataset.value===select.value));
+    }
+    function place(){
+      const r=trigger.getBoundingClientRect(),margin=8,gap=5;
+      const width=Math.min(Math.max(r.width,Math.min(245,window.innerWidth-2*margin)),window.innerWidth-2*margin);
+      menu.style.width=width+'px';menu.style.left=Math.max(margin,Math.min(r.left,window.innerWidth-width-margin))+'px';
+      const below=window.innerHeight-r.bottom-gap-margin,above=r.top-gap-margin;
+      const desired=menu.scrollHeight+2,up=desired>below&&above>below;
+      const available=Math.max(30,up?above:below);
+      menu.style.maxHeight=available+'px';
+      menu.style.top=Math.max(margin,Math.min(up?r.top-gap-Math.min(desired,available):r.bottom+gap,window.innerHeight-margin-Math.min(desired,available)))+'px';
+    }
+    function open(direction=1){
+      if(menu.matches(':popover-open'))return;
+      closeProfileSelects();refresh();menu.showPopover();place();
+      trigger.setAttribute('aria-expanded','true');
+      (options.find(b=>b.dataset.value===select.value)||options[direction<0?options.length-1:0])?.focus({preventScroll:true});
+    }
+    trigger.addEventListener('click',()=>{if(menu.matches(':popover-open'))menu.hidePopover();else open();});
+    trigger.addEventListener('keydown',event=>{
+      if(['ArrowDown','ArrowUp'].includes(event.key)){event.preventDefault();open(event.key==='ArrowUp'?-1:1);}
+    });
+    menu.addEventListener('keydown',event=>{
+      const index=options.indexOf(document.activeElement);
+      if(['ArrowDown','ArrowUp','Home','End'].includes(event.key)){
+        event.preventDefault();
+        const next=event.key==='Home'?0:event.key==='End'?options.length-1:Math.max(0,Math.min(options.length-1,index+(event.key==='ArrowDown'?1:-1)));
+        options[next]?.focus();
+      }else if(event.key==='Escape'){event.preventDefault();event.stopPropagation();menu.hidePopover();trigger.focus({preventScroll:true});}
+      else if(event.key==='Tab'){menu.hidePopover();trigger.focus({preventScroll:true});}
+    });
+    menu.addEventListener('toggle',()=>trigger.setAttribute('aria-expanded',String(menu.matches(':popover-open'))));
+    select.addEventListener('change',refresh);
+    select.addEventListener('invalid',event=>{
+      event.preventDefault();trigger.setAttribute('aria-invalid','true');trigger.focus();
+      $('profile-error').textContent=id==='profile-type'?'Select an employee category.':'Select a department / unit.';
+      $('profile-error').classList.remove('hidden');
+    });
+    field.append(trigger,menu);field.classList.add('enhanced');select.tabIndex=-1;
+    field.querySelector('label').htmlFor=trigger.id;
+    profileSelectControls.set(id,{trigger,menu,refresh});refresh();
+  }
+  window.addEventListener('resize',closeProfileSelects);
+  $('profile-dialog').querySelector('.app-dialog-body').addEventListener('scroll',closeProfileSelects,{passive:true});
+}
 async function openProfile(code=null){
   if(session?.role!=='admin')return;
   const token=++profileFormToken;
   profileReturn={page:currentPage,employee:selectedEmployee,month:$('detail-month').value};
-  profileEditing=null;profileVersion=null;profileSyncAuthorized=true;
+  profileEditing=null;profileVersion=null;profileSyncAuthorized=true;profileLockedCode=null;
   $('profile-dialog').dataset.profileMode=code?'edit':'register';
   $('profile-form').reset();$('profile-id').readOnly=false;
   $('profile-error').classList.add('hidden');$('save-profile').disabled=false;
   $('profile-heading').textContent='Register employee';$('save-profile').textContent='Register employee';
-  $('profile-context').textContent='Link an enrolled K14 ID to a verified employee profile.';
-  $('profile-id-hint').textContent='Enter the ID already enrolled on the K14. Keep any leading zeroes.';
   try{
     if(code){
       const data=await api('/api/employee-profiles/'+encodeURIComponent(code));
       if(token!==profileFormToken || session?.role!=='admin')return;
       profileEditing=data.profile_complete?code:null;profileVersion=data.version;
-      $('profile-id').value=code;$('profile-id').readOnly=true;
-      for(const [field,key] of [['first','first_name'],['middle','middle_name'],['last','last_name'],['suffix','suffix'],['type','employment_type'],['department','department'],['position','position']])
+      profileLockedCode=code;$('profile-id').value=code;$('profile-id').readOnly=true;
+      for(const [field,key] of [['first','first_name'],['middle','middle_name'],['last','last_name'],['suffix','suffix'],['type','employment_type'],['department','department']])
         $('profile-'+field).value=data[key]||'';
       const department=String(data.department||'').trim().toLowerCase();
       const official=[...$('profile-department').options].find(option=>{
@@ -439,23 +521,30 @@ async function openProfile(code=null){
       }
       $('profile-heading').textContent=data.profile_complete?'Edit employee profile':'Complete employee profile';
       $('save-profile').textContent=data.profile_complete?'Save changes':'Complete profile';
-      $('profile-context').textContent='K14 ID '+code+(data.display_name?' · Current name: '+data.display_name:'');
-      $('profile-id-hint').textContent=data.profile_complete?'This existing K14 ID stays fixed. Saving verified details preserves all linked scans.':'Verify the suggested name against the device and office records. Category and department are required.';
     }
-    $('profile-confirm').checked=false;
+    refreshProfileSelects();
     $('profile-dialog').showModal();
-    $(code?($('profile-first').value&&$('profile-last').value?'profile-type':'profile-first'):'profile-id').focus();
+    focusProfileField(code?($('profile-first').value&&$('profile-last').value?'profile-type':'profile-first'):'profile-id');
   }catch(error){toast(error.message,true);}
 }
 async function saveProfile(event){
   event.preventDefault();
   if(session?.role!=='admin')return;
-  const account=session,code=$('profile-id').value.trim();
+  const account=session,code=profileLockedCode??$('profile-id').value.trim();
   const payload={};
-  for(const [field,key] of [['first','first_name'],['middle','middle_name'],['last','last_name'],['suffix','suffix'],['type','employment_type'],['department','department'],['position','position']])
+  for(const [field,key] of [['first','first_name'],['middle','middle_name'],['last','last_name'],['suffix','suffix'],['type','employment_type'],['department','department']])
     payload[key]=$('profile-'+field).value.trim();
   payload.sync_authorized=profileSyncAuthorized;
-  payload.device_enrollment_confirmed=$('profile-confirm').checked;
+  if(!payload.first_name||!payload.last_name||!payload.employment_type||!payload.department){
+    $('profile-error').textContent='First name, last name, category and department are required.';$('profile-error').classList.remove('hidden');return;
+  }
+  if(!/^[A-Za-z0-9._-]{1,64}$/.test(code)){
+    $('profile-error').textContent='Enter a valid existing biometric ID.';$('profile-error').classList.remove('hidden');return;
+  }
+  // Saving a fixed existing identity is the administrator's approval.
+  // Manual entry of an otherwise unverified ID still needs explicit confirmation.
+  if(!profileLockedCode && !window.confirm('Confirm that this biometric ID is already enrolled on the K14 and the employee name is correct.'))return;
+  payload.device_enrollment_confirmed=true;
   const editing=profileEditing;
   if(editing)payload.version=profileVersion;else payload.employee_code=code;
   $('save-profile').disabled=true;$('profile-error').classList.add('hidden');
@@ -1215,6 +1304,7 @@ function initializeModalDismissal(){
 async function initialize(){
   initializeAttendanceMonthPicker();
   initializeModalDismissal();
+  initializeProfileSelects();
   document.addEventListener('visibilitychange',()=>{
     if(!document.hidden)updateWorkspaceClock();
     if(document.hidden){
@@ -1290,7 +1380,7 @@ async function initialize(){
   $('open-profile').addEventListener('click',()=>openProfile());
   $('close-profile').addEventListener('click',()=>$('profile-dialog').close());
   $('cancel-profile').addEventListener('click',()=>$('profile-dialog').close());
-  $('profile-dialog').addEventListener('close',()=>profileFormToken++);
+  $('profile-dialog').addEventListener('close',()=>{closeProfileSelects();profileFormToken++;});
   $('profile-form').addEventListener('submit',saveProfile);
   $('profile-filter').addEventListener('submit',event=>{event.preventDefault();renderProfiles();});
   $('profile-search').addEventListener('input',renderProfiles);

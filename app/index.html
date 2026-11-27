@@ -6,11 +6,11 @@
   <meta name="theme-color" content="#142650">
   <title>NCSC | Attendance Records</title>
   <link rel="stylesheet" href="/static/app.css">
-  <link rel="stylesheet" href="/static/workspace.css?v=employees-137">
+  <link rel="stylesheet" href="/static/workspace.css?v=employees-138">
   <link rel="stylesheet" href="/static/attendance-detail.css?v=auto-dtr-45">
   <link rel="stylesheet" href="/static/dtr-preview.css?v=23">
   <script src="/static/dtr-preview.js?v=22" defer></script>
-  <script src="/static/app.js?v=employees-59" defer></script>
+  <script src="/static/app.js?v=employees-60" defer></script>
 </head>
 <body>
   <main id="login-view" class="auth-shell" aria-labelledby="login-heading">
@@ -291,17 +291,23 @@
     <button type="button" id="profile-menu-delete"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 6h18M9 6V3h6v3M5 6l1 15h12l1-15M10 10v7m4-7v7"/></svg><span>Delete</span></button>
   </div>
   <dialog id="profile-dialog" class="app-dialog profile-dialog" data-profile-mode="register" aria-labelledby="profile-heading">
-    <div class="app-dialog-head"><div class="profile-dialog-heading"><h2 id="profile-heading">Register employee</h2><p id="profile-context">Link an enrolled K14 ID to a verified employee profile.</p></div><button class="modal-x profile-close" id="close-profile" type="button" aria-label="Close employee profile"><svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><path d="m6 6 12 12M18 6 6 18"/></svg></button></div>
+    <div class="app-dialog-head"><h2 id="profile-heading" class="sr-only">Register employee</h2><button class="modal-x profile-close" id="close-profile" type="button" aria-label="Close employee profile"><svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><path d="m6 6 12 12M18 6 6 18"/></svg></button></div>
     <form id="profile-form">
       <div class="app-dialog-body">
-        <h3 class="form-section-title">Device identity</h3>
-        <div class="profile-form-grid"><label>Biometric ID <span class="required-mark">*</span><input id="profile-id" required maxlength="64" autocomplete="off" placeholder="Existing K14 ID"></label><label>Employee category <span class="required-mark">*</span><select id="profile-type" required><option value="">Select category</option><option value="COS">COS</option><option value="Permanent">Employee · Permanent</option><option value="GIP">GIP</option><option value="OJT">OJT</option></select></label></div>
-        <p class="field-hint" id="profile-id-hint">Enter the ID already enrolled on the K14. Keep any leading zeroes.</p>
-        <h3 class="form-section-title">Verified employee details</h3>
-        <div class="profile-form-grid"><label>First name <span class="required-mark">*</span><input id="profile-first" required maxlength="70" autocomplete="given-name"></label><label>Last name <span class="required-mark">*</span><input id="profile-last" required maxlength="70" autocomplete="family-name"></label><label>Middle name<input id="profile-middle" maxlength="60" autocomplete="additional-name"></label><label>Suffix<input id="profile-suffix" maxlength="20" placeholder="Optional"></label><label>Department / unit <span class="required-mark">*</span><select id="profile-department" required><option value="">Select department</option><option>Operations Division (OPS)</option><option>Administrative and Finance Section (AFS)</option><option>Office of the Regional Director (ORD)</option></select></label><label>Position / designation<input id="profile-position" maxlength="140"></label></div>
-        <h3 class="form-section-title">Verification</h3>
-        <label class="check-line"><input id="profile-confirm" type="checkbox" required><span>I verified that this ID is already enrolled on the K14 and the name matches office records.</span></label>
-        <p class="field-hint">Attendance collection starts automatically for newly confirmed profiles. Existing attendance is preserved.</p>
+        <h3 class="form-section-title">Employee identity</h3>
+        <div class="profile-form-grid">
+          <label class="profile-id-field" for="profile-id">Biometric ID <span class="required-mark">*</span><span class="profile-id-control"><input id="profile-id" required maxlength="64" pattern="[A-Za-z0-9._\-]+" autocomplete="off" placeholder="Existing K14 ID"><svg class="profile-id-lock" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="5" y="10" width="14" height="11" rx="2"/><path d="M8 10V7a4 4 0 0 1 8 0v3"/></svg></span></label>
+          <div class="profile-spacer" aria-hidden="true"></div>
+          <label>First name <span class="required-mark">*</span><input id="profile-first" required maxlength="70" autocomplete="given-name"></label>
+          <label>Last name <span class="required-mark">*</span><input id="profile-last" required maxlength="70" autocomplete="family-name"></label>
+          <label>Middle name<input id="profile-middle" maxlength="60" autocomplete="additional-name" placeholder="Optional"></label>
+          <label>Suffix<input id="profile-suffix" maxlength="20" placeholder="Optional"></label>
+        </div>
+        <h3 class="form-section-title">Employment details</h3>
+        <div class="profile-form-grid">
+          <div class="profile-select-field"><label id="profile-type-label" for="profile-type">Employee category <span class="required-mark">*</span></label><select id="profile-type" required><option value="">Select category</option><option value="COS">COS</option><option value="Permanent">Permanent</option><option value="GIP">GIP</option><option value="OJT">OJT</option></select></div>
+          <div class="profile-select-field"><label id="profile-department-label" for="profile-department">Department / unit <span class="required-mark">*</span></label><select id="profile-department" required><option value="">Select department</option><option>Operations Division (OPS)</option><option>Administrative and Finance Section (AFS)</option><option>Office of the Regional Director (ORD)</option></select></div>
+        </div>
         <p id="profile-error" class="form-error hidden" role="alert"></p>
       </div>
       <div class="app-dialog-footer"><button id="cancel-profile" type="button" class="button outline">Cancel</button><button id="save-profile" type="submit" class="button primary">Register employee</button></div>

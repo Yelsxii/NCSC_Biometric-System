@@ -166,8 +166,9 @@ def save_profile(code: str, payload: ProfileFields, actor: int, creating: bool) 
             "name_source='profile',updated_at=CURRENT_TIMESTAMP",
             (code, payload.display_name, payload.department),
         )
+        position = payload.position if creating or 'position' in payload.model_fields_set else (previous['position'] or '')
         values = (payload.first_name, payload.middle_name, payload.last_name, payload.suffix,
-                  payload.employment_type, payload.position)
+                  payload.employment_type, position)
         if creating:
             con.execute(
                 "INSERT INTO employee_profiles(employee_code,first_name,middle_name,last_name,suffix,employment_type,position,registered_by) "
@@ -184,7 +185,7 @@ def save_profile(code: str, payload: ProfileFields, actor: int, creating: bool) 
             (code, int(payload.sync_authorized), actor),
         )
         details = {"employee_code": code, "before": None if previous is None else dict(previous),
-                   "after": {**payload.model_dump(exclude={"device_enrollment_confirmed"}), "display_name": payload.display_name}}
+                   "after": {**payload.model_dump(exclude={"device_enrollment_confirmed"}), "position": position, "display_name": payload.display_name}}
         con.execute("INSERT INTO audit_events(actor_id,action,entity,entity_id,details) VALUES(?,?,?,0,?)",
                     (actor, "registered" if creating else "updated", "employee_profile", json.dumps(details, ensure_ascii=False)))
     return get_profile(code)

@@ -1174,53 +1174,61 @@ dialog.app-dialog[open]::backdrop,#dtr-preview-dialog[open]::backdrop{
 .workspace :is(#attendance-register-panel,#employee-profile-panel,[data-view=staff]) .button.record-create-action:is(#open-attendance-import,#open-profile,#open-user-import):focus-visible{outline:2px solid #7295ce;outline-offset:2px}
 @media(prefers-reduced-motion:reduce){.workspace :is(#attendance-register-panel,#employee-profile-panel,[data-view=staff]) .button.record-create-action:is(#open-attendance-import,#open-profile,#open-user-import)::before{transition:none}}
 
-/* Employee profile editor: the same compact white surface, blue inputs,
-   red close control and action hierarchy as the finalized attendance editor.
-   Scoped to this shared edit/register dialog; no other modal changes. */
-#profile-dialog{width:min(570px,calc(100vw - 24px));max-height:min(90dvh,calc(100dvh - 24px));border-radius:14px;background:#fff;overflow:hidden}
-#profile-dialog[open]{height:auto;max-height:min(90dvh,calc(100dvh - 24px))}
-#profile-dialog>form{display:flex;flex:1 1 auto;min-height:0;max-height:none;overflow:hidden}
-#profile-dialog .app-dialog-head{padding:14px 18px 12px;gap:12px;align-items:flex-start;border-bottom:1px solid #e8edf6}
-#profile-dialog .profile-dialog-heading{min-width:0;flex:1}
-#profile-dialog .app-dialog-head h2{color:#243e68;font-size:17px;font-weight:700;line-height:1.35;letter-spacing:-.025em}
-#profile-dialog #profile-context{font-size:11px;color:#637c9e;margin:4px 0 0;line-height:1.45;overflow-wrap:anywhere}
+
+/* Compact profile editor; same interaction palette as attendance and action menus. */
+#profile-dialog{width:min(520px,calc(100vw - 24px));max-height:calc(100dvh - 24px);min-height:0;border-radius:14px;background:#fff;overflow:hidden;margin:auto}
+#profile-dialog[open]{height:fit-content;min-height:0;max-height:calc(100dvh - 24px)}
+#profile-dialog>form{display:flex;flex:0 1 auto;min-height:0;height:auto;max-height:calc(100dvh - 76px);overflow:hidden}
+#profile-dialog .app-dialog-head{justify-content:flex-end;align-items:center;padding:10px 16px 4px;border:0;gap:0}
+#profile-dialog #profile-heading{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0}
 #profile-dialog .profile-close{display:grid;place-items:center;width:32px;height:32px;min-width:32px;min-height:32px;padding:0;border:0;border-radius:50%;background:linear-gradient(145deg,#fff1f3df,#f8dce5cf);color:#b42d4e;box-shadow:inset 0 1px 1px #fff9,0 3px 10px #b42d4e12;backdrop-filter:blur(12px);transition:background .18s ease,color .18s ease,box-shadow .18s ease,transform .18s ease}
 #profile-dialog .profile-close:is(:hover,:focus-visible){background:linear-gradient(145deg,#ffe9ee,#f5c5d2);color:#96233e;box-shadow:inset 0 1px 1px #fffc,0 5px 14px #b42d4e26;transform:translateY(-1px)}
 #profile-dialog .profile-close:active{transform:scale(.96)}
 #profile-dialog .profile-close:focus-visible{outline:2px solid #b4233b;outline-offset:2px}
 #profile-dialog .profile-close svg{pointer-events:none}
-#profile-dialog .app-dialog-body{flex:1 1 auto;min-height:0;padding:14px 18px 16px;overflow:auto;overscroll-behavior:contain;scrollbar-width:thin;scrollbar-color:#c1cfe3 transparent}
+#profile-dialog .app-dialog-body{flex:0 1 auto;min-height:0;padding:4px 16px 16px;overflow:auto;overscroll-behavior:contain;scrollbar-width:thin;scrollbar-color:#c1cfe3 transparent}
 #profile-dialog .form-section-title{display:block;margin:0 0 8px;color:#385780;font-size:11.5px;font-weight:700;line-height:1.4}
 #profile-dialog .form-section-title:not(:first-child){margin-top:16px}
 #profile-dialog .profile-form-grid{grid-template-columns:repeat(2,minmax(0,1fr));gap:9px 12px}
 #profile-dialog .profile-form-grid label{min-width:0;color:#52688a;font-size:11px;font-weight:650}
-#profile-dialog .profile-form-grid :is(input,select){box-sizing:border-box;width:100%;min-width:0;margin-top:4px;height:33px;min-height:33px;border:1px solid #dce5f2;border-radius:7px;background:#f6f8fc;color:#243e68;font-size:12px;font-weight:600;padding:5px 9px;box-shadow:none;transition:border-color .18s ease,background-color .18s ease,box-shadow .18s ease}
-#profile-dialog .profile-form-grid :is(input,select):focus{border-color:#6284ca;outline:none;box-shadow:0 0 0 2px #244b9a12}
-#profile-dialog .profile-form-grid input:read-only{background:#eef2f8;color:#7285a3}
+#profile-dialog .profile-form-grid :is(input,select),#profile-dialog .profile-select-trigger{box-sizing:border-box;width:100%;min-width:0;margin-top:4px;height:33px;min-height:33px;border:1px solid #dce5f2;border-radius:7px;background:#f6f8fc;color:#243e68;font-size:12px;font-weight:600;padding:5px 9px;box-shadow:none;transition:border-color .18s ease,background-color .18s ease,box-shadow .18s ease}
+#profile-dialog .profile-form-grid :is(input,select):focus,#profile-dialog .profile-select-trigger:focus-visible{border-color:#6284ca;outline:none;box-shadow:0 0 0 2px #244b9a12}
+#profile-dialog .profile-id-control{display:block;position:relative}
+#profile-dialog .profile-id-control input:read-only{background:#eef2f8;color:#7285a3;padding-right:31px;cursor:default}
+#profile-dialog .profile-id-lock{position:absolute;right:10px;top:50%;transform:translateY(-50%);width:14px;height:14px;color:#7285a3;pointer-events:none;display:none}
+#profile-dialog .profile-id-control:has(input:read-only) .profile-id-lock{display:block}
 #profile-dialog .profile-form-grid input::placeholder{color:#8698b3;font-weight:500}
 #profile-dialog .required-mark{color:#bd3654}
-#profile-dialog .field-hint{margin:6px 0 0;font-size:10px;line-height:1.5;color:#637b9c;overflow-wrap:anywhere}
-#profile-dialog .check-card{align-items:flex-start;gap:9px;padding:10px 11px;border:1px solid #dce5f2;background:#f4f7fc;border-radius:8px}
-#profile-dialog .check-card strong{font-size:11px;font-weight:650;color:#385780}
-#profile-dialog .check-card small{font-size:10px;color:#637b9c;line-height:1.45;margin-top:3px}
-#profile-dialog input[type="checkbox"]{accent-color:#244b9a;width:15px;height:15px;min-height:15px}
-#profile-dialog .check-line{margin-top:10px;gap:8px;align-items:flex-start;color:#52688a;font-size:10.5px;font-weight:500;line-height:1.5;cursor:pointer}
-#profile-dialog .check-line input{margin-top:1px}
+#profile-dialog .profile-select-field{position:relative;min-width:0}
+#profile-dialog .profile-select-field.enhanced select{position:absolute!important;inset:auto!important;width:1px!important;height:1px!important;min-height:0!important;margin:0!important;padding:0!important;border:0!important;opacity:0;pointer-events:none}
+#profile-dialog .profile-select-trigger{display:flex;align-items:center;justify-content:space-between;text-align:left;gap:8px;cursor:pointer}
+#profile-dialog .profile-select-trigger span{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+#profile-dialog .profile-select-trigger svg{flex:none;width:13px;height:13px;color:#536e9e;transition:transform .2s ease}
+#profile-dialog .profile-select-trigger[aria-expanded=true]{background:#eaf0fa;border-color:#9bb3da}
+#profile-dialog .profile-select-trigger[aria-expanded=true] svg{transform:rotate(180deg)}
+#profile-dialog .profile-select-trigger[data-empty=true]{color:#8698b3}
+#profile-dialog .profile-select-trigger[aria-invalid=true]{border-color:#bd3654}
+#profile-dialog .profile-select-menu{position:fixed;inset:auto;margin:0;padding:4px;box-sizing:border-box;min-width:0;border:1px solid #f7faff;border-radius:12px;background:#f4f8fd;box-shadow:0 8px 24px #18365b26;overflow:auto;overscroll-behavior:contain;opacity:0;transform:translateY(-4px) scale(.99);transition:opacity .18s ease,transform .18s ease,display .18s allow-discrete,overlay .18s allow-discrete}
+#profile-dialog .profile-select-menu:popover-open{opacity:1;transform:none}
+@starting-style{#profile-dialog .profile-select-menu:popover-open{opacity:0;transform:translateY(-4px) scale(.99)}}
+#profile-dialog .profile-select-menu button{display:flex;align-items:center;justify-content:space-between;gap:8px;text-align:left;width:100%;min-height:31px;padding:7px 9px;border:0;border-radius:8px;background:transparent;color:#244b9a;font:600 11px/1.4 "Segoe UI",system-ui,sans-serif;white-space:normal;overflow-wrap:anywhere;cursor:pointer;transition:background-color .16s ease,color .16s ease}
+#profile-dialog .profile-select-menu button:is(:hover,:focus-visible){background:#dce8fb;outline:none}
+#profile-dialog .profile-select-menu button[aria-selected=true]{background:#e1eaf9;color:#244b9a}
+#profile-dialog .profile-select-menu button[aria-selected=true]:is(:hover,:focus-visible){background:#d0e0f8}
+#profile-dialog .profile-select-menu button svg{width:13px;height:13px;flex:none;visibility:hidden}
+#profile-dialog .profile-select-menu button[aria-selected=true] svg{visibility:visible}
 #profile-dialog .form-error{color:#b32638;background:#fbe2e7;font-size:11px;line-height:1.5}
-#profile-dialog .app-dialog-footer{padding:10px 18px;gap:9px;background:#f8faff;border-top:1px solid #e8edf6;flex-shrink:0}
+#profile-dialog .app-dialog-footer{padding:9px 16px;gap:9px;background:#f8faff;border-top:1px solid #e8edf6;flex-shrink:0}
 #profile-dialog .app-dialog-footer .button{height:33px;min-height:33px;padding:0 14px;border:0;border-radius:8px;font-size:11px;font-weight:650;text-decoration:none;box-shadow:none;transition:background-color .22s ease,color .22s ease,transform .22s ease,box-shadow .22s ease}
 #profile-dialog .app-dialog-footer .button.outline{background:#eaf0fa;color:#31588e}
 #profile-dialog .app-dialog-footer .button.outline:is(:hover,:focus-visible):not(:disabled){background:#dbe7fa;color:#244b9a;transform:translateY(-1px)}
 #profile-dialog #save-profile{background:#244b9a;color:#fff}
 #profile-dialog #save-profile:is(:hover,:focus-visible):not(:disabled){background:#173b83;transform:translateY(-1px);box-shadow:0 3px 8px #244b9a22}
 #profile-dialog[data-profile-mode="register"] #save-profile{background:var(--app-blue)}
-#profile-dialog[data-profile-mode="register"] #save-profile:is(:hover,:focus-visible):not(:disabled){background:var(--app-blue-dark)}
+#profile-dialog[data-profile-mode="register"] #save-profile:is(:hover,:focus-visible):not(:disabled){background:#223ba8}
 #profile-dialog .app-dialog-footer .button:not(:disabled):active{transform:scale(.98)}
 #profile-dialog .app-dialog-footer .button:focus-visible{outline:2px solid #7095d1;outline-offset:2px}
 #profile-dialog #save-profile:disabled{opacity:.55;cursor:not-allowed}
-@media(max-width:480px){
-  #profile-dialog .app-dialog-head,#profile-dialog .app-dialog-body,#profile-dialog .app-dialog-footer{padding-inline:13px}
-  #profile-dialog .profile-form-grid{gap:8px 9px}
-}
-@media(max-width:350px){#profile-dialog .profile-form-grid{grid-template-columns:minmax(0,1fr)}}
-@media(prefers-reduced-motion:reduce){#profile-dialog .profile-close,#profile-dialog .app-dialog-footer .button{transition:none;transform:none!important}}
+@media(max-width:480px){#profile-dialog .app-dialog-head,#profile-dialog .app-dialog-body,#profile-dialog .app-dialog-footer{padding-inline:13px}#profile-dialog .profile-form-grid{gap:8px 9px}}
+@media(max-width:350px){#profile-dialog .profile-form-grid{grid-template-columns:minmax(0,1fr)}#profile-dialog .profile-spacer{display:none}}
+@media(prefers-reduced-motion:reduce){#profile-dialog :is(.profile-close,.app-dialog-footer .button,.profile-select-trigger svg,.profile-select-menu,.profile-select-menu button){transition:none;transform:none!important}}
