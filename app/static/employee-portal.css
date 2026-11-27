@@ -90,14 +90,23 @@
 @media(prefers-reduced-motion:reduce){.workspace #aja-pilot-panel :is(input,textarea,.aja-time-trigger,.button){transition:none}.workspace #aja-pilot-panel #aja-progress::-webkit-progress-value{transition:none}}
 
 /* Multi-date controls retain the Edit Profile and month-picker design language. */
-.workspace #aja-pilot-panel .aja-date-trigger{display:flex;align-items:center;justify-content:space-between;gap:8px;width:100%;min-height:33px;margin-top:4px;padding:5px 9px;border:1px solid #dce5f2;border-radius:7px;background:#f6f8fc;color:#243e68;font-family:inherit;font-size:12px;font-weight:600;text-align:left;transition:background-color .18s ease,border-color .18s ease}
-.workspace #aja-pilot-panel .aja-date-trigger svg{width:16px;height:16px;flex:none;color:#526fa4}
-.workspace #aja-pilot-panel .aja-date-trigger:is(:hover,[aria-expanded=true]){background:#e3edfc;border-color:#a5bce2}
-.workspace #aja-pilot-panel .aja-date-trigger[aria-invalid=true]{background:#fff5f7;border-color:#d36b83}
-.workspace #aja-pilot-panel .aja-selected-dates{display:flex;flex-wrap:wrap;gap:5px;margin-top:5px}
+/* The selected values and calendar action share one field border. */
+.workspace #aja-pilot-panel .aja-date-control{display:flex;align-items:center;gap:6px;min-height:33px;width:100%;box-sizing:border-box;margin-top:4px;padding:3px 3px 3px 9px;border:1px solid #dce5f2;border-radius:7px;background:#f6f8fc;color:#243e68;font-size:12px;font-weight:600;cursor:pointer;transition:background-color .18s ease,border-color .18s ease,box-shadow .18s ease}
+.workspace #aja-pilot-panel .aja-date-control:hover{border-color:#a5bce2}
+.workspace #aja-pilot-panel .aja-date-control:focus-within{border-color:#6284ca;box-shadow:0 0 0 2px #244b9a12}
+.workspace #aja-pilot-panel .aja-date-control:has(.aja-date-trigger[aria-expanded=true]){background:#e3edfc;border-color:#a5bce2}
+.workspace #aja-pilot-panel .aja-date-control:has(.aja-date-trigger[aria-invalid=true]){background:#fff5f7;border-color:#d36b83}
+.workspace #aja-pilot-panel .aja-date-content{flex:1;min-width:0;display:flex;align-items:center}
+.workspace #aja-pilot-panel .aja-date-placeholder{color:#8698b3;font-weight:500}
+.workspace #aja-pilot-panel .aja-date-trigger{display:grid;place-items:center;flex:0 0 27px;width:27px;min-width:27px;max-width:27px;height:25px;min-height:0;margin:0;padding:0;border:0;border-radius:5px;background:transparent;color:#526fa4;box-shadow:none;cursor:pointer}
+.workspace #aja-pilot-panel .aja-date-trigger svg{width:16px;height:16px;pointer-events:none}
+.workspace #aja-pilot-panel .aja-date-trigger:is(:hover,[aria-expanded=true]){background:#e3edfc;color:#244b9a}
+.workspace #aja-pilot-panel .aja-selected-dates{display:flex;align-items:center;flex-wrap:wrap;gap:4px;min-width:0}
 .workspace #aja-pilot-panel .aja-selected-dates:empty{display:none}
-.workspace #aja-pilot-panel .aja-date-chip{padding:4px 7px;border:0;border-radius:6px;background:#e4edfb;color:#244b9a;font-size:10px;font-weight:600}
-.workspace #aja-pilot-panel .aja-date-chip:hover{background:#dbe7fa}
+.workspace #aja-pilot-panel #aja-date-display[hidden]{display:none!important}
+.workspace #aja-pilot-panel .aja-date-chip{display:inline-flex;align-items:center;gap:5px;padding:3px 7px;border:0;border-radius:5px;background:#dfe9fa;color:#244b9a;font-size:11px;font-weight:600;line-height:1.4;min-width:0;max-width:100%;overflow-wrap:anywhere}
+.workspace #aja-pilot-panel .aja-date-chip:hover{background:#d2e1f7}
+.workspace #aja-pilot-panel .aja-chip-remove{font-size:13px;line-height:1;color:#526fa4}
 .workspace #aja-pilot-panel .aja-schedule-mode{display:flex;gap:5px;margin-top:4px;padding:3px;background:#f0f4fc;border-radius:8px}
 .workspace #aja-pilot-panel .aja-schedule-mode button{flex:1;padding:6px;border:0;border-radius:6px;background:transparent;color:#52688a;font-size:11px;font-weight:650}
 .workspace #aja-pilot-panel .aja-schedule-mode button:hover{background:#e3edfc}
@@ -117,3 +126,11 @@
 .aja-page-nav{display:flex;justify-content:space-between;align-items:center;gap:8px;color:#385780;font-size:12px;font-weight:650}
 .aja-page-nav .button{background:#eaf0fa;color:#31588e;border:0;border-radius:8px;min-width:34px}
 @media(max-width:740px){.workspace #aja-pilot-panel .aja-time-row{grid-template-columns:minmax(0,1fr)}}
+
+/* Native popover top layer prevents positioned time controls or panels from
+   painting over either picker. Keep the shared month-picker animation. */
+.workspace :is(.aja-date-picker,.aja-time-picker)[popover]{position:fixed;inset:auto;margin:0;box-sizing:border-box}
+.workspace :is(.aja-date-picker,.aja-time-picker):popover-open{opacity:1;transform:none;pointer-events:auto}
+.workspace :is(.aja-date-picker,.aja-time-picker):not(:popover-open){pointer-events:none}
+@starting-style{.workspace :is(.aja-date-picker,.aja-time-picker):popover-open{opacity:0;transform:translateY(-9px)}}
+@media(prefers-reduced-motion:reduce){.workspace :is(.aja-date-picker,.aja-time-picker)[popover]{transition:none;transform:none}}
