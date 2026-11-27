@@ -986,14 +986,44 @@ def admin_aja_document(reference: str, user: dict = Depends(require_admin)):
             key: row[key] for key in ("employee_code", "position", "department")
         }
         pdf = row["pdf"]
-    return {"filing": metadata, **render_saved_pdf(pdf)}
+    return {"filing": metadata, "previews": render_saved_pdf(pdf)["previews"]}
 
 
-@app.get("/api/admin/aja/filings/{reference}/pdf")
-def admin_aja_pdf(reference: str, user: dict = Depends(require_admin)):
-    with closing(connect()) as con:
+
+class AdminAjaReviewInput(BaseModel):
+    decision: Literal["approved", "returned", "disapproved"]
+    remarks: str = Field(default="", max_length=600)
+    authorized_decision_verified: bool = Field(default=False, strict=True)
+
+    @model_validator(mode="after")
+    def validate_review(self):
+        self.remarks = self.remarks.strip()
+        if self.decision in ("approved", "disapproved") and not self.authorized_decision_verified:
+            raise ValueError("Verify the authorized decision on the physical document first.")
+        if self.decision != "approved" and not self.remarks:
+            raise ValueError("Enter the reason for returning or disapproving the filing.")
+        return self
+
+
+@app.post("/api/admin/aja/filings/{reference}/review")
+def admin_aja_review(reference: str, payload: AdminAjaReviewInput, request: Request,
+                     user: dict = Depends(require_admin)):
+    require_csrf(request)
+    with closing(connect()) as con, con:
+        con.execute("BEGIN IMMEDIATE")
         row = admin_aja_active_filing(con, reference)
-        return Response(content=row["pdf"], media_type="application/pdf", headers={
-            "Cache-Control": "no-store",
-            "Content-Disposition": f'attachment; filename="{row["reference"]}.pdf"'
-        })
+        if row["status"] != "awaiting_signatures" or con.execute(
+            "SELECT 1 FROM aja_filing_reviews WHERE filing_id=?", (row["id"],)).fetchone():
+            raise HTTPException(409, "This filing has already been reviewed. Reopen the filing for its latest status.")
+        con.execute("""INSERT INTO aja_filing_reviews(filing_id,decision,remarks,
+            authorized_decision_verified,reviewed_by,original_fingerprint) VALUES(?,?,?,?,?,?)""",
+            (row["id"], payload.decision, payload.remarks,
+             int(payload.authorized_decision_verified and payload.decision != "returned"),
+             user["id"], row["fingerprint"]))
+        if payload.decision in ("returned", "disapproved"):
+            # Keep the original application and hash for audit; allow a new corrected filing.
+            con.execute("UPDATE aja_filings SET fingerprint=? WHERE id=?",
+                        ("reviewed:" + reference + ":" + row["fingerprint"], row["id"]))
+        # Verified approval is not proof of actual work performed. Do not post
+        # scheduled departure/return as attendance or automatically credit DTR.
+        return {"filing": filing_metadata(con, row)}
