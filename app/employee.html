@@ -1,0 +1,34 @@
+<!doctype html>
+<html lang="en">
+<head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Employee Portal | NCSC</title>
+<link rel="stylesheet" href="/static/employee-portal.css?v=1">
+<link rel="stylesheet" href="/static/dtr-preview.css?v=23">
+<script src="/static/employee-portal.js?v=1" defer></script>
+</head>
+<body>
+<main id="employee-login" class="portal-login">
+  <div class="login-intro"><img src="/static/images/ncsc-seal.jpg" alt="NCSC seal"><div><small>NATIONAL COMMISSION OF SENIOR CITIZENS</small><h1>Employee Portal</h1><p>Regional Office I</p></div></div>
+  <form id="employee-login-form" class="login-form"><h2>Sign in</h2><label>Username<input name="username" autocomplete="username" maxlength="40" required></label><label>Password<input name="password" type="password" autocomplete="current-password" maxlength="256" required></label><p class="error" id="login-error" role="alert"></p><button class="primary" type="submit">Sign in</button><a href="/">HR / Admin Portal</a></form>
+</main>
+<div id="employee-workspace" class="portal-shell" hidden>
+  <aside class="portal-sidebar"><div class="portal-brand"><img src="/static/images/ncsc-seal.jpg" alt="NCSC seal"><div><small>Republic of the Philippines</small><strong>NATIONAL COMMISSION<br>OF SENIOR CITIZENS</strong></div></div><div class="nav-label">DOCUMENTS</div><div class="portal-nav" aria-current="page"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="7" width="18" height="14" rx="3"/><path d="M8 7V4h8v3M3 12h18"/></svg><span>AJA / Official Business</span></div><button id="employee-logout" class="portal-signout" type="button">Sign out</button></aside>
+  <div class="portal-content"><header class="portal-top"><h1>AJA / Official Business</h1><span id="employee-top-name"></span></header>
+    <main class="portal-main">
+      <form id="aja-form" class="aja-card">
+        <div class="aja-heading"><div><h2>New AJA / Official Business</h2><p>Prepare your official business form.</p></div><span class="form-chip">AJA / OB</span></div>
+        <section class="aja-section"><h3>Employee information</h3><div class="aja-grid identity-grid"><label>Employee name<input id="employee-name" readonly></label><label>Position<input id="employee-position" readonly></label><label>Department / Office / Division<input id="employee-department" readonly></label></div></section>
+        <section class="aja-section"><h3>Official business</h3><div class="aja-grid"><label class="full">Date/s of official business<input name="dates" placeholder="e.g. November 27, 2026" maxlength="100" required></label><label>From<input name="origin" maxlength="200" placeholder="Origin" required></label><label>To<input name="destination" maxlength="200" placeholder="Destination" required></label><label class="full">Purpose(s)<textarea name="purpose" rows="3" maxlength="500" placeholder="Purpose of official business" required></textarea></label><label>Time of departure<input name="departure" type="time" required></label><label>Time of return<input name="return_time" type="time" required></label></div></section>
+        <p id="aja-error" class="error" role="alert"></p>
+        <footer class="aja-footer"><span>Print and secure required signatures before departure.</span><div><button type="reset" class="secondary">Clear form</button><button id="aja-submit" type="submit" class="primary">Preview official form</button></div></footer>
+      </form>
+    </main>
+  </div>
+</div>
+<dialog id="aja-preview-dialog" aria-labelledby="aja-preview-title">
+  <div class="export-preview-toolbar"><div class="preview-identity"><h2 id="aja-preview-title" class="preview-person">AJA / Official Business</h2><span id="aja-preview-name" class="preview-month"></span></div><button type="button" id="aja-close" class="preview-close" aria-label="Close preview">×</button></div>
+  <div class="dtr-workspace"><div class="dtr-document-area"><div id="aja-stage" class="export-preview-stage"><img id="aja-paper" alt="Generated AJA form including Certificate of Appearance"></div>
+    <div class="preview-zoom-bar" role="group" aria-label="Paper preview zoom"><button id="aja-minus" type="button" aria-label="Zoom out">−</button><output id="aja-zoom">100%</output><button id="aja-plus" type="button" aria-label="Zoom in">+</button><span class="zoom-divider"></span><button id="aja-fit" type="button" aria-pressed="true">Fit Page</button></div>
+  </div><aside class="preview-controls"><h3>Document settings</h3><div class="preview-fields"><div class="preview-category-field">Paper size<output class="preview-category-value">Folio (8.5 × 13 in)</output></div></div><div class="preview-actions"><button type="button" id="aja-print" class="secondary">Print</button><button type="button" id="aja-download" class="preview-download">Download PDF</button></div></aside></div>
+</dialog>
+</body></html>
