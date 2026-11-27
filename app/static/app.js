@@ -407,6 +407,7 @@ async function openProfile(code=null){
   const token=++profileFormToken;
   profileReturn={page:currentPage,employee:selectedEmployee,month:$('detail-month').value};
   profileEditing=null;profileVersion=null;
+  $('profile-dialog').dataset.profileMode=code?'edit':'register';
   $('profile-form').reset();$('profile-id').readOnly=false;
   $('profile-error').classList.add('hidden');$('save-profile').disabled=false;
   $('profile-heading').textContent='Register employee';$('save-profile').textContent='Register employee';
