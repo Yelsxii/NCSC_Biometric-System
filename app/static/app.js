@@ -429,6 +429,7 @@ function initializeProfileSelects(){
     menu.setAttribute('role','listbox');menu.setAttribute('aria-labelledby',id+'-label');
     const options=[...select.options].filter(option=>option.value).map(option=>{
       const button=document.createElement('button');button.type='button';button.setAttribute('role','option');button.tabIndex=-1;button.dataset.value=option.value;
+      if(id==='profile-type')button.dataset.category=option.value;
       const label=document.createElement('span');label.textContent=option.textContent;
       button.append(label);
       menu.append(button);
@@ -441,6 +442,7 @@ function initializeProfileSelects(){
     function refresh(){
       trigger.querySelector('span').textContent=select.selectedOptions[0]?.textContent||select.options[0].textContent;
       trigger.dataset.empty=String(!select.value);
+      if(id==='profile-type')trigger.dataset.category=select.value;
       if(select.value)trigger.removeAttribute('aria-invalid');
       for(const button of options)button.setAttribute('aria-selected',String(button.dataset.value===select.value));
     }
@@ -557,8 +559,8 @@ async function saveProfile(event){
   for(const [field,key] of [['first','first_name'],['middle','middle_name'],['last','last_name'],['suffix','suffix'],['type','employment_type'],['department','department']])
     payload[key]=$('profile-'+field).value.trim();
   payload.sync_authorized=profileSyncAuthorized;
-  if(!payload.first_name||!payload.last_name||!payload.employment_type||!payload.department){
-    $('profile-error').textContent='First name, last name, category and department are required.';$('profile-error').classList.remove('hidden');return;
+  if(!payload.first_name||!payload.middle_name||!payload.last_name||!payload.employment_type||!payload.department){
+    $('profile-error').textContent='First name, middle name, last name, category and department are required.';$('profile-error').classList.remove('hidden');return;
   }
   if(!/^[A-Za-z0-9._-]{1,64}$/.test(code)){
     $('profile-error').textContent='Enter a valid existing biometric ID.';$('profile-error').classList.remove('hidden');return;

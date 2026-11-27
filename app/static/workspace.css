@@ -1188,7 +1188,6 @@ dialog.app-dialog[open]::backdrop,#dtr-preview-dialog[open]::backdrop{
 #profile-dialog .profile-id-meta{display:flex;flex-direction:column;justify-content:center;gap:1px;min-width:0}
 #profile-dialog .profile-id-meta>span{font-size:10px;font-weight:600;line-height:1.2;color:#637c9e}
 #profile-dialog .profile-id-meta strong{color:#244b9a;font-size:16px;font-weight:750;line-height:1.1;font-variant-numeric:tabular-nums;overflow-wrap:anywhere;min-width:0}
-#profile-dialog .profile-id-fixed{width:12px;height:12px;flex:none;color:#8395b0;margin-left:1px;align-self:center}
 #profile-dialog[data-profile-mode=edit] :is(.profile-id-field,.profile-spacer){display:none}
 #profile-dialog #profile-heading{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0}
 #profile-dialog .profile-close{display:grid;place-items:center;width:32px;height:32px;min-width:32px;min-height:32px;padding:0;border:0;border-radius:50%;background:linear-gradient(145deg,#fff1f3df,#f8dce5cf);color:#b42d4e;box-shadow:inset 0 1px 1px #fff9,0 3px 10px #b42d4e12;backdrop-filter:blur(12px);transition:background .18s ease,color .18s ease,box-shadow .18s ease,transform .18s ease}
@@ -1213,6 +1212,7 @@ dialog.app-dialog[open]::backdrop,#dtr-preview-dialog[open]::backdrop{
 #profile-dialog .profile-select-field.enhanced select{position:absolute!important;inset:auto!important;width:1px!important;height:1px!important;min-height:0!important;margin:0!important;padding:0!important;border:0!important;opacity:0;pointer-events:none}
 #profile-dialog .profile-select-trigger{display:flex;align-items:center;justify-content:space-between;text-align:left;gap:8px;cursor:pointer}
 #profile-dialog .profile-select-trigger span{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+#profile-dialog .profile-select-trigger[data-category]:not([data-category=""]){padding-block:3px}
 #profile-dialog .profile-select-trigger svg{flex:none;width:13px;height:13px;color:#2258a4;transition:transform .34s cubic-bezier(.25,.7,.25,1)}
 #profile-dialog .profile-select-trigger:is(:hover,[aria-expanded=true]){background:#e3edfc;border-color:#a5bce2;color:#244b9a}
 #profile-dialog .profile-select-trigger[aria-expanded=true] svg{transform:rotate(180deg)}
@@ -1223,10 +1223,23 @@ dialog.app-dialog[open]::backdrop,#dtr-preview-dialog[open]::backdrop{
 @starting-style{#profile-dialog .profile-select-menu:popover-open{opacity:0;transform:translateY(var(--profile-menu-offset,-9px))}}
 #profile-dialog .profile-select-menu:not(:popover-open){pointer-events:none}
 #profile-dialog .profile-select-menu[data-direction=up]{--profile-menu-offset:9px;transform-origin:bottom center}
-#profile-dialog .profile-select-menu button{display:flex;align-items:center;justify-content:flex-start;gap:8px;text-align:left;width:100%;min-height:31px;padding:7px 9px;border:0;border-radius:8px;background:transparent;color:#244b9a;font:600 11px/1.4 "Segoe UI",system-ui,sans-serif;white-space:normal;overflow-wrap:anywhere;cursor:pointer;transition:background-color .16s ease,color .16s ease}
-#profile-dialog .profile-select-menu button:is(:hover,:focus-visible){background:#e0ebfc;color:#244b9a;outline:none}
-#profile-dialog .profile-select-menu button[aria-selected=true]{background:#244b9a;color:#fff}
-#profile-dialog .profile-select-menu button[aria-selected=true]:is(:hover,:focus-visible){background:#173b83;color:#fff}
+/* Match the DTR preview picker: separated rows, quiet hover and a clear selection. */
+#profile-dialog .profile-select-menu button{display:flex;align-items:center;justify-content:flex-start;box-sizing:border-box;gap:8px;text-align:left;width:100%;min-height:28px;padding:5px 9px;margin:0 0 3px;border:1px solid transparent;border-radius:7px;background:transparent;color:#536b91;font:550 11.5px/1.3 "Segoe UI",system-ui,sans-serif;white-space:normal;overflow-wrap:anywhere;cursor:pointer;transition:background-color .18s ease,border-color .18s ease,color .18s ease}
+#profile-dialog .profile-select-menu button:last-child{margin-bottom:0}
+#profile-dialog .profile-select-menu button:not([aria-selected=true]):is(:hover,:focus-visible){background:#f1f5fc;border-color:#e6edf9;color:#244b9a}
+#profile-dialog #profile-department-menu button[aria-selected=true]{background-color:#20458c;background-image:radial-gradient(ellipse at 18% 0%,#ffffff24 0%,#ffffff08 55%,#ffffff00 85%),linear-gradient(115deg,#ffffff0d,#ffffff03);background-clip:padding-box;border-color:#31599b;color:#fff;font-weight:650}
+#profile-dialog #profile-department-menu button[aria-selected=true]:is(:hover,:focus-visible){background-color:#2a5098;border-color:#4166a4}
+#profile-dialog .profile-select-menu button:focus-visible{outline:2px solid #7596cc;outline-offset:-2px}
+/* Exactly the category palette used by the employee table; selection is a chip,
+   never an adjacent full-width dark bar. */
+#profile-dialog [data-category="COS"]{--profile-chip-bg:#d5dfff;--profile-chip-ink:#2346bc}
+#profile-dialog [data-category="Permanent"]{--profile-chip-bg:#c4e9ff;--profile-chip-ink:#005b8c}
+#profile-dialog [data-category="GIP"]{--profile-chip-bg:#eadcff;--profile-chip-ink:#7040a8}
+#profile-dialog [data-category="OJT"]{--profile-chip-bg:#ffe4c7;--profile-chip-ink:#9a4c13}
+#profile-dialog #profile-type-trigger[data-category]:not([data-category=""])>span,
+#profile-dialog #profile-type-menu button[aria-selected=true]>span{display:inline-flex;align-items:center;justify-content:center;max-width:100%;min-height:23px;padding:3px 11px;border-radius:999px;background:var(--profile-chip-bg);color:var(--profile-chip-ink);font-size:11px;line-height:1.25;font-weight:700;white-space:nowrap;box-sizing:border-box}
+#profile-dialog #profile-type-menu button[aria-selected=true]{background:transparent;border-color:transparent;padding-block:3px}
+#profile-dialog #profile-type-menu button[aria-selected=true]:hover{background:#f1f5fc;border-color:#e6edf9}
 #profile-dialog .form-error{color:#b32638;background:#fbe2e7;font-size:11px;line-height:1.5}
 #profile-dialog .app-dialog-footer{padding:9px 16px;gap:9px;background:#f8faff;border-top:1px solid #e8edf6;flex-shrink:0}
 #profile-dialog .app-dialog-footer .button{height:33px;min-height:33px;padding:0 14px;border:0;border-radius:8px;font-size:11px;font-weight:650;text-decoration:none;box-shadow:none;transition:background-color .22s ease,color .22s ease,transform .22s ease,box-shadow .22s ease}

@@ -1175,16 +1175,20 @@ with connect() as con:
     assert.equal(await page.locator('#profile-id').isVisible(),false);
     assert.equal(await page.locator('#profile-id-display').textContent(),'1');
     await page.locator('#profile-first').fill('Sample');
+    await page.locator('#profile-middle').fill('A.');
     await page.locator('#profile-last').fill('One');
     await page.locator('#profile-type-trigger').click();
     await page.locator('#profile-type-menu:popover-open').waitFor();
     await page.waitForFunction(()=>document.querySelector('#profile-type-menu').dataset.direction==='down');
     assert.equal(await page.locator('#profile-middle').getAttribute('placeholder'),null);
+    assert.equal(await page.locator('#profile-middle').getAttribute('required'),'');
+    assert.equal(await page.locator('.profile-id-fixed').count(),0);
     await page.locator('#profile-type-trigger').click();
     await page.locator('#profile-type-menu:popover-open').waitFor({state:'detached'});
     assert.equal(await page.locator('#profile-type-trigger').getAttribute('aria-expanded'),'false');
     await page.locator('#profile-type-trigger').click();
     await page.locator('#profile-type-menu:popover-open').getByRole('option',{name:'Permanent',exact:true}).click();
+    assert.equal(await page.locator('#profile-type-trigger').getAttribute('data-category'),'Permanent');
     await page.locator('#profile-department-trigger').click();
     await page.locator('#profile-department-menu:popover-open').getByRole('option',{name:'Operations Division (OPS)',exact:true}).click();
     assert.equal(await page.locator('#profile-position').count(),0);
@@ -1197,6 +1201,7 @@ with connect() as con:
     await page.locator('#open-profile').click();
     await page.locator('#profile-id').fill('25');
     await page.locator('#profile-first').fill('Example');
+    await page.locator('#profile-middle').fill('A.');
     await page.locator('#profile-last').fill('Employee');
     await page.locator('#profile-type-trigger').click();
     await page.locator('#profile-type-menu').getByRole('option',{name:'COS',exact:true}).click();
@@ -1210,6 +1215,7 @@ with connect() as con:
     await page.locator('#open-profile').click();
     await page.locator('#profile-id').fill('25');
     await page.locator('#profile-first').fill('Wrong duplicate');
+    await page.locator('#profile-middle').fill('A.');
     await page.locator('#profile-last').fill('Name');
     await page.locator('#profile-type-trigger').click();
     await page.locator('#profile-type-menu').getByRole('option',{name:'COS',exact:true}).click();
@@ -1226,7 +1232,7 @@ with connect() as con:
         const response=await fetch('/api/employee-profiles',{
           method:'POST',credentials:'same-origin',
           headers:{'Content-Type':'application/json','X-CSRF-Token':session.csrf},
-          body:JSON.stringify({employee_code:String(i),first_name:'Sample '+i,last_name:'Employee',
+          body:JSON.stringify({employee_code:String(i),first_name:'Sample '+i,middle_name:'A.',last_name:'Employee',
             employment_type:['COS','Permanent','GIP','OJT'][i%4],department:'Sample Office',
             position:'Example designation',sync_authorized:true,device_enrollment_confirmed:true})
         });

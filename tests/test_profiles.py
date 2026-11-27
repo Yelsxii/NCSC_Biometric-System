@@ -81,7 +81,7 @@ def test_exact_ids_and_optimistic_profile_updates(admin):
 
 
 @pytest.mark.parametrize('changes', [
-    {'employee_code':'bad id'}, {'first_name':'  '}, {'last_name':'Wrong\nName'},
+    {'employee_code':'bad id'}, {'first_name':'  '}, {'middle_name':''}, {'middle_name':'  '}, {'last_name':'Wrong\nName'},
     {'employment_type':'Invented'}, {'device_enrollment_confirmed':False},
     {'unexpected':'not allowed'},
 ])
@@ -207,3 +207,10 @@ def test_profile_update_without_position_preserves_saved_designation(admin):
     assert updated.status_code == 200, updated.text
     assert updated.json()['position'] == 'Records Assistant'
     assert updated.json()['employee_code'] == '25'
+
+
+def test_registration_rejects_missing_middle_name(admin):
+    client, headers = admin
+    data = profile('25')
+    data.pop('middle_name')
+    assert client.post('/api/employee-profiles', json=data, headers=headers).status_code == 422

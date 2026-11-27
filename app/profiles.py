@@ -18,7 +18,7 @@ EMPLOYMENT_TYPES = ("COS", "Permanent", "GIP", "OJT")
 class ProfileFields(BaseModel):
     model_config = ConfigDict(extra="forbid")
     first_name: str = Field(min_length=1, max_length=70)
-    middle_name: str = Field(default="", max_length=60)
+    middle_name: str = Field(min_length=1, max_length=60)
     last_name: str = Field(min_length=1, max_length=70)
     suffix: str = Field(default="", max_length=20)
     employment_type: Literal["COS", "Permanent", "GIP", "OJT"]
