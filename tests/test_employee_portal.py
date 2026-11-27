@@ -98,6 +98,24 @@ def test_aja_filing_persistence_and_ownership(admin, monkeypatch):
     assert len(client.get("/api/employee-portal/aja/filings").json()["filings"]) == 1
     url = "/api/employee-portal/aja/filings/"+ref+"/document"
     assert client.get(url).status_code == 200
-    login("aja-test-2")
+    other_headers = login("aja-test-2")
     assert client.get(url).status_code == 404
     assert client.get("/api/employee-portal/aja/filings").json()["filings"] == []
+    delete_url = "/api/employee-portal/aja/filings/"+ref+"/delete"
+    assert client.post(delete_url, json={}, headers=other_headers).status_code == 404
+    headers = login("aja-test-1")
+    assert client.post(delete_url, json={}).status_code == 403
+    assert client.post(delete_url, json={}, headers=headers).status_code == 200
+    assert client.get(url).status_code == 404
+    assert client.get("/api/employee-portal/aja/filings/"+ref+"/pdf").status_code == 404
+    assert client.get("/api/employee-portal/aja/filings").json()["filings"] == []
+    assert client.post(delete_url, json={}, headers=headers).status_code == 200
+    with closing(connect()) as con:
+        saved = con.execute("""SELECT f.pdf,x.original_fingerprint FROM aja_filings f
+            JOIN aja_filing_deletions x ON x.filing_id=f.id WHERE f.reference=?""",(ref,)).fetchone()
+        assert saved["pdf"] == b"saved-pdf"
+        assert len(saved["original_fingerprint"]) == 64
+    refile = client.post("/api/employee-portal/aja/file", json=payload, headers=headers)
+    assert refile.status_code == 200, refile.text
+    assert refile.json()["filing"]["reference"] != ref
+    assert len(client.get("/api/employee-portal/aja/filings").json()["filings"]) == 1
