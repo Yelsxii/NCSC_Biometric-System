@@ -758,7 +758,9 @@
 .workspace #attendance-register-panel #live-refresh-note{margin-left:auto;font-size:9px;color:#a83e5b}
 .workspace #attendance-register-panel .live-other{border:0;border-radius:6px;background:#e8edf5;color:#526888;padding:3px 6px;font-size:9px}
 .workspace #attendance-register-panel .live-other[aria-pressed=true]{background:#d4e0f4;color:#234b8b}
-.workspace #attendance-register-panel .live-kpi-strip{display:grid;grid-template-columns:repeat(6,minmax(144px,1fr));gap:clamp(16px,1.5%,28px);padding:13px clamp(14px,1.3%,24px);overflow-x:auto;overflow-y:hidden;scrollbar-width:none;-ms-overflow-style:none;scroll-snap-type:x proximity;overscroll-behavior-inline:contain}
+/* Keep the scroll viewport stationary when individual KPI cards scale.
+   Transformed snap targets can otherwise trigger automatic horizontal re-snapping. */
+.workspace #attendance-register-panel .live-kpi-strip{display:grid;min-width:0;max-width:100%;box-sizing:border-box;grid-template-columns:repeat(6,minmax(144px,1fr));gap:clamp(16px,1.5%,28px);padding:13px clamp(14px,1.3%,24px);overflow-x:auto;overflow-y:hidden;scrollbar-width:none;-ms-overflow-style:none;scroll-snap-type:none;overflow-anchor:none;overscroll-behavior-inline:contain}
 .workspace #attendance-register-panel .live-kpi-strip::-webkit-scrollbar{display:none;width:0;height:0}
 /* Thin luminous glass edges rather than a raised, stacked card base. */
 .workspace #attendance-register-panel .live-kpi{
@@ -770,7 +772,7 @@
   background:linear-gradient(145deg,#ffffff76,#f9fcff35 54%,#ffffff26);
   -webkit-backdrop-filter:none;backdrop-filter:none;
   box-shadow:inset 0 1px 0 #ffffff8a,inset 0 -1px 0 #ffffff28,0 3px 9px #31578b15;
-  scroll-snap-align:start;transform-origin:center center;transform:scale(1);
+  scroll-snap-align:none;transform-origin:center center;transform:scale(1);
   transition:transform .56s cubic-bezier(.35,0,.22,1),box-shadow .4s ease
 }
 /* Two nested, borderless glass surfaces: clear outer glass and a softly
