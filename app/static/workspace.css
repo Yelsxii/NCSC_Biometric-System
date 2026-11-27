@@ -1309,34 +1309,29 @@ body:has(#profile-undo-stack:not(:empty)) #toast:not(.hidden){bottom:auto;top:22
 @media print{#profile-undo-stack{display:none!important}}
 
 
-/* Connected navigation: keep the curved tab at the navy rail's outer edge.
-   The tiny rounded lip stops inside the glass gutter; it never reaches the
-   adjacent content shell. No changes to either glass panel or layout. */
+/* Connected navigation: a single straight, flush outer edge with inverted
+   shoulders above and below the selected tab. No protruding lip or bridge. */
 .workspace .sidebar{
   --nav-join-fill:#e4ecf7;
   --nav-join-radius:12px;
-  --nav-join-tip:2px;
-  --nav-join-lip:3px;
 }
 .workspace .sidebar .nav-edge-highlight{
   position:absolute;
-  inset:0 calc(-1 * (var(--rail-inset) + var(--nav-join-lip))) 0 0;
+  inset:0 calc(-1 * (var(--rail-inset) + 1px)) 0 0;
   z-index:-1;pointer-events:none;
-  /* Keep the fill opaque through the rail boundary. The former tall
-     elliptical corners and transparent tip exposed two navy slivers
-     where the body met the inverted shoulders. Round only the small
-     lip outside the rail, without touching the neighbouring panel. */
-  border-radius:12px var(--nav-join-tip) var(--nav-join-tip) 12px / 12px 6px 6px 12px;
+  /* The 1px compensates for the nav button's transparent border.
+     Keep the right edge perfectly vertical; round only the left corners. */
+  border-radius:12px 0 0 12px;
   background:linear-gradient(to right,#f4f7fc 0%,var(--nav-join-fill) 70%);
   opacity:0;transform:translateX(-3px) scaleX(.985);
   transform-origin:right center;
   transition:opacity .38s cubic-bezier(.25,.7,.25,1),transform .38s cubic-bezier(.25,.7,.25,1);
 }
-/* Preserve the inverted shoulders at the rail edge, independent of the lip. */
+/* Both inverted shoulders share exactly the same right edge as the tab. */
 .workspace .sidebar .nav-edge-highlight::before,
 .workspace .sidebar .nav-edge-highlight::after{
   content:"";position:absolute;
-  right:calc(var(--nav-join-lip) - 2px);
+  right:0;
   width:var(--nav-join-radius);height:var(--nav-join-radius);
   pointer-events:none;
 }
