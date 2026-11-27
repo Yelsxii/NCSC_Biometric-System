@@ -1,5 +1,39 @@
-/* Employee content only. Login, navigation, workspace, panel, button, field and
-   preview styling come from the shared Admin Portal stylesheets. */
-.workspace #aja-pilot-panel .aja-identity-grid input[readonly]{background:#eef2f8;color:#52688a;cursor:default}
-.workspace #aja-pilot-panel .aja-identity-grid input[readonly]:focus{box-shadow:none;border-color:#e0e7f3}
+/* AJA content layout only. Inherit the common Admin Portal shell, panels and
+   controls. Use the same form typography and blue focus/hover family. */
+.workspace .content-shell .page #aja-pilot-panel{
+  flex:1;display:flex;flex-direction:column;min-height:0;overflow:hidden;
+}
+.workspace #aja-pilot-panel .panel-header{flex:none;margin:0 0 12px}
+.workspace #aja-pilot-panel #aja-form{
+  width:100%;max-width:none;min-width:0;min-height:0;flex:1;
+  display:flex;flex-direction:column;
+}
+.workspace #aja-pilot-panel .aja-form-body{
+  flex:1;min-height:0;min-width:0;overflow:auto;overscroll-behavior:contain;
+  padding:0 1px 14px;scrollbar-width:thin;scrollbar-color:#c1cfe3 transparent;
+}
+.workspace #aja-pilot-panel .aja-form-body::-webkit-scrollbar{display:block;width:5px}
+.workspace #aja-pilot-panel .aja-form-body::-webkit-scrollbar-thumb{background:#c1cfe3;border-radius:8px}
+.workspace #aja-pilot-panel fieldset{min-width:0;padding:15px 16px 16px;margin:0 0 12px;background:#f8faff;border:1px solid #d8e3f1;border-radius:10px;box-shadow:inset 0 1px 0 #fff}
+.workspace #aja-pilot-panel fieldset h3{margin:0 0 12px;color:#385780;font-size:12px;font-weight:700;line-height:1.4}
+.workspace #aja-pilot-panel .aja-form-grid{gap:12px 14px}
+.workspace #aja-pilot-panel .aja-identity-grid{grid-template-columns:repeat(3,minmax(0,1fr))}
+.workspace #aja-pilot-panel .aja-schedule-grid{grid-template-columns:minmax(0,2fr) repeat(2,minmax(0,1fr))}
+.workspace #aja-pilot-panel .aja-trip-grid{margin-top:12px}
+.workspace #aja-pilot-panel label{font-size:11px;color:#52688a;font-weight:650;gap:5px;line-height:1.4}
+.workspace #aja-pilot-panel :is(input,textarea){background:#fff;border-color:#bdcde3;color:#243e68;font-size:12px;font-weight:600;transition:background-color .18s ease,border-color .18s ease,box-shadow .18s ease}
+.workspace #aja-pilot-panel :is(input,textarea)::placeholder{color:#687e9e;font-weight:500;opacity:1}
+.workspace #aja-pilot-panel :is(input,textarea):not([readonly]):hover{border-color:#98b2d5}
+.workspace #aja-pilot-panel :is(input,textarea):focus{border-color:#6284ca;outline:none;box-shadow:0 0 0 2px #244b9a12;background:#fff}
+.workspace #aja-pilot-panel .aja-identity-grid input[readonly]{background:#e4edf8;color:#334d73;border-color:#c2d2e8;cursor:default}
+.workspace #aja-pilot-panel .aja-identity-grid input[readonly]:focus{background:#e4edf8;box-shadow:none;border-color:#a5bce2}
+.workspace #aja-pilot-panel textarea{min-height:72px;resize:vertical}
+.workspace #aja-pilot-panel .aja-form-footer{display:flex;align-items:center;justify-content:space-between;flex:none;flex-wrap:wrap;gap:10px 16px;border-top:1px solid #cddbeb;padding:12px 0 0;background:transparent}
+.workspace #aja-pilot-panel .aja-form-footer .aja-note{margin:0;color:#52688a;font-weight:550}
+.workspace #aja-pilot-panel .aja-form-footer .aja-actions{margin-left:auto}
+.workspace #aja-pilot-panel .aja-actions .button.outline{background:#eaf0fa;color:#31588e;border-color:#c4d3ec}
+.workspace #aja-pilot-panel .aja-actions .button.outline:is(:hover,:focus-visible){background:#dbe7fa;color:#244b9a}
 #aja-paper{display:block;margin:0 auto;max-width:none;background:#fff;box-shadow:0 6px 25px #243e6b24}
+@media(max-width:1000px){.workspace #aja-pilot-panel .aja-identity-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.workspace #aja-pilot-panel .aja-identity-grid label:last-child{grid-column:1/-1}.workspace #aja-pilot-panel .aja-schedule-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.workspace #aja-pilot-panel .aja-schedule-grid label:first-child{grid-column:1/-1}}
+@media(max-width:740px){.workspace #aja-pilot-panel fieldset{padding:12px}.workspace #aja-pilot-panel .aja-form-grid{grid-template-columns:minmax(0,1fr);gap:10px}.workspace #aja-pilot-panel .aja-form-footer .aja-actions{width:100%}.workspace #aja-pilot-panel .aja-form-footer .aja-actions .button{flex:1}}
+@media(prefers-reduced-motion:reduce){.workspace #aja-pilot-panel :is(input,textarea){transition:none}}
