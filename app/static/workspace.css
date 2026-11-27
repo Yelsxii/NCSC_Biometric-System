@@ -1125,15 +1125,18 @@ dialog.app-dialog[open]::backdrop,#dtr-preview-dialog[open]::backdrop{
 @media(prefers-reduced-motion:reduce){.workspace #employee-profile-panel .category-tab span::before{transition:none}}
 .workspace #employee-profile-panel .profile-action,.workspace #employee-profile-panel .profile-table .actions-column{width:60px;min-width:60px;max-width:60px}
 .workspace #employee-profile-panel .profile-table .directory-action-cell,.workspace #employee-profile-panel .profile-table .actions-column{padding-inline:4px}
-.workspace #employee-profile-panel .profile-more{position:relative;isolation:isolate;width:24px;height:24px;min-width:24px;min-height:24px;padding:0;display:inline-grid;place-items:center;vertical-align:middle;border:0;border-radius:999px;background:transparent;color:#294d85;box-shadow:none;transition:color .18s ease}
+/* The directory action has the same three color states as View attendance.
+   Retain the 20px visual circle inside its 24px click target. */
+.workspace #employee-profile-panel .profile-more{position:relative;isolation:isolate;width:24px;height:24px;min-width:24px;min-height:24px;padding:0;display:inline-grid;place-items:center;vertical-align:middle;border:0;border-radius:999px;background:transparent;color:#294d85;box-shadow:none;transform:none;transition:color .18s ease}
 .workspace #employee-profile-panel .profile-more::before{content:"";position:absolute;inset:2px;z-index:-1;border-radius:50%;background:#e3ebf8;transition:background-color .18s ease;pointer-events:none}
 .workspace #employee-profile-panel .profile-more svg{width:12px;height:12px;display:block}
 .workspace #employee-profile-panel .profile-table tbody tr:is(:hover,:focus-within) .profile-more{color:#fff}
 .workspace #employee-profile-panel .profile-table tbody tr:is(:hover,:focus-within) .profile-more::before{background:#3263bd}
-.workspace #employee-profile-panel .profile-more:is(:hover,:focus-visible,[aria-expanded=true]){color:#fff}
-.workspace #employee-profile-panel .profile-more:is(:hover,:focus-visible,[aria-expanded=true])::before{background:#173b80}
+/* The direct state must outrank row hover, including when the menu is open. */
+.workspace #employee-profile-panel .profile-table tbody tr .directory-action-cell .profile-more:is(:hover,:focus-visible,:active,[aria-expanded=true]){color:#fff;background:transparent;box-shadow:none;transform:none}
+.workspace #employee-profile-panel .profile-table tbody tr .directory-action-cell .profile-more:is(:hover,:focus-visible,:active,[aria-expanded=true])::before{background:#173b80}
 .workspace #employee-profile-panel .profile-more:focus-visible{outline:2px solid #7295ce;outline-offset:1px}
-@media(prefers-reduced-motion:reduce){.workspace #employee-profile-panel .profile-more::before{transition:none}}
+@media(prefers-reduced-motion:reduce){.workspace #employee-profile-panel .profile-more,.workspace #employee-profile-panel .profile-more::before{transition:none}}
 .workspace #employee-profile-panel .directory-archive-toggle{border:0;background:transparent;color:#536e94;font-size:10px;padding:4px 7px;border-radius:999px}
 .workspace #employee-profile-panel .directory-archive-toggle[hidden]{display:none}
 .workspace #employee-profile-panel .directory-archive-toggle:hover{background:#d8e5f7;color:#244b9a}
