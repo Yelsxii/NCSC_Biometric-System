@@ -6,11 +6,11 @@
   <meta name="theme-color" content="#142650">
   <title>NCSC | Employee Portal</title>
   <link rel="stylesheet" href="/static/app.css">
-  <link rel="stylesheet" href="/static/workspace.css?v=employees-163">
+  <link rel="stylesheet" href="/static/workspace.css?v=employees-164">
   <link rel="stylesheet" href="/static/attendance-detail.css?v=auto-dtr-45">
   <link rel="stylesheet" href="/static/dtr-preview.css?v=23">
-  <link rel="stylesheet" href="/static/employee-portal.css?v=20">
-  <script src="/static/employee-portal.js?v=14" defer></script>
+  <link rel="stylesheet" href="/static/employee-portal.css?v=21">
+  <script src="/static/employee-portal.js?v=15" defer></script>
 </head>
 <body>
   <main id="login-view" class="auth-shell" aria-labelledby="login-heading">
@@ -139,18 +139,19 @@
                 </div>
               </div>
               <div class="aja-form-footer">
-                <span class="aja-filing-note">File first, then print for signatures.</span><div class="aja-actions"><button type="reset" class="button outline">Clear form</button><button id="aja-submit" type="submit" class="button primary" disabled>File AJA</button></div>
+                <span class="aja-filing-note">File first, then print for signatures.</span><div class="aja-actions"><button type="reset" class="button outline">Clear form</button><button id="aja-submit" type="submit" class="button primary record-create-action" disabled>Submit AJA</button></div>
               </div>
             </form>
           </div>
         </section>
         <section class="page hidden" data-view="filings">
           <div class="panel records-panel list-panel" id="aja-filings-panel">
-            <div class="panel-header aja-filings-heading"><h2>My AJA Filings</h2><button type="button" id="aja-new-filing" class="button primary">New AJA</button></div>
+            <div class="panel-header aja-filings-heading"><h2>My AJA Filings</h2><button type="button" id="aja-new-filing" class="button primary record-create-action"><svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="1.65" stroke-linecap="round" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>New AJA</button></div>
             <p id="aja-filings-message" class="aja-filings-message hidden" role="status"></p>
-            <div class="table-wrap"><table class="records-table aja-filings-table">
-              <thead><tr><th>Reference No.</th><th>Date/s of official business</th><th>Destination</th><th>Status</th><th class="actions-column">Action</th></tr></thead>
-              <tbody id="aja-filings-rows"><tr><td colspan="5" class="table-empty">No filings yet.</td></tr></tbody>
+            <div class="table-wrap"><table class="records-table profile-table aja-filings-table">
+              <colgroup><col class="aja-col-reference"><col class="aja-col-filed"><col class="aja-col-dates"><col class="aja-col-destination"><col class="aja-col-status"><col class="aja-col-actions"></colgroup>
+              <thead><tr><th>Reference No.</th><th>Date filed</th><th>Date/s of official business</th><th>Destination</th><th>Status</th><th class="actions-column">Action</th></tr></thead>
+              <tbody id="aja-filings-rows"><tr><td colspan="6" class="table-empty">No filings yet.</td></tr></tbody>
             </table></div>
           </div>
         </section>
