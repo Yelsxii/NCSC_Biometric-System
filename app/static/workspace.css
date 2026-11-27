@@ -1337,7 +1337,11 @@ body:has(#profile-undo-stack:not(:empty)) #toast:not(.hidden){bottom:auto;top:22
 .workspace .sidebar .nav-edge-highlight::after{
   content:"";position:absolute;
   right:0;
-  width:var(--nav-join-radius);height:var(--nav-join-radius);
+  /* Leave a fully opaque 1.5px strip beyond the radial mask radius.
+     The previous mask ended exactly at the right boundary, allowing
+     subpixel antialiasing to expose the navy rim along the shoulder. 
+     Grow inward, not outward, to preserve the straight outer edge. */
+  width:calc(var(--nav-join-radius) + 1.5px);height:var(--nav-join-radius);
   /* Use the same ramp and right alignment as the tab, so the shoulders
      match its color at every horizontal position. */
   background:var(--nav-join-ramp) right center / var(--nav-join-blend) 100% no-repeat;
