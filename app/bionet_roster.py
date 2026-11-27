@@ -120,6 +120,68 @@ def sync_roster():
             counts['updated'] += 1
     return counts
 
+def discover_roster():
+    """Read the office-authorized Time.Net roster without a separate K14 collector.
+
+    Only configured ID and name columns are read. Unconfirmed names are
+    directory metadata, never permission to import attendance.
+    """
+    from app.k14_sync import import_discovered_roster, roster_discovery_enabled
+    from app.lan import settings
+
+    if not roster_discovery_enabled():
+        return 0
+    table = os.getenv('BIONET_ROSTER_TABLE', '').strip()
+    fields = [os.getenv('BIONET_ROSTER_' + key, '').strip() for key in
+              ('ID_COLUMN', 'FIRST_COLUMN', 'LAST_COLUMN')]
+    if not table or not all(fields) or len(set(fields)) != 3:
+        raise ValueError('Configure the ZKBio roster table and exact ID, first-name and last-name columns.')
+    with closing(open_source(os.getenv('BIONET_ROSTER_DB', ''))) as source:
+        columns = schema(source).get(table, [])
+        if any(field not in columns for field in fields):
+            raise ValueError('Configured ZKBio roster columns were not found.')
+        sql = 'SELECT ' + ','.join(map(quote_identifier, fields)) + ' FROM ' + quote_identifier(table) + ' LIMIT 5001'
+        records = source.execute(sql).fetchall()
+    if len(records) > 5000:
+        raise ValueError('ZKBio roster exceeds the supported employee limit.')
+    prepared = {}
+    conflicts = set()
+    host = settings().host
+    for record in records:
+        if record[0] is None:
+            continue
+        first, last = (v.strip() if isinstance(v, str) else '' for v in record[1:3])
+        name = ' '.join(v for v in (first, last) if v)
+        try:
+            item = staff_row(record[0], name)
+        except ValueError:
+            continue
+        code = item['employee_code']
+        row = dict(device_ip=host, employee_id=code, display_name=name, first_name=first, last_name=last)
+        if code in prepared and prepared[code] != row:
+            conflicts.add(code)
+        prepared[code] = row
+    rows = [row for code, row in prepared.items() if code not in conflicts]
+    with closing(connect()) as con, con:
+        con.execute('BEGIN IMMEDIATE')
+        changed = import_discovered_roster(con, rows, host)
+        for row in rows:
+            code, name = row['employee_id'], row['display_name']
+            current = con.execute(
+                "SELECT display_name FROM employees WHERE employee_code=? "
+                "AND name_source IN ('device_discovered','bionet','device') "
+                "AND NOT EXISTS(SELECT 1 FROM employee_profiles WHERE employee_code=?)",
+                (code, code)).fetchone()
+            if current is None or current['display_name'] != name:
+                continue
+            con.execute(
+                "INSERT INTO discovered_name_parts(employee_code,display_name,first_name,last_name) VALUES(?,?,?,?) "
+                "ON CONFLICT(employee_code) DO UPDATE SET display_name=excluded.display_name,"
+                "first_name=excluded.first_name,last_name=excluded.last_name",
+                (code, name, row['first_name'], row['last_name']))
+    return changed
+
+
 def workcode_diagnostics():
     """Read counts only for approved employee IDs; no raw personal timestamps."""
     if not configured():

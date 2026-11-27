@@ -90,13 +90,28 @@ def suggest_name_parts(name: str) -> dict:
 def get_profile(code: str) -> dict:
     with closing(connect()) as con:
         row = con.execute(PROFILE_SELECT + " WHERE e.employee_code=?", (code,)).fetchone()
+        parts = con.execute(
+            "SELECT display_name,first_name,last_name FROM discovered_name_parts WHERE employee_code=?",
+            (code,)).fetchone() if row is not None and row["version"] is None else None
     if row is None:
         raise HTTPException(404, "Employee record not found.")
     result = dict(row)
     result["profile_complete"] = row["version"] is not None
     result["sync_authorized"] = bool(result["sync_authorized"])
     if not result["profile_complete"]:
-        result["suggested_name"] = suggest_name_parts(result["display_name"])
+        suggested = suggest_name_parts(result["display_name"])
+        # Keep explicit vendor first/last columns intact, including compound
+        # surnames. Comma-delimited full names take precedence. Unclear middle
+        # names and suffixes remain editable rather than silently inferred.
+        if (parts and parts["display_name"] == result["display_name"]
+                and parts["first_name"] and parts["last_name"]
+                and "," not in result["display_name"]):
+            first, last = parts["first_name"].split(), parts["last_name"].split()
+            suffix = last.pop() if len(last) > 1 and last[-1].rstrip(".").upper() in {"JR", "SR", "II", "III", "IV", "V"} else ""
+            middle = first.pop() if len(first) > 1 and len(first[-1].rstrip(".")) == 1 else ""
+            suggested = dict(first_name=" ".join(first), middle_name=middle, last_name=" ".join(last),
+                             suffix=suffix, needs_review=True)
+        result["suggested_name"] = suggested
     return result
 
 

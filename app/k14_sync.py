@@ -466,15 +466,21 @@ def run_sync(actor_id: int | None = None, *, manual: bool = False) -> dict:
                 raise ValueError("Automatic connector imports are turned off.")
             from app.bionet_attendance import active, import_records
             if active():
-                result = import_records(actor_id, started)
+                # Time.Net is the primary source for both roster and attendance.
+                # Discovery is independent of work-code validation and never
+                # requires the legacy connector database or a Python poller.
+                discovered = 0
+                warning = False
                 if roster_discovery_enabled():
                     try:
-                        discovered = read_discovered_roster(connector_path())
-                        with connect() as con:
-                            con.execute("BEGIN IMMEDIATE")
-                            result["roster_discovered"] = import_discovered_roster(con, discovered, settings().host)
+                        from app.bionet_roster import discover_roster
+                        discovered = discover_roster()
                     except (ValueError, sqlite3.Error, OSError):
-                        result["roster_discovery_warning"] = "Device roster snapshot unavailable; vendor attendance preserved."
+                        warning = True
+                result = import_records(actor_id, started)
+                result["roster_discovered"] = discovered
+                if warning:
+                    result["roster_discovery_warning"] = "Time.Net roster unavailable; vendor attendance preserved."
                 return result
             path = connector_path()
             rows = read_connector(path)

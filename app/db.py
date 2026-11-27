@@ -121,6 +121,12 @@ CREATE TABLE IF NOT EXISTS employee_profiles (
  registered_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
  updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
+CREATE TABLE IF NOT EXISTS discovered_name_parts (
+ employee_code TEXT PRIMARY KEY REFERENCES employees(employee_code),
+ display_name TEXT NOT NULL,
+ first_name TEXT NOT NULL DEFAULT '',
+ last_name TEXT NOT NULL DEFAULT ''
+);
 CREATE TABLE IF NOT EXISTS employee_directory_archive (
  employee_code TEXT PRIMARY KEY REFERENCES employees(employee_code),
  archived_by INTEGER NOT NULL REFERENCES users(id),
