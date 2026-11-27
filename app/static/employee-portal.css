@@ -24,7 +24,7 @@
 .workspace #aja-pilot-panel .aja-side #aja-progress{margin:7px 0 9px}
 .workspace #aja-pilot-panel .aja-side .aja-person{margin-bottom:8px}
 .workspace #aja-pilot-panel .aja-live-summary{display:flex;flex-direction:column;min-height:0}
-.workspace #aja-pilot-panel .aja-live-summary .aja-trip-summary{flex:1;align-content:space-between;gap:10px}
+.workspace #aja-pilot-panel .aja-live-summary .aja-trip-summary{flex:1;align-content:start;gap:10px}
 .workspace #aja-pilot-panel :is(fieldset,.aja-summary-card){min-width:0;margin:0;padding:14px 16px 16px;background:#fff;border:1px solid #dce5f2;border-radius:10px;box-shadow:inset 0 1px 0 #fff}
 .workspace #aja-pilot-panel :is(fieldset,.aja-summary-card) h3{margin:0 0 12px;color:#385780;font-size:12px;font-weight:700;line-height:1.4}
 .workspace #aja-pilot-panel .aja-form-grid{gap:9px 12px}
@@ -88,3 +88,32 @@
 @media(max-width:1000px){.workspace #aja-pilot-panel .aja-layout{grid-template-columns:minmax(0,1fr);min-height:0}.workspace #aja-pilot-panel .aja-side{grid-template-columns:repeat(2,minmax(0,1fr));grid-template-rows:auto}.workspace #aja-pilot-panel .aja-trip-grid>.aja-purpose-field>textarea{height:100px;flex:none}}
 @media(max-width:740px){.workspace #aja-pilot-panel :is(fieldset,.aja-summary-card){padding:12px}.workspace #aja-pilot-panel :is(.aja-form-grid,.aja-side){grid-template-columns:minmax(0,1fr);gap:10px}.workspace #aja-pilot-panel .aja-trip-grid{grid-template-rows:auto}.workspace #aja-pilot-panel .aja-trip-grid>.aja-purpose-field>textarea{height:100px;flex:none}.workspace #aja-pilot-panel .aja-actions{width:100%}.workspace #aja-pilot-panel .aja-actions .button{flex:1}}
 @media(prefers-reduced-motion:reduce){.workspace #aja-pilot-panel :is(input,textarea,.aja-time-trigger,.button){transition:none}.workspace #aja-pilot-panel #aja-progress::-webkit-progress-value{transition:none}}
+
+/* Multi-date controls retain the Edit Profile and month-picker design language. */
+.workspace #aja-pilot-panel .aja-date-trigger{display:flex;align-items:center;justify-content:space-between;gap:8px;width:100%;min-height:33px;margin-top:4px;padding:5px 9px;border:1px solid #dce5f2;border-radius:7px;background:#f6f8fc;color:#243e68;font-family:inherit;font-size:12px;font-weight:600;text-align:left;transition:background-color .18s ease,border-color .18s ease}
+.workspace #aja-pilot-panel .aja-date-trigger svg{width:16px;height:16px;flex:none;color:#526fa4}
+.workspace #aja-pilot-panel .aja-date-trigger:is(:hover,[aria-expanded=true]){background:#e3edfc;border-color:#a5bce2}
+.workspace #aja-pilot-panel .aja-date-trigger[aria-invalid=true]{background:#fff5f7;border-color:#d36b83}
+.workspace #aja-pilot-panel .aja-selected-dates{display:flex;flex-wrap:wrap;gap:5px;margin-top:5px}
+.workspace #aja-pilot-panel .aja-selected-dates:empty{display:none}
+.workspace #aja-pilot-panel .aja-date-chip{padding:4px 7px;border:0;border-radius:6px;background:#e4edfb;color:#244b9a;font-size:10px;font-weight:600}
+.workspace #aja-pilot-panel .aja-date-chip:hover{background:#dbe7fa}
+.workspace #aja-pilot-panel .aja-schedule-mode{display:flex;gap:5px;margin-top:4px;padding:3px;background:#f0f4fc;border-radius:8px}
+.workspace #aja-pilot-panel .aja-schedule-mode button{flex:1;padding:6px;border:0;border-radius:6px;background:transparent;color:#52688a;font-size:11px;font-weight:650}
+.workspace #aja-pilot-panel .aja-schedule-mode button:hover{background:#e3edfc}
+.workspace #aja-pilot-panel .aja-schedule-mode button[aria-pressed=true]{background:#244b9a;color:white}
+.workspace #aja-pilot-panel .aja-time-row{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:9px 12px}
+.workspace #aja-pilot-panel #aja-individual-times{display:grid;gap:8px}
+.workspace #aja-pilot-panel .aja-daily-row{padding:9px;border:1px solid #dce5f2;border-radius:8px;background:#fafbfe}
+.workspace #aja-pilot-panel .aja-daily-row>strong{display:block;margin-bottom:6px;color:#385780;font-size:11px}
+.workspace #aja-pilot-panel .aja-daily-summary{display:flex;flex-wrap:wrap;justify-content:space-between;gap:4px;padding:5px 0;border-bottom:1px solid #edf1f7;font-size:11px}
+.workspace #aja-pilot-panel .aja-daily-summary:last-child{border:0}
+.workspace .aja-date-picker{width:min(306px,calc(100vw - 16px));padding:10px}
+.workspace .aja-date-modes{grid-template-columns:repeat(3,minmax(0,1fr));margin:7px 0}
+.workspace .aja-calendar-week,.workspace .aja-calendar-days{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:4px;text-align:center}
+.workspace .aja-calendar-week{font-size:10px;color:#657997;margin:6px 0}
+.workspace .aja-picker-close{border:0;border-radius:6px;background:#f0f4fc;color:#52688a;width:24px;height:24px;font-size:17px}
+.workspace #aja-calendar-status{font-size:10px;color:#52688a;margin:7px 0 0;min-height:15px}
+.aja-page-nav{display:flex;justify-content:space-between;align-items:center;gap:8px;color:#385780;font-size:12px;font-weight:650}
+.aja-page-nav .button{background:#eaf0fa;color:#31588e;border:0;border-radius:8px;min-width:34px}
+@media(max-width:740px){.workspace #aja-pilot-panel .aja-time-row{grid-template-columns:minmax(0,1fr)}}
