@@ -19,7 +19,8 @@ from typing import Literal
 from dotenv import load_dotenv
 from fastapi import Depends, FastAPI, File, Form, HTTPException, Request, UploadFile
 from itsdangerous import URLSafeTimedSerializer, BadSignature, SignatureExpired
-from fastapi.responses import FileResponse, JSONResponse
+from fastapi.responses import FileResponse, JSONResponse, Response
+from app.aja_print import AjaPrintInput, build_aja_pdf
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, Field, field_validator, model_validator
 from starlette.middleware.sessions import SessionMiddleware
@@ -950,3 +951,11 @@ def monitor_official_activities(
                 "Travel Orders without office scans are NOT detectable from this list; "
                 "official TO coverage requires approved office records for DTR treatment.",
     }
+
+
+@app.post("/api/aja/preview")
+def preview_aja(payload: AjaPrintInput, request: Request, user: dict = Depends(require_admin)):
+    require_csrf(request)
+    pdf = build_aja_pdf(payload, ROOT / "aja-template.pdf")
+    return Response(pdf, media_type="application/pdf",
+                    headers={"Content-Disposition": 'inline; filename="AJA-OB.pdf"'})
