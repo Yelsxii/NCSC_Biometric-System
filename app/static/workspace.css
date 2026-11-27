@@ -1309,43 +1309,45 @@ body:has(#profile-undo-stack:not(:empty)) #toast:not(.hidden){bottom:auto;top:22
 @media print{#profile-undo-stack{display:none!important}}
 
 
-/* Connected navigation experiment. Only the sidebar is changed; the adjacent
-   glass workspace, its gutter and all layout dimensions stay untouched. */
+/* Connected navigation: join the OUTER workspace rim, not the inner
+   content cards. Keep the glass shells and their dimensions unchanged. */
 .workspace .sidebar{
   --nav-join-gap:5px;
   --nav-join-fill:#e4ecf7;
-  --nav-join-radius:26px;
-  --nav-join-overlap:12px;
-  --nav-join-fade:10px;
+  --nav-join-radius:12px;
+  --nav-join-overlap:14px;
+  --nav-join-fade:5px;
+  --nav-join-cap:16px;
 }
 .workspace .sidebar .nav-edge-highlight{
   position:absolute;
   inset:0 calc(-1 * (var(--rail-inset) + var(--nav-join-gap) + var(--nav-join-overlap))) 0 0;
   z-index:-1;pointer-events:none;
-  border-radius:12px 0 0 12px;
-  background:linear-gradient(100deg,#f4f7fc 0%,var(--nav-join-fill) 70%);
-  /* Cover the visible glass seam, then feather the last few pixels over
-     the existing panel rim. No layout or main-panel styling is changed. */
-  -webkit-mask-image:linear-gradient(to right,#000 0 calc(100% - var(--nav-join-fade)),transparent 100%);
-  mask-image:linear-gradient(to right,#000 0 calc(100% - var(--nav-join-fade)),transparent 100%);
-  opacity:0;transform:translateX(-4px) scaleX(.97);
+  /* A rounded tip follows the existing outer glass rim. Fade only the
+     background, NOT the element: masking the whole element previously
+     clipped the curved shoulders outside its bounds. */
+  border-radius:12px var(--nav-join-cap) var(--nav-join-cap) 12px;
+  background:linear-gradient(to right,#f4f7fc 0%,var(--nav-join-fill) calc(100% - var(--nav-join-overlap) - var(--nav-join-gap)),var(--nav-join-fill) calc(100% - var(--nav-join-fade)),#e4ecf700 100%);
+  opacity:0;transform:translateX(-3px) scaleX(.985);
   transform-origin:right center;
-  transition:opacity .34s cubic-bezier(.25,.7,.25,1),transform .34s cubic-bezier(.25,.7,.25,1);
+  transition:opacity .38s cubic-bezier(.25,.7,.25,1),transform .38s cubic-bezier(.25,.7,.25,1);
 }
-/* Concave shoulders merge the selected tab into the right edge. The
-   quarter-circle cutouts reveal the existing navy glass underneath. */
+/* Inverted curves end at the navy rail's OUTER edge, independently of
+   the protruding rounded tip. Extend them 1px into the body to avoid a seam. */
 .workspace .sidebar .nav-edge-highlight::before,
 .workspace .sidebar .nav-edge-highlight::after{
-  content:"";position:absolute;right:0;width:var(--nav-join-radius);height:var(--nav-join-radius);
+  content:"";position:absolute;
+  right:calc(var(--nav-join-overlap) + var(--nav-join-gap) - 1px);
+  width:var(--nav-join-radius);height:var(--nav-join-radius);
   pointer-events:none;
 }
 .workspace .sidebar .nav-edge-highlight::before{
-  bottom:100%;
-  background:radial-gradient(circle at 0 0,transparent calc(var(--nav-join-radius) - .8px),var(--nav-join-fill) var(--nav-join-radius));
+  bottom:calc(100% - 1px);
+  background:radial-gradient(circle at 0 0,transparent calc(var(--nav-join-radius) - .65px),var(--nav-join-fill) var(--nav-join-radius));
 }
 .workspace .sidebar .nav-edge-highlight::after{
-  top:100%;
-  background:radial-gradient(circle at 0 100%,transparent calc(var(--nav-join-radius) - .8px),var(--nav-join-fill) var(--nav-join-radius));
+  top:calc(100% - 1px);
+  background:radial-gradient(circle at 0 100%,transparent calc(var(--nav-join-radius) - .65px),var(--nav-join-fill) var(--nav-join-radius));
 }
 .workspace .sidebar .nav-item.active,
 .workspace .sidebar .nav-item.active:is(:hover,:focus-visible){
@@ -1354,13 +1356,13 @@ body:has(#profile-undo-stack:not(:empty)) #toast:not(.hidden){bottom:auto;top:22
 .workspace .sidebar .nav-item.active::before,
 .workspace .sidebar .nav-item.active:is(:hover,:focus-visible)::before{opacity:0}
 .workspace .sidebar .nav-item.active .nav-edge-highlight{opacity:1;transform:none}
-/* The icon rail retains its original button hit areas and tooltip layer. */
+/* Keep the responsive rail's tooltip and original hit targets intact. */
 @media(max-width:1100px){
-  .workspace .sidebar{--nav-join-radius:20px;--nav-join-overlap:8px;--nav-join-fade:7px}
+  .workspace .sidebar{--nav-join-radius:10px;--nav-join-overlap:9px;--nav-join-fade:4px;--nav-join-cap:12px}
   .workspace .sidebar .nav-edge-highlight{border-top-left-radius:10px;border-bottom-left-radius:10px}
 }
 @media(max-width:740px){
-  .workspace .sidebar{--nav-join-gap:4px;--nav-join-radius:16px;--nav-join-overlap:6px;--nav-join-fade:5px}
+  .workspace .sidebar{--nav-join-gap:4px;--nav-join-radius:8px;--nav-join-overlap:6px;--nav-join-fade:3px;--nav-join-cap:9px}
 }
 @media(prefers-reduced-motion:reduce){
   .workspace .sidebar .nav-edge-highlight{transition:none;transform:none}
