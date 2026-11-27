@@ -163,3 +163,22 @@
 .workspace #aja-pilot-panel .aja-ticket-footer{display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:6px;padding:8px 12px;border-top:1px solid #e0e7f3;background:#eaf0fa;color:#52688a;font-size:10px;font-weight:600}
 .workspace #aja-pilot-panel #aja-ticket-forms{color:#244b9a}
 @media(max-width:540px){.workspace #aja-pilot-panel .aja-ticket-times strong{font-size:12px}.workspace #aja-pilot-panel .aja-ticket-daily .aja-daily-summary{grid-template-columns:1fr 1fr}.workspace #aja-pilot-panel .aja-ticket-daily .aja-daily-summary small{grid-column:2}}
+
+/* Filing history reuses the workspace records table, navigation and buttons. */
+.workspace .content-shell .page #aja-filings-panel{display:flex;flex:1;min-height:0;flex-direction:column;overflow:hidden;background:#eaf1fa;border-color:#f7faffaa;box-shadow:inset 0 1px 0 #ffffffb0,0 5px 18px #45689b15}
+.workspace #aja-filings-panel .aja-filings-heading{display:flex;justify-content:space-between;align-items:center;margin:0 0 12px;flex:none}
+.workspace #aja-filings-panel .aja-filings-heading h2{margin:0;color:#20375f;font-size:15px;font-weight:700}
+.workspace #aja-filings-panel .table-wrap{flex:1;background:#fff;border:1px solid #dce5f2;border-radius:9px}
+.workspace #aja-filings-panel .aja-filings-table{width:100%;min-width:690px}
+.workspace #aja-filings-panel .aja-filings-table td{overflow-wrap:anywhere}
+.workspace #aja-filings-panel .aja-filings-table th{color:#52688a;background:#e6eef8;font-size:11px}
+.workspace #aja-filings-panel .aja-filings-table td:first-child{font-size:10px}
+.workspace #aja-filings-panel .aja-filing-status{display:inline-flex;padding:5px 8px;border-radius:6px;background:#fff3d9;color:#846119;font-size:10px;font-weight:650;white-space:nowrap}
+.workspace #aja-filings-panel .aja-open-filing{background:#eaf0fa;color:#31588e;border:0;white-space:nowrap}
+.workspace #aja-filings-panel .aja-open-filing:hover{background:#dbe7fa;color:#244b9a}
+.workspace #aja-filings-panel .aja-filings-message{margin:0 0 10px;font-size:11px;font-weight:600;color:#385780;overflow-wrap:anywhere}
+.workspace #aja-filings-panel .aja-filings-message.is-error{color:#a12a45}
+.workspace #aja-pilot-panel .aja-form-footer{justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap}
+.workspace #aja-pilot-panel .aja-filing-note{font-size:11px;color:#52688a;font-weight:550}
+.aja-print-frame{position:fixed;left:-10000px;top:0;width:816px;height:1248px;border:0;pointer-events:none}
+#aja-preview-reference{font-size:11px;overflow-wrap:anywhere}
