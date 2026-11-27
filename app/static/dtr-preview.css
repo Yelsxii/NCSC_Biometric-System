@@ -183,3 +183,41 @@ body.print-document{box-sizing:border-box;margin:0;padding:var(--paper-margin);w
 .admin-aja-preview-details dt{font-weight:650;color:#385780;margin-top:8px}
 .admin-aja-preview-details dd{margin:3px 0 0}
 .admin-aja-print-frame{position:fixed;left:-10000px;top:0;width:816px;height:1248px;border:0;pointer-events:none}
+
+/* HR review is a decision workspace, not a print-settings panel. */
+#admin-aja-preview-dialog .dtr-workspace{grid-template-columns:minmax(0,1fr) 294px}
+#admin-aja-preview-dialog .admin-aja-review-panel{gap:15px;padding:18px 16px}
+.admin-aja-review-heading{display:flex;flex-direction:column;align-items:flex-start;gap:9px}
+.admin-aja-review-heading h3{font-size:14px}
+.aja-review-chip{display:inline-flex;align-items:center;padding:5px 8px;border-radius:7px;background:#fff5da;color:#76551b;font-size:11px;font-weight:650;line-height:1.4}
+.aja-review-chip[data-status="approved"]{background:#e1f3e7;color:#287449}
+.aja-review-chip[data-status="returned"]{background:#fce8d6;color:#a15a24}
+.aja-review-chip[data-status="disapproved"]{background:#fbe2e7;color:#b32638}
+.admin-aja-review-summary{display:flex;flex-direction:column;gap:12px;padding:12px;border:1px solid #dce5f1;border-radius:10px;background:#ffffffa0}
+.admin-aja-review-field{display:flex;flex-direction:column;gap:4px;font-size:11px;color:#52688a;overflow-wrap:anywhere}
+.admin-aja-review-field strong{color:#243e68;font-size:11px;font-weight:650}
+.admin-aja-schedule{display:flex;flex-direction:column;gap:9px;border-top:1px solid #e1e8f3;padding-top:10px;max-height:132px;overflow:auto}
+.admin-aja-review-form{display:flex;flex-direction:column;gap:11px;min-width:0}
+.admin-aja-review-form.hidden,.admin-aja-review-result.hidden{display:none}
+.admin-aja-review-form h4,.admin-aja-review-result h4{margin:0;color:#243e68;font-size:12px;font-weight:700}
+.admin-aja-review-hint{margin:0;color:#637c9e;font-size:11px;line-height:1.45}
+#admin-aja-preview-dialog .admin-aja-verification{display:flex;flex-direction:row;align-items:flex-start;gap:8px;font-size:11px;font-weight:550;line-height:1.45;color:#385780;padding:9px;border:1px solid #dce5f1;border-radius:8px;background:#f7faff}
+#admin-aja-preview-dialog .admin-aja-verification input{accent-color:#244b9a;width:16px;height:16px;min-height:16px;flex:0 0 16px;margin:1px 0 0;padding:0;appearance:auto;cursor:pointer}
+#admin-aja-preview-dialog .admin-aja-remarks-label{display:flex;gap:2px;font-size:11px;color:#385780}
+.admin-aja-remarks-label small{font-size:10px;color:#637c9e;font-weight:400}
+#admin-aja-remarks{box-sizing:border-box;width:100%;min-height:68px;resize:vertical;border:1px solid #dce5f1;border-radius:8px;background:#fff;padding:9px 10px;color:#243e68;font:12px/1.4 Arial,sans-serif}
+#admin-aja-remarks:focus{outline:2px solid #a5bce2;outline-offset:-1px}
+.admin-aja-review-actions{display:flex;flex-direction:column;gap:8px;padding-top:3px}
+#admin-aja-preview-dialog .admin-aja-review-actions .button{display:flex;align-items:center;justify-content:center;gap:7px;min-height:36px;height:36px;padding:0 9px;border:0;border-radius:8px;font-size:11.5px;font-weight:650;box-shadow:none;transition:background .18s ease,color .18s ease}
+#admin-aja-approve{background:#244b9a;color:white}
+#admin-aja-approve:not(:disabled):is(:hover,:focus-visible){background:#173b80}
+#admin-aja-return{background:#e5edfa;color:#31588e}
+#admin-aja-return:not(:disabled):is(:hover,:focus-visible){background:#d5e4fa;color:#244b9a}
+#admin-aja-disapprove{background:#fff0f3;color:#b32638}
+#admin-aja-disapprove:not(:disabled):is(:hover,:focus-visible){background:#fbe2e7}
+#admin-aja-preview-dialog .admin-aja-review-actions .button:disabled{opacity:.45;cursor:not-allowed;transform:none}
+.admin-aja-review-error{font-size:11px;color:#b32638;background:#fbe2e7;padding:8px;border-radius:7px;overflow-wrap:anywhere}
+.admin-aja-review-result{display:flex;flex-direction:column;gap:8px;border-top:1px solid #dce5f1;padding-top:13px;color:#52688a;font-size:11px;line-height:1.45;overflow-wrap:anywhere}
+.admin-aja-review-result p{margin:0;white-space:pre-wrap}
+@media(max-width:760px){#admin-aja-preview-dialog .dtr-workspace{grid-template-columns:minmax(0,1fr);grid-template-rows:auto minmax(0,1fr)}#admin-aja-preview-dialog .admin-aja-review-panel{max-height:44dvh}.admin-aja-review-actions{flex-wrap:wrap}}
+@media(prefers-reduced-motion:reduce){#admin-aja-preview-dialog .admin-aja-review-actions .button{transition:none}}
