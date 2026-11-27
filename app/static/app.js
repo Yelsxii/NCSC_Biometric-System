@@ -410,7 +410,7 @@ function refreshProfileSelects(){
   for(const control of profileSelectControls.values())control.refresh();
 }
 function closeProfileSelects(){
-  for(const control of profileSelectControls.values())if(control.menu.matches(':popover-open'))control.menu.hidePopover();
+  for(const control of profileSelectControls.values())control.close();
 }
 function focusProfileField(id){
   (profileSelectControls.get(id)?.trigger||$(id)).focus();
@@ -425,17 +425,16 @@ function initializeProfileSelects(){
     trigger.setAttribute('aria-labelledby',id+'-label '+id+'-value');
     trigger.setAttribute('aria-controls',id+'-menu');
     trigger.innerHTML='<span id="'+id+'-value"></span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg>';
-    menu.id=id+'-menu';menu.className='profile-select-menu';menu.setAttribute('popover','auto');
+    menu.id=id+'-menu';menu.className='profile-select-menu';menu.setAttribute('popover','manual');
     menu.setAttribute('role','listbox');menu.setAttribute('aria-labelledby',id+'-label');
     const options=[...select.options].filter(option=>option.value).map(option=>{
       const button=document.createElement('button');button.type='button';button.setAttribute('role','option');button.tabIndex=-1;button.dataset.value=option.value;
       const label=document.createElement('span');label.textContent=option.textContent;
       button.append(label);
-      button.insertAdjacentHTML('beforeend','<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m5 12 4 4L19 6"/></svg>');
       menu.append(button);
       button.addEventListener('click',()=>{
         select.value=option.value;select.dispatchEvent(new Event('change',{bubbles:true}));
-        menu.hidePopover();trigger.focus({preventScroll:true});
+        close(true);
       });
       return button;
     });
@@ -447,13 +446,25 @@ function initializeProfileSelects(){
     }
     function place(){
       const r=trigger.getBoundingClientRect(),margin=8,gap=5;
-      const width=Math.min(Math.max(r.width,Math.min(245,window.innerWidth-2*margin)),window.innerWidth-2*margin);
-      menu.style.width=width+'px';menu.style.left=Math.max(margin,Math.min(r.left,window.innerWidth-width-margin))+'px';
+      const dialog=$('profile-dialog').getBoundingClientRect();
+      const leftBound=Math.max(margin,dialog.left+margin),rightBound=Math.min(window.innerWidth-margin,dialog.right-margin);
+      const width=Math.min(Math.max(r.width,Math.min(245,rightBound-leftBound)),rightBound-leftBound);
+      menu.style.width=width+'px';menu.style.left=Math.max(leftBound,Math.min(r.left,rightBound-width))+'px';
+      menu.style.maxHeight='none';
       const below=window.innerHeight-r.bottom-gap-margin,above=r.top-gap-margin;
-      const desired=menu.scrollHeight+2,up=desired>below&&above>below;
+      const desired=menu.scrollHeight+2;
+      const insideBelow=dialog.bottom-r.bottom-gap-margin,insideAbove=r.top-dialog.top-gap-margin;
+      // Prefer an in-dialog placement, then use available viewport space.
+      const up=desired>insideBelow&&(desired<=insideAbove||(desired>below&&above>below));
       const available=Math.max(30,up?above:below);
+      menu.dataset.direction=up?'up':'down';
       menu.style.maxHeight=available+'px';
       menu.style.top=Math.max(margin,Math.min(up?r.top-gap-Math.min(desired,available):r.bottom+gap,window.innerHeight-margin-Math.min(desired,available)))+'px';
+    }
+    function close(restoreFocus=false){
+      if(menu.matches(':popover-open'))menu.hidePopover();
+      trigger.setAttribute('aria-expanded','false');
+      if(restoreFocus)trigger.focus({preventScroll:true});
     }
     function open(direction=1){
       if(menu.matches(':popover-open'))return;
@@ -461,9 +472,10 @@ function initializeProfileSelects(){
       trigger.setAttribute('aria-expanded','true');
       (options.find(b=>b.dataset.value===select.value)||options[direction<0?options.length-1:0])?.focus({preventScroll:true});
     }
-    trigger.addEventListener('click',()=>{if(menu.matches(':popover-open'))menu.hidePopover();else open();});
+    trigger.addEventListener('click',()=>{if(menu.matches(':popover-open'))close(true);else open();});
     trigger.addEventListener('keydown',event=>{
       if(['ArrowDown','ArrowUp'].includes(event.key)){event.preventDefault();open(event.key==='ArrowUp'?-1:1);}
+      else if(event.key==='Escape'&&menu.matches(':popover-open')){event.preventDefault();event.stopPropagation();close(true);}
     });
     menu.addEventListener('keydown',event=>{
       const index=options.indexOf(document.activeElement);
@@ -471,8 +483,8 @@ function initializeProfileSelects(){
         event.preventDefault();
         const next=event.key==='Home'?0:event.key==='End'?options.length-1:Math.max(0,Math.min(options.length-1,index+(event.key==='ArrowDown'?1:-1)));
         options[next]?.focus();
-      }else if(event.key==='Escape'){event.preventDefault();event.stopPropagation();menu.hidePopover();trigger.focus({preventScroll:true});}
-      else if(event.key==='Tab'){menu.hidePopover();trigger.focus({preventScroll:true});}
+      }else if(event.key==='Escape'){event.preventDefault();event.stopPropagation();close(true);}
+      else if(event.key==='Tab'){close(true);}
     });
     menu.addEventListener('toggle',()=>trigger.setAttribute('aria-expanded',String(menu.matches(':popover-open'))));
     select.addEventListener('change',refresh);
@@ -483,8 +495,18 @@ function initializeProfileSelects(){
     });
     field.append(trigger,menu);field.classList.add('enhanced');select.tabIndex=-1;
     field.querySelector('label').htmlFor=trigger.id;
-    profileSelectControls.set(id,{trigger,menu,refresh});refresh();
+    profileSelectControls.set(id,{trigger,menu,refresh,close});refresh();
   }
+  // Manual popovers keep the trigger click from being swallowed by the
+  // browser's automatic light-dismiss. Explicit outside clicks still close.
+  document.addEventListener('pointerdown',event=>{
+    for(const control of profileSelectControls.values()){
+      if(control.menu.matches(':popover-open')&&!control.trigger.contains(event.target)&&!control.menu.contains(event.target))control.close();
+    }
+  },true);
+  $('profile-dialog').addEventListener('cancel',event=>{
+    if([...profileSelectControls.values()].some(c=>c.menu.matches(':popover-open'))){event.preventDefault();closeProfileSelects();}
+  });
   window.addEventListener('resize',closeProfileSelects);
   $('profile-dialog').querySelector('.app-dialog-body').addEventListener('scroll',closeProfileSelects,{passive:true});
 }
@@ -494,7 +516,7 @@ async function openProfile(code=null){
   profileReturn={page:currentPage,employee:selectedEmployee,month:$('detail-month').value};
   profileEditing=null;profileVersion=null;profileSyncAuthorized=true;profileLockedCode=null;
   $('profile-dialog').dataset.profileMode=code?'edit':'register';
-  $('profile-form').reset();$('profile-id').readOnly=false;
+  $('profile-form').reset();$('profile-id').readOnly=false;$('profile-id-display').textContent='';
   $('profile-error').classList.add('hidden');$('save-profile').disabled=false;
   $('profile-heading').textContent='Register employee';$('save-profile').textContent='Register employee';
   try{
@@ -502,7 +524,7 @@ async function openProfile(code=null){
       const data=await api('/api/employee-profiles/'+encodeURIComponent(code));
       if(token!==profileFormToken || session?.role!=='admin')return;
       profileEditing=data.profile_complete?code:null;profileVersion=data.version;
-      profileLockedCode=code;$('profile-id').value=code;$('profile-id').readOnly=true;
+      profileLockedCode=code;$('profile-id').value=code;$('profile-id').readOnly=true;$('profile-id-display').textContent=code;
       for(const [field,key] of [['first','first_name'],['middle','middle_name'],['last','last_name'],['suffix','suffix'],['type','employment_type'],['department','department']])
         $('profile-'+field).value=data[key]||'';
       const department=String(data.department||'').trim().toLowerCase();

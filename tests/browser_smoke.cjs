@@ -1172,8 +1172,15 @@ with connect() as con:
     await page.locator('#profile-menu-edit').click();
     await page.locator('#profile-dialog[open]').waitFor();
     assert.equal(await page.locator('#profile-id').getAttribute('readonly'),'');
+    assert.equal(await page.locator('#profile-id').isVisible(),false);
+    assert.equal(await page.locator('#profile-id-display').textContent(),'1');
     await page.locator('#profile-first').fill('Sample');
     await page.locator('#profile-last').fill('One');
+    await page.locator('#profile-type-trigger').click();
+    await page.locator('#profile-type-menu:popover-open').waitFor();
+    await page.locator('#profile-type-trigger').click();
+    await page.locator('#profile-type-menu:popover-open').waitFor({state:'detached'});
+    assert.equal(await page.locator('#profile-type-trigger').getAttribute('aria-expanded'),'false');
     await page.locator('#profile-type-trigger').click();
     await page.locator('#profile-type-menu:popover-open').getByRole('option',{name:'Permanent',exact:true}).click();
     await page.locator('#profile-department-trigger').click();
