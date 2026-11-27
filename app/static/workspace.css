@@ -1467,3 +1467,29 @@ body:has(#profile-undo-stack:not(:empty)) #toast:not(.hidden){bottom:auto;top:22
   .workspace #activity-log-panel #activity-month-trigger,.workspace #activity-log-panel #activity-category{min-width:0;width:100%}
 }
 @media(prefers-reduced-motion:reduce){.workspace #activity-log-panel .activity-submit,.workspace #activity-log-panel .row-action{transition:none}}
+
+/* AJA document pilot, aligned with the finalized directory controls. */
+.workspace .sidebar .document-nav-title{padding:14px 10px 3px}
+.workspace .content-shell .page #aja-pilot-panel{background:#eaf1fa;border-color:#f7faffaa;box-shadow:inset 0 1px 0 #ffffffb0,0 5px 18px #45689b15;overflow:auto}
+.workspace #aja-pilot-panel .panel-header{margin:0 0 15px;gap:12px}
+.workspace #aja-pilot-panel .panel-header h2{color:#20375f;font-size:15px;font-weight:700;letter-spacing:0}
+.workspace #aja-pilot-panel .aja-pilot-label{font-size:10px;color:#657997}
+.workspace #aja-pilot-panel fieldset{padding:0;border:0;margin:0;min-width:0}
+.workspace #aja-pilot-panel #aja-form{max-width:920px}
+.workspace #aja-pilot-panel .aja-form-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:13px 16px}
+.workspace #aja-pilot-panel .aja-wide{grid-column:1/-1}
+.workspace #aja-pilot-panel label{display:flex;flex-direction:column;gap:6px;font-size:11px;color:#657997;font-weight:550;min-width:0}
+.workspace #aja-pilot-panel :is(input,select,textarea){width:100%;min-width:0;height:38px;min-height:38px;padding:0 12px;border:1px solid #e0e7f3;border-radius:9px;color:#203b67;background:#f6f8fc;font:inherit;font-size:12px;box-sizing:border-box}
+.workspace #aja-pilot-panel textarea{height:auto;min-height:84px;padding:10px 12px;resize:vertical}
+.workspace #aja-pilot-panel :is(input,select,textarea):focus{border-color:#7295ce;background:#fff;box-shadow:0 0 0 3px #244b9a12;outline:0}
+.workspace #aja-pilot-panel h3{font-size:13px;color:#20375f;margin:20px 0 12px}
+.workspace #aja-pilot-panel .aja-note,#aja-access-note{font-size:11px;color:#657997;line-height:1.5;margin:16px 0 10px}
+.workspace #aja-pilot-panel .aja-actions{display:flex;justify-content:flex-end;gap:8px;flex-wrap:wrap}
+.workspace #aja-pilot-panel .button{height:38px;min-height:38px;border-radius:9px;font-size:11px;font-weight:650;padding:0 13px;display:inline-flex;align-items:center;justify-content:center;text-decoration:none}
+.workspace #aja-pilot-panel .button.primary{background:#244b9a;border-color:transparent;color:#fff;box-shadow:none}
+.workspace #aja-pilot-panel .button.primary:is(:hover,:focus-visible){background:#173b80}
+.workspace #aja-pilot-panel .button.outline{color:#244b9a;background:#f6f8fc;border-color:#c4d3ec}
+.workspace #aja-pilot-panel #aja-error{color:#a12a45;font-size:11px;line-height:1.5}
+.workspace #aja-pilot-panel #aja-preview-panel{margin-top:18px;min-height:0}
+.workspace #aja-pilot-panel #aja-pdf-frame{display:block;width:100%;height:75vh;border:1px solid #d4dfee;border-radius:9px;background:white}
+@media(max-width:740px){.workspace #aja-pilot-panel .aja-form-grid{grid-template-columns:1fr}}
