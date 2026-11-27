@@ -6,11 +6,11 @@
   <meta name="theme-color" content="#142650">
   <title>NCSC | Attendance Records</title>
   <link rel="stylesheet" href="/static/app.css">
-  <link rel="stylesheet" href="/static/workspace.css?v=employees-161">
+  <link rel="stylesheet" href="/static/workspace.css?v=employees-162">
   <link rel="stylesheet" href="/static/attendance-detail.css?v=auto-dtr-45">
   <link rel="stylesheet" href="/static/dtr-preview.css?v=23">
   <script src="/static/dtr-preview.js?v=22" defer></script>
-  <script src="/static/app.js?v=employees-71" defer></script>
+  <script src="/static/app.js?v=employees-72" defer></script>
 </head>
 <body>
   <main id="login-view" class="auth-shell" aria-labelledby="login-heading">
@@ -96,7 +96,7 @@
                   <button type="button" class="live-kpi kpi-travel" data-live-filter="travel" aria-pressed="false"><span class="kpi-glass-flow" aria-hidden="true"></span><span class="kpi-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.65" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 21s7-6 7-12a7 7 0 1 0-14 0c0 6 7 12 7 12z"/><circle cx="12" cy="9" r="2"/></svg></span><span class="kpi-text"><small>Travel Order</small><strong data-live-count="travel">—</strong></span></button>
               </div>
             </section>
-            <form id="employee-filter" class="toolbar" role="search" aria-label="Employee attendance filters">
+            <form id="employee-filter" class="toolbar" role="search" aria-label="Employee attendance filters" autocomplete="off">
               <div class="search-box"><label for="employee-search">Search employees</label><div class="employee-search-field"><svg class="search-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><circle cx="10.5" cy="10.5" r="6.5"/><path d="m16 16 4 4"/></svg><input id="employee-search" type="search" placeholder="Search by employee name" autocomplete="off" maxlength="80"><button id="clear-employee-search" type="button" aria-label="Clear search" title="Clear search" hidden><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><path d="m7 7 10 10M17 7 7 17"/></svg></button></div></div>
               <div class="register-month-control"><label id="register-month-label" for="register-month-trigger">Reporting month</label><input id="register-month" type="month" hidden tabindex="-1" aria-hidden="true"><button type="button" class="month-trigger" id="register-month-trigger" data-month-target="register-month" aria-haspopup="dialog" aria-controls="attendance-month-picker" aria-expanded="false"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="5" width="18" height="16" rx="3"/><path d="M8 3v4m8-4v4M3 10h18"/></svg><span class="month-trigger-value">Select month</span><svg class="month-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><path d="m7 10 5 5 5-5"/></svg></button></div>
               <button id="open-attendance-import" class="button outline import-button record-create-action" type="button" aria-haspopup="dialog">
@@ -136,7 +136,7 @@
           <div class="panel list-panel" id="employee-profile-panel">
             <div class="panel-header"><h2>Employee directory</h2><button class="button primary record-create-action" id="open-profile" type="button" aria-haspopup="dialog"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.65" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="9" cy="7" r="4"/><path d="M2 21v-2a6 6 0 0 1 6-6h2a6 6 0 0 1 6 6v2m3-11v6m-3-3h6"/></svg>Register employee</button></div>
             
-            <form class="toolbar profile-toolbar" id="profile-filter" role="search" aria-label="Employee filters">
+            <form class="toolbar profile-toolbar" id="profile-filter" role="search" aria-label="Employee filters" autocomplete="off">
               <div class="search-box"><label for="profile-search">Search employees</label><div class="employee-search-field"><svg class="search-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.65" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="10.5" cy="10.5" r="6.5"/><path d="m16 16 4 4"/></svg><input id="profile-search" type="search" maxlength="80" autocomplete="off" placeholder="Search name, ID, position or department"></div></div>
               <div class="category-tabs" role="group" aria-label="Employee category">
               <button type="button" class="category-tab active" data-profile-category="All" aria-pressed="true">All employees <span id="profile-total-badge">0</span></button>
@@ -205,7 +205,7 @@
   </div>
 
   <dialog id="day-review-dialog" class="app-dialog day-review-dialog" aria-labelledby="day-review-heading" aria-describedby="day-review-context">
-    <form id="day-review-form">
+    <form id="day-review-form" autocomplete="off">
       <div class="app-dialog-head review-minimal-head"><div class="sr-only"><h2 id="day-review-heading">Edit attendance</h2><p id="day-review-context"></p></div><button type="button" class="modal-x review-close" id="close-day-review" aria-label="Close attendance editor"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg></button></div>
       <div class="app-dialog-body">
         <p id="review-travel-info" class="travel-status hidden"></p>
@@ -277,7 +277,7 @@
   </dialog>
 
   <dialog id="calendar-dialog" class="app-dialog edit-dialog" aria-labelledby="calendar-heading">
-    <form id="calendar-form"><div class="app-dialog-head"><div><h2 id="calendar-heading">Attendance calendar</h2><p>Holiday labels apply to all employees.</p></div><button type="button" class="modal-x" id="close-calendar" aria-label="Close calendar">×</button></div>
+    <form id="calendar-form" autocomplete="off"><div class="app-dialog-head"><div><h2 id="calendar-heading">Attendance calendar</h2><p>Holiday labels apply to all employees.</p></div><button type="button" class="modal-x" id="close-calendar" aria-label="Close calendar">×</button></div>
       <div class="app-dialog-body"><label>Date<select id="calendar-date"></select></label><label>Holiday name<input id="calendar-name" maxlength="140" placeholder="Leave blank for a regular date"></label><p id="calendar-error" class="form-error hidden" role="alert"></p></div>
       <div class="app-dialog-footer"><button id="cancel-calendar" type="button" class="button outline">Cancel</button><button id="save-calendar" class="button primary" type="submit">Save calendar</button></div>
     </form>
@@ -330,22 +330,22 @@
       <span class="profile-register-caption" aria-hidden="true">Register employee</span>
       <button class="modal-x profile-close" id="close-profile" type="button" aria-label="Close employee profile"><svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><path d="m6 6 12 12M18 6 6 18"/></svg></button>
     </div>
-    <form id="profile-form" novalidate>
+    <form id="profile-form" novalidate autocomplete="off">
       <div class="app-dialog-body">
         <h3 class="form-section-title">Employee identity</h3>
         <div class="profile-form-grid">
           <label class="profile-id-field" for="profile-id">Biometric ID <span class="required-mark">*</span><span class="profile-id-control"><input id="profile-id" required maxlength="64" pattern="[A-Za-z0-9._\-]+" autocomplete="off" placeholder="Existing K14 ID"><svg class="profile-id-lock" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="5" y="10" width="14" height="11" rx="2"/><path d="M8 10V7a4 4 0 0 1 8 0v3"/></svg></span></label>
           <div class="profile-spacer" aria-hidden="true"></div>
-          <label>First name <span class="required-mark">*</span><input id="profile-first" required maxlength="70" autocomplete="given-name"></label>
-          <label>Last name <span class="required-mark">*</span><input id="profile-last" required maxlength="70" autocomplete="family-name"></label>
-          <label>Middle name <span class="required-mark">*</span><input id="profile-middle" required maxlength="60" autocomplete="additional-name"></label>
+          <label>First name <span class="required-mark">*</span><input id="profile-first" required maxlength="70" autocomplete="off"></label>
+          <label>Last name <span class="required-mark">*</span><input id="profile-last" required maxlength="70" autocomplete="off"></label>
+          <label>Middle name <span class="required-mark">*</span><input id="profile-middle" required maxlength="60" autocomplete="off"></label>
           <label>Suffix<input id="profile-suffix" maxlength="20" placeholder="Optional"></label>
         </div>
         <h3 class="form-section-title">Employment details</h3>
         <div class="profile-form-grid">
           <div class="profile-select-field"><label id="profile-type-label" for="profile-type">Employee category <span class="required-mark">*</span></label><select id="profile-type" required><option value="">Select category</option><option value="COS">COS</option><option value="Permanent">Permanent</option><option value="GIP">GIP</option><option value="OJT">OJT</option></select></div>
           <div class="profile-select-field"><label id="profile-department-label" for="profile-department">Department / unit <span class="required-mark">*</span></label><select id="profile-department" required><option value="">Select department</option><option>Operations Division (OPS)</option><option>Administrative and Finance Section (AFS)</option><option>Office of the Regional Director (ORD)</option></select></div>
-          <label class="profile-position-field">Position<input id="profile-position" maxlength="140" autocomplete="off" list="profile-position-options" placeholder="Select or enter position"><datalist id="profile-position-options"><option value="PDO I"><option value="PDO II"><option value="PDO III"><option value="PDO IV"><option value="Project Development Officer V"><option value="PDO I (COS)"><option value="PDO I (COS-RA 11982)"><option value="PDO II (COS-RA 11982)"><option value="PDO III (COS-RA 11982)"><option value="Administrative Officer IV"><option value="Administrative Officer V - Head (AFS)"><option value="ADAS I"><option value="Administrative Assistant III (Secretary III)"><option value="Admin Aide IV (COS)"><option value="Admin Aide IV (Driver II)"><option value="Accountant II"><option value="Regional Director (Director IV)"><option value="GIP Intern"><option value="OJT"></datalist></label>
+          <div class="profile-select-field profile-position-field"><label id="profile-position-label" for="profile-position">Position</label><div class="profile-position-control"><input id="profile-position" maxlength="140" autocomplete="off" spellcheck="false" placeholder="Select or enter position"><button type="button" class="profile-position-toggle" aria-label="Show position suggestions" hidden><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg></button></div><template id="profile-position-options"><option value="PDO I"><option value="PDO II"><option value="PDO III"><option value="PDO IV"><option value="Project Development Officer V"><option value="PDO I (COS)"><option value="PDO I (COS-RA 11982)"><option value="PDO II (COS-RA 11982)"><option value="PDO III (COS-RA 11982)"><option value="Administrative Officer IV"><option value="Administrative Officer V - Head (AFS)"><option value="ADAS I"><option value="Administrative Assistant III (Secretary III)"><option value="Admin Aide IV (COS)"><option value="Admin Aide IV (Driver II)"><option value="Accountant II"><option value="Regional Director (Director IV)"><option value="GIP Intern"><option value="OJT"></template></div>
         </div>
         <p id="profile-error" class="form-error hidden" role="alert"></p>
       </div>
@@ -359,7 +359,7 @@
       <div><h2 id="attendance-import-heading">Import attendance logs</h2><p>Recover missing scans from the K14 USB export.</p></div>
       <button id="close-attendance-import" class="modal-x" aria-label="Close attendance import" type="button">×</button>
     </div>
-    <form id="usb-form">
+    <form id="usb-form" autocomplete="off">
       <div class="file-dialog-body">
         <label class="file-dropzone" for="usb-file" id="usb-dropzone">
           <svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"><path d="M12 16V4M8 8l4-4 4 4M5 18h14M5 18v3h14v-3"/></svg>
@@ -380,7 +380,7 @@
       <div><h2 id="user-import-heading">Import device users</h2><p>Fallback synchronization of employee IDs and names.</p></div>
       <button id="close-user-import" class="modal-x" aria-label="Close user import" type="button">×</button>
     </div>
-    <form id="roster-form">
+    <form id="roster-form" autocomplete="off">
       <div class="file-dialog-body">
         <label class="file-dropzone" for="roster-file">
           <svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"><path d="M12 16V4M8 8l4-4 4 4M5 18h14"/></svg>
@@ -396,7 +396,7 @@
     </form>
   </dialog>
 
-  <dialog id="code-dialog" class="edit-dialog app-dialog" aria-labelledby="code-heading"><form id="code-form"><div class="app-dialog-head"><div><p class="page-eyebrow">DEVICE CLASSIFICATION</p><h2 id="code-heading">Work code label</h2><p>Choose the activity and a verified scan direction. This does not program the device.</p></div></div><div class="app-dialog-body"><input id="code-device" type="hidden"><label>Numeric device code<input id="code-number" readonly></label><label>Local label<input id="code-label" required maxlength="100"></label><label>Activity type<select id="code-activity"><option>Unclassified</option><option>Regular</option><option>AJA</option><option>Fieldwork</option><option>Official Business</option><option>Travel Order</option></select></label><label id="code-direction-field">Scan direction<select id="code-direction"><option value="Unspecified">Unspecified — review required</option><option value="IN">Time In</option><option value="OUT">Time Out</option></select></label><p class="field-hint" id="code-direction-help">A scan can be paired only when the date contains exactly one configured IN and one later OUT of the same activity.</p></div><div class="app-dialog-footer"><button id="close-code" type="button" class="button outline">Cancel</button><button class="button primary" type="submit">Save mapping</button></div></form></dialog>
+  <dialog id="code-dialog" class="edit-dialog app-dialog" aria-labelledby="code-heading"><form id="code-form" autocomplete="off"><div class="app-dialog-head"><div><p class="page-eyebrow">DEVICE CLASSIFICATION</p><h2 id="code-heading">Work code label</h2><p>Choose the activity and a verified scan direction. This does not program the device.</p></div></div><div class="app-dialog-body"><input id="code-device" type="hidden"><label>Numeric device code<input id="code-number" readonly></label><label>Local label<input id="code-label" required maxlength="100"></label><label>Activity type<select id="code-activity"><option>Unclassified</option><option>Regular</option><option>AJA</option><option>Fieldwork</option><option>Official Business</option><option>Travel Order</option></select></label><label id="code-direction-field">Scan direction<select id="code-direction"><option value="Unspecified">Unspecified — review required</option><option value="IN">Time In</option><option value="OUT">Time Out</option></select></label><p class="field-hint" id="code-direction-help">A scan can be paired only when the date contains exactly one configured IN and one later OUT of the same activity.</p></div><div class="app-dialog-footer"><button id="close-code" type="button" class="button outline">Cancel</button><button class="button primary" type="submit">Save mapping</button></div></form></dialog>
 
   <div id="profile-undo-stack" role="region" aria-label="Recent employee removals"></div>
   <div class="toast hidden" id="toast" role="status" aria-live="polite"></div>
