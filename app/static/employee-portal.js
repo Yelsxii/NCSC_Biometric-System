@@ -95,6 +95,17 @@ function expectedForms(days){
   const identical=days.every(day=>day.departure===days[0].departure&&day.return_time===days[0].return_time);
   return consecutive&&identical?1:days.length;
 }
+function filingReady(values,days,profile,busy=false){
+  return !busy&&!!profile&&['name','position','department'].every(key=>String(profile[key]||'').trim())&&
+    ['origin','destination','purpose'].every(key=>{
+      const value=String(values[key]||'').trim();
+      return value.length>0&&value.length<=(key==='purpose'?500:200);
+    })&&days.length>=1&&days.length<=14&&new Set(days.map(day=>day.date)).size===days.length&&
+    days.every(day=>!!tripDuration(day.departure,day.return_time));
+}
+function updateFileButton(){
+  $('aja-submit').disabled=!filingReady(Object.fromEntries(new FormData(ajaForm)),collectDays(),account,busyFiling);
+}
 function updateSummary(){
   const values=Object.fromEntries(new FormData(ajaForm)),days=collectDays();
   const individual=scheduleMode==='individual'&&dates.length>1;
@@ -135,6 +146,7 @@ function updateSummary(){
   }
   $('aja-progress').value=count;
   $('aja-completion').textContent=count+' of 6';
+  updateFileButton();
 }
 function bindTimeInput(target){
   const input=$(target+'-display');
@@ -173,7 +185,7 @@ function renderSchedules(){
   }
 }
 function formChanged(){
-  clearPreview();updateSummary();setError('aja-error','');$('aja-submit').disabled=false;
+  clearPreview();updateSummary();setError('aja-error','');
 }
 function rangeLabel(first,last){
   const a=new Date(first+'T00:00:00Z'),b=new Date(last+'T00:00:00Z');
@@ -434,7 +446,7 @@ async function openFiledDocument(reference,owner=account){
 function show(user){
   clearPreview();account=user;historyVersion++;historyMessage('');historyEmpty('No filings yet.');selectPage('activities');$('login-view').classList.toggle('hidden',!!user);$('workspace').classList.toggle('hidden',!user);
   $('aja-form').reset();identity();
-  setError('aja-error','');$('aja-submit').disabled=false;
+  setError('aja-error','');updateFileButton();
 }
 $('login-form').addEventListener('submit',async e=>{
   e.preventDefault();setError('login-error','');const b=$('login-submit');b.disabled=true;
@@ -443,7 +455,7 @@ $('login-form').addEventListener('submit',async e=>{
 });
 $('logout-sidebar').addEventListener('click',async()=>{if(busyFiling)return;try{await call('logout',{});show(null);}catch(err){if(document.querySelector('[data-view=filings]').classList.contains('hidden'))setError('aja-error',err.message);else historyMessage(err.message,true);}});
 $('aja-form').addEventListener('reset',()=>{
-  closeTimePicker();closeCalendar();clearPreview();
+  closeTimePicker();closeCalendar();clearPreview();$('aja-submit').disabled=true;
   queueMicrotask(()=>{
     dates=[];dailyTimes.clear();scheduleMode='same';
     for(const target of timeNames){$(target).value='';const input=$(target+'-display');input.value='';input.disabled=false;input.setCustomValidity('');input.removeAttribute('aria-invalid');}
@@ -485,6 +497,7 @@ $('aja-form').addEventListener('submit',async e=>{
   const days=collectDays(),bad=days.find(day=>day.return_time<=day.departure);
   if(bad){setError('aja-error','Return must be after departure on '+dateLabel(bad.date,true)+'. Overnight trips require HR review.');return;}
   const values=Object.fromEntries(new FormData(e.target));
+  if(!filingReady(values,days,account,busyFiling)){updateFileButton();return;}
   const payload={days,origin:values.origin,destination:values.destination,purpose:values.purpose};
   clearPreview();const owner=account;
   busyFiling=true;ajaForm.inert=true;$('aja-submit').disabled=true;$('aja-submit').textContent='Filing…';setError('aja-error','');
@@ -504,7 +517,7 @@ $('aja-form').addEventListener('submit',async e=>{
       else setError('aja-error',err.message);
     }
   }finally{
-    busyFiling=false;ajaForm.inert=false;$('aja-submit').disabled=false;$('aja-submit').textContent='File AJA';
+    busyFiling=false;ajaForm.inert=false;$('aja-submit').textContent='File AJA';updateFileButton();
   }
 });
 $('dtr-preview-back').addEventListener('click',()=>$('dtr-preview-dialog').close());
