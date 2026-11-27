@@ -151,10 +151,28 @@ function updateSummary(){
   $('aja-completion').textContent=count+' of 6';
   updateFileButton();
 }
+function nextAjaTimeTarget(target,targets){
+  const index=targets.indexOf(target);
+  return index>=0&&index+1<targets.length?targets[index+1]+'-display':null;
+}
 function bindTimeInput(target){
   const input=$(target+'-display');
   $(target+'-trigger').addEventListener('click',()=>openTimePicker(target));
   input.addEventListener('input',()=>syncTypedTime(target));
+  // Enter commits the typed time and advances, never implicitly files AJA.
+  input.addEventListener('keydown',event=>{
+    if(event.key!=='Enter'||event.isComposing)return;
+    event.preventDefault();
+    if(!syncTypedTime(target,true)){
+      input.setAttribute('aria-invalid','true');
+      input.reportValidity();
+      updateSummary();
+      return;
+    }
+    updateSummary();
+    const next=nextAjaTimeTarget(target,activeTimeTargets());
+    (next?$(next):ajaForm.querySelector('input[name="origin"]'))?.focus();
+  });
   input.addEventListener('blur',()=>{syncTypedTime(target,true);updateSummary();});
   input.addEventListener('invalid',()=>input.setAttribute('aria-invalid','true'));
 }
