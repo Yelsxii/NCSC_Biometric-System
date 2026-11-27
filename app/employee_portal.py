@@ -219,7 +219,12 @@ def filing_metadata(con, row):
     days = [dict(day) for day in con.execute(
         "SELECT business_date AS date,departure,return_time FROM aja_filing_days WHERE filing_id=? ORDER BY business_date",
         (row["id"],))]
-    return {key: row[key] for key in ("reference", "employee_name", "origin", "destination", "purpose", "status", "filed_at")} | {"days": days}
+    result = {key: row[key] for key in ("reference", "employee_name", "origin", "destination", "purpose", "status", "filed_at")} | {"days": days}
+    review = con.execute("""SELECT decision,remarks,reviewed_at FROM aja_filing_reviews
+        WHERE filing_id=?""", (row["id"],)).fetchone()
+    if review:
+        result.update(status=review["decision"], review_remarks=review["remarks"], reviewed_at=review["reviewed_at"])
+    return result
 
 
 @router.post("/api/employee-portal/aja/file")
@@ -252,6 +257,7 @@ def employee_aja_file(payload: EmployeeAjaInput, request: Request, response: Res
                 JOIN aja_filings f ON f.id=d.filing_id
                 WHERE f.employee_code=? AND d.business_date=? AND d.departure<? AND d.return_time>?
                 AND NOT EXISTS (SELECT 1 FROM aja_filing_deletions x WHERE x.filing_id=f.id)
+                AND NOT EXISTS (SELECT 1 FROM aja_filing_reviews r WHERE r.filing_id=f.id AND r.decision IN ('returned','disapproved'))
                 LIMIT 1""", (user["employee_code"], day.date.isoformat(), day.return_time, day.departure)).fetchone()
             if overlap:
                 raise HTTPException(409, f"An overlapping AJA is already filed for {day.date.isoformat()} ({overlap['reference']}).")
@@ -315,7 +321,7 @@ def employee_aja_delete(reference: str, request: Request, response: Response, us
             raise HTTPException(404, "AJA filing not found.")
         if con.execute("SELECT 1 FROM aja_filing_deletions WHERE filing_id=?", (row["id"],)).fetchone():
             return {"deleted": True}
-        if row["status"] != "awaiting_signatures":
+        if row["status"] != "awaiting_signatures" or con.execute("SELECT 1 FROM aja_filing_reviews WHERE filing_id=?", (row["id"],)).fetchone():
             raise HTTPException(409, "Only filings awaiting signatures can be deleted. Contact HR.")
         con.execute("INSERT INTO aja_filing_deletions(filing_id,original_fingerprint) VALUES(?,?)",
                     (row["id"], row["fingerprint"]))
