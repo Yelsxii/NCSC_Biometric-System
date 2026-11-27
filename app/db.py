@@ -116,6 +116,31 @@ CREATE TABLE IF NOT EXISTS employee_portal_accounts (
  enabled INTEGER NOT NULL DEFAULT 1 CHECK(enabled IN (0,1)),
  created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
+CREATE TABLE IF NOT EXISTS aja_filings (
+ id INTEGER PRIMARY KEY AUTOINCREMENT,
+ employee_code TEXT NOT NULL REFERENCES employees(employee_code),
+ reference TEXT NOT NULL UNIQUE,
+ fingerprint TEXT NOT NULL,
+ employee_name TEXT NOT NULL,
+ position TEXT NOT NULL,
+ department TEXT NOT NULL,
+ origin TEXT NOT NULL,
+ destination TEXT NOT NULL,
+ purpose TEXT NOT NULL,
+ status TEXT NOT NULL DEFAULT 'awaiting_signatures' CHECK(status IN ('awaiting_signatures')),
+ pdf BLOB NOT NULL,
+ filed_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+ UNIQUE(employee_code,fingerprint)
+);
+CREATE TABLE IF NOT EXISTS aja_filing_days (
+ filing_id INTEGER NOT NULL REFERENCES aja_filings(id),
+ business_date TEXT NOT NULL,
+ departure TEXT NOT NULL,
+ return_time TEXT NOT NULL,
+ PRIMARY KEY(filing_id,business_date),
+ CHECK(return_time>departure)
+);
+CREATE INDEX IF NOT EXISTS idx_aja_filings_employee ON aja_filings(employee_code,id DESC);
 CREATE TABLE IF NOT EXISTS employee_profiles (
  employee_code TEXT PRIMARY KEY REFERENCES employees(employee_code),
  first_name TEXT NOT NULL,
@@ -260,7 +285,8 @@ def initialize() -> None:
                  "direction" not in {row[1] for row in con.execute("PRAGMA table_info(work_codes)")} else
                  "manual-dtr" if "manual_dtr_entries" not in tables else
                  "approved-times" if "approved_times" not in {row[1] for row in con.execute("PRAGMA table_info(attendance_day_reviews)")} else
-                 "bionet-evidence" if "bionet_attendance_evidence" not in tables else None)
+                 "bionet-evidence" if "bionet_attendance_evidence" not in tables else
+                 "aja-filing" if "aja_filings" not in tables else None)
         if phase and "punches" in tables:
             if con.execute("SELECT COUNT(*) FROM punches").fetchone()[0]:
                 folder = database_path().parent / "backups"
