@@ -403,7 +403,7 @@ function changeProfileArchive(){
   dialog.dataset.action=archived?'restore':'delete';
   $('profile-archive-heading').textContent=archived?'Restore employee?':'Delete employee?';
   $('profile-archive-name').textContent=row.display_name||row.employee_code;
-  $('profile-archive-description').textContent=archived?'This employee will return to the active Employees directory.':'This employee will be removed from the active directory. Attendance history is preserved, and the employee can be restored.';
+  $('profile-archive-description').textContent=archived?'This employee will return to the active Employees directory.':'This employee will be removed from the active directory. Attendance is preserved and the employee can be restored.';
   $('confirm-profile-archive').textContent=archived?'Restore':'Delete';
   $('profile-archive-error').classList.add('hidden');
   dialog.showModal();
@@ -411,7 +411,7 @@ function changeProfileArchive(){
 }
 function setProfileArchiveBusy(busy){
   profileArchiveBusy=busy;
-  for(const id of ['close-profile-archive','cancel-profile-archive','confirm-profile-archive'])$(id).disabled=busy;
+  for(const id of ['cancel-profile-archive','confirm-profile-archive'])$(id).disabled=busy;
   $('profile-archive-dialog').setAttribute('aria-busy',String(busy));
   for(const notice of profileUndoNotices.values())notice.button.disabled=busy;
 }
@@ -1557,7 +1557,7 @@ async function initialize(){
   $('profile-menu-delete').addEventListener('click',changeProfileArchive);
   const archiveDialog=$('profile-archive-dialog');
   $('confirm-profile-archive').addEventListener('click',confirmProfileArchive);
-  for(const id of ['close-profile-archive','cancel-profile-archive'])$(id).addEventListener('click',()=>{if(!profileArchiveBusy)archiveDialog.close();});
+  $('cancel-profile-archive').addEventListener('click',()=>{if(!profileArchiveBusy)archiveDialog.close();});
   archiveDialog.addEventListener('cancel',event=>{if(profileArchiveBusy)event.preventDefault();});
   archiveDialog.addEventListener('close',()=>{profileArchiveContext=null;});
   $('profile-archive-toggle').addEventListener('click',()=>{

@@ -1261,30 +1261,25 @@ dialog.app-dialog[open]::backdrop,#dtr-preview-dialog[open]::backdrop{
 @media(prefers-reduced-motion:reduce){#profile-dialog :is(.profile-close,.app-dialog-footer .button,.profile-select-trigger svg,.profile-select-menu,.profile-select-menu button){transition:none;transform:none!important}}
 
 /* Employee archive confirmation and reversible five-second notification. */
-#profile-archive-dialog{width:min(390px,calc(100vw - 24px));height:fit-content;max-height:calc(100dvh - 24px);border-radius:14px;background:#fff}
-#profile-archive-dialog .app-dialog-head{align-items:center;padding:12px 16px;border-bottom:1px solid #e8edf6;gap:10px}
-#profile-archive-dialog .profile-archive-heading{display:flex;align-items:center;gap:10px;min-width:0}
-#profile-archive-dialog .profile-archive-heading h2{font-size:15px;font-weight:700;color:#243e68;letter-spacing:-.02em}
-#profile-archive-dialog .profile-archive-icon{display:grid;place-items:center;width:34px;height:34px;border-radius:9px;flex:none;background:linear-gradient(145deg,#fff0f3,#f9dce4);color:#b32648;box-shadow:inset 0 1px 1px #fff}
-#profile-archive-dialog .profile-archive-icon svg{width:18px;height:18px}
+#profile-archive-dialog{--confirm-accent:#e83b51;--confirm-hover:#cb2b40;--confirm-soft:#fff3f5;width:min(330px,calc(100vw - 24px));height:fit-content;max-height:calc(100dvh - 24px);border:1px solid #fff;border-radius:16px;background:#fff;box-shadow:0 18px 64px #17254e25;overflow:hidden}
+#profile-archive-dialog[data-action=restore]{--confirm-accent:#244b9a;--confirm-hover:#173b83;--confirm-soft:#edf3fc}
+#profile-archive-dialog .app-dialog-body{padding:18px 22px 15px;text-align:center;overflow:auto;min-height:0}
+#profile-archive-dialog .profile-archive-art{display:flex;justify-content:center;align-items:center;margin:0 auto 14px;width:118px;height:101px}
+#profile-archive-dialog .profile-archive-art svg{width:100%;height:100%;overflow:visible}
 #profile-archive-dialog .archive-restore,#profile-archive-dialog[data-action=restore] .archive-trash{display:none}
 #profile-archive-dialog[data-action=restore] .archive-restore{display:block}
-#profile-archive-dialog[data-action=restore] .profile-archive-icon{background:#e3ebf8;color:#244b9a}
-#profile-archive-dialog .modal-x{display:grid;place-items:center;width:32px;height:32px;min-width:32px;min-height:32px;padding:0;border:0;border-radius:50%;background:linear-gradient(145deg,#fff1f3df,#f8dce5cf);color:#b42d4e;box-shadow:inset 0 1px 1px #fff9,0 3px 10px #b42d4e12;transition:background .18s ease,color .18s ease,transform .18s ease}
-#profile-archive-dialog .modal-x:not(:disabled):is(:hover,:focus-visible){background:#f9dce4;color:#96233e;transform:translateY(-1px)}
-#profile-archive-dialog .app-dialog-body{padding:15px 16px 17px;overflow:auto}
-#profile-archive-name{display:block;color:#243e68;font-size:13px;font-weight:700;overflow-wrap:anywhere}
-#profile-archive-description{margin:6px 0 0;color:#637c9e;font-size:11.5px;line-height:1.6}
+#profile-archive-heading{font-size:16px;font-weight:700;letter-spacing:-.025em;color:#243e68;line-height:1.35;margin:0 0 7px}
+#profile-archive-name{display:block;color:#385780;font-size:11.5px;font-weight:650;line-height:1.45;overflow-wrap:anywhere}
+#profile-archive-description{max-width:252px;margin:6px auto 0;color:#637c9e;font-size:11.5px;line-height:1.55}
 #profile-archive-dialog .form-error{background:#fbe2e7;color:#b32638}
-#profile-archive-dialog .app-dialog-footer{padding:10px 16px;border-top:1px solid #e8edf6;background:#f8faff;gap:9px}
-#profile-archive-dialog .app-dialog-footer .button{height:33px;min-height:33px;padding:0 14px;border:0;border-radius:8px;font-size:11px;font-weight:650;box-shadow:none}
-#profile-archive-dialog #cancel-profile-archive{background:#eaf0fa;color:#31588e}
-#profile-archive-dialog #cancel-profile-archive:not(:disabled):is(:hover,:focus-visible){background:#dbe7fa;color:#244b9a}
-#profile-archive-dialog #confirm-profile-archive{background:#b72c48;color:white}
-#profile-archive-dialog #confirm-profile-archive:not(:disabled):is(:hover,:focus-visible){background:#98233b;color:white;box-shadow:0 3px 8px #b72c4822}
-#profile-archive-dialog[data-action=restore] #confirm-profile-archive{background:#244b9a}
-#profile-archive-dialog[data-action=restore] #confirm-profile-archive:not(:disabled):is(:hover,:focus-visible){background:#173b83}
-#profile-archive-dialog button:focus-visible{outline:2px solid #7295ce;outline-offset:2px}
+#profile-archive-dialog .app-dialog-footer{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));padding:5px 13px 13px;border:0;background:#fff;gap:9px}
+#profile-archive-dialog .app-dialog-footer .button{height:34px;min-height:34px;width:100%;padding:0 12px;border-radius:7px;font-size:11px;font-weight:650;box-shadow:none;transform:none;transition:background-color .22s ease,color .22s ease,border-color .22s ease,transform .22s ease}
+#profile-archive-dialog #cancel-profile-archive{background:#fff;color:var(--confirm-accent);border:1px solid color-mix(in srgb,var(--confirm-accent) 65%,white)}
+#profile-archive-dialog #cancel-profile-archive:not(:disabled):is(:hover,:focus-visible){background:var(--confirm-soft);border-color:var(--confirm-accent);color:var(--confirm-hover)}
+#profile-archive-dialog #confirm-profile-archive{border:1px solid transparent;background:var(--confirm-accent);color:#fff}
+#profile-archive-dialog #confirm-profile-archive:not(:disabled):is(:hover,:focus-visible){background:var(--confirm-hover);color:#fff}
+#profile-archive-dialog .button:not(:disabled):active{transform:scale(.98)}
+#profile-archive-dialog button:focus-visible{outline:2px solid color-mix(in srgb,var(--confirm-accent) 60%,white);outline-offset:2px}
 #profile-archive-dialog button:disabled{opacity:.55;cursor:not-allowed}
 #profile-undo-stack{position:fixed;right:24px;bottom:22px;z-index:50;width:min(330px,calc(100vw - 32px));display:flex;flex-direction:column;gap:8px;pointer-events:none}
 #profile-undo-stack:empty{display:none}
