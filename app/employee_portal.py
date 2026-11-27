@@ -9,7 +9,7 @@ import threading
 import hashlib
 import json
 
-from fastapi import APIRouter, Depends, HTTPException, Request
+from fastapi import APIRouter, Depends, HTTPException, Request, Response
 from fastapi.responses import FileResponse
 from pydantic import BaseModel, Field, field_validator, model_validator
 
@@ -223,7 +223,8 @@ def filing_metadata(con, row):
 
 
 @router.post("/api/employee-portal/aja/file")
-def employee_aja_file(payload: EmployeeAjaInput, request: Request, user=Depends(employee_user)):
+def employee_aja_file(payload: EmployeeAjaInput, request: Request, response: Response, user=Depends(employee_user)):
+    response.headers['Cache-Control'] = 'no-store'
     check_csrf(request)
     if not all(user[key].strip() for key in ("name", "position", "department")):
         raise HTTPException(400, "Ask HR to complete your name, position and department before filing AJA.")
@@ -265,7 +266,8 @@ def employee_aja_file(payload: EmployeeAjaInput, request: Request, user=Depends(
 
 
 @router.get("/api/employee-portal/aja/filings")
-def employee_aja_filings(user=Depends(employee_user)):
+def employee_aja_filings(response: Response, user=Depends(employee_user)):
+    response.headers['Cache-Control'] = 'no-store'
     with closing(connect()) as con:
         rows = con.execute("""SELECT id,reference,employee_name,origin,destination,purpose,status,filed_at
             FROM aja_filings WHERE employee_code=? ORDER BY id DESC""",
@@ -274,7 +276,8 @@ def employee_aja_filings(user=Depends(employee_user)):
 
 
 @router.get("/api/employee-portal/aja/filings/{reference}/document")
-def employee_aja_document(reference: str, user=Depends(employee_user)):
+def employee_aja_document(reference: str, response: Response, user=Depends(employee_user)):
+    response.headers['Cache-Control'] = 'no-store'
     with closing(connect()) as con:
         row = con.execute("SELECT * FROM aja_filings WHERE reference=? AND employee_code=?",
                           (reference,user["employee_code"])).fetchone()
