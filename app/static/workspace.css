@@ -1549,3 +1549,12 @@ body:has(#profile-undo-stack:not(:empty)) #toast:not(.hidden){bottom:auto;top:22
 .workspace #aja-filings-panel .admin-aja-footer{padding:10px 1px 0;color:#607a9e;font-size:10px;flex:none}
 .workspace [data-page="activities"][hidden]{display:none!important}
 @media(prefers-reduced-motion:reduce){.workspace #aja-filings-panel :is(.admin-aja-status-chip,.admin-aja-employee-cell strong){transition:none}}
+
+/* Status chips retain their meaning against the blue selected row. */
+.workspace #aja-filings-panel :is(.admin-aja-status-chip,.aja-filing-status)[data-status="approved"]{background:#e1f3e7;color:#226741}
+.workspace #aja-filings-panel :is(.admin-aja-table,.aja-filings-table) tr:is(:hover,:focus-within) :is(.admin-aja-status-chip,.aja-filing-status)[data-status="approved"]{background:#ccead6;color:#205b38}
+.workspace #aja-filings-panel :is(.admin-aja-status-chip,.aja-filing-status)[data-status="returned"]{background:#fce8d6;color:#92501b}
+.workspace #aja-filings-panel :is(.admin-aja-table,.aja-filings-table) tr:is(:hover,:focus-within) :is(.admin-aja-status-chip,.aja-filing-status)[data-status="returned"]{background:#f7d8ba;color:#814313}
+.workspace #aja-filings-panel :is(.admin-aja-status-chip,.aja-filing-status)[data-status="disapproved"]{background:#fbe2e7;color:#b32638}
+.workspace #aja-filings-panel :is(.admin-aja-table,.aja-filings-table) tr:is(:hover,:focus-within) :is(.admin-aja-status-chip,.aja-filing-status)[data-status="disapproved"]{background:#f8ced8;color:#9c2336}
+.workspace #aja-filings-panel .aja-review-remarks{display:block;margin-top:3px;font-size:10px;line-height:1.4;color:#637c9e;overflow-wrap:anywhere}
