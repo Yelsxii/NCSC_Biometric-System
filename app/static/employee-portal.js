@@ -82,6 +82,18 @@ function collectDays(){
     return {date,departure:$('departure'+suffix)?.value||'',return_time:$('return_time'+suffix)?.value||''};
   });
 }
+function tripDuration(departure,returnTime){
+  if(!timeDisplay(departure)||!timeDisplay(returnTime)||returnTime<=departure)return '';
+  const mins=value=>{const [h,m]=value.split(':').map(Number);return h*60+m;};
+  const total=mins(returnTime)-mins(departure),h=Math.floor(total/60),m=total%60;
+  return [h?h+'h':'',m?m+'m':''].filter(Boolean).join(' ');
+}
+function expectedForms(days){
+  if(!days.length)return 0;
+  const consecutive=days.every((day,i)=>!i||Date.parse(day.date)-Date.parse(days[i-1].date)===86400000);
+  const identical=days.every(day=>day.departure===days[0].departure&&day.return_time===days[0].return_time);
+  return consecutive&&identical?1:days.length;
+}
 function updateSummary(){
   const values=Object.fromEntries(new FormData(ajaForm)),days=collectDays();
   const individual=scheduleMode==='individual'&&dates.length>1;
@@ -99,12 +111,19 @@ function updateSummary(){
   }
   $('aja-summary-shared').classList.toggle('hidden',individual);
   $('aja-summary-individual').classList.toggle('hidden',!individual);
+  const dateCount=$('aja-ticket-date-count');
+  dateCount.textContent=dates.length+' '+(dates.length===1?'day':'days');dateCount.classList.toggle('hidden',!dates.length);
+  $('aja-ticket-duration').textContent=tripDuration($('departure').value,$('return_time').value)||'—';
+  const formCount=expectedForms(days);
+  const schedulesReady=days.length>0&&days.every(day=>tripDuration(day.departure,day.return_time));
+  $('aja-ticket-forms').textContent=schedulesReady?(formCount===1?'1 form expected':formCount+' forms expected'):'—';
   $('aja-summary-days').replaceChildren();
   if(individual)for(const day of days){
     const row=document.createElement('div');row.className='aja-daily-summary';
     const label=document.createElement('strong');label.textContent=dateLabel(day.date,true);
-    const value=document.createElement('span');value.textContent=(timeDisplay(day.departure)||'—')+' – '+(timeDisplay(day.return_time)||'—');
-    row.append(label,value);$('aja-summary-days').append(row);
+    const value=document.createElement('span');value.textContent=(timeDisplay(day.departure)||'—')+' → '+(timeDisplay(day.return_time)||'—');
+    const duration=document.createElement('small');duration.textContent=tripDuration(day.departure,day.return_time)||'—';
+    row.append(label,value,duration);$('aja-summary-days').append(row);
   }
   $('aja-progress').value=count;
   $('aja-completion').textContent=count+' of 6';
