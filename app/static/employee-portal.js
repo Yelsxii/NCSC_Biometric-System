@@ -35,7 +35,7 @@ function clearPreview(){
 }
 const ajaForm=$('aja-form'),timePicker=$('aja-time-picker');
 const timeNames=['departure','return_time'];
-let timeTarget=null,hour=8,period='AM';
+let timeTarget=null,hour=8,minute=0,period='AM';
 function timeDisplay(value){
   if(!/^([01]\d|2[0-3]):[0-5]\d$/.test(value||''))return '';
   const [h,m]=value.split(':').map(Number);
@@ -62,6 +62,7 @@ function updateSummary(){
 }
 function refreshTimePicker(){
   for(const button of $('aja-hours').querySelectorAll('button'))button.setAttribute('aria-pressed',String(Number(button.dataset.hour)===hour));
+  for(const button of $('aja-minutes').querySelectorAll('button'))button.setAttribute('aria-pressed',String(Number(button.dataset.minute)===minute));
   for(const button of timePicker.querySelectorAll('[data-period]'))button.setAttribute('aria-pressed',String(button.dataset.period===period));
 }
 function closeTimePicker(restore=false){
@@ -69,7 +70,19 @@ function closeTimePicker(restore=false){
   if(trigger)trigger.setAttribute('aria-expanded','false');
   timeTarget=null;
   if(timePicker.open)timePicker.close();
+  document.querySelector('.aja-form-body').style.removeProperty('--aja-picker-space');
   if(restore&&trigger)trigger.focus({preventScroll:true});
+}
+function placeTimePicker(){
+  if(!timeTarget||!timePicker.open)return;
+  const trigger=$(timeTarget+'-trigger'),r=trigger.getBoundingClientRect(),gap=5,margin=8;
+  timePicker.style.left=Math.max(margin,Math.min(r.left,window.innerWidth-timePicker.offsetWidth-margin))+'px';
+  timePicker.style.top=(r.bottom+gap)+'px';
+  timePicker.style.maxHeight=Math.max(40,window.innerHeight-r.bottom-gap-margin)+'px';
+}
+function centerTimeChoice(list){
+  const selected=list.querySelector('[aria-pressed=true]');
+  if(selected)list.scrollTop=Math.max(0,selected.offsetTop-list.firstElementChild.offsetTop-(list.clientHeight-selected.offsetHeight)/2);
 }
 function openTimePicker(target){
   if(timeTarget===target&&timePicker.open){closeTimePicker(true);return;}
@@ -78,47 +91,42 @@ function openTimePicker(target){
   const existing=$(target).value;
   if(timeDisplay(existing)){
     const [h,m]=existing.split(':').map(Number);
-    hour=h%12||12;period=h<12?'AM':'PM';$('aja-minute').value=String(m).padStart(2,'0');
-  }else{hour=8;period='AM';$('aja-minute').value='00';}
+    hour=h%12||12;minute=m;period=h<12?'AM':'PM';
+  }else{hour=8;minute=0;period='AM';}
   $('aja-time-title').textContent=$(target+'-label').textContent.replace('*','').trim();
-  $('aja-time-error').classList.add('hidden');
   refreshTimePicker();
-  const trigger=$(target+'-trigger'),r=trigger.getBoundingClientRect(),gap=5,margin=8;
-  // Shared month-picker styling; position the non-modal dialog beside its trigger.
-  timePicker.style.left='0px';timePicker.style.top='0px';
+  const trigger=$(target+'-trigger'),body=document.querySelector('.aja-form-body'),gap=5,margin=8;
+  timePicker.style.left='0px';timePicker.style.top='0px';timePicker.style.maxHeight='';
   timePicker.show();
-  const width=timePicker.offsetWidth,height=timePicker.offsetHeight;
-  const below=window.innerHeight-r.bottom-gap-margin,above=r.top-gap-margin;
-  const up=height>below&&above>below;
-  timePicker.style.left=Math.max(margin,Math.min(r.left,window.innerWidth-width-margin))+'px';
-  timePicker.style.top=Math.max(margin,Math.min(up?r.top-gap-height:r.bottom+gap,window.innerHeight-height-margin))+'px';
+  const height=timePicker.offsetHeight,below=window.innerHeight-trigger.getBoundingClientRect().bottom-gap-margin;
+  // Keep the picker below the field. If the viewport is short, create
+  // temporary scrolling room and raise the field rather than flipping above.
+  if(below<height){
+    const extra=Math.ceil(height-below);
+    body.style.setProperty('--aja-picker-space',extra+'px');
+    body.scrollTop+=extra;
+  }
+  placeTimePicker();
   trigger.setAttribute('aria-expanded','true');
+  centerTimeChoice($('aja-hours'));centerTimeChoice($('aja-minutes'));
   $('aja-hours').querySelector('[aria-pressed=true]')?.focus({preventScroll:true});
 }
 function applyTime(clear=false){
   if(!timeTarget)return;
-  const minute=$('aja-minute').value.trim();
-  if(!clear&&(!/^\d{1,2}$/.test(minute)||Number(minute)>59)){
-    $('aja-time-error').classList.remove('hidden');$('aja-minute').focus();return;
-  }
   const target=$(timeTarget),h=hour%12+(period==='PM'?12:0);
-  target.value=clear?'':String(h).padStart(2,'0')+':'+String(Number(minute)).padStart(2,'0');
+  target.value=clear?'':String(h).padStart(2,'0')+':'+String(minute).padStart(2,'0');
   closeTimePicker(true);
   target.dispatchEvent(new Event('input',{bubbles:true}));
 }
-for(let h=1;h<=12;h++){
-  const button=document.createElement('button');button.type='button';button.dataset.hour=String(h);button.textContent=String(h).padStart(2,'0');
-  button.addEventListener('click',()=>{hour=h;refreshTimePicker();});
-  $('aja-hours').append(button);
+for(const [list,key,start,end] of [['aja-hours','hour',1,12],['aja-minutes','minute',0,59]]){
+  for(let n=start;n<=end;n++){
+    const button=document.createElement('button');button.type='button';button.dataset[key]=String(n);button.textContent=String(n).padStart(2,'0');
+    button.addEventListener('click',()=>{if(key==='hour')hour=n;else minute=n;refreshTimePicker();});
+    $(list).append(button);
+  }
 }
 for(const button of timePicker.querySelectorAll('[data-period]'))button.addEventListener('click',()=>{period=button.dataset.period;refreshTimePicker();});
 for(const target of timeNames)$(target+'-trigger').addEventListener('click',()=>openTimePicker(target));
-for(const [id,delta] of [['aja-minute-minus',-1],['aja-minute-plus',1]])$(id).addEventListener('click',()=>{
-  const current=Number($('aja-minute').value)||0;
-  $('aja-minute').value=String((current+delta+60)%60).padStart(2,'0');$('aja-time-error').classList.add('hidden');
-});
-$('aja-minute').addEventListener('input',()=>{$('aja-minute').value=$('aja-minute').value.replace(/\D/g,'').slice(0,2);$('aja-time-error').classList.add('hidden');});
-$('aja-minute').addEventListener('keydown',event=>{if(event.key==='Enter'){event.preventDefault();applyTime();}});
 $('aja-time-apply').addEventListener('click',()=>applyTime());
 $('aja-time-clear').addEventListener('click',()=>applyTime(true));
 $('aja-time-close').addEventListener('click',()=>closeTimePicker(true));
@@ -128,7 +136,7 @@ document.addEventListener('pointerdown',event=>{
 document.addEventListener('keydown',event=>{if(event.key==='Escape'&&timePicker.open){event.preventDefault();closeTimePicker(true);}});
 timePicker.addEventListener('cancel',event=>{event.preventDefault();closeTimePicker(true);});
 window.addEventListener('resize',()=>closeTimePicker());
-document.querySelector('.aja-form-body').addEventListener('scroll',()=>closeTimePicker(),{passive:true});
+document.querySelector('.aja-form-body').addEventListener('scroll',placeTimePicker,{passive:true});
 function identity(){
   $('employee-name').textContent=account?.name||'—';
   $('employee-position').textContent=account?.position||'—';
@@ -147,7 +155,7 @@ $('login-form').addEventListener('submit',async e=>{
   catch(err){setError('login-error',err.message);}finally{b.disabled=false;}
 });
 $('logout-sidebar').addEventListener('click',async()=>{try{await call('logout',{});show(null);}catch(err){setError('aja-error',err.message);}});
-$('aja-form').addEventListener('reset',()=>{closeTimePicker();clearPreview();queueMicrotask(identity);for(const target of timeNames)$(target+'-trigger').removeAttribute('aria-invalid');setError('aja-error','');$('aja-submit').disabled=false;});
+$('aja-form').addEventListener('reset',()=>{closeTimePicker();clearPreview();queueMicrotask(()=>{for(const target of timeNames)$(target).value='';identity();});for(const target of timeNames)$(target+'-trigger').removeAttribute('aria-invalid');setError('aja-error','');$('aja-submit').disabled=false;});
 $('aja-form').addEventListener('input',()=>{clearPreview();updateSummary();setError('aja-error','');$('aja-submit').disabled=false;});
 function applyZoom(){
   const stage=$('aja-stage');
