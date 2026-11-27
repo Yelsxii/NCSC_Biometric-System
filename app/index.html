@@ -6,11 +6,11 @@
   <meta name="theme-color" content="#142650">
   <title>NCSC | Attendance Records</title>
   <link rel="stylesheet" href="/static/app.css">
-  <link rel="stylesheet" href="/static/workspace.css?v=employees-139">
+  <link rel="stylesheet" href="/static/workspace.css?v=employees-140">
   <link rel="stylesheet" href="/static/attendance-detail.css?v=auto-dtr-45">
   <link rel="stylesheet" href="/static/dtr-preview.css?v=23">
   <script src="/static/dtr-preview.js?v=22" defer></script>
-  <script src="/static/app.js?v=employees-61" defer></script>
+  <script src="/static/app.js?v=employees-62" defer></script>
 </head>
 <body>
   <main id="login-view" class="auth-shell" aria-labelledby="login-heading">
@@ -291,7 +291,7 @@
     <button type="button" id="profile-menu-delete"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 6h18M9 6V3h6v3M5 6l1 15h12l1-15M10 10v7m4-7v7"/></svg><span>Delete</span></button>
   </div>
   <dialog id="profile-dialog" class="app-dialog profile-dialog" data-profile-mode="register" aria-labelledby="profile-heading">
-    <div class="app-dialog-head"><h2 id="profile-heading" class="sr-only">Register employee</h2><div class="profile-id-badge"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.65" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="5" width="18" height="14" rx="3"/><circle cx="9" cy="11" r="2"/><path d="M6 16v-.5a3 3 0 0 1 6 0v.5M15 10h3M15 14h3"/></svg><span>Biometric ID</span><strong id="profile-id-display"></strong></div><button class="modal-x profile-close" id="close-profile" type="button" aria-label="Close employee profile"><svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><path d="m6 6 12 12M18 6 6 18"/></svg></button></div>
+    <div class="app-dialog-head"><h2 id="profile-heading" class="sr-only">Register employee</h2><div class="profile-id-badge"><span class="profile-id-emblem" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.65" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="18" height="14" rx="3"/><circle cx="9" cy="11" r="2"/><path d="M6 16v-.5a3 3 0 0 1 6 0v.5M15 10h3M15 14h3"/></svg></span><span class="profile-id-meta"><span>Biometric ID</span><strong id="profile-id-display"></strong></span><svg class="profile-id-fixed" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-label="Read-only" role="img"><rect x="5" y="10" width="14" height="11" rx="2"/><path d="M8 10V7a4 4 0 0 1 8 0v3"/></svg></div><button class="modal-x profile-close" id="close-profile" type="button" aria-label="Close employee profile"><svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><path d="m6 6 12 12M18 6 6 18"/></svg></button></div>
     <form id="profile-form">
       <div class="app-dialog-body">
         <h3 class="form-section-title">Employee identity</h3>
@@ -300,7 +300,7 @@
           <div class="profile-spacer" aria-hidden="true"></div>
           <label>First name <span class="required-mark">*</span><input id="profile-first" required maxlength="70" autocomplete="given-name"></label>
           <label>Last name <span class="required-mark">*</span><input id="profile-last" required maxlength="70" autocomplete="family-name"></label>
-          <label>Middle name<input id="profile-middle" maxlength="60" autocomplete="additional-name" placeholder="Optional"></label>
+          <label>Middle name<input id="profile-middle" maxlength="60" autocomplete="additional-name"></label>
           <label>Suffix<input id="profile-suffix" maxlength="20" placeholder="Optional"></label>
         </div>
         <h3 class="form-section-title">Employment details</h3>

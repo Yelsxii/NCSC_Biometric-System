@@ -453,9 +453,9 @@ function initializeProfileSelects(){
       menu.style.maxHeight='none';
       const below=window.innerHeight-r.bottom-gap-margin,above=r.top-gap-margin;
       const desired=menu.scrollHeight+2;
-      const insideBelow=dialog.bottom-r.bottom-gap-margin,insideAbove=r.top-dialog.top-gap-margin;
-      // Prefer an in-dialog placement, then use available viewport space.
-      const up=desired>insideBelow&&(desired<=insideAbove||(desired>below&&above>below));
+      // Normal dropdowns open below the trigger. The top-layer popover may
+      // extend beyond the dialog; only viewport space determines a flip.
+      const up=desired>below&&above>below;
       const available=Math.max(30,up?above:below);
       menu.dataset.direction=up?'up':'down';
       menu.style.maxHeight=available+'px';

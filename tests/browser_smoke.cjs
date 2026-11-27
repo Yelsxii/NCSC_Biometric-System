@@ -1178,6 +1178,8 @@ with connect() as con:
     await page.locator('#profile-last').fill('One');
     await page.locator('#profile-type-trigger').click();
     await page.locator('#profile-type-menu:popover-open').waitFor();
+    await page.waitForFunction(()=>document.querySelector('#profile-type-menu').dataset.direction==='down');
+    assert.equal(await page.locator('#profile-middle').getAttribute('placeholder'),null);
     await page.locator('#profile-type-trigger').click();
     await page.locator('#profile-type-menu:popover-open').waitFor({state:'detached'});
     assert.equal(await page.locator('#profile-type-trigger').getAttribute('aria-expanded'),'false');
