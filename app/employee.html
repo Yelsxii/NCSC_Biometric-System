@@ -10,7 +10,7 @@
   <link rel="stylesheet" href="/static/attendance-detail.css?v=auto-dtr-45">
   <link rel="stylesheet" href="/static/dtr-preview.css?v=23">
   <link rel="stylesheet" href="/static/employee-portal.css?v=23">
-  <script src="/static/employee-portal.js?v=16" defer></script>
+  <script src="/static/employee-portal.js?v=17" defer></script>
 </head>
 <body>
   <main id="login-view" class="auth-shell" aria-labelledby="login-heading">
@@ -139,14 +139,14 @@
                 </div>
               </div>
               <div class="aja-form-footer">
-                <span class="aja-filing-note">File first, then print for signatures.</span><div class="aja-actions"><button type="reset" class="button outline">Clear form</button><button id="aja-submit" type="submit" class="button primary record-create-action" disabled>Submit AJA</button></div>
+                <span class="aja-filing-note">File first, then print for signatures.</span><div class="aja-actions"><button type="reset" class="button outline">Clear form</button><button id="aja-submit" type="submit" class="button primary record-create-action" disabled>Submit</button></div>
               </div>
             </form>
           </div>
         </section>
         <section class="page hidden" data-view="filings">
           <div class="panel records-panel list-panel" id="aja-filings-panel">
-            <div class="panel-header aja-filings-heading"><h2>My AJA Filings</h2><button type="button" id="aja-new-filing" class="button primary record-create-action"><svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="1.65" stroke-linecap="round" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>New AJA</button></div>
+            <div class="panel-header aja-filings-heading"><h2>My AJA Filings</h2><button type="button" id="aja-new-filing" class="button primary record-create-action"><svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="1.65" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14 3H6a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9zM14 3v6h6M12 12v6M9 15h6"/></svg>New AJA</button></div>
             <p id="aja-filings-message" class="aja-filings-message hidden" role="status"></p>
             <div class="table-wrap"><table class="records-table profile-table aja-filings-table">
               <colgroup><col class="aja-col-number"><col class="aja-col-reference"><col class="aja-col-filed"><col class="aja-col-dates"><col class="aja-col-destination"><col class="aja-col-status"><col class="aja-col-actions"></colgroup>
