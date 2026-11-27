@@ -434,7 +434,7 @@ function filedDate(value){
 }
 // Same popover and circular action styling as the Employees directory.
 const filingMenu=$('profile-action-menu');
-let filingMenuContext=null, filingActionBusy=false;
+let filingMenuContext=null, filingActionBusy=false, filingDeleteContext=null;
 function closeFilingMenu(restore=false){
   const context=filingMenuContext;filingMenuContext=null;
   if(filingMenu.matches(':popover-open'))filingMenu.hidePopover();
@@ -453,6 +453,7 @@ function openFilingMenu(trigger,reference,owner){
   filingMenu.style.left=Math.max(8,Math.min(innerWidth-w-8,r.right-w))+'px';
   filingMenu.style.top=Math.max(8,r.bottom+h+14<=innerHeight?r.bottom+6:r.top-h-6)+'px';
   trigger.setAttribute('aria-expanded','true');
+  $('profile-menu-delete').hidden=trigger.dataset.status!=='awaiting_signatures';
   $('aja-menu-view').focus({preventScroll:true});
 }
 async function runFilingAction(action){
@@ -467,6 +468,40 @@ async function runFilingAction(action){
 }
 $('aja-menu-view').addEventListener('click',()=>runFilingAction('view'));
 $('aja-menu-download').addEventListener('click',()=>runFilingAction('download'));
+const filingDeleteDialog=$('profile-archive-dialog');
+function closeFilingDelete(){
+  if(filingActionBusy)return;
+  const context=filingDeleteContext;filingDeleteContext=null;
+  if(filingDeleteDialog.open)filingDeleteDialog.close();
+  if(context?.trigger.isConnected)context.trigger.focus({preventScroll:true});
+}
+$('profile-menu-delete').addEventListener('click',()=>{
+  const context=filingMenuContext;
+  if(!context||context.owner!==account||filingActionBusy||context.trigger.dataset.status!=='awaiting_signatures')return;
+  closeFilingMenu(true);filingDeleteContext=context;
+  $('profile-archive-name').textContent=context.reference;
+  setError('profile-archive-error','');
+  filingDeleteDialog.showModal();$('cancel-profile-archive').focus({preventScroll:true});
+});
+$('cancel-profile-archive').addEventListener('click',closeFilingDelete);
+filingDeleteDialog.addEventListener('cancel',event=>{event.preventDefault();closeFilingDelete();});
+$('confirm-profile-archive').addEventListener('click',async()=>{
+  const context=filingDeleteContext;
+  if(!context||context.owner!==account||filingActionBusy)return;
+  filingActionBusy=true;
+  const confirm=$('confirm-profile-archive'),cancel=$('cancel-profile-archive');
+  confirm.disabled=cancel.disabled=true;confirm.textContent='Deleting…';
+  setError('profile-archive-error','');
+  try{
+    await call('aja/filings/'+encodeURIComponent(context.reference)+'/delete',{});
+    if(context.owner!==account)return;
+    filingDeleteContext=null;filingDeleteDialog.close();clearPreview();
+    await loadFilings();
+    historyMessage('AJA filing deleted.');
+    $('aja-new-filing').focus({preventScroll:true});
+  }catch(err){if(context.owner===account)setError('profile-archive-error',err.message);}
+  finally{filingActionBusy=false;confirm.disabled=cancel.disabled=false;confirm.textContent='Delete';}
+});
 document.addEventListener('pointerdown',e=>{
   if(filingMenuContext&&!filingMenu.contains(e.target)&&!e.target.closest('[data-filing-menu]'))closeFilingMenu();
 });
@@ -475,15 +510,15 @@ document.addEventListener('keydown',e=>{
   if(e.key==='Escape'){e.preventDefault();closeFilingMenu(true);}
   else if(e.key==='Tab'){closeFilingMenu(true);}
   else if(e.key==='ArrowDown'||e.key==='ArrowUp'){
-    e.preventDefault();const items=[...filingMenu.querySelectorAll('button')],i=items.indexOf(document.activeElement);
+    e.preventDefault();const items=[...filingMenu.querySelectorAll('button:not([hidden])')],i=items.indexOf(document.activeElement);
     items[(i+(e.key==='ArrowDown'?1:items.length-1)+items.length)%items.length].focus({preventScroll:true});
   }
 });
 window.addEventListener('resize',()=>closeFilingMenu());
 document.querySelector('#aja-filings-panel .table-wrap').addEventListener('scroll',()=>closeFilingMenu(),{passive:true});
-function filingMenuButton(reference,owner){
+function filingMenuButton(reference,owner,status){
   const button=document.createElement('button');button.type='button';button.className='profile-more aja-filing-action';
-  button.dataset.filingMenu='';button.setAttribute('aria-haspopup','true');button.setAttribute('aria-expanded','false');button.setAttribute('aria-controls','profile-action-menu');button.setAttribute('aria-label','Actions for '+reference);
+  button.dataset.filingMenu='';button.dataset.status=status;button.setAttribute('aria-haspopup','true');button.setAttribute('aria-expanded','false');button.setAttribute('aria-controls','profile-action-menu');button.setAttribute('aria-label','Actions for '+reference);
   button.innerHTML='<svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><circle cx="5" cy="12" r="1.8"/><circle cx="12" cy="12" r="1.8"/><circle cx="19" cy="12" r="1.8"/></svg>';
   button.addEventListener('click',()=>openFilingMenu(button,reference,owner));
   return button;
@@ -515,14 +550,14 @@ async function loadFilings(){
       });
       const status=document.createElement('td'),badge=document.createElement('span');badge.className='aja-filing-status';badge.textContent='Awaiting signatures';status.append(badge);row.append(status);
       const action=document.createElement('td');action.className='directory-action-cell';
-      action.append(filingMenuButton(filing.reference,owner));row.append(action);host.append(row);
+      action.append(filingMenuButton(filing.reference,owner,filing.status));row.append(action);host.append(row);
     }
   }catch(err){if(version===historyVersion&&owner===account){historyEmpty('Could not load filings.');historyMessage(err.message,true);}}
 }
 document.querySelectorAll('#workspace .nav-item[data-page]').forEach(button=>button.addEventListener('click',()=>{
-  if(busyFiling)return;selectPage(button.dataset.page);historyMessage('');if(button.dataset.page==='filings')loadFilings();
+  if(busyFiling||filingActionBusy)return;selectPage(button.dataset.page);historyMessage('');if(button.dataset.page==='filings')loadFilings();
 }));
-$('aja-new-filing').addEventListener('click',()=>{if(!busyFiling){selectPage('activities');$('aja-date-trigger').focus({preventScroll:true});}});
+$('aja-new-filing').addEventListener('click',()=>{if(!busyFiling&&!filingActionBusy){selectPage('activities');$('aja-date-trigger').focus({preventScroll:true});}});
 async function openFiledDocument(reference,owner=account){
   const data=await call('aja/filings/'+encodeURIComponent(reference)+'/document');
   if(!owner||owner!==account)return;
@@ -544,7 +579,7 @@ $('login-form').addEventListener('submit',async e=>{
   try{const data=await call('login',Object.fromEntries(new FormData(e.target)));e.target.reset();show(data);}
   catch(err){setError('login-error',err.message);}finally{b.disabled=false;}
 });
-$('logout-sidebar').addEventListener('click',async()=>{if(busyFiling)return;try{await call('logout',{});show(null);}catch(err){if(document.querySelector('[data-view=filings]').classList.contains('hidden'))setError('aja-error',err.message);else historyMessage(err.message,true);}});
+$('logout-sidebar').addEventListener('click',async()=>{if(busyFiling||filingActionBusy)return;try{await call('logout',{});show(null);}catch(err){if(document.querySelector('[data-view=filings]').classList.contains('hidden'))setError('aja-error',err.message);else historyMessage(err.message,true);}});
 $('aja-form').addEventListener('reset',()=>{
   closeTimePicker();closeCalendar();clearPreview();$('aja-submit').disabled=true;$('aja-route-connector').classList.remove('is-ready');
   queueMicrotask(()=>{
