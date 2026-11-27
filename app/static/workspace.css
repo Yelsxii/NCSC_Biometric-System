@@ -766,8 +766,10 @@
 .workspace #attendance-register-panel .live-kpi{
   --status-color:#527eb9;--count-bright:#2866be;--card-start:#294a80;--card-end:#386ca3;
   position:relative;isolation:isolate;overflow:hidden;display:grid;
-  grid-template-columns:minmax(0,1fr) 38px;align-items:center;gap:7px;min-width:0;
-  height:72px;min-height:72px;text-align:left;padding:7px 12px 7px 10px;
+  /* Center a compact text/icon pair instead of stretching the text column
+     to the full card width. The first track can still shrink on small screens. */
+  grid-template-columns:minmax(0,84px) 38px;justify-content:center;align-items:center;gap:10px;min-width:0;
+  height:72px;min-height:72px;text-align:left;padding:7px 10px;
   border:1px solid transparent;border-radius:11px;color:#243d65;
   background:linear-gradient(145deg,#ffffff76,#f9fcff35 54%,#ffffff26);
   -webkit-backdrop-filter:none;backdrop-filter:none;
@@ -899,7 +901,7 @@
 @media(max-width:740px){
 .workspace #attendance-register-panel .live-overview{padding:7px 6px 2px}
 .workspace #attendance-register-panel .live-kpi-strip{grid-template-columns:repeat(6,minmax(134px,1fr));gap:14px}
-.workspace #attendance-register-panel .live-kpi{height:66px;min-height:66px;grid-template-columns:minmax(0,1fr) 34px;gap:6px;padding:6px 9px}
+.workspace #attendance-register-panel .live-kpi{height:66px;min-height:66px;grid-template-columns:minmax(0,76px) 34px;gap:6px;padding:6px 9px}
  .workspace #attendance-register-panel .live-kpi small{font-size:11px}
 .workspace #attendance-register-panel .live-kpi strong{font-size:24px}
 .workspace #attendance-register-panel .live-kpi .kpi-icon{width:34px;height:34px;border-radius:8px}
