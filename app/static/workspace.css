@@ -952,7 +952,7 @@ dialog.app-dialog[open]::backdrop,#dtr-preview-dialog[open]::backdrop{
 
 /* Employees — scoped reuse of the approved attendance glass language. */
 .workspace .content-shell .page #employee-profile-panel{background:#eaf1fa;border-color:#f7faffaa;box-shadow:inset 0 1px 0 #ffffffb0,0 5px 18px #45689b15;-webkit-backdrop-filter:none;backdrop-filter:none}
-.workspace #employee-profile-panel .profile-table th{
+.workspace :is(#employee-profile-panel,#aja-filings-panel) .profile-table th{
   /* Quiet slate-blue glass: separation through tint and soft depth,
      not a saturated gradient or hard dividing line. The opaque surface
      keeps the sticky header readable when records scroll beneath it. */
@@ -963,7 +963,7 @@ dialog.app-dialog[open]::backdrop,#dtr-preview-dialog[open]::backdrop{
   border-bottom:1px solid transparent;
   box-shadow:0 2px 3px #304d7510;
 }
-.workspace #employee-profile-panel .profile-table td{overflow-wrap:anywhere}
+.workspace :is(#employee-profile-panel,#aja-filings-panel) .profile-table td{overflow-wrap:anywhere}
 .workspace #employee-profile-panel .register-identity{
   display:flex;align-items:center;gap:9px;min-width:0;
 }
@@ -979,10 +979,10 @@ dialog.app-dialog[open]::backdrop,#dtr-preview-dialog[open]::backdrop{
   font-size:12px;color:#263b60;font-weight:650;line-height:1.4;min-width:0;
   transition:color .22s ease,text-shadow .22s ease;
 }
-.workspace #employee-profile-panel .profile-table tbody tr:is(:hover,:focus-within) .employee-name-cell strong{
+.workspace :is(#employee-profile-panel,#aja-filings-panel) .profile-table tbody tr:is(:hover,:focus-within) .employee-name-cell strong{
   color:#0755c5;text-shadow:0 0 7px rgba(25,102,231,.22);
 }
-.workspace #employee-profile-panel .profile-table tbody tr:is(:hover,:focus-within) .register-identity .name-avatar{
+.workspace :is(#employee-profile-panel,#aja-filings-panel) .profile-table tbody tr:is(:hover,:focus-within) .register-identity .name-avatar{
   background-color:#afcdf5;color:#154c99;
 }
 @media(max-width:740px){
@@ -993,30 +993,30 @@ dialog.app-dialog[open]::backdrop,#dtr-preview-dialog[open]::backdrop{
   .workspace #employee-profile-panel .register-identity .name-avatar,
   .workspace #employee-profile-panel .employee-name-cell strong{transition:none}
 }
-.workspace #employee-profile-panel .profile-table .actions-column{
+.workspace :is(#employee-profile-panel,#aja-filings-panel) .profile-table .actions-column{
   position:sticky;right:0;z-index:4;text-align:center;
   box-shadow:0 2px 3px #304d7510,-3px 0 8px #263b600d;
 }
-.workspace #employee-profile-panel .directory-action-cell{
+.workspace :is(#employee-profile-panel,#aja-filings-panel) .directory-action-cell{
   position:sticky;right:0;z-index:2;text-align:center;background:#fff;
   box-shadow:-3px 0 8px #263b601c;padding:6px 8px;transition:background-color .22s cubic-bezier(.4,0,.2,1);
 }
-.workspace #employee-profile-panel .profile-table tbody tr:hover{background:#dbe7f7}
-.workspace #employee-profile-panel .profile-table tbody tr:hover .directory-action-cell{background:#dbe7f7}
-.workspace #employee-profile-panel .directory-action-cell .row-action{
+.workspace :is(#employee-profile-panel,#aja-filings-panel) .profile-table tbody tr:hover{background:#dbe7f7}
+.workspace :is(#employee-profile-panel,#aja-filings-panel) .profile-table tbody tr:hover .directory-action-cell{background:#dbe7f7}
+.workspace :is(#employee-profile-panel,#aja-filings-panel) .directory-action-cell .row-action{
   display:inline-flex;align-items:center;justify-content:center;gap:5px;
   height:30px;min-height:30px;padding:0 9px;border:0;
   background:#244b9a;color:#fff;font-size:10.5px;font-weight:650;
   text-decoration:none!important;border-radius:6px;box-shadow:0 2px 5px #244b9a26;
   transition:transform .32s cubic-bezier(.4,0,.2,1),background-color .28s cubic-bezier(.4,0,.2,1),color .28s cubic-bezier(.4,0,.2,1);
 }
-.workspace #employee-profile-panel .directory-action-cell .row-action svg{width:13px;height:13px;flex:none}
-.workspace #employee-profile-panel .directory-action-cell .row-action:hover,
-.workspace #employee-profile-panel .directory-action-cell .row-action:focus-visible{
+.workspace :is(#employee-profile-panel,#aja-filings-panel) .directory-action-cell .row-action svg{width:13px;height:13px;flex:none}
+.workspace :is(#employee-profile-panel,#aja-filings-panel) .directory-action-cell .row-action:hover,
+.workspace :is(#employee-profile-panel,#aja-filings-panel) .directory-action-cell .row-action:focus-visible{
   background:#17356e;color:#fff;text-decoration:none!important;
   transform:translateY(-1px);box-shadow:0 4px 10px #244b9a40;
 }
-.workspace #employee-profile-panel .directory-action-cell .row-action:active{transform:translateY(0)}
+.workspace :is(#employee-profile-panel,#aja-filings-panel) .directory-action-cell .row-action:active{transform:translateY(0)}
 .workspace .content-shell .page #employee-profile-panel{background:#eaf1fa;border-color:#f7faffaa;box-shadow:inset 0 1px 0 #ffffffb0,0 5px 18px #45689b15;backdrop-filter:none}
 .workspace #employee-profile-panel .registry-summary{padding:0 1px 12px;color:#536c90;font-size:11px;flex-shrink:0}
 .workspace #employee-profile-panel .profile-toolbar{gap:10px 18px;margin:0 0 14px;align-items:flex-end;justify-content:flex-start;flex-wrap:wrap}
@@ -1029,12 +1029,12 @@ dialog.app-dialog[open]::backdrop,#dtr-preview-dialog[open]::backdrop{
 .workspace #employee-profile-panel #profile-search:focus{border-color:#7295ce;background:#fff;box-shadow:0 0 0 3px #244b9a12}
 .workspace #employee-profile-panel #open-profile{background:#244b9a;border-color:#244b9a;color:#fff}
 .workspace #employee-profile-panel #open-profile:not(:disabled):hover{background:#17356e;border-color:#17356e}
-.workspace #employee-profile-panel .profile-table{width:100%;min-width:820px;table-layout:fixed;font-size:11.5px}
-.workspace #employee-profile-panel .profile-table td{height:44px;padding:7px 10px;vertical-align:middle}
-.workspace #employee-profile-panel .profile-table th{height:34px;padding:9px 10px}
+.workspace :is(#employee-profile-panel,#aja-filings-panel) .profile-table{width:100%;min-width:820px;table-layout:fixed;font-size:11.5px}
+.workspace :is(#employee-profile-panel,#aja-filings-panel) .profile-table td{height:44px;padding:7px 10px;vertical-align:middle}
+.workspace :is(#employee-profile-panel,#aja-filings-panel) .profile-table th{height:34px;padding:9px 10px}
 .workspace #employee-profile-panel .profile-name{width:28%}.workspace #employee-profile-panel .profile-id{width:88px}.workspace #employee-profile-panel .profile-position{width:24%}.workspace #employee-profile-panel .profile-category{width:12%}.workspace #employee-profile-panel .profile-department{width:auto}.workspace #employee-profile-panel .profile-action{width:60px}
-.workspace #employee-profile-panel .profile-table tbody tr:nth-child(even){background:#f7f9fc}
-.workspace #employee-profile-panel .profile-table tbody tr:is(:hover,:focus-within){background:#dbe7f7}
+.workspace :is(#employee-profile-panel,#aja-filings-panel) .profile-table tbody tr:nth-child(even){background:#f7f9fc}
+.workspace :is(#employee-profile-panel,#aja-filings-panel) .profile-table tbody tr:is(:hover,:focus-within){background:#dbe7f7}
 .workspace #employee-profile-panel .employee-name-cell small{font-size:10px;color:#657997;line-height:1.3}
 .workspace #employee-profile-panel .list-footer{border-color:transparent;color:#607a9e;font-size:10px}
 .workspace #employee-profile-panel .pagination button{background:#f1f5fc;border-color:#d3dfee;color:#31598e}
@@ -1064,11 +1064,11 @@ dialog.app-dialog[open]::backdrop,#dtr-preview-dialog[open]::backdrop{
 @media(prefers-reduced-motion:reduce){.workspace #employee-profile-panel .category-tab,.workspace #employee-profile-panel .category-tab span{transition:none}.workspace #employee-profile-panel .category-tab:is(:hover,:focus-visible,:active){transform:none}}
 
 /* Keep the leftmost device-linked employee identifier compact and readable. */
-.workspace #employee-profile-panel .profile-table .id-cell{font-weight:650;color:#334d73;font-variant-numeric:tabular-nums;white-space:nowrap}
+.workspace :is(#employee-profile-panel,#aja-filings-panel) .profile-table .id-cell{font-weight:650;color:#334d73;font-variant-numeric:tabular-nums;white-space:nowrap}
 
 /* Shared directory row emphasis: highlight every meaningful detail, not only the name. */
-.workspace :is(#attendance-register-panel,#employee-profile-panel) :is(.attendance-directory,.profile-table) :is(.department-name,.department-code,.id-cell,.live-last-update.has-update){transition:color .22s ease,text-shadow .22s ease}
-.workspace :is(#attendance-register-panel,#employee-profile-panel) :is(.attendance-directory,.profile-table) tbody tr:is(:hover,:focus-within) :is(.department-name,.department-code,.id-cell,.live-last-update.has-update){color:#0755c5;text-shadow:0 0 7px rgba(25,102,231,.16)}
+.workspace :is(#attendance-register-panel,#employee-profile-panel,#aja-filings-panel) :is(.attendance-directory,.profile-table) :is(.department-name,.department-code,.id-cell,.live-last-update.has-update){transition:color .22s ease,text-shadow .22s ease}
+.workspace :is(#attendance-register-panel,#employee-profile-panel,#aja-filings-panel) :is(.attendance-directory,.profile-table) tbody tr:is(:hover,:focus-within) :is(.department-name,.department-code,.id-cell,.live-last-update.has-update){color:#0755c5;text-shadow:0 0 7px rgba(25,102,231,.16)}
 /* Preserve the semantic status colors rather than making every status blue. */
 .workspace #attendance-register-panel .attendance-directory .live-status{transition:background-color .22s ease,color .22s ease,text-shadow .22s ease}
 .workspace #attendance-register-panel .attendance-directory tbody tr:is(:hover,:focus-within) .live-status.live-in{background:#23694e;color:#fff}
@@ -1078,13 +1078,13 @@ dialog.app-dialog[open]::backdrop,#dtr-preview-dialog[open]::backdrop{
 .workspace #attendance-register-panel .attendance-directory tbody tr:is(:hover,:focus-within) .live-status.live-review{background:#805d18;color:#fff}
 .workspace #attendance-register-panel .attendance-directory tbody tr:is(:hover,:focus-within) .live-status.live-missing{color:#b71834;text-shadow:0 0 5px #d3264020}
 .workspace #attendance-register-panel .attendance-directory tbody tr:focus-within{background:#dbe7f7}
-.workspace :is(#attendance-register-panel,#employee-profile-panel) :is(.attendance-directory,.profile-table) tbody tr:focus-within .directory-action-cell{background:#dbe7f7}
-@media(prefers-reduced-motion:reduce){.workspace :is(#attendance-register-panel,#employee-profile-panel) :is(.attendance-directory,.profile-table) :is(.department-name,.department-code,.id-cell,.live-last-update.has-update,.live-status){transition:none}}
+.workspace :is(#attendance-register-panel,#employee-profile-panel,#aja-filings-panel) :is(.attendance-directory,.profile-table) tbody tr:focus-within .directory-action-cell{background:#dbe7f7}
+@media(prefers-reduced-motion:reduce){.workspace :is(#attendance-register-panel,#employee-profile-panel,#aja-filings-panel) :is(.attendance-directory,.profile-table) :is(.department-name,.department-code,.id-cell,.live-last-update.has-update,.live-status){transition:none}}
 
 /* Directory scrolling replaces pagination; keep scrolling affordances consistent. */
-.workspace #employee-profile-panel .table-wrap{scrollbar-width:thin;scrollbar-color:#b8c6dd transparent}
-.workspace #employee-profile-panel .table-wrap::-webkit-scrollbar{display:block;width:6px;height:6px}
-.workspace #employee-profile-panel .table-wrap::-webkit-scrollbar-thumb{background:#b8c6dd;border-radius:999px}
+.workspace :is(#employee-profile-panel,#aja-filings-panel) .table-wrap{scrollbar-width:thin;scrollbar-color:#b8c6dd transparent}
+.workspace :is(#employee-profile-panel,#aja-filings-panel) .table-wrap::-webkit-scrollbar{display:block;width:6px;height:6px}
+.workspace :is(#employee-profile-panel,#aja-filings-panel) .table-wrap::-webkit-scrollbar-thumb{background:#b8c6dd;border-radius:999px}
 .workspace #attendance-register-panel .live-status.live-pending{background:transparent;color:#657997;font-weight:500}
 
 /* Separate action roles within the existing NCSC blue palette.
@@ -1123,20 +1123,20 @@ dialog.app-dialog[open]::backdrop,#dtr-preview-dialog[open]::backdrop{
 .workspace #employee-profile-panel .category-tab span::before{content:"";position:absolute;inset:-3px;z-index:-1;border-radius:999px;background:radial-gradient(circle,#ffffffa8 20%,#ffffff00 73%);pointer-events:none;opacity:0;transition:opacity .2s ease}
 .workspace #employee-profile-panel .category-tab:not(.active):is(:hover,:focus-visible) span::before{opacity:1}
 @media(prefers-reduced-motion:reduce){.workspace #employee-profile-panel .category-tab span::before{transition:none}}
-.workspace #employee-profile-panel .profile-action,.workspace #employee-profile-panel .profile-table .actions-column{width:60px;min-width:60px;max-width:60px}
-.workspace #employee-profile-panel .profile-table .directory-action-cell,.workspace #employee-profile-panel .profile-table .actions-column{padding-inline:4px}
+.workspace #employee-profile-panel .profile-action,.workspace :is(#employee-profile-panel,#aja-filings-panel) .profile-table .actions-column{width:60px;min-width:60px;max-width:60px}
+.workspace :is(#employee-profile-panel,#aja-filings-panel) .profile-table .directory-action-cell,.workspace :is(#employee-profile-panel,#aja-filings-panel) .profile-table .actions-column{padding-inline:4px}
 /* The directory action has the same three color states as View attendance.
    Retain the 20px visual circle inside its 24px click target. */
-.workspace #employee-profile-panel .profile-more{position:relative;isolation:isolate;width:24px;height:24px;min-width:24px;min-height:24px;padding:0;display:inline-grid;place-items:center;vertical-align:middle;border:0;border-radius:999px;background:transparent;color:#294d85;box-shadow:none;transform:none;transition:color .18s ease}
-.workspace #employee-profile-panel .profile-more::before{content:"";position:absolute;inset:2px;z-index:-1;border-radius:50%;background:#e3ebf8;transition:background-color .18s ease;pointer-events:none}
-.workspace #employee-profile-panel .profile-more svg{width:12px;height:12px;display:block}
-.workspace #employee-profile-panel .profile-table tbody tr:is(:hover,:focus-within) .profile-more{color:#fff}
-.workspace #employee-profile-panel .profile-table tbody tr:is(:hover,:focus-within) .profile-more::before{background:#3263bd}
+.workspace :is(#employee-profile-panel,#aja-filings-panel) .profile-more{position:relative;isolation:isolate;width:24px;height:24px;min-width:24px;min-height:24px;padding:0;display:inline-grid;place-items:center;vertical-align:middle;border:0;border-radius:999px;background:transparent;color:#294d85;box-shadow:none;transform:none;transition:color .18s ease}
+.workspace :is(#employee-profile-panel,#aja-filings-panel) .profile-more::before{content:"";position:absolute;inset:2px;z-index:-1;border-radius:50%;background:#e3ebf8;transition:background-color .18s ease;pointer-events:none}
+.workspace :is(#employee-profile-panel,#aja-filings-panel) .profile-more svg{width:12px;height:12px;display:block}
+.workspace :is(#employee-profile-panel,#aja-filings-panel) .profile-table tbody tr:is(:hover,:focus-within) .profile-more{color:#fff}
+.workspace :is(#employee-profile-panel,#aja-filings-panel) .profile-table tbody tr:is(:hover,:focus-within) .profile-more::before{background:#3263bd}
 /* The direct state must outrank row hover, including when the menu is open. */
-.workspace #employee-profile-panel .profile-table tbody tr .directory-action-cell .profile-more:is(:hover,:focus-visible,:active,[aria-expanded=true]){color:#fff;background:transparent;box-shadow:none;transform:none}
-.workspace #employee-profile-panel .profile-table tbody tr .directory-action-cell .profile-more:is(:hover,:focus-visible,:active,[aria-expanded=true])::before{background:#173b80}
-.workspace #employee-profile-panel .profile-more:focus-visible{outline:2px solid #7295ce;outline-offset:1px}
-@media(prefers-reduced-motion:reduce){.workspace #employee-profile-panel .profile-more,.workspace #employee-profile-panel .profile-more::before{transition:none}}
+.workspace :is(#employee-profile-panel,#aja-filings-panel) .profile-table tbody tr .directory-action-cell .profile-more:is(:hover,:focus-visible,:active,[aria-expanded=true]){color:#fff;background:transparent;box-shadow:none;transform:none}
+.workspace :is(#employee-profile-panel,#aja-filings-panel) .profile-table tbody tr .directory-action-cell .profile-more:is(:hover,:focus-visible,:active,[aria-expanded=true])::before{background:#173b80}
+.workspace :is(#employee-profile-panel,#aja-filings-panel) .profile-more:focus-visible{outline:2px solid #7295ce;outline-offset:1px}
+@media(prefers-reduced-motion:reduce){.workspace :is(#employee-profile-panel,#aja-filings-panel) .profile-more,.workspace :is(#employee-profile-panel,#aja-filings-panel) .profile-more::before{transition:none}}
 .workspace #employee-profile-panel .directory-archive-toggle{border:0;background:transparent;color:#536e94;font-size:10px;padding:4px 7px;border-radius:999px}
 .workspace #employee-profile-panel .directory-archive-toggle[hidden]{display:none}
 .workspace #employee-profile-panel .directory-archive-toggle:hover{background:#d8e5f7;color:#244b9a}
@@ -1151,7 +1151,7 @@ dialog.app-dialog[open]::backdrop,#dtr-preview-dialog[open]::backdrop{
 #profile-action-menu #profile-menu-delete:is(:hover,:focus-visible){background:#fbe2e7}
 #profile-action-menu #profile-menu-delete.restore-action{color:#244b9a}
 #profile-action-menu #profile-menu-delete.restore-action:is(:hover,:focus-visible){background:#dce8fb}
-@media(prefers-reduced-motion:reduce){#profile-action-menu,#profile-action-menu button,.workspace #employee-profile-panel .profile-more{transition:none}}
+@media(prefers-reduced-motion:reduce){#profile-action-menu,#profile-action-menu button,.workspace :is(#employee-profile-panel,#aja-filings-panel) .profile-more{transition:none}}
 
 @property --ncsc-fill-a{syntax:"<percentage>";inherits:false;initial-value:0%}
 @property --ncsc-fill-b{syntax:"<percentage>";inherits:false;initial-value:0%}
@@ -1160,19 +1160,19 @@ dialog.app-dialog[open]::backdrop,#dtr-preview-dialog[open]::backdrop{
 @property --ncsc-fill-e{syntax:"<percentage>";inherits:false;initial-value:0%}
 @property --ncsc-fill-f{syntax:"<percentage>";inherits:false;initial-value:0%}
 /* Organic, staggered color droplets. Fixed irregular centers; no linear or bottom-up fill. */
-.workspace :is(#attendance-register-panel,#employee-profile-panel,[data-view=staff]) .button.record-create-action:is(#open-attendance-import,#open-profile,#open-user-import){--liquid-base:var(--record-create-bg);--liquid-fill:#223ba8;position:relative;isolation:isolate;overflow:hidden;background:var(--liquid-base);color:#fff;box-shadow:none;transform:none;transition:none}
-.workspace :is(#attendance-register-panel,#employee-profile-panel,[data-view=staff]) .button.record-create-action:is(#open-attendance-import,#open-profile,#open-user-import)::before{content:"";position:absolute;inset:0;z-index:-1;pointer-events:none;border-radius:inherit;background-image:radial-gradient(circle at 8% 23%,var(--liquid-fill) max(0%,calc(var(--ncsc-fill-a) - .35%)),transparent var(--ncsc-fill-a)),
+.workspace :is(#attendance-register-panel,#employee-profile-panel,[data-view=staff],#aja-filings-panel,#aja-pilot-panel) .button.record-create-action:is(#open-attendance-import,#open-profile,#open-user-import,#aja-new-filing,#aja-submit){--liquid-base:var(--record-create-bg);--liquid-fill:#223ba8;position:relative;isolation:isolate;overflow:hidden;background:var(--liquid-base);color:#fff;box-shadow:none;transform:none;transition:none}
+.workspace :is(#attendance-register-panel,#employee-profile-panel,[data-view=staff],#aja-filings-panel,#aja-pilot-panel) .button.record-create-action:is(#open-attendance-import,#open-profile,#open-user-import,#aja-new-filing,#aja-submit)::before{content:"";position:absolute;inset:0;z-index:-1;pointer-events:none;border-radius:inherit;background-image:radial-gradient(circle at 8% 23%,var(--liquid-fill) max(0%,calc(var(--ncsc-fill-a) - .35%)),transparent var(--ncsc-fill-a)),
     radial-gradient(circle at 26% 81%,var(--liquid-fill) max(0%,calc(var(--ncsc-fill-b) - .35%)),transparent var(--ncsc-fill-b)),
     radial-gradient(circle at 47% 12%,var(--liquid-fill) max(0%,calc(var(--ncsc-fill-c) - .35%)),transparent var(--ncsc-fill-c)),
     radial-gradient(circle at 59% 63%,var(--liquid-fill) max(0%,calc(var(--ncsc-fill-d) - .35%)),transparent var(--ncsc-fill-d)),
     radial-gradient(circle at 79% 37%,var(--liquid-fill) max(0%,calc(var(--ncsc-fill-e) - .35%)),transparent var(--ncsc-fill-e)),
     radial-gradient(circle at 96% 86%,var(--liquid-fill) max(0%,calc(var(--ncsc-fill-f) - .35%)),transparent var(--ncsc-fill-f));background-repeat:no-repeat;opacity:0;transition:--ncsc-fill-a 0s linear .42s,--ncsc-fill-b 0s linear .42s,--ncsc-fill-c 0s linear .42s,--ncsc-fill-d 0s linear .42s,--ncsc-fill-e 0s linear .42s,--ncsc-fill-f 0s linear .42s,opacity .4s ease-out}
-.workspace :is(#attendance-register-panel,#employee-profile-panel,[data-view=staff]) .button.record-create-action:is(#open-attendance-import,#open-profile,#open-user-import):not(:disabled):is(:hover,:focus-visible){background:var(--liquid-base);color:#fff;box-shadow:none;transform:none}
-.workspace :is(#attendance-register-panel,#employee-profile-panel,[data-view=staff]) .button.record-create-action:is(#open-attendance-import,#open-profile,#open-user-import):not(:disabled):is(:hover,:focus-visible)::before{--ncsc-fill-a:56%;--ncsc-fill-b:53%;--ncsc-fill-c:64%;--ncsc-fill-d:105%;--ncsc-fill-e:58%;--ncsc-fill-f:53%;opacity:1;transition:--ncsc-fill-a .80s cubic-bezier(.42,0,.24,1),--ncsc-fill-b .72s cubic-bezier(.42,0,.24,1),--ncsc-fill-c .87s cubic-bezier(.42,0,.24,1),--ncsc-fill-d .89s cubic-bezier(.42,0,.24,1),--ncsc-fill-e .76s cubic-bezier(.42,0,.24,1),--ncsc-fill-f .82s cubic-bezier(.42,0,.24,1),opacity 0s;transition-delay:.10s,0s,.19s,.24s,.05s,.16s,0s}
-.workspace :is(#attendance-register-panel,#employee-profile-panel,[data-view=staff]) .button.record-create-action:is(#open-attendance-import,#open-profile,#open-user-import) svg,.workspace :is(#attendance-register-panel,#employee-profile-panel,[data-view=staff]) .button.record-create-action:is(#open-attendance-import,#open-profile,#open-user-import):not(:disabled):is(:hover,:focus-visible) svg{transform:none;animation:none;transition:none}
-.workspace :is(#attendance-register-panel,#employee-profile-panel,[data-view=staff]) .button.record-create-action:is(#open-attendance-import,#open-profile,#open-user-import):not(:disabled):active{background:var(--liquid-fill);transform:none;box-shadow:none}
-.workspace :is(#attendance-register-panel,#employee-profile-panel,[data-view=staff]) .button.record-create-action:is(#open-attendance-import,#open-profile,#open-user-import):focus-visible{outline:2px solid #7295ce;outline-offset:2px}
-@media(prefers-reduced-motion:reduce){.workspace :is(#attendance-register-panel,#employee-profile-panel,[data-view=staff]) .button.record-create-action:is(#open-attendance-import,#open-profile,#open-user-import)::before{transition:none}}
+.workspace :is(#attendance-register-panel,#employee-profile-panel,[data-view=staff],#aja-filings-panel,#aja-pilot-panel) .button.record-create-action:is(#open-attendance-import,#open-profile,#open-user-import,#aja-new-filing,#aja-submit):not(:disabled):is(:hover,:focus-visible){background:var(--liquid-base);color:#fff;box-shadow:none;transform:none}
+.workspace :is(#attendance-register-panel,#employee-profile-panel,[data-view=staff],#aja-filings-panel,#aja-pilot-panel) .button.record-create-action:is(#open-attendance-import,#open-profile,#open-user-import,#aja-new-filing,#aja-submit):not(:disabled):is(:hover,:focus-visible)::before{--ncsc-fill-a:56%;--ncsc-fill-b:53%;--ncsc-fill-c:64%;--ncsc-fill-d:105%;--ncsc-fill-e:58%;--ncsc-fill-f:53%;opacity:1;transition:--ncsc-fill-a .80s cubic-bezier(.42,0,.24,1),--ncsc-fill-b .72s cubic-bezier(.42,0,.24,1),--ncsc-fill-c .87s cubic-bezier(.42,0,.24,1),--ncsc-fill-d .89s cubic-bezier(.42,0,.24,1),--ncsc-fill-e .76s cubic-bezier(.42,0,.24,1),--ncsc-fill-f .82s cubic-bezier(.42,0,.24,1),opacity 0s;transition-delay:.10s,0s,.19s,.24s,.05s,.16s,0s}
+.workspace :is(#attendance-register-panel,#employee-profile-panel,[data-view=staff],#aja-filings-panel,#aja-pilot-panel) .button.record-create-action:is(#open-attendance-import,#open-profile,#open-user-import,#aja-new-filing,#aja-submit) svg,.workspace :is(#attendance-register-panel,#employee-profile-panel,[data-view=staff],#aja-filings-panel,#aja-pilot-panel) .button.record-create-action:is(#open-attendance-import,#open-profile,#open-user-import,#aja-new-filing,#aja-submit):not(:disabled):is(:hover,:focus-visible) svg{transform:none;animation:none;transition:none}
+.workspace :is(#attendance-register-panel,#employee-profile-panel,[data-view=staff],#aja-filings-panel,#aja-pilot-panel) .button.record-create-action:is(#open-attendance-import,#open-profile,#open-user-import,#aja-new-filing,#aja-submit):not(:disabled):active{background:var(--liquid-fill);transform:none;box-shadow:none}
+.workspace :is(#attendance-register-panel,#employee-profile-panel,[data-view=staff],#aja-filings-panel,#aja-pilot-panel) .button.record-create-action:is(#open-attendance-import,#open-profile,#open-user-import,#aja-new-filing,#aja-submit):focus-visible{outline:2px solid #7295ce;outline-offset:2px}
+@media(prefers-reduced-motion:reduce){.workspace :is(#attendance-register-panel,#employee-profile-panel,[data-view=staff],#aja-filings-panel,#aja-pilot-panel) .button.record-create-action:is(#open-attendance-import,#open-profile,#open-user-import,#aja-new-filing,#aja-submit)::before{transition:none}}
 
 
 /* Compact profile editor; same interaction palette as attendance and action menus. */
@@ -1498,10 +1498,10 @@ body:has(#profile-undo-stack:not(:empty)) #toast:not(.hidden){bottom:auto;top:22
 #profile-dialog .profile-position-field{grid-column:auto}
 
 /* Directory position is a distinct column; preserve saved title capitalization. */
-.workspace #employee-profile-panel .profile-table .profile-position-cell{color:#334d73;font-weight:600;line-height:1.4;overflow-wrap:anywhere;transition:color .22s ease,text-shadow .22s ease}
-.workspace #employee-profile-panel .profile-table tbody tr:is(:hover,:focus-within) .profile-position-cell{color:#0755c5;text-shadow:0 0 7px rgba(25,102,231,.16)}
+.workspace :is(#employee-profile-panel,#aja-filings-panel) .profile-table .profile-position-cell{color:#334d73;font-weight:600;line-height:1.4;overflow-wrap:anywhere;transition:color .22s ease,text-shadow .22s ease}
+.workspace :is(#employee-profile-panel,#aja-filings-panel) .profile-table tbody tr:is(:hover,:focus-within) .profile-position-cell{color:#0755c5;text-shadow:0 0 7px rgba(25,102,231,.16)}
 .workspace #employee-profile-panel .position-unset{color:#8294ad;text-shadow:none;font-weight:500}
-@media(prefers-reduced-motion:reduce){.workspace #employee-profile-panel .profile-table .profile-position-cell{transition:none}}
+@media(prefers-reduced-motion:reduce){.workspace :is(#employee-profile-panel,#aja-filings-panel) .profile-table .profile-position-cell{transition:none}}
 
 /* Editable position combobox: same visual system as the existing profile pickers. */
 #profile-dialog .profile-position-control{position:relative;min-width:0}
