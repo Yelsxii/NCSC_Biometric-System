@@ -162,7 +162,7 @@
 .workspace #aja-pilot-panel .aja-ticket-times{display:grid;grid-template-columns:minmax(0,1fr) auto minmax(0,1fr);align-items:center;gap:6px;padding:12px;border-top:1px dashed #c6d4e8}
 .workspace #aja-pilot-panel .aja-ticket-times>div:last-child{text-align:right}
 .workspace #aja-pilot-panel .aja-ticket-times strong{font-size:15px;font-weight:700;white-space:nowrap;font-variant-numeric:tabular-nums}
-.workspace #aja-pilot-panel .aja-ticket-duration{display:flex;align-items:center;justify-content:center;color:#657997;font-size:11px;font-weight:600;white-space:nowrap}
+.workspace #aja-pilot-panel .aja-ticket-duration{display:flex;align-items:center;justify-content:center;color:#52688a;font-size:15px;font-weight:650;white-space:nowrap;font-variant-numeric:tabular-nums}
 .workspace #aja-pilot-panel .aja-ticket-daily{padding:12px;border-top:1px dashed #c6d4e8}
 .workspace #aja-pilot-panel .aja-ticket-daily .aja-daily-summary{display:grid;grid-template-columns:minmax(0,1fr) auto auto;align-items:center;gap:6px;font-variant-numeric:tabular-nums}
 .workspace #aja-pilot-panel .aja-ticket-daily .aja-daily-summary small{color:#657997;white-space:nowrap}
