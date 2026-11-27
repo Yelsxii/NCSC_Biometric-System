@@ -591,7 +591,7 @@ $('aja-form').addEventListener('submit',async e=>{
   if(!filingReady(values,days,account,busyFiling)){updateFileButton();return;}
   const payload={days,origin:values.origin,destination:values.destination,purpose:values.purpose};
   clearPreview();const owner=account;
-  busyFiling=true;ajaForm.inert=true;$('aja-submit').disabled=true;$('aja-submit').textContent='Filing…';setError('aja-error','');
+  busyFiling=true;ajaForm.inert=true;$('aja-submit').disabled=true;$('aja-submit').textContent='Submitting…';setError('aja-error','');
   let filed=false;
   try{
     const data=await call('aja/file',payload);
@@ -608,7 +608,7 @@ $('aja-form').addEventListener('submit',async e=>{
       else setError('aja-error',err.message);
     }
   }finally{
-    busyFiling=false;ajaForm.inert=false;$('aja-submit').textContent='Submit AJA';updateFileButton();
+    busyFiling=false;ajaForm.inert=false;$('aja-submit').textContent='Submit';updateFileButton();
   }
 });
 $('dtr-preview-back').addEventListener('click',()=>$('dtr-preview-dialog').close());
