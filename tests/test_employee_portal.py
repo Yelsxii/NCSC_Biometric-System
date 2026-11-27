@@ -119,3 +119,42 @@ def test_aja_filing_persistence_and_ownership(admin, monkeypatch):
     assert refile.status_code == 200, refile.text
     assert refile.json()["filing"]["reference"] != ref
     assert len(client.get("/api/employee-portal/aja/filings").json()["filings"]) == 1
+
+
+def test_admin_aja_monitor_reads_active_filings_only(admin, monkeypatch):
+    import app.main as main
+    client, _ = admin
+    monkeypatch.setattr(main, "render_saved_pdf", lambda pdf: {"pdf":"test", "previews":["test"]})
+    with closing(connect()) as con, con:
+        con.execute("INSERT INTO employees(employee_code,display_name,department) VALUES(?,?,?)",
+                    ("aja-monitor-test","Test Employee","Operations"))
+        for ref in ("AJA-TEST-ACTIVE","AJA-TEST-DELETED"):
+            cur = con.execute("""INSERT INTO aja_filings(employee_code,reference,fingerprint,employee_name,
+                position,department,origin,destination,purpose,pdf) VALUES(?,?,?,?,?,?,?,?,?,?)""",
+                ("aja-monitor-test",ref,ref,"Test Employee","Officer","Operations","Office","Venue","Meeting",b"saved-pdf"))
+            con.execute("INSERT INTO aja_filing_days(filing_id,business_date,departure,return_time) VALUES(?,?,?,?)",
+                        (cur.lastrowid,"2026-12-16","08:00","10:00"))
+            if ref.endswith("DELETED"):
+                con.execute("INSERT INTO aja_filing_deletions(filing_id,original_fingerprint) VALUES(?,?)",
+                            (cur.lastrowid,ref))
+        con.execute("INSERT INTO employee_portal_accounts(employee_code,username,password_hash) VALUES(?,?,?)",
+                    ("aja-monitor-test","aja-monitor-employee",hash_password("local-test-password")))
+    base = "/api/admin/aja/filings"
+    result = client.get(base)
+    assert result.status_code == 200
+    assert [item["reference"] for item in result.json()["filings"]] == ["AJA-TEST-ACTIVE"]
+    item = result.json()["filings"][0]
+    assert item["employee_code"] == "aja-monitor-test"
+    assert item["days"] == [{"date":"2026-12-16","departure":"08:00","return_time":"10:00"}]
+    assert item["status"] == "awaiting_signatures"
+    assert client.get(base+"/AJA-TEST-ACTIVE/document").status_code == 200
+    assert client.get(base+"/AJA-TEST-ACTIVE/pdf").content == b"saved-pdf"
+    assert client.get(base+"/AJA-TEST-DELETED/document").status_code == 404
+    assert client.get(base+"/AJA-TEST-DELETED/pdf").status_code == 404
+    with closing(connect()) as con:
+        assert con.execute("SELECT COUNT(*) FROM activity_records WHERE employee_code='aja-monitor-test'").fetchone()[0] == 0
+    assert client.post("/api/login",json={"username":"reviewer-test","password":"local-reviewer-test-password"}).status_code == 200
+    assert client.get(base).status_code == 403
+    assert client.post("/api/employee-portal/login",json={"username":"aja-monitor-employee","password":"local-test-password"}).status_code == 200
+    assert client.get(base).status_code == 401
+    assert client.get(base+"/AJA-TEST-ACTIVE/pdf").status_code == 401
