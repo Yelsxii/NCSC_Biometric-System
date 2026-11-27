@@ -185,8 +185,8 @@
 .workspace #aja-filings-panel .aja-col-status{width:19%}
 .workspace #aja-filings-panel .aja-col-actions,.workspace #aja-filings-panel .aja-filings-table .actions-column{width:60px;min-width:60px;max-width:60px}
 .workspace #aja-filings-panel .aja-filings-table .aja-reference-cell{font-size:10.5px;white-space:normal;overflow-wrap:anywhere}
-.workspace #aja-filings-panel .aja-filing-status{display:inline-flex;padding:4px 7px;border-radius:6px;background:#e3ebf8;color:#486387;font-size:10px;font-weight:650;line-height:1.4;transition:background-color .22s ease,color .22s ease}
-.workspace #aja-filings-panel .aja-filings-table tbody tr:is(:hover,:focus-within) .aja-filing-status{background:#c5d9f6;color:#244b9a;text-shadow:0 0 4px #2458b41a}
+.workspace #aja-filings-panel .aja-filing-status{display:inline-flex;padding:4px 7px;border-radius:6px;background:#fff5da;color:#76551b;font-size:10px;font-weight:650;line-height:1.4;transition:background-color .22s ease,color .22s ease}
+.workspace #aja-filings-panel .aja-filings-table tbody tr:is(:hover,:focus-within) .aja-filing-status{background:#ffedbd;color:#704c0d;text-shadow:none}
 .workspace #aja-filings-panel .aja-filing-action:disabled{opacity:.45;cursor:wait}
 .workspace #aja-filings-panel .aja-filings-message{margin:0 0 10px;font-size:11px;font-weight:600;color:#385780;overflow-wrap:anywhere}
 .workspace #aja-filings-panel .aja-filings-message.is-error{color:#a12a45}
