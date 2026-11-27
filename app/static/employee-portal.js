@@ -1,6 +1,7 @@
 'use strict';
 const $=id=>document.getElementById(id);
 let account=null, pdfUrl=null, epoch=0, zoom=1, fit=true, previewPages=[], previewIndex=0;
+let busyFiling=false, historyVersion=0, activeReference='', printFrame=null;
 function setError(id,message){
   const node=$(id);node.textContent=message;node.classList.toggle('hidden',!message);
 }
@@ -31,7 +32,7 @@ function clearPreview(){
   epoch++;
   if($('dtr-preview-dialog').open)$('dtr-preview-dialog').close();
   if(pdfUrl)URL.revokeObjectURL(pdfUrl);
-  pdfUrl=null;previewPages=[];previewIndex=0;$('aja-paper').removeAttribute('src');
+  pdfUrl=null;previewPages=[];previewIndex=0;activeReference='';$('aja-paper').removeAttribute('src');
 }
 const ajaForm=$('aja-form'),timePicker=$('aja-time-picker');
 const timeNames=['departure','return_time'];
@@ -376,8 +377,62 @@ function identity(){
   $('aja-avatar').textContent=account?.name?.split(',').map(part=>part.trim()[0]||'').join('').toUpperCase()||'—';
   updateSummary();
 }
+function selectPage(page){
+  closeTimePicker();closeCalendar();
+  document.querySelectorAll('#workspace .page[data-view]').forEach(node=>node.classList.toggle('hidden',node.dataset.view!==page));
+  document.querySelectorAll('#workspace .nav-item[data-page]').forEach(button=>{
+    const active=button.dataset.page===page;
+    button.classList.toggle('active',active);
+    if(active)button.setAttribute('aria-current','page');else button.removeAttribute('aria-current');
+  });
+  $('section-name').textContent=page==='filings'?'My AJA Filings':'AJA / Official Business';
+}
+function historyMessage(message,error=false){
+  const node=$('aja-filings-message');node.textContent=message;node.classList.toggle('hidden',!message);node.classList.toggle('is-error',error);
+}
+function historyEmpty(message){
+  const row=document.createElement('tr'),cell=document.createElement('td');cell.colSpan=5;cell.className='table-empty';cell.textContent=message;row.append(cell);$('aja-filings-rows').replaceChildren(row);
+}
+async function loadFilings(){
+  const version=++historyVersion,owner=account;
+  historyEmpty('Loading filings…');
+  try{
+    const data=await call('aja/filings');
+    if(version!==historyVersion||owner!==account)return;
+    const host=$('aja-filings-rows');host.replaceChildren();
+    if(!data.filings.length){historyEmpty('No AJA filings yet.');return;}
+    for(const filing of data.filings){
+      const row=document.createElement('tr');
+      for(const value of [filing.reference,filing.days.map(day=>dateLabel(day.date,true)).join('; '),filing.destination]){
+        const cell=document.createElement('td');cell.textContent=value;row.append(cell);
+      }
+      const status=document.createElement('td'),badge=document.createElement('span');badge.className='aja-filing-status';badge.textContent='Awaiting signatures';status.append(badge);row.append(status);
+      const action=document.createElement('td'),button=document.createElement('button');button.type='button';button.className='button outline aja-open-filing';button.textContent='View / Print';
+      button.addEventListener('click',async()=>{
+        if(button.disabled)return;button.disabled=true;historyMessage('');
+        try{await openFiledDocument(filing.reference,owner);}catch(err){if(owner===account)historyMessage(err.message,true);}finally{button.disabled=false;}
+      });
+      action.append(button);row.append(action);host.append(row);
+    }
+  }catch(err){if(version===historyVersion&&owner===account){historyEmpty('Could not load filings.');historyMessage(err.message,true);}}
+}
+document.querySelectorAll('#workspace .nav-item[data-page]').forEach(button=>button.addEventListener('click',()=>{
+  if(busyFiling)return;selectPage(button.dataset.page);historyMessage('');if(button.dataset.page==='filings')loadFilings();
+}));
+$('aja-new-filing').addEventListener('click',()=>{if(!busyFiling){selectPage('activities');$('aja-date-trigger').focus({preventScroll:true});}});
+async function openFiledDocument(reference,owner=account){
+  const data=await call('aja/filings/'+encodeURIComponent(reference)+'/document');
+  if(!owner||owner!==account)return;
+  clearPreview();
+  const bytes=Uint8Array.from(atob(data.pdf),char=>char.charCodeAt(0));
+  pdfUrl=URL.createObjectURL(new Blob([bytes],{type:'application/pdf'}));
+  activeReference=data.filing.reference;previewPages=data.previews;$('dtr-preview-note').hidden=true;
+  $('dtr-preview-context').textContent=data.filing.employee_name;
+  $('aja-preview-reference').textContent=activeReference;
+  fit=true;$('dtr-preview-dialog').showModal();showPreviewPage(0);
+}
 function show(user){
-  clearPreview();account=user;$('login-view').classList.toggle('hidden',!!user);$('workspace').classList.toggle('hidden',!user);
+  clearPreview();account=user;historyVersion++;historyMessage('');historyEmpty('No filings yet.');selectPage('activities');$('login-view').classList.toggle('hidden',!!user);$('workspace').classList.toggle('hidden',!user);
   $('aja-form').reset();identity();
   setError('aja-error','');$('aja-submit').disabled=false;
 }
@@ -386,7 +441,7 @@ $('login-form').addEventListener('submit',async e=>{
   try{const data=await call('login',Object.fromEntries(new FormData(e.target)));e.target.reset();show(data);}
   catch(err){setError('login-error',err.message);}finally{b.disabled=false;}
 });
-$('logout-sidebar').addEventListener('click',async()=>{try{await call('logout',{});show(null);}catch(err){setError('aja-error',err.message);}});
+$('logout-sidebar').addEventListener('click',async()=>{if(busyFiling)return;try{await call('logout',{});show(null);}catch(err){if(document.querySelector('[data-view=filings]').classList.contains('hidden'))setError('aja-error',err.message);else historyMessage(err.message,true);}});
 $('aja-form').addEventListener('reset',()=>{
   closeTimePicker();closeCalendar();clearPreview();
   queueMicrotask(()=>{
@@ -419,7 +474,7 @@ function applyZoom(){
   $('dtr-zoom-fit').setAttribute('aria-pressed',String(fit));
 }
 $('aja-form').addEventListener('submit',async e=>{
-  e.preventDefault();if(!account)return;
+  e.preventDefault();if(!account||busyFiling)return;
   closeTimePicker();closeCalendar();
   if(!dates.length){setError('aja-error','Select at least one official business date.');$('aja-date-trigger').setAttribute('aria-invalid','true');$('aja-date-trigger').focus();return;}
   for(const target of activeTimeTargets()){
@@ -431,24 +486,49 @@ $('aja-form').addEventListener('submit',async e=>{
   if(bad){setError('aja-error','Return must be after departure on '+dateLabel(bad.date,true)+'. Overnight trips require HR review.');return;}
   const values=Object.fromEntries(new FormData(e.target));
   const payload={days,origin:values.origin,destination:values.destination,purpose:values.purpose};
-  clearPreview();const token=epoch;
-  $('aja-submit').disabled=true;setError('aja-error','');
+  clearPreview();const owner=account;
+  busyFiling=true;ajaForm.inert=true;$('aja-submit').disabled=true;$('aja-submit').textContent='Filing…';setError('aja-error','');
+  let filed=false;
   try{
-    const data=await call('aja/preview',payload);
-    if(token!==epoch)return;
-    const bytes=Uint8Array.from(atob(data.pdf),c=>c.charCodeAt(0));
-    pdfUrl=URL.createObjectURL(new Blob([bytes],{type:'application/pdf'}));
-    previewPages=data.previews||[data.preview];showPreviewPage(0);
-    $('dtr-preview-context').textContent=account.name;
-    fit=true;$('dtr-preview-dialog').showModal();requestAnimationFrame(applyZoom);
-  }catch(err){if(token===epoch)setError('aja-error',err.message);}
-  finally{if(token===epoch)$('aja-submit').disabled=false;}
+    const data=await call('aja/file',payload);
+    if(owner!==account)return;
+    filed=true;
+    ajaForm.reset();
+    selectPage('filings');
+    historyMessage((data.already_filed?'Existing filing reopened: ':'AJA filed successfully: ')+data.filing.reference);
+    await loadFilings();
+    await openFiledDocument(data.filing.reference,owner);
+  }catch(err){
+    if(owner===account){
+      if(filed)historyMessage('AJA saved. Open View / Print to try again. '+err.message,true);
+      else setError('aja-error',err.message);
+    }
+  }finally{
+    busyFiling=false;ajaForm.inert=false;$('aja-submit').disabled=false;$('aja-submit').textContent='File AJA';
+  }
 });
 $('dtr-preview-back').addEventListener('click',()=>$('dtr-preview-dialog').close());
 $('dtr-zoom-out').addEventListener('click',()=>{fit=false;zoom=Math.max(.12,zoom-.15);applyZoom();});
 $('dtr-zoom-in').addEventListener('click',()=>{fit=false;zoom=Math.min(2,zoom+.15);applyZoom();});
 $('dtr-zoom-fit').addEventListener('click',()=>{fit=true;applyZoom();});
 window.addEventListener('resize',()=>{if(fit)applyZoom();});
-$('dtr-preview-download').addEventListener('click',()=>{if(pdfUrl){const a=document.createElement('a');a.href=pdfUrl;a.download='AJA-OB.pdf';a.click();}});
-$('dtr-preview-print').addEventListener('click',()=>{if(pdfUrl)window.open(pdfUrl,'_blank','noopener');});
+$('dtr-preview-download').addEventListener('click',()=>{if(pdfUrl){const a=document.createElement('a');a.href=pdfUrl;a.download=(activeReference||'AJA-OB')+'.pdf';a.click();}});
+$('dtr-preview-print').addEventListener('click',async()=>{
+  if(!pdfUrl||!previewPages.length||printFrame)return;
+  const button=$('dtr-preview-print');button.disabled=true;
+  const frame=document.createElement('iframe');printFrame=frame;frame.className='aja-print-frame';frame.title='Printable AJA forms';frame.setAttribute('aria-hidden','true');frame.tabIndex=-1;
+  const release=()=>{if(printFrame===frame){frame.remove();printFrame=null;button.disabled=false;}};
+  try{
+    document.body.append(frame);
+    const doc=frame.contentDocument;
+    doc.open();doc.write('<!doctype html><html><head><meta charset="utf-8"><title>AJA</title><style>@page{size:8.5in 13in;margin:0}html,body{margin:0;padding:0;background:white}img{display:block;width:8.5in;height:13in;object-fit:contain;break-after:page;page-break-after:always}img:last-child{break-after:auto;page-break-after:auto}</style></head><body></body></html>');doc.close();
+    const images=previewPages.map(page=>{const image=doc.createElement('img');image.src='data:image/png;base64,'+page;doc.body.append(image);return image;});
+    await Promise.all(images.map(image=>image.decode()));
+    if(!pdfUrl||!$('dtr-preview-dialog').open){release();return;}
+    frame.contentWindow.addEventListener('afterprint',release,{once:true});
+    frame.contentWindow.focus();frame.contentWindow.print();
+    // Native print is blocking in Chromium; also release when it returns.
+    release();
+  }catch(err){release();const note=$('dtr-preview-note');note.textContent='Unable to open print dialog. Download the original PDF and print it instead.';note.hidden=false;}
+});
 call('me').then(show).catch(()=>show(null));
