@@ -141,6 +141,11 @@ CREATE TABLE IF NOT EXISTS aja_filing_days (
  CHECK(return_time>departure)
 );
 CREATE INDEX IF NOT EXISTS idx_aja_filings_employee ON aja_filings(employee_code,id DESC);
+CREATE TABLE IF NOT EXISTS aja_filing_deletions (
+ filing_id INTEGER PRIMARY KEY REFERENCES aja_filings(id),
+ original_fingerprint TEXT NOT NULL,
+ deleted_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
 CREATE TABLE IF NOT EXISTS employee_profiles (
  employee_code TEXT PRIMARY KEY REFERENCES employees(employee_code),
  first_name TEXT NOT NULL,
@@ -286,7 +291,8 @@ def initialize() -> None:
                  "manual-dtr" if "manual_dtr_entries" not in tables else
                  "approved-times" if "approved_times" not in {row[1] for row in con.execute("PRAGMA table_info(attendance_day_reviews)")} else
                  "bionet-evidence" if "bionet_attendance_evidence" not in tables else
-                 "aja-filing" if "aja_filings" not in tables else None)
+                 "aja-filing" if "aja_filings" not in tables else
+                 "aja-deletions" if "aja_filing_deletions" not in tables else None)
         if phase and "punches" in tables:
             if con.execute("SELECT COUNT(*) FROM punches").fetchone()[0]:
                 folder = database_path().parent / "backups"
