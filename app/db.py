@@ -108,6 +108,14 @@ CREATE TABLE IF NOT EXISTS employees (
  name_source TEXT NOT NULL DEFAULT 'scan',
  updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
+CREATE TABLE IF NOT EXISTS employee_portal_accounts (
+ id INTEGER PRIMARY KEY AUTOINCREMENT,
+ employee_code TEXT NOT NULL UNIQUE REFERENCES employees(employee_code),
+ username TEXT NOT NULL UNIQUE,
+ password_hash TEXT NOT NULL,
+ enabled INTEGER NOT NULL DEFAULT 1 CHECK(enabled IN (0,1)),
+ created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
 CREATE TABLE IF NOT EXISTS employee_profiles (
  employee_code TEXT PRIMARY KEY REFERENCES employees(employee_code),
  first_name TEXT NOT NULL,
