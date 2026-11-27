@@ -472,12 +472,12 @@
 }
 .workspace #attendance-register-panel .attendance-directory tbody tr:hover{background:#dbe7f7}
 .workspace #attendance-register-panel .attendance-directory tbody tr:hover .directory-action-cell{background:#dbe7f7}
-/* Match Employees' action control: quiet default, blue on row hover,
-   deeper navy on direct interaction. Keep the text-only attendance button. */
+/* Dark blue attendance action, brighter on row hover and deeper navy
+   on direct interaction. Keep the text-only attendance button. */
 .workspace #attendance-register-panel .directory-action-cell .row-action{
   display:inline-flex;align-items:center;justify-content:center;gap:0;
   height:30px;min-height:30px;padding:0 9px;border:0;
-  background:#e3ebf8;color:#294d85;font-size:10.5px;font-weight:650;
+  background:#244b9a;color:#fff;font-size:10.5px;font-weight:650;
   text-decoration:none!important;border-radius:6px;box-shadow:none;transform:none;
   transition:background-color .18s ease,color .18s ease;
 }
