@@ -4,6 +4,7 @@ from contextlib import closing
 from io import BytesIO
 from pathlib import Path
 import secrets
+import threading
 
 from fastapi import APIRouter, Depends, HTTPException, Request
 from fastapi.responses import FileResponse
@@ -15,6 +16,7 @@ from app.aja_print import AjaPrintInput, build_aja_pdf
 
 router = APIRouter()
 ROOT = Path(__file__).resolve().parent
+_PDF_RENDER_LOCK = threading.Lock()
 
 def employee_identity(con, account_id):
     row = con.execute("""
@@ -112,18 +114,19 @@ def employee_aja_preview(payload: EmployeeAjaInput, request: Request, user=Depen
     pdf = build_aja_pdf(form, ROOT / "aja-template.pdf")
     # Render the exact generated PDF, not an independent HTML reconstruction.
     import pypdfium2 as pdfium
-    doc = pdfium.PdfDocument(pdf)
-    try:
-        page = doc[0]
+    with _PDF_RENDER_LOCK:
+        doc = pdfium.PdfDocument(pdf)
         try:
-            bitmap = page.render(scale=2.5)
+            page = doc[0]
             try:
-                image = BytesIO()
-                bitmap.to_pil().save(image, format="PNG")
+                bitmap = page.render(scale=2.5)
+                try:
+                    image = BytesIO()
+                    bitmap.to_pil().save(image, format="PNG")
+                finally:
+                    bitmap.close()
             finally:
-                bitmap.close()
+                page.close()
         finally:
-            page.close()
-    finally:
-        doc.close()
+            doc.close()
     return {"pdf": b64encode(pdf).decode("ascii"), "preview": b64encode(image.getvalue()).decode("ascii")}
