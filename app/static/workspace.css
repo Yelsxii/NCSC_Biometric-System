@@ -1049,12 +1049,12 @@ dialog.app-dialog[open]::backdrop,#dtr-preview-dialog[open]::backdrop{
 .workspace #employee-profile-panel .category-tab[data-profile-category="GIP"]{--filter-accent:#7842b6;--filter-count:#efe1ff;--filter-hover:#e8dafa}
 .workspace #employee-profile-panel .category-tab[data-profile-category="OJT"]{--filter-accent:#a35113;--filter-count:#ffead7;--filter-hover:#fce4ce}
 .workspace #employee-profile-panel .category-tab:not(.active):is(:hover,:focus-visible){background:var(--filter-hover);color:var(--filter-accent);box-shadow:none}
-.workspace #employee-profile-panel .category-tab:not(.active):is(:hover,:focus-visible) span{background:var(--filter-accent);color:#fff}
+.workspace #employee-profile-panel .category-tab:not(.active):is(:hover,:focus-visible) span{background:#f5f8fd;color:var(--filter-accent)}
 /* Selected filters retain their own hover palette, with a slightly richer tint
-   and a colored count badge so selection stays distinguishable from hover. */
+   and a flat light count badge so selection stays distinguishable from hover. */
 .workspace #employee-profile-panel .category-tab.active{color:color-mix(in srgb,var(--filter-accent) 74%,#172b49);background:color-mix(in srgb,var(--filter-hover) 86%,var(--filter-accent));box-shadow:none;font-weight:650}
 .workspace #employee-profile-panel .category-tab.active:is(:hover,:focus-visible){background:color-mix(in srgb,var(--filter-hover) 78%,var(--filter-accent))}
-.workspace #employee-profile-panel .category-tab.active span{background:var(--filter-accent);color:#fff;box-shadow:none}
+.workspace #employee-profile-panel .category-tab.active span{background:#f5f8fd;color:var(--filter-accent);box-shadow:none}
 .workspace #employee-profile-panel .category-tab:focus-visible{outline:2px solid #7295ce;outline-offset:2px}
 .workspace #employee-profile-panel #open-profile{height:38px;min-height:38px;border-radius:9px;font-size:11px;font-weight:650;gap:7px;flex-shrink:0}
 .workspace #employee-profile-panel #open-profile svg{width:16px;height:16px;flex:none}
@@ -1118,7 +1118,7 @@ dialog.app-dialog[open]::backdrop,#dtr-preview-dialog[open]::backdrop{
 
 /* Small translucent light circle behind count badges, without a raised button. */
 .workspace #employee-profile-panel .category-tab span{position:relative;isolation:isolate}
-.workspace #employee-profile-panel .category-tab span::before{content:"";position:absolute;inset:-3px;z-index:-1;border-radius:999px;background:radial-gradient(circle,#ffffffa8 20%,#ffffff00 73%);pointer-events:none}
+.workspace #employee-profile-panel .category-tab span::before{content:none}
 .workspace #employee-profile-panel .profile-action,.workspace #employee-profile-panel .profile-table .actions-column{width:60px;min-width:60px;max-width:60px}
 .workspace #employee-profile-panel .profile-table .directory-action-cell,.workspace #employee-profile-panel .profile-table .actions-column{padding-inline:4px}
 .workspace #employee-profile-panel .profile-more{position:relative;isolation:isolate;width:24px;height:24px;min-width:24px;min-height:24px;padding:0;display:inline-grid;place-items:center;vertical-align:middle;border:0;border-radius:999px;background:transparent;color:#294d85;box-shadow:none;transition:color .18s ease}
