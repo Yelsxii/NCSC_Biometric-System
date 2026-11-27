@@ -1396,3 +1396,74 @@ body:has(#profile-undo-stack:not(:empty)) #toast:not(.hidden){bottom:auto;top:22
   .workspace .sidebar .nav-edge-highlight::after{content:none}
   @media(max-width:1100px){.workspace .sidebar{--nav-join-left:10px}}
 }
+
+/* AJA / Travel Orders: match the finalized employee directories.
+   All overrides are scoped to this page; shared sidebar and other pages stay intact. */
+.workspace .content-shell .page #activity-log-panel{background:#eaf1fa;border-color:#f7faffaa;box-shadow:inset 0 1px 0 #ffffffb0,0 5px 18px #45689b15;backdrop-filter:none;-webkit-backdrop-filter:none}
+.workspace #activity-log-panel .panel-header{margin:0 0 15px;gap:12px}
+.workspace #activity-log-panel .panel-header h2{color:#20375f;font-size:15px;font-weight:700;letter-spacing:0}
+.workspace #activity-log-panel .activity-toolbar{gap:10px 12px;margin:0 0 14px;align-items:flex-end;flex-wrap:wrap}
+.workspace #activity-log-panel .activity-toolbar label{font-size:11px;color:#657997;font-weight:550}
+.workspace #activity-log-panel .search-box{display:flex;flex-direction:column;gap:6px;flex:1 1 200px;min-width:160px;max-width:none;width:auto}
+.workspace #activity-log-panel .employee-search-field{position:relative;display:flex;align-items:center;min-width:0}
+.workspace #activity-log-panel .search-icon{position:absolute;left:12px;width:17px;height:17px;color:#6f86ae;pointer-events:none}
+.workspace #activity-log-panel #activity-search{width:100%;min-width:0;height:38px;min-height:38px;padding:0 12px 0 37px;border:1px solid #e0e7f3;border-radius:9px;color:#203b67;background:#f6f8fc;font-size:12px}
+.workspace #activity-log-panel #activity-search:hover{border-color:#c5d2e8;background:#fff}
+.workspace #activity-log-panel #activity-search:focus{border-color:#7295ce;background:#fff;box-shadow:0 0 0 3px #244b9a12}
+.workspace #activity-log-panel .register-month-control{flex:0 0 auto;min-width:0}
+.workspace #activity-log-panel #activity-month-trigger{background:#f8faff;color:#203b67;border-color:#c4d3ec;box-shadow:none;border-radius:9px}
+.workspace #activity-log-panel #activity-month-trigger svg{color:#2258a4}
+.workspace #activity-log-panel #activity-month-trigger:is(:hover,[aria-expanded=true]){background:#e2ebfc;color:#173b80;border-color:#a3b9df;box-shadow:none}
+.workspace #activity-log-panel .activity-category-control{display:flex;flex-direction:column;gap:6px;flex:0 0 auto;min-width:0}
+.workspace #activity-log-panel #activity-category{height:38px;min-height:38px;min-width:128px;width:100%;border:1px solid #c4d3ec;border-radius:9px;background:#f8faff;color:#203b67;font-size:11px;font-weight:650;padding:0 28px 0 10px}
+.workspace #activity-log-panel #activity-category:focus{border-color:#7295ce;background:#fff;box-shadow:0 0 0 3px #244b9a12}
+.workspace #activity-log-panel .activity-submit{height:38px;min-height:38px;border-radius:9px;padding:0 13px;font-size:11px;font-weight:650;background:#244b9a;border-color:transparent;color:#fff;box-shadow:none;transition:background-color .22s ease}
+.workspace #activity-log-panel .activity-submit:is(:hover,:focus-visible){background:#173b80;box-shadow:none}
+.workspace #activity-log-panel #activity-counts{display:flex;flex-wrap:wrap;gap:7px;padding:0;margin:0 0 12px;border:0;color:#344f76;font-size:11.5px}
+.workspace #activity-log-panel #activity-counts>span{display:inline-flex;align-items:center;gap:6px;min-height:31px;padding:4px 10px;border-radius:999px;background:#f5f8fd;font-weight:550}
+.workspace #activity-log-panel #activity-counts b{display:grid;place-items:center;min-width:20px;height:20px;padding:0 5px;margin:0;border-radius:999px;background:#dce9ff;color:#2458b4;font-size:10.5px;font-weight:700;font-variant-numeric:tabular-nums}
+.workspace #activity-log-panel #activity-counts>span:nth-child(2) b{background:#fff1d6;color:#805d18}
+.workspace #activity-log-panel #activity-counts>span:nth-child(3) b{background:#eee6fa;color:#68459c}
+.workspace #activity-log-panel .activity-table{width:100%;min-width:820px;table-layout:fixed;font-size:11.5px;color:#526987}
+.workspace #activity-log-panel .activity-table th{width:auto;text-align:left;height:34px;padding:9px 10px;color:#3a5275;font-size:11px;font-weight:600;letter-spacing:.01em;background:#dfe8f3;border-bottom:1px solid transparent;box-shadow:0 2px 3px #304d7510}
+.workspace #activity-log-panel .activity-table td{height:44px;padding:7px 10px;vertical-align:middle;overflow-wrap:anywhere}
+.workspace #activity-log-panel .activity-col-id{width:90px}
+.workspace #activity-log-panel .activity-col-name{width:auto}
+.workspace #activity-log-panel .activity-col-type{width:110px}
+.workspace #activity-log-panel .activity-col-direction{width:90px}
+.workspace #activity-log-panel .activity-col-date{width:98px}
+.workspace #activity-log-panel .activity-col-time{width:82px}
+.workspace #activity-log-panel .activity-col-code{width:80px}
+.workspace #activity-log-panel .activity-col-action{width:125px}
+.workspace #activity-log-panel .activity-table tbody tr:nth-child(even){background:#f7f9fc}
+.workspace #activity-log-panel .activity-table tbody tr:is(:hover,:focus-within){background:#dbe7f7}
+.workspace #activity-log-panel .activity-table .id-cell{font-weight:650;color:#334d73;font-variant-numeric:tabular-nums;white-space:nowrap}
+.workspace #activity-log-panel .activity-table .employee-name-cell{font-size:12px;color:#263b60;font-weight:650}
+.workspace #activity-log-panel .activity-table .date-cell{font-variant-numeric:tabular-nums;white-space:nowrap}
+.workspace #activity-log-panel .activity-table tbody tr:is(:hover,:focus-within) :is(.employee-name-cell,.id-cell){color:#0755c5}
+.workspace #activity-log-panel .activity-table .activity-badge{min-width:0;border:0;border-radius:6px;padding:4px 7px;font-size:10px;font-weight:650}
+.workspace #activity-log-panel .activity-aja{background:#fff1d6;color:#805d18}
+.workspace #activity-log-panel .activity-travel{background:#eee6fa;color:#68459c}
+.workspace #activity-log-panel .direction-pill{display:inline-block;padding:4px 7px;border:0;border-radius:6px;font-size:10px;font-weight:650;background:#e9edf4;color:#536985}
+.workspace #activity-log-panel .direction-in{background:#e3f4eb;color:#23694e}
+.workspace #activity-log-panel .direction-out{background:#e6eefc;color:#345d9d}
+.workspace #activity-log-panel .code-pill{border-radius:6px;background:#e5edf8;color:#334d73;font-family:inherit;line-height:1.25;font-size:10px;font-weight:650;padding:4px 7px}
+.workspace #activity-log-panel .activity-table .actions-column{position:sticky;right:0;z-index:4;text-align:center;width:125px;box-shadow:0 2px 3px #304d7510,-3px 0 8px #263b600d}
+.workspace #activity-log-panel .activity-table .directory-action-cell{position:sticky;right:0;z-index:2;text-align:center;background:#fff;box-shadow:-3px 0 8px #263b601c;padding:6px 8px}
+.workspace #activity-log-panel .activity-table tbody tr:nth-child(even) .directory-action-cell{background:#f7f9fc}
+.workspace #activity-log-panel .activity-table tbody tr:is(:hover,:focus-within) .directory-action-cell{background:#dbe7f7}
+.workspace #activity-log-panel .directory-action-cell .row-action{display:inline-flex;align-items:center;justify-content:center;height:30px;min-height:30px;padding:0 9px;border:0;background:#244b9a;color:#fff;font-size:10.5px;font-weight:650;border-radius:6px;text-decoration:none!important;box-shadow:none;transition:background-color .18s ease,color .18s ease}
+.workspace #activity-log-panel .activity-table tbody tr:is(:hover,:focus-within) .row-action{background:#3263bd}
+.workspace #activity-log-panel .activity-table tbody tr .directory-action-cell .row-action:is(:hover,:focus-visible,:active){background:#173b80}
+.workspace #activity-log-panel .directory-action-cell .row-action:focus-visible{outline:2px solid #7295ce;outline-offset:1px}
+.workspace #activity-log-panel .table-wrap{scrollbar-width:thin;scrollbar-color:#b8c6dd transparent}
+.workspace #activity-log-panel .table-wrap::-webkit-scrollbar{display:block;width:6px;height:6px}
+.workspace #activity-log-panel .table-wrap::-webkit-scrollbar-thumb{background:#b8c6dd;border-radius:999px}
+.workspace #activity-log-panel .activity-table .table-empty{padding:38px 16px;height:92px;color:#657997;font-size:11px;font-weight:550;text-align:center!important}
+.workspace #activity-log-panel .mapping-note{margin:9px 1px 0;color:#657997;font-size:10px;line-height:1.5;flex-shrink:0}
+@media(max-width:740px){
+  .workspace #activity-log-panel .search-box{flex:1 1 100%;min-width:0;width:100%}
+  .workspace #activity-log-panel .register-month-control,.workspace #activity-log-panel .activity-category-control{flex:1 1 125px}
+  .workspace #activity-log-panel #activity-month-trigger,.workspace #activity-log-panel #activity-category{min-width:0;width:100%}
+}
+@media(prefers-reduced-motion:reduce){.workspace #activity-log-panel .activity-submit,.workspace #activity-log-panel .row-action{transition:none}}
