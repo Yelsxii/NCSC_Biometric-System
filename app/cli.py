@@ -99,8 +99,38 @@ def main() -> None:
         info["sync_enabled"] = info["attendance_sync"]["enabled"]
         print(json.dumps(info, indent=2, ensure_ascii=False))
         return
+    if command in (["create-employee-account"], ["disable-employee-account"]):
+        initialize()
+        code = input("Employee biometric ID: ").strip()
+        with connect() as con:
+            if command == ["disable-employee-account"]:
+                changed = con.execute("UPDATE employee_portal_accounts SET enabled=0 WHERE employee_code=?", (code,)).rowcount
+                print("Employee account disabled." if changed else "No employee account found.")
+                return
+            employee = con.execute("""SELECT e.display_name,e.department,p.position FROM employees e
+                LEFT JOIN employee_profiles p ON p.employee_code=e.employee_code
+                WHERE e.employee_code=? AND NOT EXISTS
+                (SELECT 1 FROM employee_directory_archive a WHERE a.employee_code=e.employee_code)""", (code,)).fetchone()
+            if not employee or not all(str(employee[k] or "").strip() for k in ("display_name","department","position")):
+                raise SystemExit("Select an active employee with complete name, position and department.")
+            print("Employee:", employee["display_name"])
+            username = input("Employee portal username: ").strip().lower()
+            if not re.fullmatch(r"[a-z0-9._-]{3,40}", username):
+                raise SystemExit("Username must be 3–40 lowercase letters, digits or ._-")
+            password = getpass.getpass("Employee password (12+ characters): ")
+            if password != getpass.getpass("Confirm password: "):
+                raise SystemExit("Passwords did not match.")
+            try:
+                con.execute("""INSERT INTO employee_portal_accounts(employee_code,username,password_hash)
+                    VALUES(?,?,?) ON CONFLICT(employee_code) DO UPDATE SET
+                    username=excluded.username,password_hash=excluded.password_hash,enabled=1""",
+                    (code,username,hash_password(password)))
+            except Exception as exc:
+                raise SystemExit(f"Could not create employee account: {exc}") from exc
+        print("Employee portal account ready. Provide credentials privately.")
+        return
     if command != ["create-admin"]:
-        raise SystemExit("Usage: python -m app.cli create-admin | sync-k14 | k14-status | poll-k14 | inspect-bionet <path> | sync-bionet | inspect-bionet-workcodes | inspect-bionet-attendance")
+        raise SystemExit("Usage: python -m app.cli create-admin | create-employee-account | disable-employee-account | sync-k14 | k14-status | poll-k14 | inspect-bionet <path> | sync-bionet | inspect-bionet-workcodes | inspect-bionet-attendance")
     initialize()
     username = input("Admin username: ").strip().lower()
     if not re.fullmatch(r"[a-z0-9._-]{3,40}", username):
