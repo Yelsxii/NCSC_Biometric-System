@@ -217,7 +217,16 @@ $('aja-date-trigger').addEventListener('click',()=>{
   placeCalendar();$('aja-date-trigger').setAttribute('aria-expanded','true');
 });
 calendar.querySelectorAll('[data-date-mode]').forEach(b=>b.addEventListener('click',()=>{
-  dateMode=b.dataset.dateMode;rangeStart=null;if(dateMode==='single'&&draftDates.length>1)draftDates=draftDates.slice(0,1);calendarRender();
+  const next=b.dataset.dateMode;
+  if(next!==dateMode){
+    rangeStart=null;
+    if(next==='single'&&draftDates.length>1)draftDates=draftDates.slice(0,1);
+    if(next==='range'&&draftDates.length>1){
+      const span=Math.round((Date.parse(draftDates.at(-1))-Date.parse(draftDates[0]))/86400000)+1;
+      if(span!==draftDates.length)draftDates=[];
+    }
+  }
+  dateMode=next;calendarRender();
 }));
 for(const [id,delta] of [['aja-month-prev',-1],['aja-month-next',1]])$(id).addEventListener('click',()=>{
   calendarMonth=new Date(Date.UTC(calendarMonth.getUTCFullYear(),calendarMonth.getUTCMonth()+delta,1));calendarRender();
