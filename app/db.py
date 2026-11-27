@@ -141,6 +141,17 @@ CREATE TABLE IF NOT EXISTS aja_filing_days (
  CHECK(return_time>departure)
 );
 CREATE INDEX IF NOT EXISTS idx_aja_filings_employee ON aja_filings(employee_code,id DESC);
+CREATE TABLE IF NOT EXISTS aja_filing_reviews (
+ filing_id INTEGER PRIMARY KEY REFERENCES aja_filings(id),
+ decision TEXT NOT NULL CHECK(decision IN ('approved','returned','disapproved')),
+ remarks TEXT NOT NULL DEFAULT '',
+ authorized_decision_verified INTEGER NOT NULL CHECK(authorized_decision_verified IN (0,1)),
+ reviewed_by INTEGER NOT NULL REFERENCES users(id),
+ reviewed_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+ original_fingerprint TEXT NOT NULL,
+ CHECK(decision='returned' OR authorized_decision_verified=1),
+ CHECK(decision='approved' OR length(trim(remarks))>0)
+);
 CREATE TABLE IF NOT EXISTS aja_filing_deletions (
  filing_id INTEGER PRIMARY KEY REFERENCES aja_filings(id),
  original_fingerprint TEXT NOT NULL,
@@ -292,7 +303,8 @@ def initialize() -> None:
                  "approved-times" if "approved_times" not in {row[1] for row in con.execute("PRAGMA table_info(attendance_day_reviews)")} else
                  "bionet-evidence" if "bionet_attendance_evidence" not in tables else
                  "aja-filing" if "aja_filings" not in tables else
-                 "aja-deletions" if "aja_filing_deletions" not in tables else None)
+                 "aja-deletions" if "aja_filing_deletions" not in tables else
+                 "aja-reviews" if "aja_filing_reviews" not in tables else None)
         if phase and "punches" in tables:
             if con.execute("SELECT COUNT(*) FROM punches").fetchone()[0]:
                 folder = database_path().parent / "backups"
