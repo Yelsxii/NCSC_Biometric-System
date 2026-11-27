@@ -147,9 +147,8 @@
 .workspace #aja-pilot-panel .aja-ticket-stop{min-width:0}
 .workspace #aja-pilot-panel .aja-ticket-stop:last-child{text-align:right}
 .workspace #aja-pilot-panel .aja-ticket-stop strong{display:block;font-size:15px;color:#203b67;line-height:1.35;font-weight:700;overflow-wrap:anywhere}
-.workspace #aja-pilot-panel .aja-ticket-connector{display:flex;align-items:center;gap:3px;color:#526fa4}
-.workspace #aja-pilot-panel .aja-ticket-connector span{flex:1;border-top:1px dashed #9db3d5}
-.workspace #aja-pilot-panel .aja-ticket-connector svg{width:18px;height:18px;flex:none}
+.workspace #aja-pilot-panel .aja-ticket-connector{display:flex;align-items:center;justify-content:center;min-width:0;color:#526fa4}
+.workspace #aja-pilot-panel .aja-ticket-connector svg{display:block;width:100%;max-width:72px;height:18px;flex:none}
 .workspace #aja-pilot-panel .aja-ticket-times{display:grid;grid-template-columns:minmax(0,1fr) auto minmax(0,1fr);align-items:center;gap:6px;padding:12px;border-top:1px dashed #c6d4e8}
 .workspace #aja-pilot-panel .aja-ticket-times>div:last-child{text-align:right}
 .workspace #aja-pilot-panel .aja-ticket-times strong{font-size:15px;font-weight:700;white-space:nowrap;font-variant-numeric:tabular-nums}
