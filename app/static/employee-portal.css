@@ -215,3 +215,6 @@
 .aja-employee-review strong[data-status="returned"]{color:#92501b}
 .aja-employee-review strong[data-status="disapproved"]{color:#b32638}
 .aja-employee-review p{margin:0;white-space:pre-wrap}
+
+/* Keep long review remarks readable without expanding the filing table. Full remarks are shown in View. */
+.workspace #aja-filings-panel .aja-review-remarks{display:-webkit-box;-webkit-box-orient:vertical;-webkit-line-clamp:2;overflow:hidden}
