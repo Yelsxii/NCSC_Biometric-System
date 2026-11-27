@@ -424,7 +424,33 @@ function historyMessage(message,error=false){
   const node=$('aja-filings-message');node.textContent=message;node.classList.toggle('hidden',!message);node.classList.toggle('is-error',error);
 }
 function historyEmpty(message){
-  const row=document.createElement('tr'),cell=document.createElement('td');cell.colSpan=5;cell.className='table-empty';cell.textContent=message;row.append(cell);$('aja-filings-rows').replaceChildren(row);
+  const row=document.createElement('tr'),cell=document.createElement('td');cell.colSpan=6;cell.className='table-empty';cell.textContent=message;row.append(cell);$('aja-filings-rows').replaceChildren(row);
+}
+function filedDate(value){
+  // SQLite CURRENT_TIMESTAMP is UTC; display the filing date in Philippine time.
+  const raw=String(value||'').trim();
+  const timestamp=new Date(/^\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}$/.test(raw)?raw.replace(' ','T')+'Z':raw);
+  return Number.isNaN(timestamp.getTime())?'—':new Intl.DateTimeFormat('en-US',{month:'short',day:'numeric',year:'numeric',timeZone:'Asia/Manila'}).format(timestamp);
+}
+function filingAction(label,icon,handler){
+  const button=document.createElement('button');button.type='button';button.className='profile-more aja-filing-action';button.title=label;button.setAttribute('aria-label',label);
+  const ns='http://www.w3.org/2000/svg',svg=document.createElementNS(ns,'svg');
+  for(const [key,value] of Object.entries({viewBox:'0 0 24 24',fill:'none',stroke:'currentColor','stroke-width':'1.8','stroke-linecap':'round','stroke-linejoin':'round','aria-hidden':'true'}))svg.setAttribute(key,value);
+  const path=document.createElementNS(ns,'path');path.setAttribute('d',icon==='eye'?'M2 12s4-7 10-7 10 7 10 7-4 7-10 7S2 12 2 12Z M15 12a3 3 0 1 1-6 0 3 3 0 0 1 6 0':'M12 3v12m-5-5 5 5 5-5M4 16v4h16v-4');svg.append(path);button.append(svg);
+  button.addEventListener('click',async()=>{
+    if(button.disabled)return;button.disabled=true;historyMessage('');
+    try{await handler();}catch(err){if(account)historyMessage(err.message,true);}finally{button.disabled=false;}
+  });
+  return button;
+}
+async function downloadFiledPdf(reference,owner){
+  const response=await fetch('/api/employee-portal/aja/filings/'+encodeURIComponent(reference)+'/pdf',{credentials:'same-origin',cache:'no-store'});
+  if(!response.ok)throw Error('Unable to download the saved AJA PDF.');
+  const blob=await response.blob();
+  if(!owner||owner!==account)return;
+  const url=URL.createObjectURL(blob),anchor=document.createElement('a');
+  anchor.href=url;anchor.download=reference+'.pdf';document.body.append(anchor);anchor.click();anchor.remove();
+  setTimeout(()=>URL.revokeObjectURL(url),30000);
 }
 async function loadFilings(){
   const version=++historyVersion,owner=account;
@@ -436,16 +462,15 @@ async function loadFilings(){
     if(!data.filings.length){historyEmpty('No AJA filings yet.');return;}
     for(const filing of data.filings){
       const row=document.createElement('tr');
-      for(const value of [filing.reference,filing.days.map(day=>dateLabel(day.date,true)).join('; '),filing.destination]){
-        const cell=document.createElement('td');cell.textContent=value;row.append(cell);
-      }
-      const status=document.createElement('td'),badge=document.createElement('span');badge.className='aja-filing-status';badge.textContent='Awaiting signatures';status.append(badge);row.append(status);
-      const action=document.createElement('td'),button=document.createElement('button');button.type='button';button.className='button outline aja-open-filing';button.textContent='View / Print';
-      button.addEventListener('click',async()=>{
-        if(button.disabled)return;button.disabled=true;historyMessage('');
-        try{await openFiledDocument(filing.reference,owner);}catch(err){if(owner===account)historyMessage(err.message,true);}finally{button.disabled=false;}
+      const values=[filing.reference,filedDate(filing.filed_at),filing.days.map(day=>dateLabel(day.date,true)).join('; '),filing.destination];
+      values.forEach((value,i)=>{
+        const cell=document.createElement('td');cell.className=i===0?'id-cell aja-reference-cell':'profile-position-cell';cell.textContent=value;row.append(cell);
       });
-      action.append(button);row.append(action);host.append(row);
+      const status=document.createElement('td'),badge=document.createElement('span');badge.className='aja-filing-status';badge.textContent='Awaiting signatures';status.append(badge);row.append(status);
+      const action=document.createElement('td');action.className='directory-action-cell';
+      const group=document.createElement('div');group.className='aja-filing-actions';
+      group.append(filingAction('View / print AJA','eye',()=>openFiledDocument(filing.reference,owner)),filingAction('Download PDF','download',()=>downloadFiledPdf(filing.reference,owner)));
+      action.append(group);row.append(action);host.append(row);
     }
   }catch(err){if(version===historyVersion&&owner===account){historyEmpty('Could not load filings.');historyMessage(err.message,true);}}
 }
@@ -538,7 +563,7 @@ $('aja-form').addEventListener('submit',async e=>{
       else setError('aja-error',err.message);
     }
   }finally{
-    busyFiling=false;ajaForm.inert=false;$('aja-submit').textContent='File AJA';updateFileButton();
+    busyFiling=false;ajaForm.inert=false;$('aja-submit').textContent='Submit AJA';updateFileButton();
   }
 });
 $('dtr-preview-back').addEventListener('click',()=>$('dtr-preview-dialog').close());
