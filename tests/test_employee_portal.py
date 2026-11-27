@@ -119,6 +119,34 @@ def test_aja_filing_persistence_and_ownership(admin, monkeypatch):
     assert refile.status_code == 200, refile.text
     assert refile.json()["filing"]["reference"] != ref
     assert len(client.get("/api/employee-portal/aja/filings").json()["filings"]) == 1
+    revised_ref = refile.json()["filing"]["reference"]
+    admin_login = client.post("/api/login", json={"username":"workspace-test","password":"local-workspace-test-password"})
+    assert admin_login.status_code == 200
+    admin_headers = {"X-CSRF-Token":admin_login.json()["csrf"]}
+    review_url = "/api/admin/aja/filings/"+revised_ref+"/review"
+    assert client.post(review_url,json={"decision":"returned","remarks":"Correct destination."},headers=admin_headers).status_code == 200
+    headers = login("aja-test-1")
+    reviewed = client.get("/api/employee-portal/aja/filings").json()["filings"][0]
+    assert reviewed["status"] == "returned"
+    assert reviewed["review_remarks"] == "Correct destination."
+    assert client.post("/api/employee-portal/aja/filings/"+revised_ref+"/delete",json={},headers=headers).status_code == 409
+    corrected = client.post("/api/employee-portal/aja/file",json=dict(payload,destination="Corrected Venue"),headers=headers)
+    assert corrected.status_code == 200, corrected.text
+    corrected_ref = corrected.json()["filing"]["reference"]
+    assert corrected_ref != revised_ref
+    assert {f["status"] for f in client.get("/api/employee-portal/aja/filings").json()["filings"]} == {"returned","awaiting_signatures"}
+    admin_login = client.post("/api/login",json={"username":"workspace-test","password":"local-workspace-test-password"})
+    admin_headers = {"X-CSRF-Token":admin_login.json()["csrf"]}
+    review_url = "/api/admin/aja/filings/"+corrected_ref+"/review"
+    assert client.post(review_url,json={"decision":"disapproved","remarks":"Authorized denial."},headers=admin_headers).status_code == 422
+    assert client.post(review_url,json={"decision":"disapproved","remarks":"Authorized denial.","authorized_decision_verified":True},headers=admin_headers).status_code == 200
+    headers = login("aja-test-1")
+    identical = client.post("/api/employee-portal/aja/file",json=dict(payload,destination="Corrected Venue"),headers=headers)
+    assert identical.status_code == 200, identical.text
+    assert identical.json()["filing"]["reference"] != corrected_ref
+    with closing(connect()) as con:
+        assert con.execute("SELECT COUNT(*) FROM aja_filing_reviews").fetchone()[0] == 2
+        assert con.execute("SELECT COUNT(*) FROM activity_records WHERE employee_code='aja-test-1'").fetchone()[0] == 0
 
 
 def test_admin_aja_monitor_reads_active_filings_only(admin, monkeypatch):
