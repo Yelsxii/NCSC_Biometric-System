@@ -20,7 +20,7 @@ from dotenv import load_dotenv
 from fastapi import Depends, FastAPI, File, Form, HTTPException, Request, UploadFile
 from itsdangerous import URLSafeTimedSerializer, BadSignature, SignatureExpired
 from fastapi.responses import FileResponse, JSONResponse, Response
-from app.employee_portal import router as employee_portal_router
+from app.employee_portal import router as employee_portal_router, filing_metadata, render_saved_pdf
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, Field, field_validator, model_validator
 from starlette.middleware.sessions import SessionMiddleware
@@ -953,3 +953,47 @@ def monitor_official_activities(
                 "official TO coverage requires approved office records for DTR treatment.",
     }
 
+
+
+# HR monitoring reads the employee's original filing; unsigned applications
+# are deliberately not written into activity_records or attendance reviews.
+@app.get("/api/admin/aja/filings")
+def admin_aja_filings(user: dict = Depends(require_admin)):
+    with closing(connect()) as con:
+        rows = con.execute("""SELECT id,reference,employee_code,employee_name,position,department,
+            origin,destination,purpose,status,filed_at FROM aja_filings f
+            WHERE NOT EXISTS (SELECT 1 FROM aja_filing_deletions x WHERE x.filing_id=f.id)
+            ORDER BY f.id DESC""").fetchall()
+        return {"filings": [filing_metadata(con, row) | {
+            key: row[key] for key in ("employee_code", "position", "department")
+        } for row in rows]}
+
+
+def admin_aja_active_filing(con, reference):
+    row = con.execute("""SELECT f.* FROM aja_filings f WHERE f.reference=?
+        AND NOT EXISTS (SELECT 1 FROM aja_filing_deletions x WHERE x.filing_id=f.id)""",
+        (reference,)).fetchone()
+    if row is None:
+        raise HTTPException(404, "AJA filing not found or deleted.")
+    return row
+
+
+@app.get("/api/admin/aja/filings/{reference}/document")
+def admin_aja_document(reference: str, user: dict = Depends(require_admin)):
+    with closing(connect()) as con:
+        row = admin_aja_active_filing(con, reference)
+        metadata = filing_metadata(con, row) | {
+            key: row[key] for key in ("employee_code", "position", "department")
+        }
+        pdf = row["pdf"]
+    return {"filing": metadata, **render_saved_pdf(pdf)}
+
+
+@app.get("/api/admin/aja/filings/{reference}/pdf")
+def admin_aja_pdf(reference: str, user: dict = Depends(require_admin)):
+    with closing(connect()) as con:
+        row = admin_aja_active_filing(con, reference)
+        return Response(content=row["pdf"], media_type="application/pdf", headers={
+            "Cache-Control": "no-store",
+            "Content-Disposition": f'attachment; filename="{row["reference"]}.pdf"'
+        })
