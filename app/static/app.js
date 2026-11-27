@@ -287,7 +287,7 @@ function renderRegister(){
       '<td>'+departmentCell(row.department)+'</td>'+
       '<td><span class="live-status live-'+esc(row.live?.status||'pending')+'" title="'+esc(row.live?.reason||'Live status is being updated')+'">'+esc(displayTitle(row.live?.label||'Updating'))+'</span></td>'+
       '<td class="live-last-update'+(row.live?.last_update?' has-update':'')+'" title="'+esc([row.live?.at?liveTime(row.live.at):'',row.live?.reason||''].filter(Boolean).join(' · '))+'">'+esc(row.live?.last_update||'—')+'</td>'+
-      '<td class="directory-action-cell"><button type="button" class="button primary row-action" data-employee="'+esc(row.employee_code)+'" aria-label="View attendance: '+esc(row.display_name||row.employee_code)+'"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M2 12s4-7 10-7 10 7 10 7-4 7-10 7S2 12 2 12Z"/><circle cx="12" cy="12" r="3"/></svg>View attendance</button></td>'+
+      '<td class="directory-action-cell"><button type="button" class="button primary row-action" data-employee="'+esc(row.employee_code)+'" aria-label="View attendance: '+esc(row.display_name||row.employee_code)+'">View attendance</button></td>'+
       '</tr>'
     ).join(''):'<tr><td colspan="6" class="table-empty">No employees found.</td></tr>');
 }
