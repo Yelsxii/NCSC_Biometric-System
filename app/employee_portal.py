@@ -6,6 +6,8 @@ from io import BytesIO
 from pathlib import Path
 import secrets
 import threading
+import hashlib
+import json
 
 from fastapi import APIRouter, Depends, HTTPException, Request
 from fastapi.responses import FileResponse
@@ -37,7 +39,7 @@ def employee_identity(con, account_id):
     suffix = (row["suffix"] or "").strip()
     name = (last + ", " + " ".join(part for part in
             (first, middle[0] + "." if middle else "", suffix) if part)) if first and last else row["display_name"]
-    return {"id": row["id"], "username": row["username"], "name": name,
+    return {"id": row["id"], "employee_code": row["employee_code"], "username": row["username"], "name": name,
             "position": row["position"] or "", "department": row["department"] or ""}
 
 def employee_user(request: Request):
@@ -189,13 +191,8 @@ def employee_logout(request: Request, user=Depends(employee_user)):
     request.session.clear()
     return {"ok": True}
 
-@router.post("/api/employee-portal/aja/preview")
-def employee_aja_preview(payload: EmployeeAjaInput, request: Request, user=Depends(employee_user)):
-    check_csrf(request)
-    if not all(user[key].strip() for key in ("name", "position", "department")):
-        raise HTTPException(400, "Ask HR to complete your name, position and department before preparing AJA.")
-    pdf = build_aja_packet(payload, user, ROOT / "aja-template.pdf")
-    # Render the exact generated PDF, not an independent HTML reconstruction.
+def render_saved_pdf(pdf):
+    # Render the original saved PDF, not an independent HTML reconstruction.
     import pypdfium2 as pdfium
     with _PDF_RENDER_LOCK:
         doc = pdfium.PdfDocument(pdf)
@@ -204,7 +201,7 @@ def employee_aja_preview(payload: EmployeeAjaInput, request: Request, user=Depen
             for index in range(len(doc)):
                 page = doc[index]
                 try:
-                    bitmap = page.render(scale=2 if len(doc)==1 else 1.5)
+                    bitmap = page.render(scale=2.5)
                     try:
                         image = BytesIO()
                         bitmap.to_pil().save(image, format="PNG")
@@ -215,4 +212,74 @@ def employee_aja_preview(payload: EmployeeAjaInput, request: Request, user=Depen
                     page.close()
         finally:
             doc.close()
-    return {"pdf": b64encode(pdf).decode("ascii"), "previews": previews, "preview": previews[0]}
+    return {"pdf": b64encode(pdf).decode("ascii"), "previews": previews}
+
+
+def filing_metadata(con, row):
+    days = [dict(day) for day in con.execute(
+        "SELECT business_date AS date,departure,return_time FROM aja_filing_days WHERE filing_id=? ORDER BY business_date",
+        (row["id"],))]
+    return {key: row[key] for key in ("reference", "employee_name", "origin", "destination", "purpose", "status", "filed_at")} | {"days": days}
+
+
+@router.post("/api/employee-portal/aja/file")
+def employee_aja_file(payload: EmployeeAjaInput, request: Request, user=Depends(employee_user)):
+    check_csrf(request)
+    if not all(user[key].strip() for key in ("name", "position", "department")):
+        raise HTTPException(400, "Ask HR to complete your name, position and department before filing AJA.")
+    fingerprint = hashlib.sha256(json.dumps(payload.model_dump(mode="json"), sort_keys=True,
+        ensure_ascii=False, separators=(",", ":")).encode("utf-8")).hexdigest()
+    # Validate against the original template before writing a new filing.
+    # Identical retries reopen the original immutable document, rather than filing twice.
+    with closing(connect()) as con:
+        row = con.execute("SELECT * FROM aja_filings WHERE employee_code=? AND fingerprint=?",
+                          (user["employee_code"], fingerprint)).fetchone()
+        if row:
+            return {"filing": filing_metadata(con, row), "already_filed": True}
+    pdf = build_aja_packet(payload, user, ROOT / "aja-template.pdf")
+    # Preflight page rendering before accepting a filing.
+    render_saved_pdf(pdf)
+    with closing(connect()) as con, con:
+        con.execute("BEGIN IMMEDIATE")
+        row = con.execute("SELECT * FROM aja_filings WHERE employee_code=? AND fingerprint=?",
+                          (user["employee_code"], fingerprint)).fetchone()
+        if row:
+            return {"filing": filing_metadata(con, row), "already_filed": True}
+        # Do not silently file conflicting schedules for the same employee/date.
+        for day in payload.days:
+            overlap = con.execute("""SELECT f.reference FROM aja_filing_days d
+                JOIN aja_filings f ON f.id=d.filing_id
+                WHERE f.employee_code=? AND d.business_date=? AND d.departure<? AND d.return_time>?
+                LIMIT 1""", (user["employee_code"], day.date.isoformat(), day.return_time, day.departure)).fetchone()
+            if overlap:
+                raise HTTPException(409, f"An overlapping AJA is already filed for {day.date.isoformat()} ({overlap['reference']}).")
+        reference = "AJA-" + secrets.token_hex(8).upper()
+        cursor = con.execute("""INSERT INTO aja_filings(employee_code,reference,fingerprint,employee_name,
+            position,department,origin,destination,purpose,pdf) VALUES(?,?,?,?,?,?,?,?,?,?)""",
+            (user["employee_code"],reference,fingerprint,user["name"],user["position"],user["department"],
+             payload.origin,payload.destination,payload.purpose,pdf))
+        con.executemany("INSERT INTO aja_filing_days(filing_id,business_date,departure,return_time) VALUES(?,?,?,?)",
+            [(cursor.lastrowid,day.date.isoformat(),day.departure,day.return_time) for day in payload.days])
+        row = con.execute("SELECT * FROM aja_filings WHERE id=?", (cursor.lastrowid,)).fetchone()
+        return {"filing": filing_metadata(con, row), "already_filed": False}
+
+
+@router.get("/api/employee-portal/aja/filings")
+def employee_aja_filings(user=Depends(employee_user)):
+    with closing(connect()) as con:
+        rows = con.execute("""SELECT id,reference,employee_name,origin,destination,purpose,status,filed_at
+            FROM aja_filings WHERE employee_code=? ORDER BY id DESC""",
+            (user["employee_code"],)).fetchall()
+        return {"filings": [filing_metadata(con, row) for row in rows]}
+
+
+@router.get("/api/employee-portal/aja/filings/{reference}/document")
+def employee_aja_document(reference: str, user=Depends(employee_user)):
+    with closing(connect()) as con:
+        row = con.execute("SELECT * FROM aja_filings WHERE reference=? AND employee_code=?",
+                          (reference,user["employee_code"])).fetchone()
+        if not row:
+            raise HTTPException(404, "AJA filing not found.")
+        metadata = filing_metadata(con, row)
+        pdf = row["pdf"]
+    return {"filing": metadata, **render_saved_pdf(pdf)}
