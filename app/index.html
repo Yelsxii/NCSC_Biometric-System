@@ -10,7 +10,7 @@
   <link rel="stylesheet" href="/static/attendance-detail.css?v=auto-dtr-45">
   <link rel="stylesheet" href="/static/dtr-preview.css?v=23">
   <script src="/static/dtr-preview.js?v=22" defer></script>
-  <script src="/static/app.js?v=employees-68" defer></script>
+  <script src="/static/app.js?v=employees-69" defer></script>
 </head>
 <body>
   <main id="login-view" class="auth-shell" aria-labelledby="login-heading">
@@ -45,6 +45,7 @@
               <p id="login-error" class="form-error hidden" role="alert"></p>
               
               <button class="button primary wide" id="login-submit" type="submit">Sign in</button>
+              <a href="/employee" style="display:block;text-align:center;margin-top:10px;font-size:12px;color:#244b9a;text-decoration:none">Employee Portal</a>
             </form>
           </div>
         </div>
@@ -153,34 +154,9 @@
 
         <section class="page hidden" data-view="activities">
           <div class="panel records-panel" id="aja-pilot-panel">
-            <div class="panel-header"><h2>New AJA / Official Business</h2><span class="aja-pilot-label">Print-only pilot</span></div>
-            <p id="aja-access-note" hidden>Only authorized administrators can prepare forms during the pilot.</p>
-            <form id="aja-form">
-              <fieldset id="aja-fields">
-                <div class="aja-form-grid">
-                  <label class="aja-wide">Employee<select id="aja-employee"><option value="">Select employee</option></select></label>
-                  <label>Name (Surname, First Name, Middle Initial)<input id="aja-name" name="name" maxlength="140" required></label>
-                  <label>Position<input id="aja-position" name="position" maxlength="140" required></label>
-                  <label>Department / Office / Division<input id="aja-department" name="department" maxlength="140" required></label>
-                  <label>Date/s of official business<input name="dates" placeholder="e.g. November 27, 2026" maxlength="100" required></label>
-                </div>
-                <h3>Itinerary / Destination</h3>
-                <div class="aja-form-grid">
-                  <label>From<input name="origin" maxlength="200" required></label>
-                  <label>To<input name="destination" maxlength="200" required></label>
-                  <label class="aja-wide">Purpose(s)<textarea name="purpose" rows="3" maxlength="500" required></textarea></label>
-                  <label>Time of departure<input name="departure" type="time" required></label>
-                  <label>Time of return<input name="return_time" type="time" required></label>
-                </div>
-                <p class="aja-note">Signatures and Certificate of Appearance remain blank for authorized signing. This pilot does not save an application or update attendance.</p>
-                <div class="aja-actions"><button type="reset" class="button outline">Clear form</button><button id="aja-preview-button" type="submit" class="button primary">Preview official form</button></div>
-              </fieldset>
-            </form>
-            <p id="aja-error" role="alert"></p>
-            <section id="aja-preview-panel" hidden>
-              <div class="panel-header"><h2>Official form preview</h2><a id="aja-download" class="button primary" download="AJA-OB.pdf">Download PDF</a></div>
-              <iframe id="aja-pdf-frame" title="Official AJA form PDF preview"></iframe>
-            </section>
+            <div class="panel-header"><h2>AJA / Official Business</h2></div>
+            <div class="aja-note" style="margin:0 0 12px">Employee filing is available in the restricted Employee Portal. Application submission, signed-document verification and HR monitoring are not yet enabled.</div>
+            <div class="table-wrap"><table class="records-table"><thead><tr><th>Employee</th><th>Official business date</th><th>Status</th></tr></thead><tbody><tr><td colspan="3" class="table-empty">No application monitoring in this print-only pilot.</td></tr></tbody></table></div>
           </div>
         </section>
 
