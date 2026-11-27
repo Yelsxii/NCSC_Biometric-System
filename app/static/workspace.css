@@ -1313,6 +1313,10 @@ body:has(#profile-undo-stack:not(:empty)) #toast:not(.hidden){bottom:auto;top:22
    shoulders above and below the selected tab. No protruding lip or bridge. */
 .workspace .sidebar{
   --nav-join-fill:#e4ecf7;
+  /* Sampled from the adjacent glass gutter at the selected row. */
+  --nav-join-edge:#afbed0;
+  --nav-join-blend:28px;
+  --nav-join-ramp:linear-gradient(to right,var(--nav-join-fill),var(--nav-join-edge));
   --nav-join-radius:12px;
 }
 .workspace .sidebar .nav-edge-highlight{
@@ -1322,7 +1326,8 @@ body:has(#profile-undo-stack:not(:empty)) #toast:not(.hidden){bottom:auto;top:22
   /* The 1px compensates for the nav button's transparent border.
      Keep the right edge perfectly vertical; round only the left corners. */
   border-radius:12px 0 0 12px;
-  background:linear-gradient(to right,#f4f7fc 0%,var(--nav-join-fill) 70%);
+  background:var(--nav-join-ramp) right center / var(--nav-join-blend) 100% no-repeat,
+    linear-gradient(to right,#f4f7fc 0%,var(--nav-join-fill) 70%);
   opacity:0;transform:translateX(-3px) scaleX(.985);
   transform-origin:right center;
   transition:opacity .38s cubic-bezier(.25,.7,.25,1),transform .38s cubic-bezier(.25,.7,.25,1);
@@ -1333,15 +1338,20 @@ body:has(#profile-undo-stack:not(:empty)) #toast:not(.hidden){bottom:auto;top:22
   content:"";position:absolute;
   right:0;
   width:var(--nav-join-radius);height:var(--nav-join-radius);
+  /* Use the same ramp and right alignment as the tab, so the shoulders
+     match its color at every horizontal position. */
+  background:var(--nav-join-ramp) right center / var(--nav-join-blend) 100% no-repeat;
   pointer-events:none;
 }
 .workspace .sidebar .nav-edge-highlight::before{
   bottom:calc(100% - 2px);
-  background:radial-gradient(circle at 0 0,transparent calc(var(--nav-join-radius) - .65px),var(--nav-join-fill) var(--nav-join-radius));
+  -webkit-mask-image:radial-gradient(circle at 0 0,transparent calc(var(--nav-join-radius) - .65px),#000 var(--nav-join-radius));
+  mask-image:radial-gradient(circle at 0 0,transparent calc(var(--nav-join-radius) - .65px),#000 var(--nav-join-radius));
 }
 .workspace .sidebar .nav-edge-highlight::after{
   top:calc(100% - 2px);
-  background:radial-gradient(circle at 0 100%,transparent calc(var(--nav-join-radius) - .65px),var(--nav-join-fill) var(--nav-join-radius));
+  -webkit-mask-image:radial-gradient(circle at 0 100%,transparent calc(var(--nav-join-radius) - .65px),#000 var(--nav-join-radius));
+  mask-image:radial-gradient(circle at 0 100%,transparent calc(var(--nav-join-radius) - .65px),#000 var(--nav-join-radius));
 }
 .workspace .sidebar .nav-item.active,
 .workspace .sidebar .nav-item.active:is(:hover,:focus-visible){
