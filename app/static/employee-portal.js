@@ -98,7 +98,14 @@ function updateSummary(){
   const values=Object.fromEntries(new FormData(ajaForm)),days=collectDays();
   const individual=scheduleMode==='individual'&&dates.length>1;
   let count=Number(dates.length>0);
-  $('summary-dates').textContent=dates.length?(committedDateMode==='range'?rangeLabel(dates[0],dates.at(-1)):dates.map(d=>dateLabel(d,true)).join('; ')):'—';
+  const dateValues=$('summary-dates');
+  const labels=dates.length?(committedDateMode==='range'?[rangeLabel(dates[0],dates.at(-1))]:dates.map(d=>dateLabel(d,true))):[];
+  dateValues.replaceChildren();
+  if(!labels.length){
+    const empty=document.createElement('span');empty.className='aja-ticket-date-empty';empty.textContent='—';dateValues.append(empty);
+  }else for(const label of labels){
+    const chip=document.createElement('span');chip.className='aja-ticket-date-chip';chip.textContent=label;dateValues.append(chip);
+  }
   for(const key of ['origin','destination','purpose']){
     const value=String(values[key]||'').trim();
     if(value)count++;
