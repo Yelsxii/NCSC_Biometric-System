@@ -146,11 +146,20 @@
 .workspace #aja-pilot-panel .aja-ticket-date-chip{display:inline-flex;align-items:center;max-width:100%;box-sizing:border-box;padding:4px 7px;border:1px solid #d7e2f2;border-radius:5px;background:#eaf0fa;color:#244b9a;font-size:10.5px;font-weight:600;line-height:1.4;overflow-wrap:anywhere}
 .workspace #aja-pilot-panel .aja-ticket-date-empty{color:#657997;font-size:12px}
 .workspace #aja-pilot-panel .aja-ticket-count{flex:none;font-size:10px;color:#244b9a;background:#e4edfb;padding:4px 7px;border-radius:6px}
-.workspace #aja-pilot-panel .aja-ticket-route{display:grid;grid-template-columns:minmax(0,1fr) 34px minmax(0,1fr);gap:8px;align-items:center;padding:15px 12px 13px}
+.workspace #aja-pilot-panel .aja-ticket-route{display:grid;grid-template-columns:minmax(0,1fr) 48px minmax(0,1fr);gap:8px;align-items:center;padding:15px 12px 13px}
 .workspace #aja-pilot-panel .aja-ticket-stop{min-width:0}
 .workspace #aja-pilot-panel .aja-ticket-stop:last-child{text-align:right}
 .workspace #aja-pilot-panel .aja-ticket-stop strong{display:block;font-size:15px;color:#203b67;line-height:1.35;font-weight:700;overflow-wrap:anywhere}
-.workspace #aja-pilot-panel .aja-ticket-connector{width:100%;min-width:0;border-top:1px dashed #9db3d5;align-self:center}
+.workspace #aja-pilot-panel .aja-ticket-connector{width:100%;min-width:0;align-self:center}
+.workspace #aja-pilot-panel .aja-ticket-connector svg{display:block;width:100%;height:16px;overflow:visible}
+.workspace #aja-pilot-panel .aja-route-track{stroke:#aebfda;stroke-width:1.1}
+.workspace #aja-pilot-panel .aja-route-trail{stroke:#244b9a;stroke-width:1.5;opacity:0;clip-path:inset(0 100% 0 0)}
+.workspace #aja-pilot-panel .aja-route-head{stroke:#244b9a;stroke-width:1.5;opacity:0}
+.workspace #aja-pilot-panel .aja-ticket-connector.is-ready .aja-route-trail{opacity:1;clip-path:inset(0);animation:aja-route-fill .85s cubic-bezier(.25,.7,.25,1) both}
+.workspace #aja-pilot-panel .aja-ticket-connector.is-ready .aja-route-head{opacity:1;animation:aja-route-travel .85s cubic-bezier(.25,.7,.25,1) both}
+@keyframes aja-route-fill{from{clip-path:inset(0 87.5% 0 0)}to{clip-path:inset(0)}}
+@keyframes aja-route-travel{from{transform:translateX(-36px);opacity:0}15%{opacity:1}to{transform:translateX(0);opacity:1}}
+@media(prefers-reduced-motion:reduce){.workspace #aja-pilot-panel .aja-ticket-connector.is-ready :is(.aja-route-trail,.aja-route-head){animation:none;transform:none;clip-path:none;opacity:1}}
 .workspace #aja-pilot-panel .aja-ticket-times{display:grid;grid-template-columns:minmax(0,1fr) auto minmax(0,1fr);align-items:center;gap:6px;padding:12px;border-top:1px dashed #c6d4e8}
 .workspace #aja-pilot-panel .aja-ticket-times>div:last-child{text-align:right}
 .workspace #aja-pilot-panel .aja-ticket-times strong{font-size:15px;font-weight:700;white-space:nowrap;font-variant-numeric:tabular-nums}
