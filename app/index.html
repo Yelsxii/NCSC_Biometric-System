@@ -6,11 +6,11 @@
   <meta name="theme-color" content="#142650">
   <title>NCSC | Attendance Records</title>
   <link rel="stylesheet" href="/static/app.css">
-  <link rel="stylesheet" href="/static/workspace.css?v=employees-142">
+  <link rel="stylesheet" href="/static/workspace.css?v=employees-143">
   <link rel="stylesheet" href="/static/attendance-detail.css?v=auto-dtr-45">
   <link rel="stylesheet" href="/static/dtr-preview.css?v=23">
   <script src="/static/dtr-preview.js?v=22" defer></script>
-  <script src="/static/app.js?v=employees-64" defer></script>
+  <script src="/static/app.js?v=employees-65" defer></script>
 </head>
 <body>
   <main id="login-view" class="auth-shell" aria-labelledby="login-heading">
@@ -290,6 +290,19 @@
     <button type="button" id="profile-menu-edit"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m13.5 6.5 4 4M4 20l4.5-1 11-11a2.8 2.8 0 0 0-4-4l-11 11L4 20z"/></svg><span>Edit profile</span></button>
     <button type="button" id="profile-menu-delete"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 6h18M9 6V3h6v3M5 6l1 15h12l1-15M10 10v7m4-7v7"/></svg><span>Delete</span></button>
   </div>
+  <dialog id="profile-archive-dialog" class="app-dialog" data-action="delete" aria-labelledby="profile-archive-heading" aria-describedby="profile-archive-description">
+    <div class="app-dialog-head">
+      <div class="profile-archive-heading"><span class="profile-archive-icon" aria-hidden="true"><svg class="archive-trash" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18M9 6V3h6v3M5 6l1 15h12l1-15M10 10v7m4-7v7"/></svg><svg class="archive-restore" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M3 11a9 9 0 1 1 2.6 6.4M3 4v7h7"/></svg></span><h2 id="profile-archive-heading">Delete employee?</h2></div>
+      <button class="modal-x" id="close-profile-archive" type="button" aria-label="Close confirmation"><svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><path d="m6 6 12 12M18 6 6 18"/></svg></button>
+    </div>
+    <div class="app-dialog-body">
+      <strong id="profile-archive-name"></strong>
+      <p id="profile-archive-description">This employee will be removed from the active directory. Attendance history is preserved, and the employee can be restored.</p>
+      <p id="profile-archive-error" class="form-error hidden" role="alert"></p>
+    </div>
+    <div class="app-dialog-footer"><button id="cancel-profile-archive" type="button" class="button outline" autofocus>Cancel</button><button id="confirm-profile-archive" type="button" class="button primary">Delete</button></div>
+  </dialog>
+
   <dialog id="profile-dialog" class="app-dialog profile-dialog" data-profile-mode="register" aria-labelledby="profile-heading">
     <div class="app-dialog-head"><h2 id="profile-heading" class="sr-only">Register employee</h2><div class="profile-id-badge"><span class="profile-id-emblem" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.65" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="18" height="14" rx="3"/><circle cx="9" cy="11" r="2"/><path d="M6 16v-.5a3 3 0 0 1 6 0v.5M15 10h3M15 14h3"/></svg></span><span class="profile-id-meta"><span>Biometric ID</span><strong id="profile-id-display"></strong></span></div><button class="modal-x profile-close" id="close-profile" type="button" aria-label="Close employee profile"><svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><path d="m6 6 12 12M18 6 6 18"/></svg></button></div>
     <form id="profile-form" novalidate>
@@ -359,5 +372,6 @@
 
   <dialog id="code-dialog" class="edit-dialog app-dialog" aria-labelledby="code-heading"><form id="code-form"><div class="app-dialog-head"><div><p class="page-eyebrow">DEVICE CLASSIFICATION</p><h2 id="code-heading">Work code label</h2><p>Choose the activity and a verified scan direction. This does not program the device.</p></div></div><div class="app-dialog-body"><input id="code-device" type="hidden"><label>Numeric device code<input id="code-number" readonly></label><label>Local label<input id="code-label" required maxlength="100"></label><label>Activity type<select id="code-activity"><option>Unclassified</option><option>Regular</option><option>AJA</option><option>Fieldwork</option><option>Official Business</option><option>Travel Order</option></select></label><label id="code-direction-field">Scan direction<select id="code-direction"><option value="Unspecified">Unspecified — review required</option><option value="IN">Time In</option><option value="OUT">Time Out</option></select></label><p class="field-hint" id="code-direction-help">A scan can be paired only when the date contains exactly one configured IN and one later OUT of the same activity.</p></div><div class="app-dialog-footer"><button id="close-code" type="button" class="button outline">Cancel</button><button class="button primary" type="submit">Save mapping</button></div></form></dialog>
 
+  <div id="profile-undo-stack" role="region" aria-label="Recent employee removals"></div>
   <div class="toast hidden" id="toast" role="status" aria-live="polite"></div>
 </body></html>

@@ -1259,3 +1259,52 @@ dialog.app-dialog[open]::backdrop,#dtr-preview-dialog[open]::backdrop{
 @media(max-width:480px){#profile-dialog .app-dialog-head,#profile-dialog .app-dialog-body,#profile-dialog .app-dialog-footer{padding-inline:13px}#profile-dialog .profile-form-grid{gap:8px 9px}}
 @media(max-width:350px){#profile-dialog .profile-form-grid{grid-template-columns:minmax(0,1fr)}#profile-dialog .profile-spacer{display:none}}
 @media(prefers-reduced-motion:reduce){#profile-dialog :is(.profile-close,.app-dialog-footer .button,.profile-select-trigger svg,.profile-select-menu,.profile-select-menu button){transition:none;transform:none!important}}
+
+/* Employee archive confirmation and reversible five-second notification. */
+#profile-archive-dialog{width:min(390px,calc(100vw - 24px));height:fit-content;max-height:calc(100dvh - 24px);border-radius:14px;background:#fff}
+#profile-archive-dialog .app-dialog-head{align-items:center;padding:12px 16px;border-bottom:1px solid #e8edf6;gap:10px}
+#profile-archive-dialog .profile-archive-heading{display:flex;align-items:center;gap:10px;min-width:0}
+#profile-archive-dialog .profile-archive-heading h2{font-size:15px;font-weight:700;color:#243e68;letter-spacing:-.02em}
+#profile-archive-dialog .profile-archive-icon{display:grid;place-items:center;width:34px;height:34px;border-radius:9px;flex:none;background:linear-gradient(145deg,#fff0f3,#f9dce4);color:#b32648;box-shadow:inset 0 1px 1px #fff}
+#profile-archive-dialog .profile-archive-icon svg{width:18px;height:18px}
+#profile-archive-dialog .archive-restore,#profile-archive-dialog[data-action=restore] .archive-trash{display:none}
+#profile-archive-dialog[data-action=restore] .archive-restore{display:block}
+#profile-archive-dialog[data-action=restore] .profile-archive-icon{background:#e3ebf8;color:#244b9a}
+#profile-archive-dialog .modal-x{display:grid;place-items:center;width:32px;height:32px;min-width:32px;min-height:32px;padding:0;border:0;border-radius:50%;background:linear-gradient(145deg,#fff1f3df,#f8dce5cf);color:#b42d4e;box-shadow:inset 0 1px 1px #fff9,0 3px 10px #b42d4e12;transition:background .18s ease,color .18s ease,transform .18s ease}
+#profile-archive-dialog .modal-x:not(:disabled):is(:hover,:focus-visible){background:#f9dce4;color:#96233e;transform:translateY(-1px)}
+#profile-archive-dialog .app-dialog-body{padding:15px 16px 17px;overflow:auto}
+#profile-archive-name{display:block;color:#243e68;font-size:13px;font-weight:700;overflow-wrap:anywhere}
+#profile-archive-description{margin:6px 0 0;color:#637c9e;font-size:11.5px;line-height:1.6}
+#profile-archive-dialog .form-error{background:#fbe2e7;color:#b32638}
+#profile-archive-dialog .app-dialog-footer{padding:10px 16px;border-top:1px solid #e8edf6;background:#f8faff;gap:9px}
+#profile-archive-dialog .app-dialog-footer .button{height:33px;min-height:33px;padding:0 14px;border:0;border-radius:8px;font-size:11px;font-weight:650;box-shadow:none}
+#profile-archive-dialog #cancel-profile-archive{background:#eaf0fa;color:#31588e}
+#profile-archive-dialog #cancel-profile-archive:not(:disabled):is(:hover,:focus-visible){background:#dbe7fa;color:#244b9a}
+#profile-archive-dialog #confirm-profile-archive{background:#b72c48;color:white}
+#profile-archive-dialog #confirm-profile-archive:not(:disabled):is(:hover,:focus-visible){background:#98233b;color:white;box-shadow:0 3px 8px #b72c4822}
+#profile-archive-dialog[data-action=restore] #confirm-profile-archive{background:#244b9a}
+#profile-archive-dialog[data-action=restore] #confirm-profile-archive:not(:disabled):is(:hover,:focus-visible){background:#173b83}
+#profile-archive-dialog button:focus-visible{outline:2px solid #7295ce;outline-offset:2px}
+#profile-archive-dialog button:disabled{opacity:.55;cursor:not-allowed}
+#profile-undo-stack{position:fixed;right:24px;bottom:22px;z-index:50;width:min(330px,calc(100vw - 32px));display:flex;flex-direction:column;gap:8px;pointer-events:none}
+#profile-undo-stack:empty{display:none}
+.profile-undo-notice{position:relative;display:flex;align-items:center;gap:10px;padding:11px 12px 13px;border:1px solid #e1e8f4;border-radius:12px;background:#f8faff;color:#243e68;box-shadow:0 12px 30px #15274d26;overflow:hidden;pointer-events:auto;animation:profile-undo-in .26s cubic-bezier(.25,.7,.25,1) both;transition:opacity .2s ease,transform .2s ease}
+.profile-undo-notice.is-leaving{opacity:0;transform:translateY(8px);pointer-events:none}
+.profile-undo-notice .undo-icon{width:28px;height:28px;border-radius:8px;display:grid;place-items:center;flex:none;background:#e3ebf8;color:#31588e}
+.profile-undo-notice .undo-icon svg{width:15px;height:15px}
+.profile-undo-notice .undo-copy{flex:1;min-width:0}
+.profile-undo-notice .undo-copy strong{display:block;font-size:11.5px;line-height:1.35;font-weight:700}
+.profile-undo-notice .undo-copy span{display:block;margin-top:3px;font-size:10.5px;line-height:1.35;color:#637c9e;overflow-wrap:anywhere}
+.profile-undo-notice button{flex:none;display:inline-flex;align-items:center;justify-content:center;gap:5px;padding:0 10px;min-height:29px;border:0;border-radius:7px;background:#244b9a;color:#fff;font-size:11px;font-weight:650;transition:background .18s ease}
+.profile-undo-notice button svg{width:13px;height:13px}
+.profile-undo-notice button:not(:disabled):is(:hover,:focus-visible){background:#173b83}
+.profile-undo-notice button:focus-visible{outline:2px solid #7295ce;outline-offset:2px}
+.profile-undo-notice button:disabled{opacity:.5;cursor:not-allowed}
+.profile-undo-notice .undo-progress{position:absolute;inset:auto 0 0;height:2px;background:#6b91d0;transform-origin:left center;animation:profile-undo-time 5s linear forwards;pointer-events:none}
+@keyframes profile-undo-time{from{transform:scaleX(1)}to{transform:scaleX(0)}}
+@keyframes profile-undo-in{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
+/* Keep unrelated standard feedback visible above any active Undo notifications. */
+body:has(#profile-undo-stack:not(:empty)) #toast:not(.hidden){bottom:auto;top:22px}
+@media(max-width:480px){#profile-undo-stack{right:16px;bottom:16px}}
+@media(prefers-reduced-motion:reduce){.profile-undo-notice,.profile-undo-notice button,#profile-archive-dialog button{animation:none;transition:none;transform:none}.profile-undo-notice .undo-progress{animation:none}}
+@media print{#profile-undo-stack{display:none!important}}

@@ -43,6 +43,8 @@ let profileArchived = false;
 let profileMenuTrigger = null;
 let profileMenuRow = null;
 let profileArchiveBusy = false;
+let profileArchiveContext = null;
+const profileUndoNotices = new Map();
 let profileSummary = null;
 let profileFormToken = 0;
 let profileEditing = null;
@@ -95,7 +97,8 @@ async function api(path,options={}) {
   return data;
 }
 function showLogin(){
-  closeProfileMenu();profileArchived=false;profileArchiveBusy=false;
+  closeProfileMenu();profileArchived=false;profileArchiveBusy=false;profileArchiveContext=null;
+  clearProfileUndoNotices();
   stopDeviceRefresh();
   stopAttendanceRefresh();
   requestSerial++;registerInFlight=null;registerReady=false;lastEmployeeRows=[];registerLiveAsOf='';
@@ -391,20 +394,98 @@ function openProfileMenu(trigger){
   trigger.setAttribute('aria-expanded','true');
   (profileArchived?remove:edit).focus({preventScroll:true});
 }
-async function changeProfileArchive(){
+function changeProfileArchive(){
   const row=profileMenuRow,archived=profileArchived,account=session;
   if(!row||account?.role!=='admin'||profileArchiveBusy)return;
   closeProfileMenu(true);
-  if(!window.confirm((archived?'Restore ':'Remove ')+(row.display_name||row.employee_code)+(archived?' to the Employees directory?':' from the active Employees directory? You can restore it later. Attendance history and biometric collection settings will remain unchanged.')))return;
-  profileArchiveBusy=true;
+  profileArchiveContext={row,archived,account};
+  const dialog=$('profile-archive-dialog');
+  dialog.dataset.action=archived?'restore':'delete';
+  $('profile-archive-heading').textContent=archived?'Restore employee?':'Delete employee?';
+  $('profile-archive-name').textContent=row.display_name||row.employee_code;
+  $('profile-archive-description').textContent=archived?'This employee will return to the active Employees directory.':'This employee will be removed from the active directory. Attendance history is preserved, and the employee can be restored.';
+  $('confirm-profile-archive').textContent=archived?'Restore':'Delete';
+  $('profile-archive-error').classList.add('hidden');
+  dialog.showModal();
+  $('cancel-profile-archive').focus({preventScroll:true});
+}
+function setProfileArchiveBusy(busy){
+  profileArchiveBusy=busy;
+  for(const id of ['close-profile-archive','cancel-profile-archive','confirm-profile-archive'])$(id).disabled=busy;
+  $('profile-archive-dialog').setAttribute('aria-busy',String(busy));
+  for(const notice of profileUndoNotices.values())notice.button.disabled=busy;
+}
+function dismissProfileUndo(code,expected=null,immediate=false){
+  const notice=profileUndoNotices.get(code);
+  if(!notice||(expected&&notice!==expected))return;
+  profileUndoNotices.delete(code);clearTimeout(notice.timer);
+  notice.button.disabled=true;
+  if(immediate){notice.node.remove();return;}
+  notice.node.classList.add('is-leaving');
+  setTimeout(()=>notice.node.remove(),200);
+}
+function clearProfileUndoNotices(){
+  for(const code of [...profileUndoNotices.keys()])dismissProfileUndo(code,null,true);
+  $('profile-undo-stack').replaceChildren();
+  setProfileArchiveBusy(false);
+}
+function showProfileUndo(row,account){
+  if(session!==account)return;
+  const code=row.employee_code;
+  dismissProfileUndo(code,null,true);
+  const node=document.createElement('div');node.className='profile-undo-notice';
+  node.innerHTML='<span class="undo-icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="m5 12 4 4L19 6"/></svg></span><div class="undo-copy" role="status" aria-live="polite"><strong>Employee removed</strong><span></span></div><button type="button"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 14 4 9l5-5M4 9h9a6 6 0 0 1 0 12"/></svg>Undo</button><span class="undo-progress" aria-hidden="true"></span>';
+  const name=row.display_name||code;
+  node.querySelector('.undo-copy span').textContent=name;
+  const button=node.querySelector('button');
+  button.setAttribute('aria-label','Undo removal of '+name);
+  button.disabled=profileArchiveBusy;
+  const notice={node,button,account,deadline:Date.now()+5000,timer:null};
+  profileUndoNotices.set(code,notice);
+  $('profile-undo-stack').append(node);
+  notice.timer=setTimeout(()=>dismissProfileUndo(code,notice),5000);
+  button.addEventListener('click',()=>void undoProfileArchive(code,notice));
+}
+async function refreshProfileArchiveDirectory(){
+  profileRows=null;profileSummary=null;
+  if(currentPage==='profiles')await loadProfiles();
+}
+async function confirmProfileArchive(){
+  const context=profileArchiveContext;
+  if(!context||context.account!==session||session?.role!=='admin'||profileArchiveBusy)return;
+  const {row,archived,account}=context,dialog=$('profile-archive-dialog');
+  setProfileArchiveBusy(true);
+  $('profile-archive-error').classList.add('hidden');
+  $('confirm-profile-archive').textContent=archived?'Restoring…':'Deleting…';
   try{
     await api('/api/employee-profiles/'+encodeURIComponent(row.employee_code)+(archived?'/restore':''),{method:archived?'POST':'DELETE'});
     if(session!==account)return;
-    profileRows=null;profileSummary=null;
-    if(currentPage==='profiles')await loadProfiles();
-    toast(archived?'Employee restored.':'Employee removed from the directory.');
-  }catch(error){if(session===account)toast(error.message,true);}
-  finally{profileArchiveBusy=false;}
+    dismissProfileUndo(row.employee_code,null,true);
+    dialog.close();
+    await refreshProfileArchiveDirectory();
+    if(session!==account)return;
+    if(archived)toast('Employee restored.');else showProfileUndo(row,account);
+  }catch(error){
+    if(session===account){$('profile-archive-error').textContent=error.message;$('profile-archive-error').classList.remove('hidden');}
+  }finally{
+    if(session===account){setProfileArchiveBusy(false);$('confirm-profile-archive').textContent=archived?'Restore':'Delete';}
+  }
+}
+async function undoProfileArchive(code,notice){
+  if(profileUndoNotices.get(code)!==notice||notice.account!==session||session?.role!=='admin')return;
+  if(Date.now()>=notice.deadline){dismissProfileUndo(code,notice);return;}
+  if(profileArchiveBusy)return;
+  const account=session;
+  setProfileArchiveBusy(true);
+  dismissProfileUndo(code,notice);
+  try{
+    await api('/api/employee-profiles/'+encodeURIComponent(code)+'/restore',{method:'POST'});
+    if(session!==account)return;
+    await refreshProfileArchiveDirectory();
+    if(session===account)toast('Employee restored.');
+  }catch(error){
+    if(session===account)toast('Could not undo removal. Restore the employee from Archived employees. '+error.message,true);
+  }finally{if(session===account)setProfileArchiveBusy(false);}
 }
 function refreshProfileSelects(){
   for(const control of profileSelectControls.values())control.refresh();
@@ -1474,6 +1555,11 @@ async function initialize(){
   });
   $('profile-menu-edit').addEventListener('click',()=>{const code=profileMenuRow?.employee_code;closeProfileMenu();if(code)openProfile(code);});
   $('profile-menu-delete').addEventListener('click',changeProfileArchive);
+  const archiveDialog=$('profile-archive-dialog');
+  $('confirm-profile-archive').addEventListener('click',confirmProfileArchive);
+  for(const id of ['close-profile-archive','cancel-profile-archive'])$(id).addEventListener('click',()=>{if(!profileArchiveBusy)archiveDialog.close();});
+  archiveDialog.addEventListener('cancel',event=>{if(profileArchiveBusy)event.preventDefault();});
+  archiveDialog.addEventListener('close',()=>{profileArchiveContext=null;});
   $('profile-archive-toggle').addEventListener('click',()=>{
     if(session?.role!=='admin'||profileArchiveBusy)return;
     closeProfileMenu();profileArchived=!profileArchived;profileRows=null;profileSummary=null;profileCategory='All';$('profile-search').value='';loadProfiles();
