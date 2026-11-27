@@ -1,7 +1,9 @@
 'use strict';
 const $=id=>document.getElementById(id);
 let account=null, pdfUrl=null, epoch=0, zoom=1, fit=true, previewPages=[], previewIndex=0;
-let busyFiling=false, historyVersion=0, activeReference='', printFrame=null;
+let busyFiling=false, historyVersion=0, activeReference='', printFrame=null, filingHistoryKey='', filingRefreshPending=false;
+const filingStatusLabels={awaiting_signatures:'Awaiting signatures',approved:'Approved',returned:'Returned',disapproved:'Disapproved'};
+function filingStatusLabel(status){return filingStatusLabels[status]||'For review';}
 function setError(id,message){
   const node=$(id);node.textContent=message;node.classList.toggle('hidden',!message);
 }
@@ -424,7 +426,7 @@ function historyMessage(message,error=false){
   const node=$('aja-filings-message');node.textContent=message;node.classList.toggle('hidden',!message);node.classList.toggle('is-error',error);
 }
 function historyEmpty(message){
-  const row=document.createElement('tr'),cell=document.createElement('td');cell.colSpan=7;cell.className='table-empty';cell.textContent=message;row.append(cell);$('aja-filings-rows').replaceChildren(row);
+  filingHistoryKey='';const row=document.createElement('tr'),cell=document.createElement('td');cell.colSpan=7;cell.className='table-empty';cell.textContent=message;row.append(cell);$('aja-filings-rows').replaceChildren(row);
 }
 function filedDate(value){
   // SQLite CURRENT_TIMESTAMP is UTC; display the filing date in Philippine time.
@@ -532,15 +534,18 @@ async function downloadFiledPdf(reference,owner){
   anchor.href=url;anchor.download=reference+'.pdf';document.body.append(anchor);anchor.click();anchor.remove();
   setTimeout(()=>URL.revokeObjectURL(url),30000);
 }
-async function loadFilings(){
-  closeFilingMenu();
-  const version=++historyVersion,owner=account;
-  historyEmpty('Loading filings…');
+async function loadFilings(quiet=false){
+  if(quiet&&(filingRefreshPending||filingMenuContext||filingActionBusy||busyFiling||$('dtr-preview-dialog').open||filingDeleteDialog.open))return;
+  if(!quiet)closeFilingMenu();
+  const version=++historyVersion,owner=account;filingRefreshPending=true;
+  if(!quiet)historyEmpty('Loading filings…');
   try{
     const data=await call('aja/filings');
     if(version!==historyVersion||owner!==account)return;
-    const host=$('aja-filings-rows');host.replaceChildren();
-    if(!data.filings.length){historyEmpty('No AJA filings yet.');return;}
+    if(quiet&&(filingMenuContext||filingActionBusy||busyFiling||$('dtr-preview-dialog').open||filingDeleteDialog.open||document.querySelector('[data-view=filings]').classList.contains('hidden')))return;
+    const key=JSON.stringify(data.filings);if(quiet&&key===filingHistoryKey)return;
+    const host=$('aja-filings-rows');host.replaceChildren();filingHistoryKey=key;
+    if(!data.filings.length){historyEmpty('No AJA filings yet.');filingHistoryKey=key;return;}
     for(const [index,filing] of data.filings.entries()){
       const row=document.createElement('tr');
       const number=document.createElement('td');number.className='id-cell aja-row-number';number.textContent=String(index+1);row.append(number);
@@ -548,12 +553,16 @@ async function loadFilings(){
       values.forEach((value,i)=>{
         const cell=document.createElement('td');cell.className=i===0?'id-cell aja-reference-cell':'profile-position-cell';cell.textContent=value;row.append(cell);
       });
-      const status=document.createElement('td'),badge=document.createElement('span');badge.className='aja-filing-status';badge.textContent='Awaiting signatures';status.append(badge);row.append(status);
+      const status=document.createElement('td'),badge=document.createElement('span');badge.className='aja-filing-status';badge.dataset.status=filing.status;badge.textContent=filingStatusLabel(filing.status);status.append(badge);if(filing.review_remarks){const note=document.createElement('small');note.className='aja-review-remarks';note.textContent=filing.review_remarks;status.append(note);}row.append(status);
       const action=document.createElement('td');action.className='directory-action-cell';
       action.append(filingMenuButton(filing.reference,owner,filing.status));row.append(action);host.append(row);
     }
-  }catch(err){if(version===historyVersion&&owner===account){historyEmpty('Could not load filings.');historyMessage(err.message,true);}}
+  }catch(err){if(version===historyVersion&&owner===account&&!quiet){historyEmpty('Could not load filings.');historyMessage(err.message,true);}}
+  finally{if(version===historyVersion)filingRefreshPending=false;}
 }
+function refreshEmployeeFilings(){if(account&&!document.hidden&&!document.querySelector('[data-view=filings]').classList.contains('hidden'))void loadFilings(true);}
+window.setInterval(refreshEmployeeFilings,15000);
+document.addEventListener('visibilitychange',refreshEmployeeFilings);
 document.querySelectorAll('#workspace .nav-item[data-page]').forEach(button=>button.addEventListener('click',()=>{
   if(busyFiling||filingActionBusy)return;selectPage(button.dataset.page);historyMessage('');if(button.dataset.page==='filings')loadFilings();
 }));
@@ -567,10 +576,12 @@ async function openFiledDocument(reference,owner=account){
   activeReference=data.filing.reference;previewPages=data.previews;$('dtr-preview-note').hidden=true;
   $('dtr-preview-context').textContent=data.filing.employee_name;
   $('aja-preview-reference').textContent=activeReference;
+  const review=$('aja-employee-review');review.replaceChildren();review.classList.toggle('hidden',data.filing.status==='awaiting_signatures');
+  if(data.filing.status!=='awaiting_signatures'){const title=document.createElement('strong');title.textContent=filingStatusLabel(data.filing.status);title.dataset.status=data.filing.status;review.append(title);if(data.filing.review_remarks){const note=document.createElement('p');note.textContent=data.filing.review_remarks;review.append(note);}}
   fit=true;$('dtr-preview-dialog').showModal();showPreviewPage(0);
 }
 function show(user){
-  clearPreview();account=user;historyVersion++;historyMessage('');historyEmpty('No filings yet.');selectPage('activities');$('login-view').classList.toggle('hidden',!!user);$('workspace').classList.toggle('hidden',!user);
+  clearPreview();account=user;historyVersion++;filingRefreshPending=false;historyMessage('');historyEmpty('No filings yet.');selectPage('activities');$('login-view').classList.toggle('hidden',!!user);$('workspace').classList.toggle('hidden',!user);
   $('aja-form').reset();identity();
   setError('aja-error','');updateFileButton();
 }
