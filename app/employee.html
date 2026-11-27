@@ -9,8 +9,8 @@
   <link rel="stylesheet" href="/static/workspace.css?v=employees-164">
   <link rel="stylesheet" href="/static/attendance-detail.css?v=auto-dtr-45">
   <link rel="stylesheet" href="/static/dtr-preview.css?v=23">
-  <link rel="stylesheet" href="/static/employee-portal.css?v=21">
-  <script src="/static/employee-portal.js?v=15" defer></script>
+  <link rel="stylesheet" href="/static/employee-portal.css?v=22">
+  <script src="/static/employee-portal.js?v=16" defer></script>
 </head>
 <body>
   <main id="login-view" class="auth-shell" aria-labelledby="login-heading">
@@ -149,14 +149,18 @@
             <div class="panel-header aja-filings-heading"><h2>My AJA Filings</h2><button type="button" id="aja-new-filing" class="button primary record-create-action"><svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="1.65" stroke-linecap="round" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>New AJA</button></div>
             <p id="aja-filings-message" class="aja-filings-message hidden" role="status"></p>
             <div class="table-wrap"><table class="records-table profile-table aja-filings-table">
-              <colgroup><col class="aja-col-reference"><col class="aja-col-filed"><col class="aja-col-dates"><col class="aja-col-destination"><col class="aja-col-status"><col class="aja-col-actions"></colgroup>
-              <thead><tr><th>Reference No.</th><th>Date filed</th><th>Date/s of official business</th><th>Destination</th><th>Status</th><th class="actions-column">Action</th></tr></thead>
-              <tbody id="aja-filings-rows"><tr><td colspan="6" class="table-empty">No filings yet.</td></tr></tbody>
+              <colgroup><col class="aja-col-number"><col class="aja-col-reference"><col class="aja-col-filed"><col class="aja-col-dates"><col class="aja-col-destination"><col class="aja-col-status"><col class="aja-col-actions"></colgroup>
+              <thead><tr><th scope="col" class="aja-row-number">No.</th><th>Reference No.</th><th>Date filed</th><th>Date/s of official business</th><th>Destination</th><th>Status</th><th class="actions-column">Action</th></tr></thead>
+              <tbody id="aja-filings-rows"><tr><td colspan="7" class="table-empty">No filings yet.</td></tr></tbody>
             </table></div>
           </div>
         </section>
       </main>
     </div>
+  </div>
+  <div id="profile-action-menu" popover="manual" role="group" aria-label="AJA filing actions">
+    <button type="button" id="aja-menu-view"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M2 12s4-7 10-7 10 7 10 7-4 7-10 7S2 12 2 12Z"/><circle cx="12" cy="12" r="3"/></svg><span>View / Print</span></button>
+    <button type="button" id="aja-menu-download"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3v12m-5-5 5 5 5-5M4 16v4h16v-4"/></svg><span>Download PDF</span></button>
   </div>
   <dialog id="dtr-preview-dialog" aria-labelledby="dtr-preview-name">
     <div class="export-preview-toolbar">
