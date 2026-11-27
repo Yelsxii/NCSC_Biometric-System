@@ -146,17 +146,15 @@
 .workspace #aja-pilot-panel .aja-ticket-date-chip{display:inline-flex;align-items:center;max-width:100%;box-sizing:border-box;padding:4px 7px;border:1px solid #d7e2f2;border-radius:5px;background:#eaf0fa;color:#244b9a;font-size:10.5px;font-weight:600;line-height:1.4;overflow-wrap:anywhere}
 .workspace #aja-pilot-panel .aja-ticket-date-empty{color:#657997;font-size:12px}
 .workspace #aja-pilot-panel .aja-ticket-count{flex:none;font-size:10px;color:#244b9a;background:#e4edfb;padding:4px 7px;border-radius:6px}
-.workspace #aja-pilot-panel .aja-ticket-route{display:grid;grid-template-columns:minmax(0,1fr) 26px minmax(0,1fr);gap:8px;align-items:center;padding:15px 12px 13px}
+.workspace #aja-pilot-panel .aja-ticket-route{display:grid;grid-template-columns:minmax(0,1fr) 34px minmax(0,1fr);gap:8px;align-items:center;padding:15px 12px 13px}
 .workspace #aja-pilot-panel .aja-ticket-stop{min-width:0}
 .workspace #aja-pilot-panel .aja-ticket-stop:last-child{text-align:right}
 .workspace #aja-pilot-panel .aja-ticket-stop strong{display:block;font-size:15px;color:#203b67;line-height:1.35;font-weight:700;overflow-wrap:anywhere}
-.workspace #aja-pilot-panel .aja-ticket-connector{display:flex;align-items:center;justify-content:center;min-width:0;color:#526fa4}
-.workspace #aja-pilot-panel .aja-ticket-connector svg{display:block;width:21px;height:21px;flex:none}
+.workspace #aja-pilot-panel .aja-ticket-connector{width:100%;min-width:0;border-top:1px dashed #9db3d5;align-self:center}
 .workspace #aja-pilot-panel .aja-ticket-times{display:grid;grid-template-columns:minmax(0,1fr) auto minmax(0,1fr);align-items:center;gap:6px;padding:12px;border-top:1px dashed #c6d4e8}
 .workspace #aja-pilot-panel .aja-ticket-times>div:last-child{text-align:right}
 .workspace #aja-pilot-panel .aja-ticket-times strong{font-size:15px;font-weight:700;white-space:nowrap;font-variant-numeric:tabular-nums}
-.workspace #aja-pilot-panel .aja-ticket-duration{display:flex;flex-direction:column;align-items:center;gap:3px;color:#657997;font-size:10px;white-space:nowrap}
-.workspace #aja-pilot-panel .aja-ticket-duration svg{width:15px;height:15px;color:#526fa4}
+.workspace #aja-pilot-panel .aja-ticket-duration{display:flex;align-items:center;justify-content:center;color:#657997;font-size:11px;font-weight:600;white-space:nowrap}
 .workspace #aja-pilot-panel .aja-ticket-daily{padding:12px;border-top:1px dashed #c6d4e8}
 .workspace #aja-pilot-panel .aja-ticket-daily .aja-daily-summary{display:grid;grid-template-columns:minmax(0,1fr) auto auto;align-items:center;gap:6px;font-variant-numeric:tabular-nums}
 .workspace #aja-pilot-panel .aja-ticket-daily .aja-daily-summary small{color:#657997;white-space:nowrap}
@@ -182,3 +180,5 @@
 .workspace #aja-pilot-panel .aja-filing-note{font-size:11px;color:#52688a;font-weight:550}
 .aja-print-frame{position:fixed;left:-10000px;top:0;width:816px;height:1248px;border:0;pointer-events:none}
 #aja-preview-reference{font-size:11px;overflow-wrap:anywhere}
+
+.workspace #aja-pilot-panel .aja-actions #aja-submit:disabled{background:#dce5f1;color:#8494ad;opacity:1;cursor:not-allowed;box-shadow:none;transform:none}
