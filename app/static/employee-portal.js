@@ -1,6 +1,6 @@
 'use strict';
 const $=id=>document.getElementById(id);
-let account=null, pdfUrl=null, epoch=0, zoom=1, fit=true;
+let account=null, pdfUrl=null, epoch=0, zoom=1, fit=true, previewPages=[], previewIndex=0;
 function setError(id,message){
   const node=$(id);node.textContent=message;node.classList.toggle('hidden',!message);
 }
@@ -31,10 +31,12 @@ function clearPreview(){
   epoch++;
   if($('dtr-preview-dialog').open)$('dtr-preview-dialog').close();
   if(pdfUrl)URL.revokeObjectURL(pdfUrl);
-  pdfUrl=null;$('aja-paper').removeAttribute('src');
+  pdfUrl=null;previewPages=[];previewIndex=0;$('aja-paper').removeAttribute('src');
 }
 const ajaForm=$('aja-form'),timePicker=$('aja-time-picker');
 const timeNames=['departure','return_time'];
+let dates=[], scheduleMode='same';
+const dailyTimes=new Map();
 let timeTarget=null,hour=8,minute=0,period='AM';
 function timeDisplay(value){
   if(!/^([01]\d|2[0-3]):[0-5]\d$/.test(value||''))return '';
@@ -68,21 +70,169 @@ function syncTypedTime(target,normalize=false){
   input.setCustomValidity(raw&&!parsed?'Enter a valid time, e.g. 8:30 AM or 13:30.':'');
   return parsed;
 }
+function activeTimeTargets(){
+  return scheduleMode==='individual'&&dates.length>1?dates.flatMap(day=>['departure-'+day,'return_time-'+day]):timeNames;
+}
+function dateLabel(iso,short=false){
+  return new Intl.DateTimeFormat('en-US',{month:short?'short':'long',day:'numeric',year:'numeric',timeZone:'UTC'}).format(new Date(iso+'T00:00:00Z'));
+}
+function collectDays(){
+  return dates.map(date=>{
+    const suffix=scheduleMode==='individual'&&dates.length>1?'-'+date:'';
+    return {date,departure:$('departure'+suffix)?.value||'',return_time:$('return_time'+suffix)?.value||''};
+  });
+}
 function updateSummary(){
-  const values=Object.fromEntries(new FormData(ajaForm));
-  let count=0;
-  for(const key of ['dates','origin','destination','purpose',...timeNames]){
+  const values=Object.fromEntries(new FormData(ajaForm)),days=collectDays();
+  const individual=scheduleMode==='individual'&&dates.length>1;
+  let count=Number(dates.length>0);
+  $('summary-dates').textContent=dates.length?dates.map(d=>dateLabel(d,true)).join('; '):'—';
+  for(const key of ['origin','destination','purpose']){
     const value=String(values[key]||'').trim();
-    const rendered=timeNames.includes(key)?timeDisplay(value):value;
-    if(rendered)count++;
-    const summary=$('summary-'+key);
-    if(summary)summary.textContent=rendered||'—';
-    // Preserve the user's text and cursor while typing. The canonical
-    // hidden value alone drives the summary and PDF payload.
+    if(value)count++;
+    const summary=$('summary-'+key);if(summary)summary.textContent=value||'—';
+  }
+  for(const key of timeNames){
+    const complete=days.length>0&&days.every(day=>timeDisplay(day[key]));
+    if(complete)count++;
+    $('summary-'+key).textContent=timeDisplay($(key).value)||'—';
+  }
+  $('aja-summary-shared').classList.toggle('hidden',individual);
+  $('aja-summary-individual').classList.toggle('hidden',!individual);
+  $('aja-summary-days').replaceChildren();
+  if(individual)for(const day of days){
+    const row=document.createElement('div');row.className='aja-daily-summary';
+    const label=document.createElement('strong');label.textContent=dateLabel(day.date,true);
+    const value=document.createElement('span');value.textContent=(timeDisplay(day.departure)||'—')+' – '+(timeDisplay(day.return_time)||'—');
+    row.append(label,value);$('aja-summary-days').append(row);
   }
   $('aja-progress').value=count;
   $('aja-completion').textContent=count+' of 6';
 }
+function bindTimeInput(target){
+  const input=$(target+'-display');
+  $(target+'-trigger').addEventListener('click',()=>openTimePicker(target));
+  input.addEventListener('input',()=>syncTypedTime(target));
+  input.addEventListener('blur',()=>{syncTypedTime(target,true);updateSummary();});
+  input.addEventListener('invalid',()=>input.setAttribute('aria-invalid','true'));
+}
+function captureDailyTimes(){
+  for(const day of dates)if($('departure-'+day)){
+    dailyTimes.set(day,timeNames.map(key=>$(key+'-'+day+'-display').value));
+  }
+}
+function renderSchedules(){
+  const individual=scheduleMode==='individual'&&dates.length>1;
+  $('aja-schedule-options').classList.toggle('hidden',dates.length<2);
+  $('aja-shared-times').classList.toggle('hidden',individual);
+  for(const key of timeNames)$(key+'-display').disabled=individual;
+  for(const b of ajaForm.querySelectorAll('[data-schedule-mode]'))b.setAttribute('aria-pressed',String(b.dataset.scheduleMode===scheduleMode));
+  const host=$('aja-individual-times');host.replaceChildren();host.classList.toggle('hidden',!individual);
+  if(!individual)return;
+  for(const day of dates){
+    const row=document.createElement('div');row.className='aja-daily-row';
+    const title=document.createElement('strong');title.textContent=dateLabel(day,true);row.append(title);
+    const pair=document.createElement('div');pair.className='aja-time-row';
+    timeNames.forEach((key,i)=>{
+      const clone=$(key+'-display').closest('.aja-time-field').cloneNode(true);
+      const target=key+'-'+day;
+      clone.querySelectorAll('[id]').forEach(el=>{el.id=el.id.replace(key,target);});
+      clone.querySelector('label').htmlFor=target+'-display';
+      const input=clone.querySelector('.aja-time-input');input.disabled=false;input.value=dailyTimes.get(day)?.[i]??$(key+'-display').value;input.removeAttribute('aria-invalid');
+      const hidden=clone.querySelector('input[type=hidden]');hidden.removeAttribute('name');hidden.value='';
+      const button=clone.querySelector('button');button.dataset.timeTarget=target;button.setAttribute('aria-expanded','false');button.setAttribute('aria-label',(i?'Choose return time for ':'Choose departure time for ')+dateLabel(day,true));
+      pair.append(clone);row.append(pair);host.append(row);bindTimeInput(target);syncTypedTime(target);
+    });
+  }
+}
+function formChanged(){
+  clearPreview();updateSummary();setError('aja-error','');$('aja-submit').disabled=false;
+}
+function commitDates(next){
+  captureDailyTimes();dates=[...new Set(next)].sort();
+  if(dates.length<2)scheduleMode='same';
+  $('aja-date-display').textContent=dates.length===1?dateLabel(dates[0]):dates.length?dates.length+' dates selected':'Select date/s';
+  $('aja-date-trigger').removeAttribute('aria-invalid');
+  const chips=$('aja-selected-dates');chips.replaceChildren();
+  if(dates.length>1)for(const date of dates){
+    const chip=document.createElement('button');chip.type='button';chip.className='aja-date-chip';
+    chip.textContent=dateLabel(date,true)+' ×';chip.setAttribute('aria-label','Remove '+dateLabel(date));chip.addEventListener('click',()=>commitDates(dates.filter(d=>d!==date)));chips.append(chip);
+  }
+  renderSchedules();formChanged();
+}
+const calendar=$('aja-date-picker');
+let draftDates=[],dateMode='single',rangeStart=null,calendarMonth=new Date();
+function isoDay(d){return d.toISOString().slice(0,10);}
+function calendarRender(message=''){
+  const y=calendarMonth.getUTCFullYear(),m=calendarMonth.getUTCMonth();
+  $('aja-month-label').textContent=new Intl.DateTimeFormat('en-US',{month:'long',year:'numeric',timeZone:'UTC'}).format(calendarMonth);
+  const grid=$('aja-calendar-days');grid.replaceChildren();
+  const first=new Date(Date.UTC(y,m,1)).getUTCDay(),last=new Date(Date.UTC(y,m+1,0)).getUTCDate();
+  for(let n=0;n<first;n++)grid.append(document.createElement('span'));
+  for(let n=1;n<=last;n++){
+    const date=isoDay(new Date(Date.UTC(y,m,n))),b=document.createElement('button');b.type='button';b.textContent=n;
+    b.setAttribute('aria-label',dateLabel(date));b.setAttribute('aria-pressed',String(draftDates.includes(date)));
+    b.addEventListener('click',()=>selectDate(date));grid.append(b);
+  }
+  calendar.querySelectorAll('[data-date-mode]').forEach(b=>b.setAttribute('aria-pressed',String(b.dataset.dateMode===dateMode)));
+  $('aja-calendar-status').textContent=message||(draftDates.length+' date'+(draftDates.length===1?'':'s')+' selected');
+}
+function selectDate(date){
+  if(dateMode==='single')draftDates=[date];
+  else if(dateMode==='multiple'){
+    if(draftDates.includes(date))draftDates=draftDates.filter(d=>d!==date);
+    else if(draftDates.length>=14){calendarRender('Maximum 14 dates per filing.');return;}
+    else draftDates=[...draftDates,date].sort();
+  }else if(!rangeStart){rangeStart=date;draftDates=[date];}
+  else{
+    const a=new Date([rangeStart,date].sort()[0]+'T00:00:00Z'),b=new Date([rangeStart,date].sort()[1]+'T00:00:00Z');
+    const length=Math.round((b-a)/86400000)+1;
+    if(length>14){calendarRender('Select a range of up to 14 days.');return;}
+    draftDates=Array.from({length},(_,i)=>isoDay(new Date(a.getTime()+i*86400000)));rangeStart=null;
+  }
+  calendarRender(dateMode==='range'&&rangeStart?'Choose the end date.':'');
+}
+function placeCalendar(){
+  if(!calendar.open)return;
+  const r=$('aja-date-trigger').getBoundingClientRect();
+  calendar.style.left=Math.max(8,Math.min(r.left,innerWidth-calendar.offsetWidth-8))+'px';
+  calendar.style.top=(r.bottom+5)+'px';
+  calendar.style.maxHeight=Math.max(40,innerHeight-r.bottom-13)+'px';
+}
+function closeCalendar(restore=false){
+  if(calendar.open)calendar.close();
+  $('aja-date-trigger').setAttribute('aria-expanded','false');
+  document.querySelector('.aja-form-body').style.removeProperty('--aja-picker-space');
+  if(restore)$('aja-date-trigger').focus({preventScroll:true});
+}
+$('aja-date-trigger').addEventListener('click',()=>{
+  if(calendar.open){closeCalendar(true);return;}
+  closeTimePicker();draftDates=[...dates];rangeStart=null;
+  dateMode=dates.length>1?'multiple':'single';
+  const today=new Intl.DateTimeFormat('sv-SE',{timeZone:'Asia/Manila',year:'numeric',month:'2-digit',day:'2-digit'}).format(new Date());
+  calendarMonth=new Date((dates[0]||today).slice(0,7)+'-01T00:00:00Z');
+  calendarRender();calendar.style.maxHeight='';calendar.show();
+  const body=document.querySelector('.aja-form-body'),extra=Math.max(0,Math.ceil(calendar.offsetHeight-(innerHeight-$('aja-date-trigger').getBoundingClientRect().bottom-13)));
+  if(extra){body.style.setProperty('--aja-picker-space',extra+'px');body.scrollTop+=extra;}
+  placeCalendar();$('aja-date-trigger').setAttribute('aria-expanded','true');
+});
+calendar.querySelectorAll('[data-date-mode]').forEach(b=>b.addEventListener('click',()=>{
+  dateMode=b.dataset.dateMode;rangeStart=null;if(dateMode==='single'&&draftDates.length>1)draftDates=draftDates.slice(0,1);calendarRender();
+}));
+for(const [id,delta] of [['aja-month-prev',-1],['aja-month-next',1]])$(id).addEventListener('click',()=>{
+  calendarMonth=new Date(Date.UTC(calendarMonth.getUTCFullYear(),calendarMonth.getUTCMonth()+delta,1));calendarRender();
+});
+$('aja-date-clear').addEventListener('click',()=>{draftDates=[];rangeStart=null;calendarRender();});
+$('aja-date-apply').addEventListener('click',()=>{if(dateMode==='range'&&rangeStart){calendarRender('Choose the end date or switch to Single.');return;}closeCalendar(true);commitDates(draftDates);});
+$('aja-date-close').addEventListener('click',()=>closeCalendar(true));
+calendar.addEventListener('cancel',e=>{e.preventDefault();closeCalendar(true);});
+document.addEventListener('pointerdown',e=>{if(calendar.open&&!calendar.contains(e.target)&&!$('aja-date-trigger').contains(e.target))closeCalendar();});
+document.addEventListener('keydown',e=>{if(e.key==='Escape'&&calendar.open){e.preventDefault();closeCalendar(true);}});
+document.querySelector('.aja-form-body').addEventListener('scroll',placeCalendar,{passive:true});
+window.addEventListener('resize',()=>closeCalendar());
+ajaForm.querySelectorAll('[data-schedule-mode]').forEach(b=>b.addEventListener('click',()=>{
+  closeTimePicker();captureDailyTimes();scheduleMode=b.dataset.scheduleMode;renderSchedules();formChanged();
+}));
 function refreshTimePicker(){
   for(const button of $('aja-hours').querySelectorAll('button'))button.setAttribute('aria-pressed',String(Number(button.dataset.hour)===hour));
   for(const button of $('aja-minutes').querySelectorAll('button'))button.setAttribute('aria-pressed',String(Number(button.dataset.minute)===minute));
@@ -109,7 +259,7 @@ function centerTimeChoice(list){
 }
 function openTimePicker(target){
   if(timeTarget===target&&timePicker.open){closeTimePicker(true);return;}
-  closeTimePicker();
+  closeTimePicker();closeCalendar();
   timeTarget=target;
   const existing=$(target).value;
   if(timeDisplay(existing)){
@@ -150,13 +300,7 @@ for(const [list,key,start,end] of [['aja-hours','hour',1,12],['aja-minutes','min
   }
 }
 for(const button of timePicker.querySelectorAll('[data-period]'))button.addEventListener('click',()=>{period=button.dataset.period;refreshTimePicker();});
-for(const target of timeNames){
-  const input=$(target+'-display');
-  $(target+'-trigger').addEventListener('click',()=>openTimePicker(target));
-  input.addEventListener('input',()=>syncTypedTime(target));
-  input.addEventListener('blur',()=>{syncTypedTime(target,true);updateSummary();});
-  input.addEventListener('invalid',()=>{input.setAttribute('aria-invalid','true');});
-}
+for(const target of timeNames)bindTimeInput(target);
 $('aja-time-apply').addEventListener('click',()=>applyTime());
 $('aja-time-clear').addEventListener('click',()=>applyTime(true));
 $('aja-time-close').addEventListener('click',()=>closeTimePicker(true));
@@ -185,8 +329,26 @@ $('login-form').addEventListener('submit',async e=>{
   catch(err){setError('login-error',err.message);}finally{b.disabled=false;}
 });
 $('logout-sidebar').addEventListener('click',async()=>{try{await call('logout',{});show(null);}catch(err){setError('aja-error',err.message);}});
-$('aja-form').addEventListener('reset',()=>{closeTimePicker();clearPreview();queueMicrotask(()=>{for(const target of timeNames){$(target).value='';const input=$(target+'-display');input.value='';input.setCustomValidity('');input.removeAttribute('aria-invalid');}identity();});for(const target of timeNames)$(target+'-trigger').removeAttribute('aria-invalid');setError('aja-error','');$('aja-submit').disabled=false;});
-$('aja-form').addEventListener('input',()=>{clearPreview();updateSummary();setError('aja-error','');$('aja-submit').disabled=false;});
+$('aja-form').addEventListener('reset',()=>{
+  closeTimePicker();closeCalendar();clearPreview();
+  queueMicrotask(()=>{
+    dates=[];dailyTimes.clear();scheduleMode='same';
+    for(const target of timeNames){$(target).value='';const input=$(target+'-display');input.value='';input.disabled=false;input.setCustomValidity('');input.removeAttribute('aria-invalid');}
+    commitDates([]);identity();
+  });
+});
+$('aja-form').addEventListener('input',formChanged);
+function showPreviewPage(index){
+  if(!previewPages.length)return;
+  previewIndex=Math.max(0,Math.min(previewPages.length-1,index));
+  $('aja-paper').src='data:image/png;base64,'+previewPages[previewIndex];
+  $('aja-page-nav').classList.toggle('hidden',previewPages.length<2);
+  $('aja-page-count').textContent=(previewIndex+1)+' / '+previewPages.length;
+  $('aja-page-prev').disabled=previewIndex===0;$('aja-page-next').disabled=previewIndex===previewPages.length-1;
+  $('aja-stage').scrollTop=0;requestAnimationFrame(applyZoom);
+}
+$('aja-page-prev').addEventListener('click',()=>showPreviewPage(previewIndex-1));
+$('aja-page-next').addEventListener('click',()=>showPreviewPage(previewIndex+1));
 function applyZoom(){
   const stage=$('aja-stage');
   if(!$('dtr-preview-dialog').open)return;
@@ -200,21 +362,25 @@ function applyZoom(){
 }
 $('aja-form').addEventListener('submit',async e=>{
   e.preventDefault();if(!account)return;
-  closeTimePicker();
-  for(const target of timeNames){
+  closeTimePicker();closeCalendar();
+  if(!dates.length){setError('aja-error','Select at least one official business date.');$('aja-date-trigger').setAttribute('aria-invalid','true');$('aja-date-trigger').focus();return;}
+  for(const target of activeTimeTargets()){
     if(!syncTypedTime(target,true)){
-      setError('aja-error','Enter valid departure and return times.');
-      $(target+'-display').setAttribute('aria-invalid','true');$(target+'-display').focus();return;
+      setError('aja-error','Enter valid departure and return times.');$(target+'-display').setAttribute('aria-invalid','true');$(target+'-display').focus();return;
     }
   }
+  const days=collectDays(),bad=days.find(day=>day.return_time<=day.departure);
+  if(bad){setError('aja-error','Return must be after departure on '+dateLabel(bad.date,true)+'. Overnight trips require HR review.');return;}
+  const values=Object.fromEntries(new FormData(e.target));
+  const payload={days,origin:values.origin,destination:values.destination,purpose:values.purpose};
   clearPreview();const token=epoch;
   $('aja-submit').disabled=true;setError('aja-error','');
   try{
-    const data=await call('aja/preview',Object.fromEntries(new FormData(e.target)));
+    const data=await call('aja/preview',payload);
     if(token!==epoch)return;
     const bytes=Uint8Array.from(atob(data.pdf),c=>c.charCodeAt(0));
     pdfUrl=URL.createObjectURL(new Blob([bytes],{type:'application/pdf'}));
-    $('aja-paper').src='data:image/png;base64,'+data.preview;
+    previewPages=data.previews||[data.preview];showPreviewPage(0);
     $('dtr-preview-context').textContent=account.name;
     fit=true;$('dtr-preview-dialog').showModal();requestAnimationFrame(applyZoom);
   }catch(err){if(token===epoch)setError('aja-error',err.message);}
