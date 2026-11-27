@@ -472,20 +472,22 @@
 }
 .workspace #attendance-register-panel .attendance-directory tbody tr:hover{background:#dbe7f7}
 .workspace #attendance-register-panel .attendance-directory tbody tr:hover .directory-action-cell{background:#dbe7f7}
+/* Match Employees' action control: quiet default, blue on row hover,
+   deeper navy on direct interaction. Keep the text-only attendance button. */
 .workspace #attendance-register-panel .directory-action-cell .row-action{
-  display:inline-flex;align-items:center;justify-content:center;gap:5px;
+  display:inline-flex;align-items:center;justify-content:center;gap:0;
   height:30px;min-height:30px;padding:0 9px;border:0;
-  background:#244b9a;color:#fff;font-size:10.5px;font-weight:650;
-  text-decoration:none!important;border-radius:6px;box-shadow:0 2px 5px #244b9a26;
-  transition:transform .32s cubic-bezier(.4,0,.2,1),background-color .28s cubic-bezier(.4,0,.2,1),color .28s cubic-bezier(.4,0,.2,1);
+  background:#e3ebf8;color:#294d85;font-size:10.5px;font-weight:650;
+  text-decoration:none!important;border-radius:6px;box-shadow:none;transform:none;
+  transition:background-color .18s ease,color .18s ease;
 }
-.workspace #attendance-register-panel .directory-action-cell .row-action svg{width:13px;height:13px;flex:none}
-.workspace #attendance-register-panel .directory-action-cell .row-action:hover,
-.workspace #attendance-register-panel .directory-action-cell .row-action:focus-visible{
-  background:#17356e;color:#fff;text-decoration:none!important;
-  transform:translateY(-1px);box-shadow:0 4px 10px #244b9a40;
+.workspace #attendance-register-panel .attendance-directory tbody tr:is(:hover,:focus-within) .row-action{
+  background:#3263bd;color:#fff;box-shadow:none;
 }
-.workspace #attendance-register-panel .directory-action-cell .row-action:active{transform:translateY(0)}
+.workspace #attendance-register-panel .attendance-directory tbody tr .directory-action-cell .row-action:is(:hover,:focus-visible,:active){
+  background:#173b80;color:#fff;text-decoration:none!important;transform:none;box-shadow:none;
+}
+.workspace #attendance-register-panel .directory-action-cell .row-action:focus-visible{outline:2px solid #7295ce;outline-offset:1px}
 .workspace #attendance-register-panel .table-wrap{scrollbar-width:thin;scrollbar-color:#b8c6dd transparent}
 .workspace #attendance-register-panel .table-wrap::-webkit-scrollbar{display:block;width:6px;height:6px}
 .workspace #attendance-register-panel .table-wrap::-webkit-scrollbar-thumb{background:#b8c6dd;border-radius:999px}
