@@ -123,7 +123,7 @@ def test_aja_filing_persistence_and_ownership(admin, monkeypatch):
 
 def test_admin_aja_monitor_reads_active_filings_only(admin, monkeypatch):
     import app.main as main
-    client, _ = admin
+    client, headers = admin
     monkeypatch.setattr(main, "render_saved_pdf", lambda pdf: {"pdf":"test", "previews":["test"]})
     with closing(connect()) as con, con:
         con.execute("INSERT INTO employees(employee_code,display_name,department) VALUES(?,?,?)",
@@ -148,13 +148,26 @@ def test_admin_aja_monitor_reads_active_filings_only(admin, monkeypatch):
     assert item["days"] == [{"date":"2026-12-16","departure":"08:00","return_time":"10:00"}]
     assert item["status"] == "awaiting_signatures"
     assert client.get(base+"/AJA-TEST-ACTIVE/document").status_code == 200
-    assert client.get(base+"/AJA-TEST-ACTIVE/pdf").content == b"saved-pdf"
+    assert "pdf" not in client.get(base+"/AJA-TEST-ACTIVE/document").json()
+    assert client.get(base+"/AJA-TEST-ACTIVE/pdf").status_code == 404
     assert client.get(base+"/AJA-TEST-DELETED/document").status_code == 404
     assert client.get(base+"/AJA-TEST-DELETED/pdf").status_code == 404
+    review = base+"/AJA-TEST-ACTIVE/review"
+    approval = {"decision":"approved","authorized_decision_verified":True}
+    assert client.post(review,json=approval).status_code == 403
+    assert client.post(review,json={"decision":"approved"},headers=headers).status_code == 422
+    assert client.post(review,json={"decision":"returned"},headers=headers).status_code == 422
+    assert client.post(base+"/AJA-TEST-DELETED/review",json=approval,headers=headers).status_code == 404
+    assert client.post(review,json=approval,headers=headers).json()["filing"]["status"] == "approved"
+    assert client.post(review,json=approval,headers=headers).status_code == 409
+    assert client.get(base).json()["filings"][0]["status"] == "approved"
     with closing(connect()) as con:
         assert con.execute("SELECT COUNT(*) FROM activity_records WHERE employee_code='aja-monitor-test'").fetchone()[0] == 0
     assert client.post("/api/login",json={"username":"reviewer-test","password":"local-reviewer-test-password"}).status_code == 200
     assert client.get(base).status_code == 403
+    assert client.post(review,json=approval).status_code == 403
     assert client.post("/api/employee-portal/login",json={"username":"aja-monitor-employee","password":"local-test-password"}).status_code == 200
     assert client.get(base).status_code == 401
-    assert client.get(base+"/AJA-TEST-ACTIVE/pdf").status_code == 401
+    assert client.get(base+"/AJA-TEST-ACTIVE/document").status_code == 401
+    assert client.post(review,json=approval).status_code == 401
+    assert client.get("/api/employee-portal/aja/filings").json()["filings"][0]["status"] == "approved"
