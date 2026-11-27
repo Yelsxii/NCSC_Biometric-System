@@ -1502,3 +1502,17 @@ body:has(#profile-undo-stack:not(:empty)) #toast:not(.hidden){bottom:auto;top:22
 .workspace #employee-profile-panel .profile-table tbody tr:is(:hover,:focus-within) .profile-position-cell{color:#0755c5;text-shadow:0 0 7px rgba(25,102,231,.16)}
 .workspace #employee-profile-panel .position-unset{color:#8294ad;text-shadow:none;font-weight:500}
 @media(prefers-reduced-motion:reduce){.workspace #employee-profile-panel .profile-table .profile-position-cell{transition:none}}
+
+/* Editable position combobox: same visual system as the existing profile pickers. */
+#profile-dialog .profile-position-control{position:relative;min-width:0}
+#profile-dialog .profile-position-control.enhanced input{padding-right:34px}
+#profile-dialog .profile-position-toggle{position:absolute;right:3px;top:4px;bottom:0;display:grid;place-items:center;width:29px;min-width:0;height:auto;min-height:0;padding:0;border:0;border-radius:6px;background:transparent;color:#2258a4;cursor:pointer;box-shadow:none;transition:background-color .18s ease}
+#profile-dialog .profile-position-toggle[hidden]{display:none!important}
+#profile-dialog .profile-position-toggle svg{width:13px;height:13px;transition:transform .34s cubic-bezier(.25,.7,.25,1);pointer-events:none}
+#profile-dialog .profile-position-toggle:is(:hover,:focus-visible){background:#e3edfc;color:#244b9a}
+#profile-dialog .profile-position-toggle[aria-expanded=true] svg{transform:rotate(180deg)}
+#profile-dialog .profile-position-menu{scrollbar-width:thin;scrollbar-color:#c1cfe3 transparent}
+#profile-dialog .profile-position-menu button[data-keyboard-active]:not([aria-selected=true]){background:#e3edfc;border-color:#a5bce2;color:#244b9a}
+#profile-dialog .profile-position-menu button[data-keyboard-active][aria-selected=true]{outline:2px solid #7596cc;outline-offset:-2px}
+#profile-dialog .profile-position-menu .position-custom-caption{margin-left:auto;font-size:9px;font-weight:600;opacity:.8;flex:none}
+@media(prefers-reduced-motion:reduce){#profile-dialog .profile-position-toggle,#profile-dialog .profile-position-toggle svg{transition:none}}
