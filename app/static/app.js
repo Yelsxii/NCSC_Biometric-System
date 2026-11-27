@@ -97,6 +97,7 @@ async function api(path,options={}) {
   return data;
 }
 function showLogin(){
+  resetAdminAja();
   closeProfileMenu();profileArchived=false;profileArchiveBusy=false;profileArchiveContext=null;
   clearProfileUndoNotices();
   stopDeviceRefresh();
@@ -116,6 +117,7 @@ function showApp(){
   $('login-view').classList.add('hidden');
   $('workspace').classList.remove('hidden');
   const canWrite=session.role==='admin';
+  document.querySelector('[data-page="activities"]').hidden=!canWrite;
   document.querySelectorAll('#usb-form button,#roster-form button')
     .forEach(el=>el.disabled=!canWrite);
   $('open-attendance-import').disabled=!canWrite;
@@ -127,7 +129,8 @@ function showApp(){
   navigate('employees');
 }
 function navigate(page){
-  if (!session || !titles[page]) return;
+  if (!session || !titles[page] || (page==='activities'&&session.role!=='admin')) return;
+  stopAdminAjaRefresh();closeAdminAjaMenu();
   closeProfileMenu();
   cancelRegisterSearch();
   stopDeviceRefresh();
@@ -153,7 +156,7 @@ function navigate(page){
     return loadRegister();
   }
   if (page==='profiles') {startAttendanceRefresh();return loadProfiles();}
-  if (page==='activities') return;
+  if (page==='activities') {startAdminAjaRefresh();return loadAdminAja();}
   if (page==='staff') {startDeviceRefresh();return loadDevice();}
 }
 function cancelRegisterSearch(){requestSerial++;}
@@ -1527,6 +1530,7 @@ function initializeModalDismissal(){
   });
 }
 async function initialize(){
+  initializeAdminAja();
   initializeAttendanceMonthPicker();
   initializeModalDismissal();
   initializeProfileSelects();
@@ -1747,4 +1751,164 @@ async function initialize(){
   try{session=await api('/api/me');showApp();}
   catch(_){session=null;showLogin();}
 }
+
+/* Admin-only employee AJA monitor. No unsigned filing is posted to attendance. */
+let adminAjaRows=[],adminAjaTimer=null,adminAjaRequest=0,adminAjaLoading=false,adminAjaMenuContext=null,adminAjaBusy=false;
+let adminAjaPdfUrl=null,adminAjaPages=[],adminAjaPage=0,adminAjaReference='',adminAjaZoom=1,adminAjaFit=true,adminAjaPrintFrame=null;
+const adminAjaApi='/api/admin/aja/filings';
+function adminAjaAllowed(){return session?.role==='admin'&&currentPage==='activities';}
+function stopAdminAjaRefresh(){clearInterval(adminAjaTimer);adminAjaTimer=null;adminAjaRequest++;adminAjaLoading=false;}
+function startAdminAjaRefresh(){
+  stopAdminAjaRefresh();
+  adminAjaTimer=setInterval(()=>{if(adminAjaAllowed()&&!document.hidden&&!adminAjaMenuContext&&!adminAjaBusy&&!$('admin-aja-preview-dialog').open)void loadAdminAja(true);},15000);
+}
+function resetAdminAja(){
+  stopAdminAjaRefresh();closeAdminAjaMenu();closeAdminAjaPreview();
+  adminAjaRows=[];adminAjaBusy=false;
+  $('admin-aja-search').value='';$('admin-aja-rows').replaceChildren();$('admin-aja-count').textContent='';adminAjaMessage('');
+}
+function adminAjaMessage(message){const node=$('admin-aja-message');node.textContent=message;node.classList.toggle('hidden',!message);}
+function adminAjaDate(iso){
+  const value=String(iso||'');const date=new Date(value+'T00:00:00Z');
+  return Number.isNaN(date.getTime())?'—':new Intl.DateTimeFormat('en-US',{month:'short',day:'numeric',year:'numeric',timeZone:'UTC'}).format(date);
+}
+function adminAjaFiled(value){
+  const raw=String(value||'').trim();const date=new Date(/^\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}$/.test(raw)?raw.replace(' ','T')+'Z':raw);
+  return Number.isNaN(date.getTime())?'—':new Intl.DateTimeFormat('en-US',{month:'short',day:'numeric',year:'numeric',timeZone:'Asia/Manila'}).format(date);
+}
+function adminAjaTime(value){
+  if(!/^([01]\d|2[0-3]):[0-5]\d$/.test(value||''))return '—';
+  const [h,m]=value.split(':').map(Number);return String(h%12||12).padStart(2,'0')+':'+String(m).padStart(2,'0')+' '+(h<12?'AM':'PM');
+}
+function renderAdminAja(){
+  const term=$('admin-aja-search').value.trim().toLowerCase();
+  const rows=adminAjaRows.filter(f=>!term||[f.employee_name,f.employee_code,f.department,f.reference,f.destination,f.origin,f.purpose,adminAjaFiled(f.filed_at),...f.days.map(d=>adminAjaDate(d.date))].join(' ').toLowerCase().includes(term));
+  const markup=rows.map((f,i)=>'<tr><td class="id-cell admin-aja-number-cell">'+(i+1)+'</td><td class="admin-aja-employee-cell"><strong>'+esc(f.employee_name)+'</strong><small>'+esc(f.department||'—')+'</small></td><td class="id-cell admin-aja-reference-cell">'+esc(f.reference)+'</td><td class="department-name">'+esc(adminAjaFiled(f.filed_at))+'</td><td class="department-name">'+esc(f.days.map(d=>adminAjaDate(d.date)).join('; '))+'</td><td class="department-name">'+esc(f.destination)+'</td><td><span class="admin-aja-status-chip">'+esc(f.status==='awaiting_signatures'?'Awaiting signatures':f.status)+'</span></td><td class="directory-action-cell"><button type="button" class="profile-more" data-admin-aja-reference="'+esc(f.reference)+'" aria-controls="admin-aja-action-menu" aria-haspopup="true" aria-expanded="false" aria-label="Actions for '+esc(f.reference)+'"><svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><circle cx="5" cy="12" r="1.8"/><circle cx="12" cy="12" r="1.8"/><circle cx="19" cy="12" r="1.8"/></svg></button></td></tr>').join('');
+  setHtmlIfChanged($('admin-aja-rows'),markup||'<tr><td colspan="8" class="table-empty">'+(term?'No matching filings.':'No AJA filings yet.')+'</td></tr>');
+  $('admin-aja-count').textContent=rows.length+' of '+adminAjaRows.length+' filings';
+}
+async function loadAdminAja(quiet=false){
+  if(!adminAjaAllowed()||adminAjaLoading)return;
+  const owner=session,request=++adminAjaRequest;adminAjaLoading=true;
+  if(!quiet){$('admin-aja-rows').innerHTML='<tr><td colspan="8" class="table-empty">Loading filings…</td></tr>';adminAjaMessage('');}
+  try{
+    const data=await api(adminAjaApi);
+    if(owner!==session||request!==adminAjaRequest||!adminAjaAllowed())return;
+    if(adminAjaMenuContext||adminAjaBusy||$('admin-aja-preview-dialog').open)return;
+    adminAjaRows=data.filings;renderAdminAja();adminAjaMessage('');
+  }catch(error){if(owner===session&&request===adminAjaRequest&&adminAjaAllowed()){if(!quiet){adminAjaRows=[];renderAdminAja();}adminAjaMessage(error.message);}}
+  finally{if(request===adminAjaRequest)adminAjaLoading=false;}
+}
+function closeAdminAjaMenu(restore=false){
+  const menu=$('admin-aja-action-menu'),context=adminAjaMenuContext;adminAjaMenuContext=null;
+  if(menu.matches(':popover-open'))menu.hidePopover();
+  if(context){context.trigger.setAttribute('aria-expanded','false');if(restore&&context.trigger.isConnected)context.trigger.focus({preventScroll:true});}
+}
+function openAdminAjaMenu(trigger){
+  if(!adminAjaAllowed()||adminAjaBusy)return;
+  if(adminAjaMenuContext?.trigger===trigger){closeAdminAjaMenu(true);return;}
+  closeAdminAjaMenu();
+  adminAjaMenuContext={trigger,reference:trigger.dataset.adminAjaReference,owner:session};
+  const menu=$('admin-aja-action-menu');menu.showPopover();
+  const r=trigger.getBoundingClientRect(),w=menu.offsetWidth,h=menu.offsetHeight;
+  menu.style.left=Math.max(8,Math.min(innerWidth-w-8,r.right-w))+'px';
+  menu.style.top=Math.max(8,r.bottom+h+14<=innerHeight?r.bottom+6:r.top-h-6)+'px';
+  trigger.setAttribute('aria-expanded','true');$('admin-aja-menu-view').focus({preventScroll:true});
+}
+function clearAdminAjaPreview(){
+  if(adminAjaPdfUrl)URL.revokeObjectURL(adminAjaPdfUrl);
+  adminAjaPdfUrl=null;adminAjaPages=[];adminAjaReference='';$('admin-aja-paper').removeAttribute('src');$('admin-aja-preview-details').replaceChildren();
+}
+function closeAdminAjaPreview(){
+  const dialog=$('admin-aja-preview-dialog');if(dialog.open)dialog.close();clearAdminAjaPreview();
+}
+function applyAdminAjaZoom(){
+  const stage=$('admin-aja-stage');if(!$('admin-aja-preview-dialog').open)return;
+  if(adminAjaFit)adminAjaZoom=Math.min((stage.clientWidth-34)/816,(stage.clientHeight-74)/1248,1);
+  adminAjaZoom=Math.max(.12,adminAjaZoom);
+  $('admin-aja-paper').style.width=Math.round(816*adminAjaZoom)+'px';
+  $('admin-aja-paper').style.height=Math.round(1248*adminAjaZoom)+'px';
+  $('admin-aja-zoom-value').textContent=Math.round(adminAjaZoom*100)+'%';
+  $('admin-aja-zoom-fit').setAttribute('aria-pressed',String(adminAjaFit));
+}
+function showAdminAjaPage(index){
+  if(!adminAjaPages.length)return;
+  adminAjaPage=Math.max(0,Math.min(adminAjaPages.length-1,index));
+  $('admin-aja-paper').src='data:image/png;base64,'+adminAjaPages[adminAjaPage];
+  $('admin-aja-page-nav').classList.toggle('hidden',adminAjaPages.length<2);
+  $('admin-aja-page-count').textContent=(adminAjaPage+1)+' / '+adminAjaPages.length;
+  $('admin-aja-page-prev').disabled=adminAjaPage===0;$('admin-aja-page-next').disabled=adminAjaPage===adminAjaPages.length-1;
+  $('admin-aja-stage').scrollTop=0;requestAnimationFrame(applyAdminAjaZoom);
+}
+async function openAdminAjaDocument(reference,owner){
+  const data=await api(adminAjaApi+'/'+encodeURIComponent(reference)+'/document');
+  if(owner!==session||!adminAjaAllowed())return;
+  clearAdminAjaPreview();
+  const f=data.filing;
+  adminAjaPdfUrl=URL.createObjectURL(new Blob([Uint8Array.from(atob(data.pdf),c=>c.charCodeAt(0))],{type:'application/pdf'}));
+  adminAjaPages=data.previews;adminAjaReference=f.reference;
+  $('admin-aja-preview-context').textContent=f.employee_name;
+  $('admin-aja-preview-reference').textContent=f.reference;$('admin-aja-preview-note').hidden=true;
+  const details=document.createElement('dl');
+  for(const [label,value] of [['Status',f.status==='awaiting_signatures'?'Awaiting signatures':f.status],['Position / department',[f.position,f.department].filter(Boolean).join(' · ')],['Route',f.origin+' → '+f.destination],['Purpose',f.purpose],...f.days.map(d=>[adminAjaDate(d.date),adminAjaTime(d.departure)+' – '+adminAjaTime(d.return_time)])]){
+    const dt=document.createElement('dt'),dd=document.createElement('dd');dt.textContent=label;dd.textContent=value;details.append(dt,dd);
+  }
+  $('admin-aja-preview-details').append(details);
+  adminAjaFit=true;$('admin-aja-preview-dialog').showModal();showAdminAjaPage(0);
+}
+function saveAdminAjaBlob(url,reference){
+  const a=document.createElement('a');a.href=url;a.download=reference+'.pdf';document.body.append(a);a.click();a.remove();
+}
+async function downloadAdminAja(reference,owner){
+  const response=await fetch(adminAjaApi+'/'+encodeURIComponent(reference)+'/pdf',{credentials:'same-origin',cache:'no-store'});
+  if(!response.ok)throw Error('Unable to download the saved AJA PDF.');
+  const blob=await response.blob();if(owner!==session||!adminAjaAllowed())return;
+  const url=URL.createObjectURL(blob);saveAdminAjaBlob(url,reference);setTimeout(()=>URL.revokeObjectURL(url),30000);
+}
+async function runAdminAjaAction(action){
+  const context=adminAjaMenuContext;if(!context||context.owner!==session||adminAjaBusy)return;
+  closeAdminAjaMenu(true);adminAjaBusy=true;context.trigger.disabled=true;adminAjaMessage('');
+  try{if(action==='view')await openAdminAjaDocument(context.reference,context.owner);else await downloadAdminAja(context.reference,context.owner);}
+  catch(error){if(context.owner===session&&adminAjaAllowed())adminAjaMessage(error.message);}
+  finally{adminAjaBusy=false;context.trigger.disabled=false;}
+}
+function initializeAdminAja(){
+  $('admin-aja-search').addEventListener('input',()=>{closeAdminAjaMenu();renderAdminAja();});
+  $('admin-aja-rows').addEventListener('click',e=>{const trigger=e.target.closest('[data-admin-aja-reference]');if(trigger)openAdminAjaMenu(trigger);});
+  $('admin-aja-menu-view').addEventListener('click',()=>runAdminAjaAction('view'));
+  $('admin-aja-menu-download').addEventListener('click',()=>runAdminAjaAction('download'));
+  document.addEventListener('pointerdown',e=>{if(adminAjaMenuContext&&!$('admin-aja-action-menu').contains(e.target)&&!e.target.closest('[data-admin-aja-reference]'))closeAdminAjaMenu();});
+  document.addEventListener('keydown',e=>{
+    if(!adminAjaMenuContext)return;
+    if(e.key==='Escape'){e.preventDefault();closeAdminAjaMenu(true);}
+    else if(e.key==='Tab')closeAdminAjaMenu(true);
+    else if(e.key==='ArrowDown'||e.key==='ArrowUp'){e.preventDefault();const items=[...$('admin-aja-action-menu').querySelectorAll('button')],i=items.indexOf(document.activeElement);items[(i+(e.key==='ArrowDown'?1:items.length-1)+items.length)%items.length].focus({preventScroll:true});}
+  });
+  document.querySelector('#aja-filings-panel .table-wrap').addEventListener('scroll',()=>closeAdminAjaMenu(),{passive:true});
+  window.addEventListener('resize',()=>{closeAdminAjaMenu();if(adminAjaFit)applyAdminAjaZoom();});
+  document.addEventListener('visibilitychange',()=>{if(!document.hidden&&adminAjaAllowed()&&!adminAjaBusy&&!$('admin-aja-preview-dialog').open){closeAdminAjaMenu();void loadAdminAja(true);}});
+  $('admin-aja-preview-back').addEventListener('click',closeAdminAjaPreview);
+  $('admin-aja-preview-dialog').addEventListener('close',()=>{if(!$('admin-aja-preview-dialog').open)clearAdminAjaPreview();});
+  $('admin-aja-page-prev').addEventListener('click',()=>showAdminAjaPage(adminAjaPage-1));
+  $('admin-aja-page-next').addEventListener('click',()=>showAdminAjaPage(adminAjaPage+1));
+  $('admin-aja-zoom-out').addEventListener('click',()=>{adminAjaFit=false;adminAjaZoom=Math.max(.12,adminAjaZoom-.15);applyAdminAjaZoom();});
+  $('admin-aja-zoom-in').addEventListener('click',()=>{adminAjaFit=false;adminAjaZoom=Math.min(2,adminAjaZoom+.15);applyAdminAjaZoom();});
+  $('admin-aja-zoom-fit').addEventListener('click',()=>{adminAjaFit=true;applyAdminAjaZoom();});
+  $('admin-aja-preview-download').addEventListener('click',()=>{if(adminAjaPdfUrl)saveAdminAjaBlob(adminAjaPdfUrl,adminAjaReference);});
+  $('admin-aja-preview-print').addEventListener('click',async()=>{
+    if(!adminAjaPdfUrl||!adminAjaPages.length||adminAjaPrintFrame)return;
+    const button=$('admin-aja-preview-print'),frame=document.createElement('iframe');adminAjaPrintFrame=frame;button.disabled=true;
+    frame.className='admin-aja-print-frame';frame.title='Printable AJA forms';frame.setAttribute('aria-hidden','true');frame.tabIndex=-1;
+    const release=()=>{if(adminAjaPrintFrame===frame){frame.remove();adminAjaPrintFrame=null;button.disabled=false;}};
+    try{
+      document.body.append(frame);const doc=frame.contentDocument;
+      doc.open();doc.write('<!doctype html><html><head><meta charset="utf-8"><title>AJA</title><style>@page{size:8.5in 13in;margin:0}html,body{margin:0;padding:0;background:white}img{display:block;width:8.5in;height:13in;object-fit:contain;break-after:page;page-break-after:always}img:last-child{break-after:auto;page-break-after:auto}</style></head><body></body></html>');doc.close();
+      const images=adminAjaPages.map(page=>{const image=doc.createElement('img');image.src='data:image/png;base64,'+page;doc.body.append(image);return image;});
+      await Promise.all(images.map(image=>image.decode()));
+      if(!adminAjaPdfUrl||!$('admin-aja-preview-dialog').open){release();return;}
+      frame.contentWindow.addEventListener('afterprint',release,{once:true});frame.contentWindow.focus();frame.contentWindow.print();release();
+    }catch(error){release();const note=$('admin-aja-preview-note');note.textContent='Unable to print. Download the original PDF and print it instead.';note.hidden=false;}
+  });
+}
+
 document.addEventListener('DOMContentLoaded',initialize);
