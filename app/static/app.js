@@ -593,14 +593,14 @@ function initializeProfileSelects(){
 }
 // Profile-specific inline validation; native required/maxlength constraints
 // remain as semantics and the API continues to enforce its own validation.
-const profileValidationFields=['profile-id','profile-first','profile-last','profile-middle','profile-suffix','profile-type','profile-department'];
+const profileValidationFields=['profile-id','profile-first','profile-last','profile-middle','profile-suffix','profile-type','profile-department','profile-position'];
 function profileFieldMessage(id){
   const field=$(id),value=field.value.trim();
   if(id==='profile-id'){
     if(profileLockedCode)return '';
     return /^[A-Za-z0-9._-]{1,64}$/.test(value)?'':'Enter a valid biometric ID.';
   }
-  const labels={'profile-first':'First name','profile-last':'Last name','profile-middle':'Middle name','profile-suffix':'Suffix'};
+  const labels={'profile-first':'First name','profile-last':'Last name','profile-middle':'Middle name','profile-suffix':'Suffix','profile-position':'Position'};
   if(labels[id]){
     if(!value&&field.required)return labels[id]+' is required.';
     if(value.length>field.maxLength)return labels[id]+' is too long.';
@@ -664,7 +664,7 @@ async function openProfile(code=null){
       if(token!==profileFormToken || session?.role!=='admin')return;
       profileEditing=data.profile_complete?code:null;profileVersion=data.version;
       profileLockedCode=code;$('profile-id').value=code;$('profile-id').readOnly=true;$('profile-id-display').textContent=code;
-      for(const [field,key] of [['first','first_name'],['middle','middle_name'],['last','last_name'],['suffix','suffix'],['type','employment_type'],['department','department']])
+      for(const [field,key] of [['first','first_name'],['middle','middle_name'],['last','last_name'],['suffix','suffix'],['type','employment_type'],['department','department'],['position','position']])
         $('profile-'+field).value=data[key]||'';
       const department=String(data.department||'').trim().toLowerCase();
       const official=[...$('profile-department').options].find(option=>{
@@ -695,7 +695,7 @@ async function saveProfile(event){
   if(!validateProfileForm())return;
   const account=session,code=profileLockedCode??$('profile-id').value.trim();
   const payload={};
-  for(const [field,key] of [['first','first_name'],['middle','middle_name'],['last','last_name'],['suffix','suffix'],['type','employment_type'],['department','department']])
+  for(const [field,key] of [['first','first_name'],['middle','middle_name'],['last','last_name'],['suffix','suffix'],['type','employment_type'],['department','department'],['position','position']])
     payload[key]=$('profile-'+field).value.trim();
   payload.sync_authorized=profileSyncAuthorized;
   if([payload.first_name,payload.middle_name,payload.last_name,payload.suffix].filter(Boolean).join(' ').length>140){
