@@ -771,7 +771,7 @@
   -webkit-backdrop-filter:none;backdrop-filter:none;
   box-shadow:inset 0 1px 0 #ffffff8a,inset 0 -1px 0 #ffffff28,0 3px 9px #31578b15;
   scroll-snap-align:start;transform-origin:center center;transform:scale(1);
-  transition:transform .34s cubic-bezier(.4,0,.2,1)
+  transition:transform .56s cubic-bezier(.35,0,.22,1),box-shadow .4s ease
 }
 /* Two nested, borderless glass surfaces: clear outer glass and a softly
    frosted inner pane. Scattered light is confined to the icon tile. */
@@ -809,9 +809,9 @@
 }
 /* Keep mirrored attendance glyphs visually equal during the restored zoom. */
 @media(prefers-reduced-motion:no-preference){
-  .workspace #attendance-register-panel .live-kpi:is(.kpi-in,.kpi-out) .kpi-icon svg{transform-origin:center;transform:scale(1);transition:transform .34s cubic-bezier(.4,0,.2,1)}
-  .workspace #attendance-register-panel .live-kpi:is(.kpi-in,.kpi-out):not([aria-pressed=true]):is(:hover,:focus-visible) .kpi-icon svg{transform:scale(.9433962264)}
-  .workspace #attendance-register-panel .live-kpi:is(.kpi-in,.kpi-out)[aria-pressed=true] .kpi-icon svg{transform:scale(.8928571429)}
+  .workspace #attendance-register-panel .live-kpi:is(.kpi-in,.kpi-out) .kpi-icon svg{transform-origin:center;transform:scale(1);transition:transform .56s cubic-bezier(.35,0,.22,1)}
+  .workspace #attendance-register-panel .live-kpi:is(.kpi-in,.kpi-out):not([aria-pressed=true]):is(:hover,:focus-visible) .kpi-icon svg{transform:scale(.9661835749)}
+  .workspace #attendance-register-panel .live-kpi:is(.kpi-in,.kpi-out)[aria-pressed=true] .kpi-icon svg{transform:scale(.9345794393)}
 }
  .workspace #attendance-register-panel .live-kpi .kpi-text{grid-column:1;grid-row:1;display:flex;flex-direction:column;align-items:flex-start;justify-content:center;gap:4px;min-width:0}
 .workspace #attendance-register-panel  .live-kpi small{font-size:12px;font-weight:600;color:#4e607d;line-height:1.15;white-space:nowrap}
@@ -826,7 +826,7 @@
     linear-gradient(145deg,var(--card-start) 0%,color-mix(in srgb,var(--card-start) 82%,#0d1d36) 49%,var(--card-end) 100%);
   opacity:0;transition:opacity .52s cubic-bezier(.4,0,.2,1);
 }
-/* Two distinct glass films: a clear flowing right veil and a fading left ribbon.
+/* Two distinct glass films separated by a slanted, widening negative-space gap.
    Their entrances are staggered; their exits fade without reversing the sweep. */
 .workspace #attendance-register-panel .live-kpi::after,
 .workspace #attendance-register-panel .live-kpi .kpi-glass-flow{
@@ -840,10 +840,10 @@
   transform:translate3d(13%,-12%,0) scale(1.10);
 }
 .workspace #attendance-register-panel .live-kpi .kpi-glass-flow{
-  background-image:url("data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20viewBox%3D%220%200%20320%20110%22%20preserveAspectRatio%3D%22none%22%3E%3Cdefs%3E%3ClinearGradient%20id%3D%22ribbon%22%20x1%3D%2210%25%22%20y1%3D%220%25%22%20x2%3D%2267%25%22%20y2%3D%22100%25%22%3E%3Cstop%20offset%3D%220%22%20stop-color%3D%22white%22%20stop-opacity%3D%22.19%22%2F%3E%3Cstop%20offset%3D%22.43%22%20stop-color%3D%22white%22%20stop-opacity%3D%22.105%22%2F%3E%3Cstop%20offset%3D%22.83%22%20stop-color%3D%22white%22%20stop-opacity%3D%22.035%22%2F%3E%3Cstop%20offset%3D%221%22%20stop-color%3D%22white%22%20stop-opacity%3D%220%22%2F%3E%3C%2FlinearGradient%3E%3C%2Fdefs%3E%3Cpath%20fill%3D%22url(%23ribbon)%22%20d%3D%22M18%200H77C111%2012%20129%2044%20176%2072C204%2090%20233%2099%20263%2098C214%20120%20152%20106%20111%2072C76%2043%2057%2010%2018%200Z%22%2F%3E%3C%2Fsvg%3E");
+  background-image:url("data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20viewBox%3D%220%200%20320%20110%22%20preserveAspectRatio%3D%22none%22%3E%3Cdefs%3E%3ClinearGradient%20id%3D%22ribbon%22%20x1%3D%2210%25%22%20y1%3D%220%25%22%20x2%3D%2267%25%22%20y2%3D%22100%25%22%3E%3Cstop%20offset%3D%220%22%20stop-color%3D%22white%22%20stop-opacity%3D%22.19%22%2F%3E%3Cstop%20offset%3D%22.43%22%20stop-color%3D%22white%22%20stop-opacity%3D%22.105%22%2F%3E%3Cstop%20offset%3D%22.83%22%20stop-color%3D%22white%22%20stop-opacity%3D%22.035%22%2F%3E%3Cstop%20offset%3D%221%22%20stop-color%3D%22white%22%20stop-opacity%3D%220%22%2F%3E%3C%2FlinearGradient%3E%3C%2Fdefs%3E%3Cpath%20fill%3D%22url(%23ribbon)%22%20d%3D%22M18%200H64C90%2014%2096%2044%20132%2078C148%2094%20168%20105%20194%20110H132C99%2091%2070%2058%2049%2028C38%2012%2027%205%2018%200Z%22%2F%3E%3C%2Fsvg%3E");
   transform:translate3d(-10%,-19%,0) scale(1.10);
 }
-.workspace #attendance-register-panel .live-kpi[aria-pressed=true]{z-index:3;transform:scale(1.12);box-shadow:0 3px 9px #31578b20}
+.workspace #attendance-register-panel .live-kpi[aria-pressed=true]{z-index:3;transform:scale(1.07);box-shadow:0 3px 9px #31578b20}
 .workspace #attendance-register-panel .live-kpi[aria-pressed=true]::before{opacity:1}
 .workspace #attendance-register-panel .live-kpi[aria-pressed=true]::after{
   opacity:1;transform:translate3d(0,0,0) scale(1);
@@ -859,7 +859,7 @@
 }
 .workspace #attendance-register-panel .live-kpi:is([aria-pressed=true],:hover,:focus-visible) .kpi-icon::before{opacity:.92}
 .workspace #attendance-register-panel .live-kpi:is([aria-pressed=true],:hover,:focus-visible) strong{color:var(--count-bright);text-shadow:none}
-.workspace #attendance-register-panel .live-kpi:not([aria-pressed=true]):is(:hover,:focus-visible){z-index:2;transform:scale(1.06)}
+.workspace #attendance-register-panel .live-kpi:not([aria-pressed=true]):is(:hover,:focus-visible){z-index:2;transform:scale(1.035)}
 .workspace #attendance-register-panel .live-kpi:focus-visible{outline:2px solid #315a96;outline-offset:-3px}
 .workspace #attendance-register-panel .live-kpi.kpi-in{--status-color:#367e67;--count-bright:#16805c;--card-start:#185d49;--card-end:#267e72}
 .workspace #attendance-register-panel .live-kpi.kpi-out{--status-color:#426da9;--count-bright:#246bb6;--card-start:#254b91;--card-end:#306da1}
