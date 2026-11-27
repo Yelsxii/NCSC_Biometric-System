@@ -1314,14 +1314,20 @@ body:has(#profile-undo-stack:not(:empty)) #toast:not(.hidden){bottom:auto;top:22
 .workspace .sidebar{
   --nav-join-gap:5px;
   --nav-join-fill:#e4ecf7;
-  --nav-join-radius:11px;
+  --nav-join-radius:26px;
+  --nav-join-overlap:12px;
+  --nav-join-fade:10px;
 }
 .workspace .sidebar .nav-edge-highlight{
   position:absolute;
-  inset:0 calc(-1 * (var(--rail-inset) + var(--nav-join-gap) + 2px)) 0 0;
+  inset:0 calc(-1 * (var(--rail-inset) + var(--nav-join-gap) + var(--nav-join-overlap))) 0 0;
   z-index:-1;pointer-events:none;
   border-radius:12px 0 0 12px;
-  background:linear-gradient(100deg,#f4f7fc 0%,var(--nav-join-fill) 72%);
+  background:linear-gradient(100deg,#f4f7fc 0%,var(--nav-join-fill) 70%);
+  /* Cover the visible glass seam, then feather the last few pixels over
+     the existing panel rim. No layout or main-panel styling is changed. */
+  -webkit-mask-image:linear-gradient(to right,#000 0 calc(100% - var(--nav-join-fade)),transparent 100%);
+  mask-image:linear-gradient(to right,#000 0 calc(100% - var(--nav-join-fade)),transparent 100%);
   opacity:0;transform:translateX(-4px) scaleX(.97);
   transform-origin:right center;
   transition:opacity .34s cubic-bezier(.25,.7,.25,1),transform .34s cubic-bezier(.25,.7,.25,1);
@@ -1335,11 +1341,11 @@ body:has(#profile-undo-stack:not(:empty)) #toast:not(.hidden){bottom:auto;top:22
 }
 .workspace .sidebar .nav-edge-highlight::before{
   bottom:100%;
-  background:radial-gradient(circle at 0 0,transparent calc(var(--nav-join-radius) - .5px),var(--nav-join-fill) var(--nav-join-radius));
+  background:radial-gradient(circle at 0 0,transparent calc(var(--nav-join-radius) - .8px),var(--nav-join-fill) var(--nav-join-radius));
 }
 .workspace .sidebar .nav-edge-highlight::after{
   top:100%;
-  background:radial-gradient(circle at 0 100%,transparent calc(var(--nav-join-radius) - .5px),var(--nav-join-fill) var(--nav-join-radius));
+  background:radial-gradient(circle at 0 100%,transparent calc(var(--nav-join-radius) - .8px),var(--nav-join-fill) var(--nav-join-radius));
 }
 .workspace .sidebar .nav-item.active,
 .workspace .sidebar .nav-item.active:is(:hover,:focus-visible){
@@ -1350,11 +1356,11 @@ body:has(#profile-undo-stack:not(:empty)) #toast:not(.hidden){bottom:auto;top:22
 .workspace .sidebar .nav-item.active .nav-edge-highlight{opacity:1;transform:none}
 /* The icon rail retains its original button hit areas and tooltip layer. */
 @media(max-width:1100px){
-  .workspace .sidebar{--nav-join-radius:9px}
+  .workspace .sidebar{--nav-join-radius:20px;--nav-join-overlap:8px;--nav-join-fade:7px}
   .workspace .sidebar .nav-edge-highlight{border-top-left-radius:10px;border-bottom-left-radius:10px}
 }
 @media(max-width:740px){
-  .workspace .sidebar{--nav-join-gap:4px;--nav-join-radius:7px}
+  .workspace .sidebar{--nav-join-gap:4px;--nav-join-radius:16px;--nav-join-overlap:6px;--nav-join-fade:5px}
 }
 @media(prefers-reduced-motion:reduce){
   .workspace .sidebar .nav-edge-highlight{transition:none;transform:none}
