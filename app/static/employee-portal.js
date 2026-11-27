@@ -104,7 +104,10 @@ function filingReady(values,days,profile,busy=false){
     days.every(day=>!!tripDuration(day.departure,day.return_time));
 }
 function updateFileButton(){
-  $('aja-submit').disabled=!filingReady(Object.fromEntries(new FormData(ajaForm)),collectDays(),account,busyFiling);
+  const ready=filingReady(Object.fromEntries(new FormData(ajaForm)),collectDays(),account);
+  $('aja-submit').disabled=!ready||busyFiling;
+  // Changing the class only when validity changes prevents replay on each edit.
+  $('aja-route-connector').classList.toggle('is-ready',ready);
 }
 function updateSummary(){
   const values=Object.fromEntries(new FormData(ajaForm)),days=collectDays();
@@ -455,7 +458,7 @@ $('login-form').addEventListener('submit',async e=>{
 });
 $('logout-sidebar').addEventListener('click',async()=>{if(busyFiling)return;try{await call('logout',{});show(null);}catch(err){if(document.querySelector('[data-view=filings]').classList.contains('hidden'))setError('aja-error',err.message);else historyMessage(err.message,true);}});
 $('aja-form').addEventListener('reset',()=>{
-  closeTimePicker();closeCalendar();clearPreview();$('aja-submit').disabled=true;
+  closeTimePicker();closeCalendar();clearPreview();$('aja-submit').disabled=true;$('aja-route-connector').classList.remove('is-ready');
   queueMicrotask(()=>{
     dates=[];dailyTimes.clear();scheduleMode='same';
     for(const target of timeNames){$(target).value='';const input=$(target+'-display');input.value='';input.disabled=false;input.setCustomValidity('');input.removeAttribute('aria-invalid');}
