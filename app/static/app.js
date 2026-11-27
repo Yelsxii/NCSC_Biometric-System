@@ -66,7 +66,7 @@ let workCodeRows = [];
 const titles = {
   employees:'Employee Attendance',
   profiles:'Employees',
-  activities:'AJA / Travel Orders',
+  activities:'AJA / Official Business',
   staff:'Users & Work Codes'
 };
 let activityRequest = 0;
@@ -97,6 +97,7 @@ async function api(path,options={}) {
   return data;
 }
 function showLogin(){
+  resetAjaPilot();
   closeProfileMenu();profileArchived=false;profileArchiveBusy=false;profileArchiveContext=null;
   clearProfileUndoNotices();
   stopDeviceRefresh();
@@ -124,7 +125,7 @@ function showApp(){
   $('profile-archive-toggle').hidden=!canWrite;
   setAttendanceMonth('register-month',currentMonth());
   setAttendanceMonth('detail-month',currentMonth());
-  setAttendanceMonth('activity-month',currentMonth());
+  resetAjaPilot();
   navigate('employees');
 }
 function navigate(page){
@@ -154,7 +155,7 @@ function navigate(page){
     return loadRegister();
   }
   if (page==='profiles') {startAttendanceRefresh();return loadProfiles();}
-  if (page==='activities') return loadActivities();
+  if (page==='activities') return loadAjaPilot();
   if (page==='staff') {startDeviceRefresh();return loadDevice();}
 }
 function cancelRegisterSearch(){requestSerial++;}
@@ -1096,46 +1097,68 @@ function startAttendanceRefresh(){
   };
   if(['employees','profiles'].includes(currentPage) && session && !document.hidden)attendanceRefreshTimer=setTimeout(tick,currentPage==='profiles'?60000:10000);
 }
-async function loadActivities(){
-  const token=++activityRequest;
-  const params=new URLSearchParams({
-    month:$('activity-month').value||currentMonth(),
-    category:$('activity-category').value,
-    q:$('activity-search').value.trim()
-  });
-  $('activity-rows').innerHTML='<tr><td colspan="8" class="table-empty">Loading activity logs…</td></tr>';
-  try{
-    const data=await api('/api/activities/monitor?'+params);
-    if(token!==activityRequest||currentPage!=='activities')return;
-    const counts=data.summary;
-    $('activity-counts').innerHTML=
-      '<span><b>'+counts.employees+'</b> employees</span>'+
-      '<span><b>'+counts.aja+'</b> AJA scans</span>'+
-      '<span><b>'+counts.travel_orders+'</b> Travel Order scans</span>';
-    $('activity-rows').innerHTML=data.items.length?data.items.map(item=>{
-      const instant=item.happened_at||'';
-      const badge=item.category==='AJA'?'activity-aja':'activity-travel';
-      return '<tr><td class="id-cell">'+esc(item.employee_code)+'</td>'+
-        '<td class="employee-name-cell">'+esc(item.display_name||'Name not synchronized')+'</td>'+
-        '<td><span class="activity-badge '+badge+'">'+esc(item.category)+'</span></td>'+ 
-        '<td><span class="direction-pill '+(item.direction==='IN'?'direction-in':item.direction==='OUT'?'direction-out':'direction-unmapped')+'">'+esc(item.direction||'Unspecified')+'</span></td>'+
-        '<td class="date-cell">'+esc(instant.slice(0,10))+'</td>'+
-        '<td class="date-cell">'+esc(instant.slice(11,19))+'</td>'+
-        '<td><span class="code-pill">'+esc(item.work_code)+'</span></td>'+
-        '<td class="directory-action-cell"><button class="row-action" type="button" data-monitor-employee="'+
-          esc(item.employee_code)+'">View attendance</button></td></tr>';
-    }).join(''):'<tr><td colspan="8" class="table-empty">No device-classified AJA or Travel Order scans found for these filters.</td></tr>';
-  }catch(error){
-    if(token!==activityRequest)return;
-    $('activity-rows').innerHTML='<tr><td colspan="8" class="table-empty">Unable to load activity logs.</td></tr>';
-    toast(error.message,true);
-  }
+// AJA print-only pilot: draft stays in the browser and never modifies attendance.
+let ajaRows=[],ajaPdfUrl=null,ajaEpoch=0;
+function clearAjaPreview(){
+  ajaEpoch++;
+  if(ajaPdfUrl)URL.revokeObjectURL(ajaPdfUrl);
+  ajaPdfUrl=null;
+  $('aja-pdf-frame').removeAttribute('src');
+  $('aja-preview-panel').hidden=true;
+  $('aja-download').removeAttribute('href');
+  $('aja-preview-button').disabled=session?.role!=='admin';
 }
-async function viewActivityEmployee(code){
-  $('employee-search').value=code;
-  setAttendanceMonth('register-month',$('activity-month').value||currentMonth());
-  await navigate('employees');
-  await openEmployee(code);
+function resetAjaPilot(){
+  clearAjaPreview();
+  ajaRows=[];
+  $('aja-form').reset();
+  $('aja-employee').replaceChildren(new Option('Select employee',''));
+  $('aja-error').textContent='';
+}
+async function loadAjaPilot(){
+  const writable=session?.role==='admin';
+  $('aja-fields').disabled=!writable;
+  $('aja-access-note').hidden=writable;
+  if(!writable)return;
+  try{
+    const data=await api('/api/employee-register?'+new URLSearchParams({month:currentMonth(),live:'false'}));
+    if(currentPage!=='activities'||session?.role!=='admin')return;
+    ajaRows=data.items.filter(row=>row.display_name);
+    const select=$('aja-employee'),selected=select.value;
+    select.replaceChildren(new Option('Select employee',''),...ajaRows.map(row=>new Option(row.display_name,row.employee_code)));
+    select.value=selected;
+  }catch(error){$('aja-error').textContent=error.message;}
+}
+function selectAjaEmployee(){
+  const row=ajaRows.find(item=>item.employee_code===$('aja-employee').value);
+  $('aja-name').value=row?.display_name||'';
+  $('aja-position').value=row?.position||'';
+  $('aja-department').value=row?.department||'';
+  clearAjaPreview();
+}
+async function previewAjaPilot(){
+  if(session?.role!=='admin')return;
+  clearAjaPreview();
+  const token=ajaEpoch;
+  $('aja-preview-button').disabled=true;
+  $('aja-error').textContent='';
+  try{
+    const data=Object.fromEntries(new FormData($('aja-form')));
+    const response=await fetch('/api/aja/preview',{method:'POST',credentials:'same-origin',headers:{'Content-Type':'application/json','X-CSRF-Token':session.csrf},body:JSON.stringify(data)});
+    if(!response.ok){
+      const result=await response.json().catch(()=>({}));
+      const message=Array.isArray(result.detail)?result.detail.map(x=>x.msg).join('; '):result.detail;
+      throw new Error(message||'Unable to generate AJA form.');
+    }
+    const blob=await response.blob();
+    if(token!==ajaEpoch||currentPage!=='activities')return;
+    ajaPdfUrl=URL.createObjectURL(blob);
+    $('aja-pdf-frame').src=ajaPdfUrl;
+    $('aja-download').href=ajaPdfUrl;
+    $('aja-preview-panel').hidden=false;
+    $('aja-preview-panel').scrollIntoView({block:'nearest',behavior:'smooth'});
+  }catch(error){if(token===ajaEpoch)$('aja-error').textContent=error.message;}
+  finally{if(token===ajaEpoch)$('aja-preview-button').disabled=false;}
 }
 function deviceRefreshAllowed(){
   return Boolean(session && currentPage==='staff' && !document.hidden);
@@ -1640,11 +1663,10 @@ async function initialize(){
   $('calendar-form').addEventListener('submit',saveCalendar);
   $('close-calendar').addEventListener('click',()=>$('calendar-dialog').close());
   $('cancel-calendar').addEventListener('click',()=>$('calendar-dialog').close());
-  $('activity-filter').addEventListener('submit',e=>{e.preventDefault();loadActivities();});
-  $('activity-rows').addEventListener('click',e=>{
-    const node=e.target.closest('[data-monitor-employee]');
-    if(node) viewActivityEmployee(node.dataset.monitorEmployee);
-  });
+  $('aja-form').addEventListener('submit',e=>{e.preventDefault();previewAjaPilot();});
+  $('aja-employee').addEventListener('change',selectAjaEmployee);
+  $('aja-form').addEventListener('input',clearAjaPreview);
+  $('aja-form').addEventListener('reset',()=>{clearAjaPreview();});
   $('open-attendance-import').addEventListener('click',()=>{
     $('usb-form').reset();$('usb-file-name').textContent='No file selected';
     usbPreviewOkay=false;$('usb-result').classList.add('hidden');
