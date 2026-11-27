@@ -327,22 +327,22 @@ function renderProfiles(){
   $('profile-archive-toggle').textContent=profileArchived?'Back to employees':'Archived employees';
   if(!profileRows||!profileSummary)return;
   const q=$('profile-search').value.trim().toLowerCase();
-  const rows=profileRows.filter(row=>(profileCategory==='All'||row.employment_type===profileCategory)&&(!q||[row.directory_id,row.display_name,row.department].some(v=>String(v??'').toLowerCase().includes(q))));
+  const rows=profileRows.filter(row=>(profileCategory==='All'||row.employment_type===profileCategory)&&(!q||[row.directory_id,row.display_name,row.position,row.department].some(v=>String(v??'').toLowerCase().includes(q))));
   $('profile-total-badge').textContent=profileSummary.total;
   for(const kind of ['COS','Permanent','GIP','OJT'])$('profile-'+kind.toLowerCase()+'-badge').textContent=profileSummary.categories[kind]||0;
   $('profile-summary').textContent=rows.length+' '+(rows.length===1?'employee':'employees');
   $('profile-count').textContent=rows.length?('Showing '+rows.length+' of '+profileRows.length+' employees'):'No matching employees';
     setHtmlIfChanged($('profile-rows'),rows.length?rows.map(row=>
-      '<tr><td class="id-cell">'+esc(row.directory_id)+'</td><td class="employee-name-cell"><div class="register-identity"><span class="name-avatar" aria-hidden="true">'+esc(registerInitials(row.display_name))+'</span><span><strong>'+esc(row.display_name||'Name not synchronized')+'</strong>'+(row.position?'<small>'+esc(displayTitle(row.position))+'</small>':'')+'</span></div></td><td>'+categoryBadge(row.employment_type)+'</td><td>'+departmentCell(row.department)+'</td>'+
+      '<tr><td class="id-cell">'+esc(row.directory_id)+'</td><td class="employee-name-cell"><div class="register-identity"><span class="name-avatar" aria-hidden="true">'+esc(registerInitials(row.display_name))+'</span><span><strong>'+esc(row.display_name||'Name not synchronized')+'</strong></span></div></td><td class="profile-position-cell">'+(String(row.position||'').trim()?esc(row.position):'<span class="position-unset">—</span>')+'</td><td>'+categoryBadge(row.employment_type)+'</td><td>'+departmentCell(row.department)+'</td>'+
       '<td class="directory-action-cell">'+(session.role==='admin'?'<button type="button" class="profile-more" data-profile-more="'+esc(row.employee_code)+'" aria-haspopup="true" aria-expanded="false" aria-controls="profile-action-menu" aria-label="Actions for '+esc(row.display_name||row.employee_code)+'"><svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><circle cx="5" cy="12" r="1.8"/><circle cx="12" cy="12" r="1.8"/><circle cx="19" cy="12" r="1.8"/></svg></button>':'—')+'</td></tr>'
-    ).join(''):'<tr><td colspan="5" class="table-empty">No matching employees.</td></tr>');
+    ).join(''):'<tr><td colspan="6" class="table-empty">No matching employees.</td></tr>');
 }
 async function loadProfiles({quiet=false}={}){
   const serial=++profileRequest,account=session,archived=profileArchived;
   const valid=()=>serial===profileRequest&&currentPage==='profiles'&&session===account&&archived===profileArchived;
   updateProfileTabs();
   if(profileRows){if(!quiet)renderProfiles();}
-  else $('profile-rows').innerHTML='<tr><td colspan="5" class="table-empty">Loading employees…</td></tr>';
+  else $('profile-rows').innerHTML='<tr><td colspan="6" class="table-empty">Loading employees…</td></tr>';
   try{
     const getPage=page=>api('/api/employee-profiles?'+new URLSearchParams({q:'',category:'All',status:'All',archived:String(archived),page:String(page),limit:String(PROFILE_BATCH_SIZE)}));
     const first=await getPage(1);
@@ -361,7 +361,7 @@ async function loadProfiles({quiet=false}={}){
     profileSummary=first.summary;renderProfiles();
   }catch(error){
     if(!valid())return;
-    if(!profileRows)$('profile-rows').innerHTML='<tr><td colspan="5" class="table-empty">Unable to load employees.</td></tr>';
+    if(!profileRows)$('profile-rows').innerHTML='<tr><td colspan="6" class="table-empty">Unable to load employees.</td></tr>';
     if(!quiet)toast(error.message,true);
   }
 }
