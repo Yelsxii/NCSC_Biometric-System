@@ -1493,3 +1493,6 @@ body:has(#profile-undo-stack:not(:empty)) #toast:not(.hidden){bottom:auto;top:22
 .workspace #aja-pilot-panel #aja-preview-panel{margin-top:18px;min-height:0}
 .workspace #aja-pilot-panel #aja-pdf-frame{display:block;width:100%;height:75vh;border:1px solid #d4dfee;border-radius:9px;background:white}
 @media(max-width:740px){.workspace #aja-pilot-panel .aja-form-grid{grid-template-columns:1fr}}
+
+/* Position shares the existing profile input styling and spans both employment columns. */
+#profile-dialog .profile-position-field{grid-column:1/-1}
