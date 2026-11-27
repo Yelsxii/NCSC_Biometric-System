@@ -1331,6 +1331,30 @@ async function initialize(){
     input.addEventListener('input',()=>{input.setCustomValidity('');});
     input.addEventListener('blur',()=>{const value=normalizedClock(input.value);if(value!==null)input.value=value;});
   });
+  // Treat the 24-hour picker as three keyboard-navigable time segments.
+  const pickerParts=['hour','minute','second'].map(part=>$('picker-'+part));
+  function focusPickerPart(index){
+    const next=pickerParts[index];
+    if(next){next.focus();next.select();}
+  }
+  pickerParts.forEach((node,index)=>{
+    node.addEventListener('input',event=>{
+      if(event.isComposing)return;
+      const digits=node.value.replace(/\D/g,'').slice(0,2);
+      if(node.value!==digits)node.value=digits;
+      // Leave invalid values in place for correction; Apply still validates.
+      if(digits.length===2 && Number(digits)<=(index===0?23:59) && index<pickerParts.length-1){
+        focusPickerPart(index+1);
+      }
+    });
+    node.addEventListener('keydown',event=>{
+      if(event.isComposing || event.altKey || event.ctrlKey || event.metaKey || event.shiftKey)return;
+      if(event.key==='ArrowLeft' || event.key==='ArrowRight'){
+        event.preventDefault();
+        focusPickerPart(index+(event.key==='ArrowLeft'?-1:1));
+      }
+    });
+  });
   document.querySelectorAll('[data-clock-step]').forEach(button=>button.addEventListener('click',()=>{
     const part=button.dataset.clockStep,node=$('picker-'+part),limit=part==='hour'?24:60;
     const value=Number(node.value)||0;
