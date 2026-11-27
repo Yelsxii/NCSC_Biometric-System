@@ -9,8 +9,8 @@
   <link rel="stylesheet" href="/static/workspace.css?v=employees-163">
   <link rel="stylesheet" href="/static/attendance-detail.css?v=auto-dtr-45">
   <link rel="stylesheet" href="/static/dtr-preview.css?v=23">
-  <link rel="stylesheet" href="/static/employee-portal.css?v=4">
-  <script src="/static/employee-portal.js?v=3" defer></script>
+  <link rel="stylesheet" href="/static/employee-portal.css?v=5">
+  <script src="/static/employee-portal.js?v=4" defer></script>
 </head>
 <body>
   <main id="login-view" class="auth-shell" aria-labelledby="login-heading">
@@ -73,10 +73,11 @@
 
       <dialog id="aja-time-picker" class="attendance-month-picker aja-time-picker" aria-labelledby="aja-time-title">
         <div class="month-picker-heading"><span id="aja-time-title">Choose time</span><button type="button" id="aja-time-close" aria-label="Close time picker">×</button></div>
-        <div class="aja-time-heading">Hour</div>
-        <div id="aja-hours" class="month-picker-grid" role="group" aria-label="Hour"></div>
-        <div class="aja-time-minute-row"><div><label for="aja-minute">Minute</label><div class="aja-minute-control"><button type="button" id="aja-minute-minus" aria-label="Decrease minute">−</button><input id="aja-minute" type="text" inputmode="numeric" maxlength="2" autocomplete="off" aria-label="Minute, 0 to 59"><button type="button" id="aja-minute-plus" aria-label="Increase minute">+</button></div></div><div><span class="aja-time-heading">Period</span><div class="month-picker-grid aja-period-grid" role="group" aria-label="AM or PM"><button type="button" data-period="AM" aria-pressed="true">AM</button><button type="button" data-period="PM" aria-pressed="false">PM</button></div></div></div>
-        <p id="aja-time-error" class="hidden" role="alert">Enter a minute from 00 to 59.</p>
+        <div class="aja-time-columns">
+          <div><span class="aja-time-heading">Hour</span><div id="aja-hours" class="month-picker-grid aja-time-list" role="group" aria-label="Hour"></div></div>
+          <div><span class="aja-time-heading">Minute</span><div id="aja-minutes" class="month-picker-grid aja-time-list" role="group" aria-label="Minute"></div></div>
+          <div><span class="aja-time-heading">AM / PM</span><div class="month-picker-grid aja-time-list aja-period-grid" role="group" aria-label="AM or PM"><button type="button" data-period="AM" aria-pressed="true">AM</button><button type="button" data-period="PM" aria-pressed="false">PM</button></div></div>
+        </div>
         <div class="aja-picker-actions"><button type="button" id="aja-time-clear" class="button outline">Clear</button><button type="button" id="aja-time-apply" class="button primary">Apply</button></div>
       </dialog>
       <main id="main-content">
@@ -86,38 +87,36 @@
             <form id="aja-form" autocomplete="off" class="aja-entry-form">
               <div class="aja-form-body">
                 <div class="aja-layout">
+                  <aside class="aja-utility-row" aria-label="AJA summary">
+                    <section class="aja-summary-card aja-employee-summary">
+                      <h3>Employee information</h3>
+                      <div class="aja-person"><span class="name-avatar" id="aja-avatar" aria-hidden="true">—</span><strong id="employee-name">—</strong></div>
+                      <dl class="aja-summary-list"><div><dt>Position</dt><dd id="employee-position">—</dd></div><div><dt>Department / unit</dt><dd id="employee-department">—</dd></div></dl>
+                    </section>
+                    <section class="aja-summary-card aja-live-summary">
+                      <div class="aja-summary-heading"><h3>Form summary</h3><span id="aja-completion">0 of 6</span></div>
+                      <progress id="aja-progress" max="6" value="0" aria-label="Completed required fields"></progress>
+                      <dl class="aja-summary-list aja-trip-summary"><div><dt>Date/s</dt><dd id="summary-dates">—</dd></div><div class="aja-summary-route"><dt>Route</dt><dd><span id="summary-origin">—</span><span aria-hidden="true" class="aja-route-arrow">→</span><span id="summary-destination">—</span></dd></div><div class="aja-summary-times"><div><dt>Departure</dt><dd id="summary-departure">—</dd></div><div><dt>Return</dt><dd id="summary-return_time">—</dd></div></div></dl>
+                    </section>
+                    <section class="aja-summary-card aja-document-note"><h3>Before departure</h3><p>Print the form and secure the required signatures. Keep the Certificate of Appearance blank for certification after the official business.</p></section>
+                  </aside>
                   <div class="aja-main">
                     <fieldset>
                       <h3>Official business details</h3>
-                      <div class="aja-form-grid">
-                        <label class="aja-wide">Date/s of official business <span class="required-mark">*</span><input name="dates" placeholder="e.g. November 27, 2026" maxlength="100" required></label>
+                      <div class="aja-form-grid aja-schedule-grid">
+                        <label>Date/s of official business <span class="required-mark">*</span><input name="dates" placeholder="e.g. November 27, 2026" maxlength="100" required></label>
+                        <div class="aja-time-field"><label id="departure-label" for="departure-trigger">Time of departure <span class="required-mark">*</span></label><input type="hidden" id="departure" name="departure"><button type="button" class="aja-time-trigger" id="departure-trigger" data-time-target="departure" aria-labelledby="departure-label departure-display" aria-haspopup="dialog" aria-controls="aja-time-picker" aria-expanded="false"><span id="departure-display" class="aja-time-value">Select time</span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="8"/><path d="M12 7v5l3 2"/></svg></button></div>
+                        <div class="aja-time-field"><label id="return_time-label" for="return_time-trigger">Time of return <span class="required-mark">*</span></label><input type="hidden" id="return_time" name="return_time"><button type="button" class="aja-time-trigger" id="return_time-trigger" data-time-target="return_time" aria-labelledby="return_time-label return_time-display" aria-haspopup="dialog" aria-controls="aja-time-picker" aria-expanded="false"><span id="return_time-display" class="aja-time-value">Select time</span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="8"/><path d="M12 7v5l3 2"/></svg></button></div>
+
+                      </div>
+                      <div class="aja-form-grid aja-trip-grid">
                         <label>From <span class="required-mark">*</span><input name="origin" maxlength="200" placeholder="Origin" required></label>
                         <label>To <span class="required-mark">*</span><input name="destination" maxlength="200" placeholder="Destination" required></label>
                         <label class="aja-wide">Purpose(s) <span class="required-mark">*</span><textarea name="purpose" rows="3" maxlength="500" placeholder="Purpose of official business" required></textarea></label>
                       </div>
                     </fieldset>
-                    <fieldset>
-                      <h3>Schedule</h3>
-                      <div class="aja-form-grid">
-                        <div class="aja-time-field"><label id="departure-label" for="departure-trigger">Time of departure <span class="required-mark">*</span></label><input type="hidden" id="departure" name="departure"><button type="button" class="aja-time-trigger" id="departure-trigger" data-time-target="departure" aria-labelledby="departure-label departure-display" aria-haspopup="dialog" aria-controls="aja-time-picker" aria-expanded="false"><span id="departure-display" class="aja-time-value">Select time</span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="8"/><path d="M12 7v5l3 2"/></svg></button></div>
-                        <div class="aja-time-field"><label id="return_time-label" for="return_time-trigger">Time of return <span class="required-mark">*</span></label><input type="hidden" id="return_time" name="return_time"><button type="button" class="aja-time-trigger" id="return_time-trigger" data-time-target="return_time" aria-labelledby="return_time-label return_time-display" aria-haspopup="dialog" aria-controls="aja-time-picker" aria-expanded="false"><span id="return_time-display" class="aja-time-value">Select time</span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="8"/><path d="M12 7v5l3 2"/></svg></button></div>
-                      </div>
-                    </fieldset>
                     <p id="aja-error" class="form-error hidden" role="alert"></p>
                   </div>
-                  <aside class="aja-side" aria-label="AJA summary">
-                    <section class="aja-summary-card">
-                      <h3>Employee information</h3>
-                      <div class="aja-person"><span class="name-avatar" id="aja-avatar" aria-hidden="true">—</span><strong id="employee-name">—</strong></div>
-                      <dl class="aja-summary-list"><div><dt>Position</dt><dd id="employee-position">—</dd></div><div><dt>Department / unit</dt><dd id="employee-department">—</dd></div></dl>
-                    </section>
-                    <section class="aja-summary-card">
-                      <div class="aja-summary-heading"><h3>Form summary</h3><span id="aja-completion">0 of 6</span></div>
-                      <progress id="aja-progress" max="6" value="0" aria-label="Completed required fields"></progress>
-                      <dl class="aja-summary-list"><div><dt>Date/s</dt><dd id="summary-dates">—</dd></div><div><dt>From</dt><dd id="summary-origin">—</dd></div><div><dt>To</dt><dd id="summary-destination">—</dd></div><div class="aja-summary-times"><div><dt>Departure</dt><dd id="summary-departure">—</dd></div><div><dt>Return</dt><dd id="summary-return_time">—</dd></div></div></dl>
-                    </section>
-                    <section class="aja-summary-card aja-document-note"><h3>Before departure</h3><p>Print the form and secure the required signatures. Keep the Certificate of Appearance blank for certification after the official business.</p></section>
-                  </aside>
                 </div>
               </div>
               <div class="aja-form-footer">
