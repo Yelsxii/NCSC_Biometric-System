@@ -1140,13 +1140,14 @@ dialog.app-dialog[open]::backdrop,#dtr-preview-dialog[open]::backdrop{
 .workspace #employee-profile-panel .directory-archive-toggle{border:0;background:transparent;color:#536e94;font-size:10px;padding:4px 7px;border-radius:999px}
 .workspace #employee-profile-panel .directory-archive-toggle[hidden]{display:none}
 .workspace #employee-profile-panel .directory-archive-toggle:hover{background:#d8e5f7;color:#244b9a}
-#profile-action-menu{position:fixed;inset:auto;margin:0;padding:4px;width:140px;max-width:calc(100vw - 16px);border:1px solid #f7faff;border-radius:14px;background:#f4f8fd;box-shadow:0 8px 24px #18365b26;opacity:0;transform:translateY(-4px) scale(.98);transition:opacity .18s ease,transform .18s ease,display .18s allow-discrete,overlay .18s allow-discrete}
+#profile-action-menu{position:fixed;inset:auto;margin:0;padding:4px;width:140px;max-width:calc(100vw - 16px);border:1px solid #ccd9eb;border-radius:14px;background:#ffffff;box-shadow:0 8px 24px #18365b30,0 2px 5px #18365b0d;opacity:0;transform:translateY(-4px) scale(.98);transition:opacity .18s ease,transform .18s ease,display .18s allow-discrete,overlay .18s allow-discrete}
 #profile-action-menu:popover-open{opacity:1;transform:none}
 @starting-style{#profile-action-menu:popover-open{opacity:0;transform:translateY(-4px) scale(.98)}}
 #profile-action-menu button{display:flex;align-items:center;gap:7px;width:100%;min-height:28px;padding:5px 8px;border:0;border-radius:8px;background:transparent;color:#244b9a;font:600 11px/1.4 "Segoe UI",system-ui,sans-serif;text-align:left;transition:background-color .16s ease,color .16s ease}
 #profile-action-menu button[hidden]{display:none}
 #profile-action-menu button svg{width:13px;height:13px;flex:none}
-#profile-action-menu button:is(:hover,:focus-visible){background:#dce8fb}
+#profile-action-menu button:is(:hover,:focus-visible){background:#dce8fb;color:#173b80;outline:none}
+#profile-action-menu button:focus-visible{outline:2px solid #a4bde5;outline-offset:-2px}
 #profile-action-menu #profile-menu-delete{color:#b32638}
 #profile-action-menu #profile-menu-delete:is(:hover,:focus-visible){background:#fbe2e7}
 #profile-action-menu #profile-menu-delete.restore-action{color:#244b9a}
