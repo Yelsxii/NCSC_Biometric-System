@@ -1140,19 +1140,19 @@ dialog.app-dialog[open]::backdrop,#dtr-preview-dialog[open]::backdrop{
 .workspace #employee-profile-panel .directory-archive-toggle{border:0;background:transparent;color:#536e94;font-size:10px;padding:4px 7px;border-radius:999px}
 .workspace #employee-profile-panel .directory-archive-toggle[hidden]{display:none}
 .workspace #employee-profile-panel .directory-archive-toggle:hover{background:#d8e5f7;color:#244b9a}
-#profile-action-menu{position:fixed;inset:auto;margin:0;padding:4px;width:140px;max-width:calc(100vw - 16px);border:1px solid #ccd9eb;border-radius:14px;background:#ffffff;box-shadow:0 8px 24px #18365b30,0 2px 5px #18365b0d;opacity:0;transform:translateY(-4px) scale(.98);transition:opacity .18s ease,transform .18s ease,display .18s allow-discrete,overlay .18s allow-discrete}
-#profile-action-menu:popover-open{opacity:1;transform:none}
-@starting-style{#profile-action-menu:popover-open{opacity:0;transform:translateY(-4px) scale(.98)}}
-#profile-action-menu button{display:flex;align-items:center;gap:7px;width:100%;min-height:28px;padding:5px 8px;border:0;border-radius:8px;background:transparent;color:#244b9a;font:600 11px/1.4 "Segoe UI",system-ui,sans-serif;text-align:left;transition:background-color .16s ease,color .16s ease}
-#profile-action-menu button[hidden]{display:none}
-#profile-action-menu button svg{width:13px;height:13px;flex:none}
-#profile-action-menu button:is(:hover,:focus-visible){background:#dce8fb;color:#173b80;outline:none}
-#profile-action-menu button:focus-visible{outline:2px solid #a4bde5;outline-offset:-2px}
-#profile-action-menu #profile-menu-delete{color:#b32638}
-#profile-action-menu #profile-menu-delete:is(:hover,:focus-visible){background:#fbe2e7}
-#profile-action-menu #profile-menu-delete.restore-action{color:#244b9a}
-#profile-action-menu #profile-menu-delete.restore-action:is(:hover,:focus-visible){background:#dce8fb}
-@media(prefers-reduced-motion:reduce){#profile-action-menu,#profile-action-menu button,.workspace :is(#employee-profile-panel,#aja-filings-panel) .profile-more{transition:none}}
+:is(#profile-action-menu,#admin-aja-action-menu){position:fixed;inset:auto;margin:0;padding:4px;width:140px;max-width:calc(100vw - 16px);border:1px solid #ccd9eb;border-radius:14px;background:#ffffff;box-shadow:0 8px 24px #18365b30,0 2px 5px #18365b0d;opacity:0;transform:translateY(-4px) scale(.98);transition:opacity .18s ease,transform .18s ease,display .18s allow-discrete,overlay .18s allow-discrete}
+:is(#profile-action-menu,#admin-aja-action-menu):popover-open{opacity:1;transform:none}
+@starting-style{:is(#profile-action-menu,#admin-aja-action-menu):popover-open{opacity:0;transform:translateY(-4px) scale(.98)}}
+:is(#profile-action-menu,#admin-aja-action-menu) button{display:flex;align-items:center;gap:7px;width:100%;min-height:28px;padding:5px 8px;border:0;border-radius:8px;background:transparent;color:#244b9a;font:600 11px/1.4 "Segoe UI",system-ui,sans-serif;text-align:left;transition:background-color .16s ease,color .16s ease}
+:is(#profile-action-menu,#admin-aja-action-menu) button[hidden]{display:none}
+:is(#profile-action-menu,#admin-aja-action-menu) button svg{width:13px;height:13px;flex:none}
+:is(#profile-action-menu,#admin-aja-action-menu) button:is(:hover,:focus-visible){background:#dce8fb;color:#173b80;outline:none}
+:is(#profile-action-menu,#admin-aja-action-menu) button:focus-visible{outline:2px solid #a4bde5;outline-offset:-2px}
+:is(#profile-action-menu,#admin-aja-action-menu) #profile-menu-delete{color:#b32638}
+:is(#profile-action-menu,#admin-aja-action-menu) #profile-menu-delete:is(:hover,:focus-visible){background:#fbe2e7}
+:is(#profile-action-menu,#admin-aja-action-menu) #profile-menu-delete.restore-action{color:#244b9a}
+:is(#profile-action-menu,#admin-aja-action-menu) #profile-menu-delete.restore-action:is(:hover,:focus-visible){background:#dce8fb}
+@media(prefers-reduced-motion:reduce){:is(#profile-action-menu,#admin-aja-action-menu),:is(#profile-action-menu,#admin-aja-action-menu) button,.workspace :is(#employee-profile-panel,#aja-filings-panel) .profile-more{transition:none}}
 
 @property --ncsc-fill-a{syntax:"<percentage>";inherits:false;initial-value:0%}
 @property --ncsc-fill-b{syntax:"<percentage>";inherits:false;initial-value:0%}
@@ -1521,3 +1521,31 @@ body:has(#profile-undo-stack:not(:empty)) #toast:not(.hidden){bottom:auto;top:22
 #profile-dialog .profile-position-menu button[data-keyboard-active][aria-selected=true]{outline:2px solid #7596cc;outline-offset:-2px}
 #profile-dialog .profile-position-menu .position-custom-caption{margin-left:auto;font-size:9px;font-weight:600;opacity:.8;flex:none}
 @media(prefers-reduced-motion:reduce){#profile-dialog .profile-position-toggle,#profile-dialog .profile-position-toggle svg{transition:none}}
+
+/* HR AJA monitor uses the directory's shared table and action components. */
+.workspace .content-shell .page #aja-filings-panel:has(.admin-aja-table){background:#eaf1fa;border-color:#f7faffaa;box-shadow:inset 0 1px 0 #ffffffb0,0 5px 18px #45689b15;backdrop-filter:none}
+.workspace #aja-filings-panel .admin-aja-heading{display:flex;align-items:center;justify-content:space-between;gap:12px;margin:0 0 15px;flex-wrap:wrap}
+.workspace #aja-filings-panel .admin-aja-heading h2{margin:0;font-size:15px;color:#20375f;font-weight:700}
+.workspace #aja-filings-panel .admin-aja-search{position:relative;width:min(270px,100%);min-width:160px}
+.workspace #aja-filings-panel .admin-aja-search svg{position:absolute;left:10px;top:9px;width:15px;height:15px;color:#657997;pointer-events:none}
+.workspace #aja-filings-panel .admin-aja-search input{width:100%;height:33px;min-height:33px;box-sizing:border-box;padding:0 9px 0 32px;border:1px solid #dce5f2;border-radius:8px;background:#f6f8fc;color:#243e68;font-size:11px}
+.workspace #aja-filings-panel .admin-aja-search input:focus{outline:2px solid #a5bce2;outline-offset:-1px}
+.workspace #aja-filings-panel .admin-aja-table{min-width:930px}
+.workspace #aja-filings-panel .admin-aja-number{width:42px}
+.workspace #aja-filings-panel .admin-aja-number-cell{text-align:center;font-variant-numeric:tabular-nums}
+.workspace #aja-filings-panel .admin-aja-employee{width:21%}
+.workspace #aja-filings-panel .admin-aja-reference{width:18%}
+.workspace #aja-filings-panel .admin-aja-filed{width:12%}
+.workspace #aja-filings-panel .admin-aja-dates{width:18%}
+.workspace #aja-filings-panel .admin-aja-status{width:15%}
+.workspace #aja-filings-panel .admin-aja-actions{width:60px}
+.workspace #aja-filings-panel .admin-aja-reference-cell{font-size:10.5px;white-space:normal;overflow-wrap:anywhere}
+.workspace #aja-filings-panel .admin-aja-employee-cell strong{display:block;color:#263b60;font-size:12px;font-weight:650;transition:color .22s ease,text-shadow .22s ease}
+.workspace #aja-filings-panel .admin-aja-employee-cell small{display:block;color:#657997;font-size:10px;margin-top:3px}
+.workspace #aja-filings-panel .admin-aja-table tr:is(:hover,:focus-within) .admin-aja-employee-cell strong{color:#0755c5;text-shadow:0 0 7px #1966e729}
+.workspace #aja-filings-panel .admin-aja-status-chip{display:inline-flex;padding:4px 7px;border-radius:6px;background:#fff5da;color:#76551b;font-size:10px;font-weight:650;line-height:1.4;transition:background-color .22s ease,color .22s ease}
+.workspace #aja-filings-panel .admin-aja-table tr:is(:hover,:focus-within) .admin-aja-status-chip{background:#ffedbd;color:#704c0d}
+.workspace #aja-filings-panel .admin-aja-message{margin:0 0 10px;font-size:11px;color:#a12a45}
+.workspace #aja-filings-panel .admin-aja-footer{padding:10px 1px 0;color:#607a9e;font-size:10px;flex:none}
+.workspace [data-page="activities"][hidden]{display:none!important}
+@media(prefers-reduced-motion:reduce){.workspace #aja-filings-panel :is(.admin-aja-status-chip,.admin-aja-employee-cell strong){transition:none}}
