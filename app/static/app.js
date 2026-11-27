@@ -124,7 +124,7 @@ function showApp(){
   $('profile-archive-toggle').hidden=!canWrite;
   setAttendanceMonth('register-month',currentMonth());
   setAttendanceMonth('detail-month',currentMonth());
-  $('activity-month').value=currentMonth();
+  setAttendanceMonth('activity-month',currentMonth());
   navigate('employees');
 }
 function navigate(page){
@@ -1122,8 +1122,8 @@ async function loadActivities(){
         '<td class="date-cell">'+esc(instant.slice(0,10))+'</td>'+
         '<td class="date-cell">'+esc(instant.slice(11,19))+'</td>'+
         '<td><span class="code-pill">'+esc(item.work_code)+'</span></td>'+
-        '<td><button class="text-link row-action" type="button" data-monitor-employee="'+
-          esc(item.employee_code)+'">View attendance <span aria-hidden="true">→</span></button></td></tr>';
+        '<td class="directory-action-cell"><button class="row-action" type="button" data-monitor-employee="'+
+          esc(item.employee_code)+'">View attendance</button></td></tr>';
     }).join(''):'<tr><td colspan="8" class="table-empty">No device-classified AJA or Travel Order scans found for these filters.</td></tr>';
   }catch(error){
     if(token!==activityRequest)return;
