@@ -6,11 +6,11 @@
   <meta name="theme-color" content="#142650">
   <title>NCSC | Attendance Records</title>
   <link rel="stylesheet" href="/static/app.css">
-  <link rel="stylesheet" href="/static/workspace.css?v=employees-156">
+  <link rel="stylesheet" href="/static/workspace.css?v=employees-157">
   <link rel="stylesheet" href="/static/attendance-detail.css?v=auto-dtr-45">
   <link rel="stylesheet" href="/static/dtr-preview.css?v=23">
   <script src="/static/dtr-preview.js?v=22" defer></script>
-  <script src="/static/app.js?v=employees-66" defer></script>
+  <script src="/static/app.js?v=employees-67" defer></script>
 </head>
 <body>
   <main id="login-view" class="auth-shell" aria-labelledby="login-heading">
@@ -150,16 +150,17 @@
         </section>
 
         <section class="page hidden" data-view="activities">
-          <div class="panel records-panel">
-            <div class="panel-header"><h2>Device-classified activity logs</h2></div><p class="table-note mapping-note">Directions are based on mapped work codes in source scans. The current LAN connector does not carry a separate work-code field, so an ordinary LAN-only scan cannot be classified as AJA or Travel Order. Use an authorized source export with actual work codes.</p>
-            <form id="activity-filter" class="toolbar compact-toolbar">
-              <label class="search-box">Search employee<input id="activity-search" type="search" maxlength="80" placeholder="Name or employee ID"></label>
-              <label>Month<input id="activity-month" type="month" required></label>
-              <label>Activity<select id="activity-category"><option value="All">All activities</option><option value="AJA">AJA</option><option value="Travel Order">Travel Order</option></select></label>
-              <button class="button primary" type="submit">View logs</button>
+          <div class="panel records-panel" id="activity-log-panel">
+            <div class="panel-header"><h2>Activity logs</h2></div>
+            <form id="activity-filter" class="toolbar activity-toolbar" role="search" aria-label="Activity log filters">
+              <div class="search-box"><label for="activity-search">Search employees</label><div class="employee-search-field"><svg class="search-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.65" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="10.5" cy="10.5" r="6.5"/><path d="m16 16 4 4"/></svg><input id="activity-search" type="search" maxlength="80" autocomplete="off" placeholder="Search name or employee ID"></div></div>
+              <div class="register-month-control"><label for="activity-month-trigger">Reporting month</label><input id="activity-month" type="month" hidden tabindex="-1" aria-hidden="true"><button type="button" class="month-trigger" id="activity-month-trigger" data-month-target="activity-month" aria-haspopup="dialog" aria-controls="attendance-month-picker" aria-expanded="false"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="5" width="18" height="16" rx="3"/><path d="M8 3v4m8-4v4M3 10h18"/></svg><span class="month-trigger-value">Select month</span><svg class="month-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><path d="m7 10 5 5 5-5"/></svg></button></div>
+              <label class="activity-category-control" for="activity-category">Activity<select id="activity-category"><option value="All">All activities</option><option value="AJA">AJA</option><option value="Travel Order">Travel Order</option></select></label>
+              <button class="button primary activity-submit" type="submit">View logs</button>
             </form>
-            <div class="inline-summary" id="activity-counts"><span>— employees</span><span>— AJA scans</span><span>— Travel Order scans</span></div>
-            <div class="table-wrap"><table class="records-table"><thead><tr><th>Employee ID</th><th>Employee Name</th><th>Activity</th><th>Direction</th><th>Date</th><th>Time</th><th>Work code</th><th class="actions-column">Action</th></tr></thead><tbody id="activity-rows"><tr><td colspan="8">Loading device activity logs…</td></tr></tbody></table></div>
+            <div class="inline-summary" id="activity-counts" role="status" aria-live="polite"><span><b>—</b> employees</span><span><b>—</b> AJA scans</span><span><b>—</b> Travel Order scans</span></div>
+            <div class="table-wrap"><table class="records-table activity-table" aria-label="Device-classified activity logs"><colgroup><col class="activity-col-id"><col class="activity-col-name"><col class="activity-col-type"><col class="activity-col-direction"><col class="activity-col-date"><col class="activity-col-time"><col class="activity-col-code"><col class="activity-col-action"></colgroup><thead><tr><th>Employee ID</th><th>Employee Name</th><th>Activity</th><th>Direction</th><th>Date</th><th>Time</th><th>Work code</th><th class="actions-column">Action</th></tr></thead><tbody id="activity-rows"><tr><td colspan="8" class="table-empty">Loading activity logs…</td></tr></tbody></table></div>
+            <p class="table-note mapping-note">Only scans with mapped activity work codes are shown. Unclassified scans are excluded.</p>
           </div>
         </section>
 
