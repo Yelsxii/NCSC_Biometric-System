@@ -1337,11 +1337,7 @@ body:has(#profile-undo-stack:not(:empty)) #toast:not(.hidden){bottom:auto;top:22
 .workspace .sidebar .nav-edge-highlight::after{
   content:"";position:absolute;
   right:0;
-  /* Leave a fully opaque 1.5px strip beyond the radial mask radius.
-     The previous mask ended exactly at the right boundary, allowing
-     subpixel antialiasing to expose the navy rim along the shoulder. 
-     Grow inward, not outward, to preserve the straight outer edge. */
-  width:calc(var(--nav-join-radius) + 1.5px);height:var(--nav-join-radius);
+  width:var(--nav-join-radius);height:var(--nav-join-radius);
   /* Use the same ramp and right alignment as the tab, so the shoulders
      match its color at every horizontal position. */
   background:var(--nav-join-ramp) right center / var(--nav-join-blend) 100% no-repeat;
@@ -1374,4 +1370,29 @@ body:has(#profile-undo-stack:not(:empty)) #toast:not(.hidden){bottom:auto;top:22
 }
 @media(prefers-reduced-motion:reduce){
   .workspace .sidebar .nav-edge-highlight{transition:none;transform:none}
+}
+
+/* Modern Chromium: clip one continuous surface instead of compositing
+   separate masked shoulders. All points share one gradient and one edge.
+   Cover the rail's hairline border with a 1px allowance into the gutter. */
+@supports (clip-path:shape(from 0 0,line to 100% 100%,close)){
+  .workspace .sidebar{--nav-join-left:12px}
+  .workspace .sidebar .nav-edge-highlight{
+    inset:calc(-1 * var(--nav-join-radius)) calc(-1 * (var(--rail-inset) + 2px)) calc(-1 * var(--nav-join-radius)) 0;
+    border-radius:0;
+    background:var(--nav-join-ramp) right center / var(--nav-join-blend) 100% no-repeat,
+      linear-gradient(to right,#f4f7fc 0%,var(--nav-join-fill) 70%);
+    clip-path:shape(from 100% 0,
+      curve to calc(100% - var(--nav-join-radius)) var(--nav-join-radius) with 100% calc(var(--nav-join-radius) * .5523) / calc(100% - var(--nav-join-radius) * .4477) var(--nav-join-radius),
+      line to var(--nav-join-left) var(--nav-join-radius),
+      curve to 0 calc(var(--nav-join-radius) + var(--nav-join-left)) with calc(var(--nav-join-left) * .4477) var(--nav-join-radius) / 0 calc(var(--nav-join-radius) + var(--nav-join-left) * .4477),
+      line to 0 calc(100% - var(--nav-join-radius) - var(--nav-join-left)),
+      curve to var(--nav-join-left) calc(100% - var(--nav-join-radius)) with 0 calc(100% - var(--nav-join-radius) - var(--nav-join-left) * .4477) / calc(var(--nav-join-left) * .4477) calc(100% - var(--nav-join-radius)),
+      line to calc(100% - var(--nav-join-radius)) calc(100% - var(--nav-join-radius)),
+      curve to 100% 100% with calc(100% - var(--nav-join-radius) * .4477) calc(100% - var(--nav-join-radius)) / 100% calc(100% - var(--nav-join-radius) * .5523),
+      close);
+  }
+  .workspace .sidebar .nav-edge-highlight::before,
+  .workspace .sidebar .nav-edge-highlight::after{content:none}
+  @media(max-width:1100px){.workspace .sidebar{--nav-join-left:10px}}
 }
