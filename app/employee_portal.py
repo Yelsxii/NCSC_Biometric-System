@@ -1,6 +1,7 @@
 """Restricted employee document portal. Employee sessions never receive HR uid."""
 from base64 import b64encode
 from contextlib import closing
+from datetime import date as CalendarDate, timedelta
 from io import BytesIO
 from pathlib import Path
 import secrets
@@ -8,7 +9,7 @@ import threading
 
 from fastapi import APIRouter, Depends, HTTPException, Request
 from fastapi.responses import FileResponse
-from pydantic import BaseModel, Field, field_validator
+from pydantic import BaseModel, Field, field_validator, model_validator
 
 from app.db import connect
 from app.security import check_password
@@ -60,19 +61,95 @@ class EmployeeLogin(BaseModel):
     username: str = Field(min_length=1, max_length=40)
     password: str = Field(min_length=1, max_length=256)
 
-class EmployeeAjaInput(BaseModel):
+class AjaDay(BaseModel):
     model_config = {"extra": "forbid"}
-    dates: str = Field(min_length=1, max_length=100)
-    origin: str = Field(min_length=1, max_length=200)
-    destination: str = Field(min_length=1, max_length=200)
-    purpose: str = Field(min_length=1, max_length=500)
+    date: CalendarDate
     departure: str = Field(pattern=r"^([01][0-9]|2[0-3]):[0-5][0-9]$")
     return_time: str = Field(pattern=r"^([01][0-9]|2[0-3]):[0-5][0-9]$")
 
-    @field_validator("dates", "origin", "destination", "purpose", mode="before")
+    @model_validator(mode="after")
+    def check_schedule(self):
+        if self.return_time <= self.departure:
+            raise ValueError("Return must be after departure on each selected date. Overnight trips require HR review.")
+        return self
+
+
+class EmployeeAjaInput(BaseModel):
+    model_config = {"extra": "forbid"}
+    days: list[AjaDay] = Field(min_length=1, max_length=14)
+    origin: str = Field(min_length=1, max_length=200)
+    destination: str = Field(min_length=1, max_length=200)
+    purpose: str = Field(min_length=1, max_length=500)
+
+    @field_validator("origin", "destination", "purpose", mode="before")
     @classmethod
     def tidy(cls, value):
         return " ".join(value.split()) if isinstance(value, str) else value
+
+    @model_validator(mode="after")
+    def unique_dates(self):
+        if len({day.date for day in self.days}) != len(self.days):
+            raise ValueError("Select each date only once.")
+        self.days.sort(key=lambda day: day.date)
+        return self
+
+
+def print_date(day):
+    return f"{day.strftime('%b')} {day.day}, {day.year}"
+
+
+def format_dates(days):
+    """Compact explicit dates, with ranges only for consecutive selected days."""
+    ranges = []
+    for day in sorted(days):
+        if ranges and day == ranges[-1][1] + timedelta(days=1):
+            ranges[-1][1] = day
+        else:
+            ranges.append([day, day])
+    parts = []
+    for first, last in ranges:
+        if first == last:
+            parts.append(print_date(first))
+        elif (first.year, first.month) == (last.year, last.month):
+            parts.append(f"{first.strftime('%b')} {first.day}-{last.day}, {first.year}")
+        else:
+            parts.append(f"{print_date(first)} - {print_date(last)}")
+    return "; ".join(parts)
+
+
+def build_aja_packet(payload, user, template):
+    from pypdf import PdfReader, PdfWriter
+    groups = {}
+    for day in payload.days:
+        groups.setdefault((day.departure, day.return_time), []).append(day.date)
+    writer = PdfWriter()
+    def render(dates, departure, return_time):
+        data = AjaPrintInput(name=user["name"], position=user["position"],
+            department=user["department"], dates=dates, origin=payload.origin,
+            destination=payload.destination, purpose=payload.purpose,
+            departure=departure, return_time=return_time)
+        return build_aja_pdf(data, template)
+    # The original one-page form has one time pair. If schedules differ,
+    # use one form per day in chronological order, never ambiguous time lists.
+    batches = [(payload.days[0].departure, payload.days[0].return_time,
+                [day.date for day in payload.days])] if len(groups)==1 else [
+                (day.departure, day.return_time, [day.date]) for day in payload.days]
+    for departure, return_time, dates in batches:
+        label = format_dates(dates)
+        pages = []
+        if len(label) <= 100:
+            try:
+                pages.append(render(label, departure, return_time))
+            except HTTPException as exc:
+                if len(dates)==1 or exc.status_code!=400 or not str(exc.detail).startswith("Dates is too long"):
+                    raise
+        if not pages:
+            pages = [render(print_date(day), departure, return_time) for day in dates]
+        for pdf in pages:
+            writer.append(PdfReader(BytesIO(pdf)))
+    output = BytesIO()
+    writer.write(output)
+    return output.getvalue()
 
 @router.get("/employee")
 def employee_home():
@@ -110,23 +187,25 @@ def employee_aja_preview(payload: EmployeeAjaInput, request: Request, user=Depen
     check_csrf(request)
     if not all(user[key].strip() for key in ("name", "position", "department")):
         raise HTTPException(400, "Ask HR to complete your name, position and department before preparing AJA.")
-    form = AjaPrintInput(name=user["name"], position=user["position"], department=user["department"], **payload.model_dump())
-    pdf = build_aja_pdf(form, ROOT / "aja-template.pdf")
+    pdf = build_aja_packet(payload, user, ROOT / "aja-template.pdf")
     # Render the exact generated PDF, not an independent HTML reconstruction.
     import pypdfium2 as pdfium
     with _PDF_RENDER_LOCK:
         doc = pdfium.PdfDocument(pdf)
         try:
-            page = doc[0]
-            try:
-                bitmap = page.render(scale=2.5)
+            previews = []
+            for index in range(len(doc)):
+                page = doc[index]
                 try:
-                    image = BytesIO()
-                    bitmap.to_pil().save(image, format="PNG")
+                    bitmap = page.render(scale=2 if len(doc)==1 else 1.5)
+                    try:
+                        image = BytesIO()
+                        bitmap.to_pil().save(image, format="PNG")
+                        previews.append(b64encode(image.getvalue()).decode("ascii"))
+                    finally:
+                        bitmap.close()
                 finally:
-                    bitmap.close()
-            finally:
-                page.close()
+                    page.close()
         finally:
             doc.close()
-    return {"pdf": b64encode(pdf).decode("ascii"), "preview": b64encode(image.getvalue()).decode("ascii")}
+    return {"pdf": b64encode(pdf).decode("ascii"), "previews": previews, "preview": previews[0]}
