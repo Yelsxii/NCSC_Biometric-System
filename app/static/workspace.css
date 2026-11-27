@@ -1511,7 +1511,11 @@ body:has(#profile-undo-stack:not(:empty)) #toast:not(.hidden){bottom:auto;top:22
 #profile-dialog .profile-position-toggle svg{width:13px;height:13px;transition:transform .34s cubic-bezier(.25,.7,.25,1);pointer-events:none}
 #profile-dialog .profile-position-toggle:is(:hover,:focus-visible){background:#e3edfc;color:#244b9a}
 #profile-dialog .profile-position-toggle[aria-expanded=true] svg{transform:rotate(180deg)}
-#profile-dialog .profile-position-menu{scrollbar-width:thin;scrollbar-color:#c1cfe3 transparent}
+#profile-dialog .profile-position-menu{scrollbar-width:thin;scrollbar-color:#c1cfe3 transparent;overscroll-behavior:contain}
+#profile-dialog .profile-position-menu::-webkit-scrollbar{width:5px}
+#profile-dialog .profile-position-menu::-webkit-scrollbar-thumb{background:#c1cfe3;border-radius:8px}
+#profile-dialog .profile-position-menu::-webkit-scrollbar-button{display:none}
+#profile-dialog .profile-position-control:has(.profile-position-toggle[aria-expanded=true]) input{background:#e3edfc;border-color:#a5bce2;color:#244b9a}
 #profile-dialog .profile-position-menu button[data-keyboard-active]:not([aria-selected=true]){background:#e3edfc;border-color:#a5bce2;color:#244b9a}
 #profile-dialog .profile-position-menu button[data-keyboard-active][aria-selected=true]{outline:2px solid #7596cc;outline-offset:-2px}
 #profile-dialog .profile-position-menu .position-custom-caption{margin-left:auto;font-size:9px;font-weight:600;opacity:.8;flex:none}
