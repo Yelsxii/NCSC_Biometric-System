@@ -107,12 +107,29 @@ def main() -> None:
                 changed = con.execute("UPDATE employee_portal_accounts SET enabled=0 WHERE employee_code=?", (code,)).rowcount
                 print("Employee account disabled." if changed else "No employee account found.")
                 return
-            employee = con.execute("""SELECT e.display_name,e.department,p.position FROM employees e
-                LEFT JOIN employee_profiles p ON p.employee_code=e.employee_code
-                WHERE e.employee_code=? AND NOT EXISTS
-                (SELECT 1 FROM employee_directory_archive a WHERE a.employee_code=e.employee_code)""", (code,)).fetchone()
-            if not employee or not all(str(employee[k] or "").strip() for k in ("display_name","department","position")):
-                raise SystemExit("Select an active employee with complete name, position and department.")
+            employee = con.execute("""SELECT e.display_name,e.department,p.position,
+                p.employee_code AS profile_code,
+                EXISTS(SELECT 1 FROM employee_directory_archive a WHERE a.employee_code=e.employee_code) AS archived
+                FROM employees e LEFT JOIN employee_profiles p ON p.employee_code=e.employee_code
+                WHERE e.employee_code=?""", (code,)).fetchone()
+            if not employee:
+                print("Biometric ID not found in this database:", code)
+                print("Available active biometric IDs (not directory row numbers):")
+                for row in con.execute("""SELECT e.employee_code,e.display_name FROM employees e
+                    WHERE NOT EXISTS (SELECT 1 FROM employee_directory_archive a WHERE a.employee_code=e.employee_code)
+                    ORDER BY e.employee_code"""):
+                    print(f"  {row['employee_code']} - {row['display_name'] or '(No name)'}")
+                raise SystemExit("Use the exact biometric ID shown above.")
+            print("Matched employee:", employee["display_name"] or "(No name)")
+            if employee["archived"]:
+                raise SystemExit("This employee is archived. Restore the profile only if authorized.")
+            missing = [label for key,label in (("display_name","Name"),("department","Department"),("position","Position"))
+                       if not str(employee[key] or "").strip()]
+            if missing:
+                if employee["profile_code"] is None:
+                    print("No saved employee profile exists for this biometric ID.")
+                raise SystemExit("Missing saved information: " + ", ".join(missing) +
+                    ". Complete and save the profile in Employees, then retry.")
             print("Employee:", employee["display_name"])
             username = input("Employee portal username: ").strip().lower()
             if not re.fullmatch(r"[a-z0-9._-]{3,40}", username):
